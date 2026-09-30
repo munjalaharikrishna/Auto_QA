@@ -1,0 +1,125 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import type { FullResult, Reporter, TestCase, TestResult, TestStep } from '@playwright/test/reporter';
+
+/**
+ * Auto QA reporter, generated (FR-RUN-02). Prints one `AUTOQA {json}` line per event so the platform
+ * can follow the run live, and writes reports/auto-qa-results.json for the platform's verdict.
+ * Secret values from the environment are replaced with •••• in everything the run produced: errors and
+ * page facts (FR-EV-03). Titles and step names are the tester's own words, which never hold a secret (FR-TD-02).
+ */
+
+interface StepRecord {
+  title: string;
+  status: 'passed' | 'failed';
+  duration: number;
+  error?: string;
+}
+
+interface TestRecord {
+  testId: string;
+  automationId?: string;
+  title: string;
+  file: string;
+  status: string;
+  expectedStatus: string;
+  duration: number;
+  startedAt: string;
+  steps: StepRecord[];
+  errors: string[];
+  facts?: unknown;
+  screenshots: string[];
+  trace?: string;
+}
+
+const root = path.dirname(__dirname);
+const manifest = JSON.parse(readFileSync(path.join(root, 'auto-qa.json'), 'utf8')) as { secretVars: string[] };
+const secrets = manifest.secretVars
+  .map((name) => process.env[name])
+  .filter((v): v is string => !!v)
+  .sort((a, b) => b.length - a.length);
+const mask = (text: string) => secrets.reduce((t, s) => t.split(s).join('••••'), text);
+// Playwright colours its messages for terminals; the results file keeps plain text.
+const plain = (text: string) => mask(text.replace(/\u001b\[[0-9;]*m/g, ''));
+
+export default class AutoQaReporter implements Reporter {
+  private readonly tests: TestRecord[] = [];
+  private readonly executionId = process.env.AUTO_QA_EXECUTION_ID ?? 'local';
+
+  private emit(event: Record<string, unknown>): void {
+    process.stdout.write(`AUTOQA ${JSON.stringify({ executionId: this.executionId, ...event })}\n`);
+  }
+
+  onTestBegin(test: TestCase): void {
+    this.emit({ event: 'test-begin', testId: testIdOf(test), title: test.title });
+  }
+
+  onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
+    if (step.category !== 'test.step') return;
+    this.emit({
+      event: 'step-end',
+      testId: testIdOf(test),
+      step: step.title,
+      status: step.error ? 'failed' : 'passed',
+      duration: step.duration,
+    });
+  }
+
+  onTestEnd(test: TestCase, result: TestResult): void {
+    const steps: StepRecord[] = [];
+    const walk = (list: TestStep[]) => {
+      for (const s of list) {
+        if (s.category === 'test.step') {
+          steps.push({
+            title: s.title,
+            status: s.error ? 'failed' : 'passed',
+            duration: s.duration,
+            error: s.error?.message ? plain(s.error.message) : undefined,
+          });
+        } else walk(s.steps);
+      }
+    };
+    walk(result.steps);
+    const facts = result.attachments.find((a) => a.name === 'auto-qa-facts')?.body?.toString();
+    const record: TestRecord = {
+      testId: testIdOf(test),
+      automationId: test.annotations.find((a) => a.type === 'automation')?.description,
+      title: test.title,
+      file: path.relative(root, test.location.file).replace(/\\/g, '/'),
+      status: result.status,
+      expectedStatus: test.expectedStatus,
+      duration: result.duration,
+      startedAt: result.startTime.toISOString(),
+      steps,
+      errors: result.errors.map((e) => plain(e.message ?? e.value ?? 'unknown error')),
+      facts: facts ? JSON.parse(mask(facts)) : undefined,
+      screenshots: result.attachments
+        .filter((a) => a.name === 'screenshot' && a.path)
+        .map((a) => path.relative(root, a.path!).replace(/\\/g, '/')),
+      trace: result.attachments.find((a) => a.name === 'trace' && a.path)?.path,
+    };
+    if (record.trace) record.trace = path.relative(root, record.trace).replace(/\\/g, '/');
+    this.tests.push(record);
+    this.emit({ event: 'test-end', testId: record.testId, status: record.status, duration: record.duration });
+  }
+
+  onEnd(result: FullResult): void {
+    const file = path.join(root, 'reports', 'auto-qa-results.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    const tests = [...this.tests].sort((a, b) => a.testId.localeCompare(b.testId));
+    writeFileSync(
+      file,
+      `${JSON.stringify({ executionId: this.executionId, status: result.status, startedAt: result.startTime.toISOString(), duration: result.duration, tests }, null, 2)}\n`,
+    );
+    this.emit({ event: 'run-end', status: result.status });
+  }
+
+  printsToStdio(): boolean {
+    return false;
+  }
+}
+
+/** "TC-DEMO-001: Verify a user can log in" → TC-DEMO-001. */
+function testIdOf(test: TestCase): string {
+  return test.title.split(':')[0].trim();
+}

@@ -427,8 +427,9 @@ Auto_QA/
     locators/              ✅ match, locator, ladder, probe,         (M3)
                               engine, session (shared Chrome)
     generator/             ✅ names, plan, render, templates/*.hbs   (M5)
-    executor/              ⬜ runner adapter, custom reporter         (M6)
-    results/               ⬜ validator, classifier                  (M6)
+    executor/              ✅ runner.ts (runs Playwright Test)      (M6)
+    results/               ✅ verdict.ts, report.ts                 (M6)
+    pipeline/              ✅ run-cases.ts (parse → … → verdict)    (M6)
     evidence/              ⬜ capture, masking, report               (M6)
     importer/              ⬜ excel, csv (V1); jira, testrail (V2)   (M7)
     server/                ⬜ Fastify API, jobs, WebSocket           (M7)
@@ -451,7 +452,8 @@ workspaces/<app-name>/     own git repo, runs without the platform
   locators/login.locators.json
   fixtures/test.fixture.ts          health check, evidence hooks
   data/login.data.ts
-  reporters/auto-qa-reporter.ts
+  reporters/auto-qa-reporter.ts     events + results for the platform (M6)
+  auto-qa.json                      manifest: tests, checks, env vars (M6)
   reports/                          git-ignored: HTML report, results, evidence per run
   playwright.config.ts
   .env                              git-ignored: credentials from the form (FR-ENV-05)

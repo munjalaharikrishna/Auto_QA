@@ -11,12 +11,12 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createInterface } from 'node:readline/promises';
-import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
-import { describe } from '../locators/match.js';
+import { type ExplorationResult, explore } from '../explorer/controller.js';
+import { loadPageUrls, savePageUrls } from '../explorer/page-store.js';
 import { openSession } from '../locators/session.js';
 import type { TestModel } from '../model/test-model.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
+import { terminalResolver } from './terminal-resolver.js';
 
 const args = process.argv.slice(2);
 const valueFlags = ['--id', '--base-url', '--env-file', '--test-id-attribute', '--out', '--login'];
@@ -51,38 +51,9 @@ if (!model) {
 }
 const login = flag('--login') ? pick(flag('--login')) : undefined;
 
-// D19: page URLs are kept with the environment, keyed by its base URL, so one app never uses another's pages.
-const pagesFile = path.join('.auto-qa', 'pages.json');
-const envKey = new URL(baseUrl).origin;
-const allPages: Record<string, Record<string, string>> = existsSync(pagesFile) ? JSON.parse(await readFile(pagesFile, 'utf8')) : {};
-const pageUrls = allPages[envKey] ?? {};
-
-const interactive = process.stdin.isTTY;
-const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout }) : undefined;
-const resolver: Resolver = {
-  async choose(r) {
-    console.log(`\n⚠ ${r.item} "${r.raw}"\n  ${r.code}: ${r.text}`);
-    for (const [i, c] of r.candidates.slice(0, 9).entries()) console.log(`  ${i + 1}) ${describe(c)}`);
-    if (!rl) return 'skip';
-    const a = (await rl.question(`  Pick 1-${Math.min(9, r.candidates.length)}, s to skip, q to stop: `)).trim().toLowerCase();
-    if (a === 'q') return 'abort';
-    const n = Number(a);
-    return Number.isInteger(n) && n >= 1 && n <= r.candidates.length ? n - 1 : 'skip';
-  },
-  async pageUrl(r) {
-    if (!rl) {
-      console.log(`\n⚠ ${r.item}: the URL of the "${r.page}" page is not known. Run in a terminal to enter it.`);
-      return 'abort';
-    }
-    const a = (await rl.question(`\n? ${r.item}: URL or path of the "${r.page}" page (q to stop): `)).trim();
-    return !a || a === 'q' ? 'abort' : a;
-  },
-  async confirm(r) {
-    console.log(`\n⚠ ${r.item} ${r.code}: ${r.text}`);
-    if (!rl) return false;
-    return /^y/i.test((await rl.question('  y/n: ')).trim());
-  },
-};
+// D19: learned page URLs are kept per environment.
+const pageUrls = await loadPageUrls(baseUrl);
+const { resolver, close } = terminalResolver();
 
 const outDir = flag('--out') ?? path.join('.auto-qa', 'explore', model.id);
 const session = await openSession({ headless: !args.includes('--headed'), testIdAttribute: flag('--test-id-attribute') });
@@ -90,35 +61,29 @@ let result: ExplorationResult;
 try {
   result = await explore(model, session, { config, baseUrl, env: process.env, pageUrls, resolver, outDir, production: args.includes('--production'), login });
 } finally {
-  rl?.close();
+  close();
   await session.close();
 }
 
 await mkdir(outDir, { recursive: true });
 await writeFile(path.join(outDir, 'exploration.json'), JSON.stringify(result, null, 2));
-if (Object.keys(result.learnedPageUrls).length) {
-  await mkdir(path.dirname(pagesFile), { recursive: true });
-  await writeFile(pagesFile, JSON.stringify({ ...allPages, [envKey]: { ...pageUrls, ...result.learnedPageUrls } }, null, 2));
-}
+await savePageUrls(baseUrl, result.learnedPageUrls);
 
 console.log(`\n━━ ${result.testId}  ${result.title}  (${result.status})`);
 for (const i of result.items) {
   const mark = i.status === 'done' ? '✔' : i.status === 'skipped' ? '–' : '✖';
   const what = i.kind === 'step' ? (i.action ?? '?').toUpperCase() : `EXPECT ${i.type}`;
   console.log(`   ${mark} ${i.phase === 'setup' ? 'setup ' : ''}${i.id.padEnd(4)} ${what.padEnd(16)} ${i.raw}`);
-  if (i.locator)
-    console.log(
-      `          ${i.locator.code}${i.locator.validated ? '' : '  (not validated)'}${i.page ? `  on ${i.page.name}` : ''}${i.resolvedBy === 'tester' ? '  (picked)' : ''}`,
-    );
+  if (i.locator) {
+    const notes = `${i.locator.validated ? '' : '  (not validated)'}${i.page ? `  on ${i.page.name}` : ''}${i.resolvedBy === 'tester' ? '  (picked)' : ''}`;
+    console.log(`          ${i.locator.code}${notes}`);
+  }
   if (i.effect) console.log(`          → ${i.effect}`);
   if (i.observed?.textFound !== undefined) console.log(`          text ${i.observed.textFound ? 'is' : 'is NOT'} on the page now`);
   for (const w of i.warnings) console.log(`          ! ${w}`);
   if (i.error) console.log(`          ✖ ${i.error}`);
 }
-console.log(
-  `\nPages: ${Object.entries(result.pages)
-    .map(([n, p]) => `${n} ${p.path}`)
-    .join(' · ')}`,
-);
+const pages = Object.entries(result.pages).map(([n, p]) => `${n} ${p.path}`);
+console.log(`\nPages: ${pages.join(' · ')}`);
 console.log(`Saved ${path.join(outDir, 'exploration.json')}`);
 process.exitCode = result.status === 'complete' ? 0 : 1;

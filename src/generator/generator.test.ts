@@ -107,6 +107,18 @@ describe('generation plan (FR-GE-10, FR-GE-11)', () => {
     assert.match(plan.warnings.join(), /LoginPage\.login\(\) already does something else, so this one is login2\(\)/);
   });
 
+  it('imports a page the test only checks the URL of', async () => {
+    const [first] = demoInputs();
+    // Only "redirected to Dashboard": nothing on DashboardPage is clicked or checked.
+    const model = parseTestCase({ ...cases[0], expected: 'User is redirected to Dashboard page.' }, config);
+    const items = first.exploration.items.filter((i) => i.id !== 'A2').map((i) => (i.id === 'A3' ? { ...i, id: 'A2' } : i));
+    const { files } = await generateProject([{ model, exploration: { ...first.exploration, items } }], 'demo');
+    const spec = files['tests/tc-demo-001.spec.ts'];
+    assert.match(spec, /import \{ DashboardPage \} from '\.\.\/pages\/DashboardPage';/);
+    assert.match(spec, /await expectPath\(page, DashboardPage\.path\);/);
+    assert.doesNotMatch(spec, /new DashboardPage/, 'no unused instance');
+  });
+
   it('refuses a test that was not fully explored', () => {
     const [input] = demoInputs();
     const ex = {

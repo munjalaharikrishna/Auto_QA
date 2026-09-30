@@ -121,6 +121,34 @@ Reads each case's exploration (M4) and writes a standalone project to `workspace
 
 The same input always gives byte-identical files; `src/generator/fixtures/demo-golden/` holds the expected output for the demo app (`UPDATE_GOLDEN=1 npm test` after an intended change). Run the project with `cd workspaces/<app> && npm install && npx playwright test`, after filling `.env` from `.env.example`.
 
+## Milestone 6: run the tests and judge them
+
+```bash
+npm run execute -- workspaces/saucedemo                       # run a generated project
+npm run auto-qa -- examples/demo-app/test-cases.json --base-url http://127.0.0.1:4173   # the whole flow
+```
+
+`execute` runs a generated project with Playwright Test and judges each test. `auto-qa` does everything for written test cases: parse → explore (or reuse a saved exploration while the case is unchanged) → generate → run → judge.
+
+| Status | Meaning |
+|---|---|
+| **PASS** | Every check passed |
+| **FAIL** | A check failed (Assertion), an element was missing (Locator), the page had errors (Application), or time ran out (Timeout) |
+| **BLOCKED** | Could not be run: a credential missing (Test Data), the app unreachable (Network), the precondition login failed, or an error in the generated test itself |
+| **NEEDS REVIEW** | A step or check could not be read or resolved; nothing is guessed |
+
+Every check shows **Expected** (the tester's words) and **Actual** (built from the assertion error and what the page showed), e.g. *Page was /. The page showed message "Epic sadface: Username and password do not match any user in this service".* Every test also has a built-in health check: an uncaught page error, a 5xx response or an error page fails it.
+
+Each run gets an ID (`EXEC-2026-00012`). Its verdicts, screenshots and traces are kept in `.auto-qa/runs/<EXEC-ID>/`. Secret values (passwords, tokens) are masked in everything the run produced.
+
+| Option (`auto-qa`) | Meaning |
+|---|---|
+| `--id TC-1` | Only these cases (repeatable) |
+| `--unattended` | Never wait for an answer; a case that needs one is set aside as NEEDS REVIEW |
+| `--reexplore` | Explore again even if a saved exploration can be reused |
+| `--login TC-LOGIN-001` | Test case to run first for "Logged in" preconditions |
+| `--workspace dir` | Where to generate the project (default `workspaces/<site>`) |
+
 ## Tests
 
 ```bash
@@ -155,6 +183,11 @@ npm run format    # apply formatting and safe fixes
 | `src/generator/names.ts` | Naming rules for properties, methods and files. |
 | `src/generator/render.ts`, `templates/` | Handlebars templates + Prettier → files. |
 | `src/cli/generate.ts` | Milestone 5 command line tool. |
+| `src/executor/runner.ts` | Runs a generated project, follows its events, keeps evidence, masks secrets. |
+| `src/results/verdict.ts` | PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual. Pure. |
+| `src/results/report.ts` | Terminal report. |
+| `src/pipeline/run-cases.ts` | The whole flow for a set of test cases. |
+| `src/cli/execute.ts`, `src/cli/auto-qa.ts` | Milestone 6 command line tools. |
 | `examples/demo-app/` | Local app and test cases for end-to-end tests (`npm run demo`). |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
@@ -165,6 +198,6 @@ npm run format    # apply formatting and safe fixes
 - [x] M3: match a step to an element and validate the locator
 - [x] M4: explore a full test case and save locators
 - [x] M5: generate Page Objects and specs
-- [ ] M6: run with Playwright Test and report PASS/FAIL
+- [x] M6: run with Playwright Test and report PASS/FAIL
 - [ ] M6b: run a whole workbook and write PASS/FAIL and actual results into a copy of the sheet
 - [ ] M7: web UI with upload, progress, review screen and results

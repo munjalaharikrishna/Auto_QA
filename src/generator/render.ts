@@ -29,6 +29,7 @@ const T = {
   tsconfig: template('tsconfig.json'),
   env: template('env.example'),
   gitignore: template('gitignore'),
+  reporter: template('reporter.ts'),
 };
 
 const require = createRequire(import.meta.url);
@@ -63,11 +64,18 @@ export async function renderProject(plan: ProjectPlan, name: string): Promise<Re
     await ts(`data/${d.file}.data.ts`, T.data({ testId: plan.specs.find((s) => s.file === d.file)?.testId ?? d.file, values: d.values }));
   }
   await ts('fixtures/test.fixture.ts', T.fixture({}));
+  await ts('reporters/auto-qa-reporter.ts', T.reporter({}));
   await ts('playwright.config.ts', T.config(plan));
   files['package.json'] = T.pkg({ name, playwrightVersion: PLAYWRIGHT_VERSION, typesNodeVersion: TYPES_NODE_VERSION });
   files['tsconfig.json'] = T.tsconfig({});
   files['.env.example'] = T.env(plan);
   files['.gitignore'] = T.gitignore({});
+  files['auto-qa.json'] = `${JSON.stringify(
+    { version: 1, name, baseUrl: plan.baseUrl, testIdAttribute: plan.testIdAttribute, envVars: plan.envVars, secretVars: plan.secretVars, tests: plan.tests },
+    null,
+    2,
+  )}
+`;
   files['.prettierrc.json'] = `${JSON.stringify(PRETTIER, null, 2)}\n`;
   return Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
 }

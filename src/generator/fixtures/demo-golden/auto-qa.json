@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "name": "demo",
+  "baseUrl": "http://127.0.0.1:4173",
+  "testIdAttribute": "data-testid",
+  "envVars": [
+    "BASE_URL",
+    "TEST_PASSWORD",
+    "TEST_USERNAME",
+    "TEST_WRONG_PASSWORD"
+  ],
+  "secretVars": [
+    "TEST_PASSWORD",
+    "TEST_WRONG_PASSWORD"
+  ],
+  "tests": [
+    {
+      "testId": "TC-DEMO-001",
+      "title": "Verify a user can log in",
+      "automationId": "AUTO-DEMO-001",
+      "file": "tests/tc-demo-001.spec.ts",
+      "steps": [
+        {
+          "id": "S1",
+          "raw": "Open Login page",
+          "action": "navigate"
+        },
+        {
+          "id": "S2",
+          "raw": "Enter valid username",
+          "action": "fill"
+        },
+        {
+          "id": "S3",
+          "raw": "Enter valid password",
+          "action": "fill"
+        },
+        {
+          "id": "S4",
+          "raw": "Click the Login button",
+          "action": "click"
+        }
+      ],
+      "checks": [
+        {
+          "id": "A1",
+          "raw": "User is redirected to Dashboard page.",
+          "type": "url",
+          "expected": "Dashboard",
+          "negated": false
+        },
+        {
+          "id": "A2",
+          "raw": "Dashboard heading is displayed.",
+          "type": "visible",
+          "target": "Dashboard",
+          "negated": false
+        },
+        {
+          "id": "A3",
+          "raw": "",
+          "type": "health",
+          "expected": "no crash",
+          "negated": false
+        }
+      ],
+      "unparsed": []
+    },
+    {
+      "testId": "TC-DEMO-002",
+      "title": "Verify a wrong password is rejected",
+      "automationId": "AUTO-DEMO-002",
+      "file": "tests/tc-demo-002.spec.ts",
+      "steps": [
+        {
+          "id": "S1",
+          "raw": "Open Login page",
+          "action": "navigate"
+        },
+        {
+          "id": "S2",
+          "raw": "Enter valid username",
+          "action": "fill"
+        },
+        {
+          "id": "S3",
+          "raw": "Enter wrong password",
+          "action": "fill"
+        },
+        {
+          "id": "S4",
+          "raw": "Click Login",
+          "action": "click"
+        }
+      ],
+      "checks": [
+        {
+          "id": "A1",
+          "raw": "Error \"Invalid username or password\" is shown.",
+          "type": "text",
+          "expected": "Invalid username or password",
+          "negated": false
+        },
+        {
+          "id": "A2",
+          "raw": "User stays on the Login page.",
+          "type": "url-unchanged",
+          "expected": "Login",
+          "negated": false
+        },
+        {
+          "id": "A3",
+          "raw": "",
+          "type": "health",
+          "expected": "no crash",
+          "negated": false
+        }
+      ],
+      "unparsed": []
+    },
+    {
+      "testId": "TC-DEMO-003",
+      "title": "Verify the profile can be saved",
+      "automationId": "AUTO-DEMO-003",
+      "file": "tests/tc-demo-003.spec.ts",
+      "steps": [
+        {
+          "id": "S1",
+          "raw": "Open Login page",
+          "action": "navigate"
+        },
+        {
+          "id": "S2",
+          "raw": "Enter valid username",
+          "action": "fill"
+        },
+        {
+          "id": "S3",
+          "raw": "Enter valid password",
+          "action": "fill"
+        },
+        {
+          "id": "S4",
+          "raw": "Click Login",
+          "action": "click"
+        },
+        {
+          "id": "S5",
+          "raw": "Click Profile",
+          "action": "click"
+        },
+        {
+          "id": "S6",
+          "raw": "Enter Full name",
+          "action": "fill"
+        },
+        {
+          "id": "S7",
+          "raw": "Select India from Country",
+          "action": "select"
+        },
+        {
+          "id": "S8",
+          "raw": "Check Send me news",
+          "action": "check"
+        },
+        {
+          "id": "S9",
+          "raw": "Click Save changes",
+          "action": "click"
+        }
+      ],
+      "checks": [
+        {
+          "id": "A1",
+          "raw": "Message \"Profile saved\" is shown.",
+          "type": "text",
+          "expected": "Profile saved",
+          "negated": false
+        },
+        {
+          "id": "A2",
+          "raw": "Send me news is checked.",
+          "type": "checked",
+          "target": "Send me news",
+          "negated": false
+        },
+        {
+          "id": "A3",
+          "raw": "",
+          "type": "health",
+          "expected": "no crash",
+          "negated": false
+        }
+      ],
+      "unparsed": []
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.9 |
+| **Spec version** | 1.10 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -258,9 +258,9 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-RUN-01 | Run a test with `npx playwright test` in the generated project, injecting the environment's variables | V1 | |
-| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | |
-| FR-RUN-03 | Chromium | V1 | |
+| FR-RUN-01 | Run a test with `npx playwright test` in the generated project, injecting the environment's variables | V1 | ✅ Done (M6) |
+| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | ✅ Done (M6): one `AUTOQA {json}` line per event on stdout; the UI shows them in M7 |
+| FR-RUN-03 | Chromium | V1 | ✅ Done (M6) |
 | FR-RUN-04 | Log in once and reuse the session (`storageState` setup project) | V2 | |
 | FR-RUN-05 | Regression suites: select tests → Run Selected / Run All, with a summary | V2 | |
 | FR-RUN-06 | Firefox and WebKit through config `projects` | V3 | |
@@ -273,17 +273,17 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-VAL-01 | For each assertion: expected, actual, result | V1 | |
-| FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" |
-| FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | |
-| FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test |
-| FR-VAL-05 | **Result statuses**: `PASS` every check passed; `FAIL` a check failed, or a step failed because of the application; `BLOCKED` the run could not be done (environment, network, missing credentials or test data); `NEEDS REVIEW` a step or check the rules cannot decide (UNPARSED, vague, ambiguous). A vague expected result is never judged. | V1 | "Works correctly" gives NEEDS REVIEW, never PASS |
+| FR-VAL-01 | For each assertion: expected, actual, result | V1 | ✅ Done (M6) |
+| FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" · ✅ Done (M6): from the assertion error and the page facts the fixture attaches |
+| FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | ✅ Done (M6) |
+| FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test · ✅ Done (M6): uncaught page errors, 5xx responses, error pages; annotation `health: off` switches it off |
+| FR-VAL-05 | **Result statuses**: `PASS` every check passed; `FAIL` a check failed, or a step failed because of the application; `BLOCKED` the run could not be done (environment, network, missing credentials or test data); `NEEDS REVIEW` a step or check the rules cannot decide (UNPARSED, vague, ambiguous). A vague expected result is never judged. | V1 | "Works correctly" gives NEEDS REVIEW, never PASS · ✅ Done (M6). A script error in the generated test is BLOCKED, never blamed on the application |
 
 ### 6.13 Failure classification and retry (FR-FC) · §15
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-FC-01 | Categories: Environment, Network, Application, Authentication, Test Data, Locator, Timeout, Assertion | V3 (basic labels in V1) | |
+| FR-FC-01 | Categories: Environment, Network, Application, Authentication, Test Data, Locator, Timeout, Assertion | V3 (basic labels in V1) | ✅ Basic labels (M6) |
 | FR-FC-02 | Rules are checked in a fixed order (see ARCHITECTURE.md §7) | V3 | |
 | FR-FC-03 | **Controlled retry**: retry once only for Environment, Network and Timeout; Locator → recovery; **never** retry Assertion, Application, Auth or Test Data | V3 | |
 
@@ -291,9 +291,9 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-EV-01 | Screenshot on failure, error message, failed locator/assertion, URL, timestamps, duration | V1 | |
+| FR-EV-01 | Screenshot on failure, error message, failed locator/assertion, URL, timestamps, duration | V1 | ✅ Done (M6): screenshot and trace on failure, copied to `.auto-qa/runs/<EXEC-ID>/` |
 | FR-EV-02 | Trace, video, console logs, network errors | V2 | |
-| FR-EV-03 | **Masking**: every secret value is replaced with `••••` in logs, errors and reports | V1 | |
+| FR-EV-03 | **Masking**: every secret value is replaced with `••••` in logs, errors and reports | V1 | ✅ Done (M6): secrets are masked in what the run produced (actual results, errors, page facts); the tester's own words and evidence paths are not masked, as they never hold a secret (FR-TD-02). Only secret-named variables are masked, not the username |
 | FR-EV-04 | Traces from tests that type a secret are marked **restricted** | V2 | |
 | FR-EV-05 | Retention setting (e.g. keep evidence 30 days) | V3 | |
 
@@ -311,7 +311,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-ENV-01 | One environment (base URL + credentials) | V1 | |
+| FR-ENV-01 | One environment (base URL + credentials) | V1 | ✅ Done (M6) |
 | FR-ENV-02 | Several environments: Development, QA, Staging, UAT, Production | V2 | Same test, different env |
 | FR-ENV-03 | **Page name → URL map** per environment (e.g. `Home → /`, `Opportunities → /opportunities`) | V2 | "Open Opportunities page" works in any env |
 | FR-ENV-04 | Secrets encrypted at rest (AES-GCM), shown masked in the UI | V2 | |
@@ -343,7 +343,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-EN-01 | **Requirement traceability**: Requirement → Test Scenario → Test Case → Automation → Execution → Result → Defect (document §25) | V4 | `REQ-REG-001 → SC-REG-003 → TC-REG-014 → AUTO-REG-014 → EXEC-2026-00124 → FAIL → BUG-REG-032` |
-| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given · ✅ Automation IDs (M5); execution IDs in M6 |
+| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given · ✅ Done: automation IDs (M5), execution IDs (M6) |
 | FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | Reuses the API steps from §6.21 inside a UI test |
 | FR-EN-03 | Create a Jira defect from a failed run, with evidence attached | V4 | |
 | FR-EN-04 | Push results back to Jira/TestRail | V4 | |
@@ -412,8 +412,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ✅ Done |
 | M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
 | M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ✅ Done |
-| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ⬜ Next |
-| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ⬜ |
+| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
+| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ⬜ Next |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
@@ -506,3 +506,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.7 | 2026-09-30 | M4 done: exploration controller with the step state machine, resolver for NEEDS_REVIEW, settle and verify-effect rules, preconditions, Production guard, per-step screenshots. Learned page URLs are per environment and stored as paths (D19). A "shown" check may target plain text. A role locator without a name ranks after a CSS id. Local demo app for end-to-end tests. |
 | 1.8 | 2026-09-30 | Batch run of a whole workbook (FR-IN-08, D22), automatic column matching (FR-IN-09), result statuses (FR-VAL-05), results written back to a copy of the workbook (FR-HI-06, D23), batch summary and review queue (FR-HI-07). New milestone M6b; Excel/CSV import moves from M7 to M6b. |
 | 1.9 | 2026-09-30 | M5 done: code generation into a standalone Playwright project (Page Objects with grouped action methods, specs, locator files, data, config). Locators are written in the Page Object and recorded in the locator JSON (FR-LR-01). Grouped steps share one `test.step` (FR-GE-03). Two page names for one path become one Page Object. |
+| 1.10 | 2026-09-30 | M6 done: execution with Playwright Test, verdicts PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual, health check, evidence kept per execution ID, basic failure labels, `npm run auto-qa` for the whole flow. Masking applies to run output only (FR-EV-03). A script error in a generated test is BLOCKED (FR-VAL-05). |

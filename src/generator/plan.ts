@@ -1,6 +1,8 @@
 import type { ExplorationResult, ExploredItem } from '../explorer/controller.js';
 import type { Fingerprint } from '../locators/ladder.js';
 import type { Assertion, Step, TestModel, ValueRef } from '../model/test-model.js';
+import { defaultParserConfig } from '../parser/config.js';
+import { isSecret } from '../parser/test-data.js';
 import { automationId, camel, escapeRegex, kebabId, kebabPage, pageVariable, pascal, propertyName, quote, singleMethodName, unique } from './names.js';
 
 /**
@@ -55,18 +57,36 @@ export interface SpecPlan {
   title: string;
   automationId: string;
   tags: string[];
+  /** Page Objects the spec creates an instance of. */
   pages: string[];
+  /** Page Objects the spec refers to, e.g. `DashboardPage.path` in a URL check: all are imported. */
+  imports: string[];
   dataFile?: string;
   helpers: string[];
   steps: Array<{ label: string; lines: string[] }>;
 }
 
+/** What the platform needs to judge a run (FR-VAL-01): each test's steps and checks as the tester wrote them. */
+export interface ManifestTest {
+  testId: string;
+  title: string;
+  automationId: string;
+  file: string;
+  steps: Array<{ id: string; raw: string; action?: string }>;
+  checks: Array<{ id: string; raw: string; type?: string; expected?: string; target?: string; negated: boolean }>;
+  /** Items the parser could not read: the test's result is NEEDS REVIEW until they are fixed (FR-VAL-05). */
+  unparsed: string[];
+}
+
 export interface ProjectPlan {
   pages: PagePlan[];
+  tests: ManifestTest[];
   specs: SpecPlan[];
   data: Array<{ file: string; values: Record<string, string> }>;
   /** Environment variables the tests read, for `.env.example`. */
   envVars: string[];
+  /** The ones holding secrets (passwords, tokens…): masked in every report (FR-EV-03). A username is not one. */
+  secretVars: string[];
   baseUrl: string;
   testIdAttribute: string;
   warnings: string[];
@@ -149,6 +169,7 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
   };
 
   const specs: SpecPlan[] = [];
+  const tests: ManifestTest[] = [];
   const data: ProjectPlan['data'] = [];
 
   for (const { model, exploration } of sorted) {
@@ -157,6 +178,11 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
     let usesData = false;
     const helpers = new Set<string>();
     const usedPages = new Set<string>();
+    const referenced = new Set<string>();
+    const pageClass = (className: string) => {
+      referenced.add(className);
+      return className;
+    };
     const steps: SpecPlan['steps'] = [];
     const pageVar = (className: string) => {
       usedPages.add(className);
@@ -304,13 +330,13 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
             helpers.add('expectPath');
             const name = pageNameFor(a.expected, exploration);
             if (!name) throw new Error(`${model.id} ${item.id}: no path is known for the ${a.expected} page.`);
-            return [`await expectPath(page, ${pageFor(name, exploration).className}.path${a.negated ? ', { not: true }' : ''});`];
+            return [`await expectPath(page, ${pageClass(pageFor(name, exploration).className)}.path${a.negated ? ', { not: true }' : ''});`];
           }
           return [`await expect(page).${not}toHaveURL(new RegExp(${quote(escapeRegex(a.expected ?? ''))}));`];
         case 'url-unchanged': {
           helpers.add('expectPath');
           const name = a.expected ? pageNameFor(a.expected, exploration) : undefined;
-          const path = name ? `${pageFor(name, exploration).className}.path` : quote(pathOf(item.observed?.url ?? '/'));
+          const path = name ? `${pageClass(pageFor(name, exploration).className)}.path` : quote(pathOf(item.observed?.url ?? '/'));
           return [`await expectPath(page, ${path});`];
         }
         case 'text':
@@ -345,6 +371,15 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
       model,
     );
 
+    tests.push({
+      testId: model.id,
+      title: model.title,
+      automationId: automationId(model.id),
+      file: `tests/${file}.spec.ts`,
+      steps: model.steps.map((s) => ({ id: s.id, raw: s.raw, action: s.action })),
+      checks: model.assertions.map((a) => ({ id: a.id, raw: a.raw, type: a.type, expected: a.expected, target: a.target, negated: a.negated })),
+      unparsed: [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed').map((x) => x.id),
+    });
     if (usesData) data.push({ file, values: Object.fromEntries([...dataKeys].map(([k, v]) => [v, model.data[k]])) });
     specs.push({
       file,
@@ -353,6 +388,7 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
       automationId: automationId(model.id),
       tags: model.type ? [`@${model.type}`] : [],
       pages: [...usedPages].sort(),
+      imports: [...new Set([...usedPages, ...referenced])].sort(),
       dataFile: usesData ? file : undefined,
       helpers: [...helpers].sort(),
       steps,
@@ -362,9 +398,11 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
   return {
     // A merged page is in the map under both names; list it once.
     pages: [...new Set(pages.values())],
+    tests,
     specs,
     data,
     envVars: [...envVars].sort((a, b) => (a === 'BASE_URL' ? -1 : b === 'BASE_URL' ? 1 : a.localeCompare(b))),
+    secretVars: [...envVars].filter((n) => isSecret(n, defaultParserConfig())).sort(),
     baseUrl: first.baseUrl,
     testIdAttribute: first.testIdAttribute,
     warnings,

@@ -12,7 +12,9 @@
     "match": "tsx src/cli/match.ts",
     "demo": "tsx examples/demo-app/server.ts",
     "explore": "tsx src/cli/explore.ts",
-    "generate": "tsx src/cli/generate.ts"
+    "generate": "tsx src/cli/generate.ts",
+    "execute": "tsx src/cli/execute.ts",
+    "auto-qa": "tsx src/cli/auto-qa.ts"
   },
   "description": "Manual test cases to Playwright automation, using Playwright MCP without an AI API",
   "dependencies": {

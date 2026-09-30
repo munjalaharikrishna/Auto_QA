@@ -9,7 +9,12 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 export default defineConfig({
   testDir: './tests',
   outputDir: './reports/test-results',
-  reporter: [['list'], ['html', { outputFolder: 'reports/html', open: 'never' }], ['json', { outputFile: 'reports/results.json' }]],
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: 'reports/html', open: 'never' }],
+    ['json', { outputFile: 'reports/results.json' }],
+    ['./reporters/auto-qa-reporter.ts'],
+  ],
   use: {
     baseURL: process.env.BASE_URL ?? {{{quote baseUrl}}},
     testIdAttribute: {{{quote testIdAttribute}}},

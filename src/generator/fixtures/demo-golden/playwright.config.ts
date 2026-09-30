@@ -13,6 +13,7 @@ export default defineConfig({
     ['list'],
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],
+    ['./reporters/auto-qa-reporter.ts'],
   ],
   use: {
     baseURL: process.env.BASE_URL ?? 'http://127.0.0.1:4173',

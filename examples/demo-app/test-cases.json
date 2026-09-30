@@ -21,5 +21,11 @@
     "steps": "1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Profile\n6. Enter Full name\n7. Select India from Country\n8. Check Send me news\n9. Click Save changes",
     "testData": "Full name=Asha Rao",
     "expected": "Message \"Profile saved\" is shown. Send me news is checked."
+  },
+  {
+    "id": "TC-DEMO-004",
+    "title": "Verify the reports page opens",
+    "steps": "1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Reports",
+    "expected": "Reports heading is displayed."
   }
 ]

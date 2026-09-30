@@ -3,7 +3,7 @@
  *
  *   npm run demo            serves it on http://127.0.0.1:4173
  *
- * Login: demo / demo123. Pages: / (login) → /dashboard → /profile.
+ * Login: demo / demo123. Pages: / (login) → /dashboard → /profile, and /reports (broken on purpose).
  */
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -37,10 +37,16 @@ document.getElementById('login').addEventListener('submit', (e) => {
   '/dashboard': layout(
     'Dashboard',
     `<h1>Dashboard</h1>
-<nav aria-label="Main"><a href="/profile">Profile</a> · <a href="/">Log out</a></nav>
+<nav aria-label="Main"><a href="/profile">Profile</a> · <a href="/reports">Reports</a> · <a href="/">Log out</a></nav>
 <p><button disabled>Delete account</button></p>
 <section aria-label="Activity"><h2>Recent activity</h2><p id="activity">Loading…</p></section>
 <script>setTimeout(() => { activity.textContent = '3 new messages'; }, 800);</script>`,
+  ),
+  // Looks fine, but throws in the page and gets a 500 from its API: the health check must catch it (FR-VAL-04).
+  '/reports': layout(
+    'Reports',
+    `<h1>Reports</h1><p id="summary">No reports yet.</p>
+<script>fetch('/api/reports'); setTimeout(() => { throw new Error('Reports widget crashed'); }, 50);</script>`,
   ),
   '/profile': layout(
     'Profile',
@@ -65,6 +71,7 @@ document.getElementById('profile').addEventListener('submit', (e) => {
 export async function startDemoApp(port = 0): Promise<{ url: string; close(): Promise<void> }> {
   const server = http.createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
+    if (path === '/api/reports') return res.writeHead(500, { 'content-type': 'application/json' }).end('{"error":"boom"}');
     const page = PAGES[path];
     if (!page) return res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(page);
