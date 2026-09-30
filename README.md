@@ -50,6 +50,8 @@ The parser's vocabulary is in [src/parser/lexicon.json](src/parser/lexicon.json)
 ```bash
 npm test
 npm run typecheck
+npm run lint      # Biome: lint + format check
+npm run format    # apply formatting and safe fixes
 ```
 
 ## Code layout

@@ -50,7 +50,7 @@ export function extractTarget(text: string, config: ParserConfig, options: { qua
       ...lexicon.fillQualifiers.negative.map((w) => [w, 'negative'] as [string, 'negative']),
     ];
     const q = matchLeading(main.name, pairs);
-    if (q && q.rest) {
+    if (q?.rest) {
       qualifier = { kind: q.value, word: q.phrase };
       main.name = q.rest;
     }

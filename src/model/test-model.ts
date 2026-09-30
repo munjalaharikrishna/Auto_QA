@@ -34,10 +34,7 @@ export const ValueRefSchema = z.discriminatedUnion('kind', [
 ]);
 export type ValueRef = z.infer<typeof ValueRefSchema>;
 
-export const ACTIONS = [
-  'navigate', 'back', 'forward', 'refresh',
-  'fill', 'clear', 'click', 'select', 'check', 'uncheck', 'hover', 'upload', 'press',
-] as const;
+export const ACTIONS = ['navigate', 'back', 'forward', 'refresh', 'fill', 'clear', 'click', 'select', 'check', 'uncheck', 'hover', 'upload', 'press'] as const;
 export type Action = (typeof ACTIONS)[number];
 
 export const STATUSES = ['parsed', 'unparsed'] as const;
@@ -73,9 +70,7 @@ export const StepSchema = z.object({
 });
 export type Step = z.infer<typeof StepSchema>;
 
-export const ASSERTION_TYPES = [
-  'url', 'url-unchanged', 'visible', 'text', 'enabled', 'disabled', 'checked', 'value', 'health',
-] as const;
+export const ASSERTION_TYPES = ['url', 'url-unchanged', 'visible', 'text', 'enabled', 'disabled', 'checked', 'value', 'health'] as const;
 export type AssertionType = (typeof ASSERTION_TYPES)[number];
 
 export const AssertionSchema = z.object({

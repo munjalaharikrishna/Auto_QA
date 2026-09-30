@@ -91,7 +91,12 @@ export class McpBrowser {
   private async call(name: string, args: Record<string, unknown>): Promise<ToolReply> {
     const result = await this.client.callTool({ name, arguments: args });
     const content = (result.content ?? []) as Array<{ type: string; text?: string }>;
-    const reply = parseToolReply(content.filter((c) => c.type === 'text').map((c) => c.text ?? '').join('\n'));
+    const reply = parseToolReply(
+      content
+        .filter((c) => c.type === 'text')
+        .map((c) => c.text ?? '')
+        .join('\n'),
+    );
     if (result.isError || reply.sections['Error'] !== undefined) {
       throw new Error(`MCP tool ${name} failed: ${(reply.sections['Error'] ?? reply.raw).trim()}`);
     }

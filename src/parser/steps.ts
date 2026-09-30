@@ -1,11 +1,9 @@
-import { ENV, type Action, type ValueRef } from '../model/test-model.js';
-import { normKey, synonymsOf, type ParserConfig } from './config.js';
-import { parseAssertions, type ParsedAssertion } from './assertions.js';
+import { type Action, ENV, type ValueRef } from '../model/test-model.js';
+import { type ParsedAssertion, parseAssertions } from './assertions.js';
+import { normKey, type ParserConfig, synonymsOf } from './config.js';
 import { extractTarget, type Target } from './target.js';
-import { isSecret, lookupData, parseValue, type DataBinding } from './test-data.js';
-import {
-  clean, containsPhrase, findQuoted, looksLikeUrl, matchLeading, protectQuotes, removePhrases, unquote,
-} from './text.js';
+import { type DataBinding, isSecret, lookupData, parseValue } from './test-data.js';
+import { clean, containsPhrase, findQuoted, looksLikeUrl, matchLeading, protectQuotes, removePhrases, unquote } from './text.js';
 
 /**
  * One tester step → an action (FR-PA-02, FR-PA-09, FR-PA-10) or, for "Observe…"/"Verify…", checks (FR-PA-06).
@@ -60,10 +58,17 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
   let t = clean(text);
   for (let lead = leadingNoise(t, ctx); lead !== undefined; lead = leadingNoise(t, ctx)) t = lead;
 
-  const checkVerb = matchLeading(t, lexicon.assertionVerbs.map((v) => [v, v] as [string, string]), true);
+  const checkVerb = matchLeading(
+    t,
+    lexicon.assertionVerbs.map((v) => [v, v] as [string, string]),
+    true,
+  );
   if (checkVerb) return { kind: 'checks', checks: parseAssertions(t, ctx.config, true) };
 
-  const subject = matchLeading(t, lexicon.subjects.map((w) => [w, w] as [string, string]));
+  const subject = matchLeading(
+    t,
+    lexicon.subjects.map((w) => [w, w] as [string, string]),
+  );
   const body = subject?.rest || t;
 
   const browser = (['back', 'forward'] as const).find((a) => containsPhrase(body, lexicon.browserPhrases[a]));
@@ -87,14 +92,21 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
 
 function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): ParsedAction {
   switch (verb) {
-    case 'navigate': return navigate(rest, ctx);
-    case 'fill': return fill(rest, ctx);
-    case 'select': return select(rest, ctx);
-    case 'upload': return upload(rest, ctx);
-    case 'refresh': return { action: 'refresh', alternatives: [], warnings: [] };
+    case 'navigate':
+      return navigate(rest, ctx);
+    case 'fill':
+      return fill(rest, ctx);
+    case 'select':
+      return select(rest, ctx);
+    case 'upload':
+      return upload(rest, ctx);
+    case 'refresh':
+      return { action: 'refresh', alternatives: [], warnings: [] };
     case 'press': {
       const key = parseKey(rest, ctx);
-      return key ? { action: 'press', key, alternatives: [], warnings: [] } : unparsed('UNKNOWN_KEY', `"${rest}" is not a key name, e.g. Enter, Tab, Escape, Control+A.`);
+      return key
+        ? { action: 'press', key, alternatives: [], warnings: [] }
+        : unparsed('UNKNOWN_KEY', `"${rest}" is not a key name, e.g. Enter, Tab, Escape, Control+A.`);
     }
     case 'click': {
       if (/^(?:press|hit)$/i.test(phrase)) {
@@ -106,7 +118,8 @@ function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): 
       }
       return withTarget('click', rest, ctx);
     }
-    default: return withTarget(verb, rest, ctx);
+    default:
+      return withTarget(verb, rest, ctx);
   }
 }
 
@@ -219,8 +232,10 @@ function select(rest: string, ctx: StepContext): ParsedAction {
   const t = extractTarget(rest, ctx.config);
   if (!t.target) return unparsed('NO_TARGET', 'Say which option to select and from which dropdown, e.g. Select "India" from Country.');
   const hit = lookupData(ctx.data, [t.target, ...t.alternatives], ctx.config);
-  if (hit) return { action: 'select', target: t.target, alternatives: t.alternatives, exact: t.exact, roleHint: t.roleHint, value: hit.ref, warnings: t.warnings };
-  if (t.roleHint === 'combobox') return unparsed('NO_VALUE', `Say which option to select, e.g. Select "…" from ${t.target}, or add ${t.target}=… to Test Data.`);
+  if (hit)
+    return { action: 'select', target: t.target, alternatives: t.alternatives, exact: t.exact, roleHint: t.roleHint, value: hit.ref, warnings: t.warnings };
+  if (t.roleHint === 'combobox')
+    return unparsed('NO_VALUE', `Say which option to select, e.g. Select "…" from ${t.target}, or add ${t.target}=… to Test Data.`);
   // No "from": the tester is choosing a radio button or checkbox by its label.
   return { action: 'check', target: t.target, alternatives: t.alternatives, exact: t.exact, roleHint: t.roleHint, warnings: t.warnings };
 }
@@ -238,7 +253,11 @@ function upload(rest: string, ctx: StepContext): ParsedAction {
 
 /** "Enter", "the Tab key", "Ctrl + A" → Playwright key names. Returns undefined if any part is not a key. */
 export function parseKey(text: string, ctx: StepContext): string | undefined {
-  const t = unquote(clean(text).replace(/^(?:the\s+)?/i, '').replace(/\s+(?:key|button)$/i, ''));
+  const t = unquote(
+    clean(text)
+      .replace(/^(?:the\s+)?/i, '')
+      .replace(/\s+(?:key|button)$/i, ''),
+  );
   const parts = t.split(/\s*\+\s*/).filter(Boolean);
   if (!parts.length) return undefined;
   const keys = parts.map((part) => {
@@ -271,7 +290,10 @@ function secondAction(rest: string, ctx: StepContext): string | undefined {
 }
 
 function leadingNoise(text: string, ctx: StepContext): string | undefined {
-  const hit = matchLeading(text, ctx.config.lexicon.leadingNoise.map((w) => [w, w] as [string, string]));
+  const hit = matchLeading(
+    text,
+    ctx.config.lexicon.leadingNoise.map((w) => [w, w] as [string, string]),
+  );
   return hit?.rest ? hit.rest : undefined;
 }
 
@@ -295,4 +317,3 @@ function action(a: ParsedAction | { action: Action }): LineResult {
 function titleCase(text: string): string {
   return text.replace(/\b\w/g, (c) => c.toUpperCase());
 }
-

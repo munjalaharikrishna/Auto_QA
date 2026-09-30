@@ -43,10 +43,20 @@ for (const m of models) {
   console.log(unparsed ? `   ⚠ ${unparsed} item(s) need the tester` : '   ✔ ready for exploration');
 
   if (m.preconditions.length) {
-    console.log('   Preconditions: ' + m.preconditions.map((p) => (p.kind === 'flow' ? `flow "${p.name}"` : p.kind === 'logged-in' ? `logged in${p.user ? ` as ${p.user}` : ''}` : p.kind)).join(', '));
+    console.log(
+      '   Preconditions: ' +
+        m.preconditions
+          .map((p) => (p.kind === 'flow' ? `flow "${p.name}"` : p.kind === 'logged-in' ? `logged in${p.user ? ` as ${p.user}` : ''}` : p.kind))
+          .join(', '),
+    );
   }
   if (Object.keys(m.data).length) {
-    console.log('   Data: ' + Object.entries(m.data).map(([k, v]) => `${k}=${v}`).join('; '));
+    console.log(
+      '   Data: ' +
+        Object.entries(m.data)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('; '),
+    );
   }
   for (const item of executionOrder(m)) console.log('   ' + describe(item));
   for (const w of m.warnings) console.log(`   ${w.code === 'UNPARSED' ? '✖' : '⚠'} ${w.at ? `${w.at} ` : ''}${w.code}: ${w.text}`);
@@ -73,9 +83,14 @@ function describe(item: Step | Assertion): string {
     return `${mark} ${s.id.padEnd(4)} ${parts.filter(Boolean).join(' ')}`;
   }
   const a = item as Assertion;
-  const what = a.type === 'url' || a.type === 'url-unchanged'
-    ? (a.expected ? (a.match === 'page' ? `page "${a.expected}"` : a.expected) : '')
-    : [element(a), a.expected !== undefined && a.type !== 'health' ? `"${a.expected}"` : ''].filter(Boolean).join(' ');
+  const what =
+    a.type === 'url' || a.type === 'url-unchanged'
+      ? a.expected
+        ? a.match === 'page'
+          ? `page "${a.expected}"`
+          : a.expected
+        : ''
+      : [element(a), a.expected !== undefined && a.type !== 'health' ? `"${a.expected}"` : ''].filter(Boolean).join(' ');
   const from = a.step ? ` (step ${a.step.slice(1)})` : '';
   return `${mark} ${a.id.padEnd(4)} EXPECT  ${a.negated ? 'NOT ' : ''}${a.type} ${what}${from}`.trimEnd();
 }
@@ -88,9 +103,13 @@ function element(x: Step | Assertion): string {
 
 function value(v: ValueRef): string {
   switch (v.kind) {
-    case 'literal': return `"${v.value}"`;
-    case 'env': return `env ${v.name}`;
-    case 'data': return `data ${v.key}`;
-    case 'generator': return `{{${v.name}}}`;
+    case 'literal':
+      return `"${v.value}"`;
+    case 'env':
+      return `env ${v.name}`;
+    case 'data':
+      return `data ${v.key}`;
+    case 'generator':
+      return `{{${v.name}}}`;
   }
 }

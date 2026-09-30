@@ -26,7 +26,10 @@ describe('snapshot parsing (FR-LO-01)', () => {
   it('builds the tree from indentation', () => {
     const form = byRef(saucedemo, 'e9');
     assert.equal(form.role, 'form');
-    assert.deepEqual(form.children.map((c) => c.ref), ['e11', 'e13', 'e15']);
+    assert.deepEqual(
+      form.children.map((c) => c.ref),
+      ['e11', 'e13', 'e15'],
+    );
     assert.equal(byRef(saucedemo, 'e11').parent, form);
   });
 
@@ -48,13 +51,10 @@ describe('snapshot parsing (FR-LO-01)', () => {
   });
 
   it('lists only element kinds a tester can use', () => {
-    assert.deepEqual(listElements(saucedemo).map((n) => `${n.role}:${n.name}`), [
-      'textbox:Username',
-      'textbox:Password',
-      'button:Login',
-      'heading:Accepted usernames are:',
-      'heading:Password for all users:',
-    ]);
+    assert.deepEqual(
+      listElements(saucedemo).map((n) => `${n.role}:${n.name}`),
+      ['textbox:Username', 'textbox:Password', 'button:Login', 'heading:Accepted usernames are:', 'heading:Password for all users:'],
+    );
   });
 });
 

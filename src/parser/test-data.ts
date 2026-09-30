@@ -1,5 +1,5 @@
 import type { ValueRef } from '../model/test-model.js';
-import { normKey, synonymsOf, type ParserConfig } from './config.js';
+import { normKey, type ParserConfig, synonymsOf } from './config.js';
 import { phraseRegex, splitList, unquote } from './text.js';
 
 /**
@@ -84,7 +84,11 @@ export function isSecret(name: string, config: ParserConfig): boolean {
 
 /** "Wrong Password" → TEST_WRONG_PASSWORD */
 export function envNameFor(name: string): string {
-  const snake = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const snake = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return `TEST_${snake}`;
 }
 
@@ -102,8 +106,7 @@ export function lookupData(
 ): DataBinding | undefined {
   const words = qualifier ? config.lexicon.fillQualifiers[qualifier.kind].map(normKey) : [];
   const prefixes = qualifier?.kind === 'negative' ? words : [...words, ''];
-  const keys = (list: (n: string) => string[]) =>
-    prefixes.flatMap((p) => names.flatMap((n) => list(n).map((k) => p + k)));
+  const keys = (list: (n: string) => string[]) => prefixes.flatMap((p) => names.flatMap((n) => list(n).map((k) => p + k)));
 
   const candidates = [...keys((n) => [normKey(n)]), ...(options.synonyms === false ? [] : keys((n) => synonymsOf(config, n)))];
   for (const key of candidates) {

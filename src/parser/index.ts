@@ -1,8 +1,14 @@
 import {
-  RawTestCaseSchema, TEST_TYPES, TestModelSchema,
-  type Assertion, type ModelWarning, type RawTestCase, type Step, type TestModel,
+  type Assertion,
+  type ModelWarning,
+  type RawTestCase,
+  RawTestCaseSchema,
+  type Step,
+  TEST_TYPES,
+  type TestModel,
+  TestModelSchema,
 } from '../model/test-model.js';
-import { parseAssertions, type ParsedAssertion } from './assertions.js';
+import { type ParsedAssertion, parseAssertions } from './assertions.js';
 import { defaultParserConfig, type ParserConfig } from './config.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
@@ -44,21 +50,23 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
     }
     const a = parsed.action;
     warnings.push(...a.warnings.map((w) => ({ at: id, ...w })));
-    steps.push(compact({
-      id,
-      action: a.action,
-      target: a.target,
-      alternatives: a.alternatives,
-      exact: a.exact,
-      roleHint: a.roleHint,
-      value: a.value,
-      url: a.url,
-      page: a.page,
-      key: a.key,
-      raw: lineText,
-      status: a.action && !a.reason ? 'parsed' : 'unparsed',
-      reason: a.reason,
-    }));
+    steps.push(
+      compact({
+        id,
+        action: a.action,
+        target: a.target,
+        alternatives: a.alternatives,
+        exact: a.exact,
+        roleHint: a.roleHint,
+        value: a.value,
+        url: a.url,
+        page: a.page,
+        key: a.key,
+        raw: lineText,
+        status: a.action && !a.reason ? 'parsed' : 'unparsed',
+        reason: a.reason,
+      }),
+    );
   }
 
   for (const line of splitList(raw.expected, { semicolons: true }).flatMap(splitSentences)) {

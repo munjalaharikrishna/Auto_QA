@@ -130,7 +130,7 @@ export function nearbyText(node: SnapshotNode): string | undefined {
     return s && (s.role === 'text' || (s.role === 'generic' && !s.children.length)) ? s.text?.trim() || undefined : undefined;
   };
   const textAfterFirst = ['checkbox', 'radio', 'switch'].includes(node.role);
-  return textAfterFirst ? textAt(i + 1) ?? textAt(i - 1) : textAt(i - 1) ?? textAt(i + 1);
+  return textAfterFirst ? (textAt(i + 1) ?? textAt(i - 1)) : (textAt(i - 1) ?? textAt(i + 1));
 }
 
 /** Readable context for a node, e.g. `form "Login"`, so testers can tell duplicates apart. */

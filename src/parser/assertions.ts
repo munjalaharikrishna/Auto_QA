@@ -1,10 +1,7 @@
 import type { AssertionType } from '../model/test-model.js';
 import type { ParserConfig } from './config.js';
 import { cleanName, extractTarget, stripArticles, type Target } from './target.js';
-import {
-  clean, containsPhrase, findQuoted, hasProtectedQuote, looksLikeUrl, matchLeading, phraseRegex,
-  protectQuotes, splitOutsideQuotes,
-} from './text.js';
+import { clean, containsPhrase, findQuoted, hasProtectedQuote, looksLikeUrl, matchLeading, phraseRegex, protectQuotes, splitOutsideQuotes } from './text.js';
 
 /**
  * Turns a check into an assertion (FR-PA-06, FR-PA-07, FR-PA-08).
@@ -52,7 +49,11 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   const p = protectQuotes(clean(text));
   let s = p.text;
 
-  const verb = matchLeading(s, lexicon.assertionVerbs.map((v) => [v, v] as [string, string]), true);
+  const verb = matchLeading(
+    s,
+    lexicon.assertionVerbs.map((v) => [v, v] as [string, string]),
+    true,
+  );
   if (verb) {
     s = verb.rest;
     bare = true;
@@ -61,7 +62,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
 
   // "Error message: Invalid credentials": the text after the colon is taken as written, like a quote,
   // so words such as "do not" inside the message are not read as negation.
-  const labelled = /^(?:an?\s+|the\s+)?(?:(?:error|success|warning|info|validation)\s+)?(?:message|error|text|alert|toast|notification|banner|title|heading)\s*[:=]\s*(.+)$/i.exec(s);
+  const labelled =
+    /^(?:an?\s+|the\s+)?(?:(?:error|success|warning|info|validation)\s+)?(?:message|error|text|alert|toast|notification|banner|title|heading)\s*[:=]\s*(.+)$/i.exec(
+      s,
+    );
   if (labelled) {
     return { type: 'text', expected: expectedText(p.restore(labelled[1])), alternatives: [], negated: false, warnings: [] };
   }
@@ -83,7 +87,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     .replace(/\b(?:should|must|will|shall|can|could)\s+/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
-  const subject = matchLeading(s, lexicon.subjects.map((w) => [w, w] as [string, string]));
+  const subject = matchLeading(
+    s,
+    lexicon.subjects.map((w) => [w, w] as [string, string]),
+  );
   if (subject?.rest) s = subject.rest;
 
   const result = (r: Omit<ParsedAssertion, 'negated' | 'alternatives' | 'warnings'> & Partial<ParsedAssertion>): ParsedAssertion => ({
@@ -115,7 +122,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
 
   // 2. Goes to a page.
   if (
-    (m = /^(?:is\s+|are\s+|gets\s+|was\s+)?(?:redirected|navigated|taken|sent|moved|brought|directed|forwarded|routed)\s+(?:back\s+)?(?:to|towards)\s+(.+)$/i.exec(s)) ||
+    (m =
+      /^(?:is\s+|are\s+|gets\s+|was\s+)?(?:redirected|navigated|taken|sent|moved|brought|directed|forwarded|routed)\s+(?:back\s+)?(?:to|towards)\s+(.+)$/i.exec(
+        s,
+      )) ||
     (m = /^(?:lands?|landed|landing|arrives?)\s+(?:on|at)\s+(.+)$/i.exec(s)) ||
     (m = /^(?:open|opens|access|accesses|reach|reaches|visit|visits|(?:navigate|navigates|go|goes|get|gets)\s+to)\s+(.+)$/i.exec(s))
   ) {
@@ -140,7 +150,12 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   }
 
   // 4. Element state.
-  if ((m = /^(.+?)\s+(?:is\s+|are\s+|becomes?\s+|gets\s+|remains?\s+|stays?\s+)?(enabled|disabled|checked|unchecked|selected|ticked|unticked|greyed out|grayed out)$/i.exec(s))) {
+  if (
+    (m =
+      /^(.+?)\s+(?:is\s+|are\s+|becomes?\s+|gets\s+|remains?\s+|stays?\s+)?(enabled|disabled|checked|unchecked|selected|ticked|unticked|greyed out|grayed out)$/i.exec(
+        s,
+      ))
+  ) {
     const state = m[2].toLowerCase();
     if (state === 'enabled') return withTarget('enabled', m[1]);
     if (state === 'disabled' || state.endsWith('out')) return withTarget('disabled', m[1]);
@@ -164,16 +179,30 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     }
 
     let target: string | undefined;
-    const where = /^(?:in|under|below|above|near|next to|inside|within|on|beside)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(afterRest);
+    const where = /^(?:in|under|below|above|near|next to|inside|within|on|beside)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(
+      afterRest,
+    );
     const owner = /^(.+?)\s+(?:shows|displays|contains|has|reads|says|shows the text|displays the text)$/i.exec(before);
     if (where) target = where[1];
     else if (owner) target = owner[1];
     const t = target ? extractTarget(target, config) : undefined;
-    return result({ type: 'text', expected: q.value, target: t?.target, alternatives: t?.alternatives ?? [], roleHint: t?.roleHint, warnings: t?.warnings ?? [] });
+    return result({
+      type: 'text',
+      expected: q.value,
+      target: t?.target,
+      alternatives: t?.alternatives ?? [],
+      roleHint: t?.roleHint,
+      warnings: t?.warnings ?? [],
+    });
   }
 
   // 6. Message text without quotes: "A message saying Saved is shown".
-  if ((m = /\b(?:message|error|text|alert|notification|toast|banner)\s+(?:saying|stating|reading|that says|which says|with text|with the text|containing)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(s))) {
+  if (
+    (m =
+      /\b(?:message|error|text|alert|notification|toast|banner)\s+(?:saying|stating|reading|that says|which says|with text|with the text|containing)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(
+        s,
+      ))
+  ) {
     return result({ type: 'text', expected: expectedText(p.restore(m[1])) });
   }
 
@@ -194,7 +223,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   if (vague) {
     return unparsed('VAGUE_CHECK', `"${vague}" cannot be checked. Say what the user sees, e.g. Error "…" is shown, or User is redirected to Dashboard.`);
   }
-  return unparsed('NO_PATTERN', 'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled.');
+  return unparsed(
+    'NO_PATTERN',
+    'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled.',
+  );
 }
 
 function isRoleWord(text: string, config: ParserConfig): boolean {
@@ -207,4 +239,3 @@ function expectedText(text: string): string {
   const q = findQuoted(text);
   return q ? q.value : clean(text);
 }
-

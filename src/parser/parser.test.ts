@@ -12,21 +12,38 @@ const pick = <T extends object>(o: T, keys: Array<keyof T>) => Object.fromEntrie
 describe('step splitting (FR-IN-03)', () => {
   it('splits numbered steps in one line and across lines', () => {
     assert.deepEqual(splitNumbered('1. Open Home 2) Click Login\n3. Enter Email'), [
-      { n: 1, text: 'Open Home' }, { n: 2, text: 'Click Login' }, { n: 3, text: 'Enter Email' },
+      { n: 1, text: 'Open Home' },
+      { n: 2, text: 'Click Login' },
+      { n: 3, text: 'Enter Email' },
     ]);
   });
   it('does not read "step" at the end of a line as a step marker', () => {
-    assert.deepEqual(splitNumbered('1. Reach the payment step\n2. Click Pay').map((l) => l.text), ['Reach the payment step', 'Click Pay']);
+    assert.deepEqual(
+      splitNumbered('1. Reach the payment step\n2. Click Pay').map((l) => l.text),
+      ['Reach the payment step', 'Click Pay'],
+    );
   });
   it('only splits on the next number in sequence', () => {
-    assert.deepEqual(splitNumbered('1. Enter 5. Then wait\n2. Click Go').map((l) => l.text), ['Enter 5. Then wait', 'Click Go']);
+    assert.deepEqual(
+      splitNumbered('1. Enter 5. Then wait\n2. Click Go').map((l) => l.text),
+      ['Enter 5. Then wait', 'Click Go'],
+    );
   });
   it('joins wrapped lines in a numbered cell and splits plain lines', () => {
-    assert.deepEqual(splitNumbered('1. Click the\nLogin button\n2. Go').map((l) => l.text), ['Click the Login button', 'Go']);
-    assert.deepEqual(splitNumbered('- Open Home\n- Click Login').map((l) => l.n), [1, 2]);
+    assert.deepEqual(
+      splitNumbered('1. Click the\nLogin button\n2. Go').map((l) => l.text),
+      ['Click the Login button', 'Go'],
+    );
+    assert.deepEqual(
+      splitNumbered('- Open Home\n- Click Login').map((l) => l.n),
+      [1, 2],
+    );
   });
   it('keeps the tester numbers as step ids (FR-GE-03)', () => {
-    assert.deepEqual(tc({ steps: 'Step 1: Open Home page\nStep 2: Click Login' }).steps.map((s) => s.id), ['S1', 'S2']);
+    assert.deepEqual(
+      tc({ steps: 'Step 1: Open Home page\nStep 2: Click Login' }).steps.map((s) => s.id),
+      ['S1', 'S2'],
+    );
   });
 });
 
@@ -47,7 +64,11 @@ describe('action lexicon and targets (FR-PA-02, FR-PA-03)', () => {
     assert.deepEqual(pick(step('Select "Option 2" from the dropdown list'), ['target', 'roleHint']), { target: 'dropdown list', roleHint: 'combobox' });
   });
   it('treats quoted names as exact', () => {
-    assert.deepEqual(pick(step("Click the 'Browse Opportunities' link"), ['target', 'exact', 'roleHint']), { target: 'Browse Opportunities', exact: true, roleHint: 'link' });
+    assert.deepEqual(pick(step("Click the 'Browse Opportunities' link"), ['target', 'exact', 'roleHint']), {
+      target: 'Browse Opportunities',
+      exact: true,
+      roleHint: 'link',
+    });
   });
   it('reads press as a key or a click', () => {
     assert.deepEqual(pick(step('Press Enter'), ['action', 'key']), { action: 'press', key: 'Enter' });
@@ -56,7 +77,10 @@ describe('action lexicon and targets (FR-PA-02, FR-PA-03)', () => {
   });
   it('reads select from a dropdown, or as choosing a radio/checkbox', () => {
     assert.deepEqual(pick(step('Select "India" from Country dropdown'), ['action', 'target', 'roleHint', 'value']), {
-      action: 'select', target: 'Country', roleHint: 'combobox', value: { kind: 'literal', value: 'India' },
+      action: 'select',
+      target: 'Country',
+      roleHint: 'combobox',
+      value: { kind: 'literal', value: 'India' },
     });
     assert.deepEqual(pick(step('Select Male'), ['action', 'target']), { action: 'check', target: 'Male' });
     assert.equal(step('Select Country dropdown').reason?.code, 'NO_VALUE');
@@ -72,12 +96,18 @@ describe('action lexicon and targets (FR-PA-02, FR-PA-03)', () => {
 describe('alternatives and noise (FR-PA-04, FR-PA-05)', () => {
   it('reads alternative names', () => {
     assert.deepEqual(step('Click Apply to the Network (or Apply)').alternatives, ['Apply']);
-    assert.deepEqual(pick(step('Enter Email Address (Email)', 'Email=a@b.com'), ['target', 'alternatives']), { target: 'Email Address', alternatives: ['Email'] });
+    assert.deepEqual(pick(step('Enter Email Address (Email)', 'Email=a@b.com'), ['target', 'alternatives']), {
+      target: 'Email Address',
+      alternatives: ['Email'],
+    });
     assert.deepEqual(pick(step('Click Login / Sign in'), ['target', 'alternatives']), { target: 'Login', alternatives: ['Sign in'] });
   });
   it('ignores arrows, fillers and note brackets, with a warning', () => {
     const m = tc({ steps: '1. Click Apply → as applicable\n2. Click Save (optional)' });
-    assert.deepEqual(m.steps.map((s) => s.target), ['Apply', 'Save']);
+    assert.deepEqual(
+      m.steps.map((s) => s.target),
+      ['Apply', 'Save'],
+    );
     assert.ok(m.warnings.some((w) => w.at === 'S1' && w.code === 'FILLER_REMOVED'));
     assert.ok(m.warnings.some((w) => w.at === 'S2' && w.code === 'BRACKET_IGNORED'));
   });
@@ -133,10 +163,16 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
 
   it('turns check steps into assertions linked to their step', () => {
     const m = tc({ steps: '1. Open Home page\n2. Observe Registration page\n3. Click Next' });
-    assert.deepEqual(m.steps.map((s) => s.id), ['S1', 'S3']);
+    assert.deepEqual(
+      m.steps.map((s) => s.id),
+      ['S1', 'S3'],
+    );
     assert.deepEqual(pick(m.assertions[0], ['type', 'target', 'roleHint', 'step']), { type: 'visible', target: 'Registration', roleHint: 'page', step: 'S2' });
     // A2 is the Expected Result check, A3 the built-in health check: both run after the last step.
-    assert.deepEqual(executionOrder(m).map((i) => i.id), ['S1', 'A1', 'S3', 'A2', 'A3']);
+    assert.deepEqual(
+      executionOrder(m).map((i) => i.id),
+      ['S1', 'A1', 'S3', 'A2', 'A3'],
+    );
   });
   it('reads url checks', () => {
     assert.deepEqual(shape(check('User is redirected to Dashboard')), { type: 'url', expected: 'Dashboard', match: 'page', negated: false });
@@ -145,14 +181,40 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
     assert.equal(check('User stays on the same page').expected, undefined);
   });
   it('reads text, visible, state and value checks', () => {
-    assert.deepEqual(shape(check('Error "This email is already registered" is shown')), { type: 'text', expected: 'This email is already registered', negated: false });
+    assert.deepEqual(shape(check('Error "This email is already registered" is shown')), {
+      type: 'text',
+      expected: 'This email is already registered',
+      negated: false,
+    });
     assert.deepEqual(shape(check('Error message: Invalid credentials')), { type: 'text', expected: 'Invalid credentials', negated: false });
-    assert.deepEqual(shape(check('Error message: Username and password do not match')), { type: 'text', expected: 'Username and password do not match', negated: false });
-    assert.deepEqual(shape(check('"Required" is displayed under Email field')), { type: 'text', target: 'Email', roleHint: 'textbox', expected: 'Required', negated: false });
-    assert.deepEqual(shape(check("The 'Save' button should be displayed")), { type: 'visible', target: 'Save', roleHint: 'button', exact: true, negated: false });
+    assert.deepEqual(shape(check('Error message: Username and password do not match')), {
+      type: 'text',
+      expected: 'Username and password do not match',
+      negated: false,
+    });
+    assert.deepEqual(shape(check('"Required" is displayed under Email field')), {
+      type: 'text',
+      target: 'Email',
+      roleHint: 'textbox',
+      expected: 'Required',
+      negated: false,
+    });
+    assert.deepEqual(shape(check("The 'Save' button should be displayed")), {
+      type: 'visible',
+      target: 'Save',
+      roleHint: 'button',
+      exact: true,
+      negated: false,
+    });
     assert.deepEqual(shape(check('Continue button is disabled')), { type: 'disabled', target: 'Continue', roleHint: 'button', negated: false });
     assert.deepEqual(shape(check('Remember me is unchecked')), { type: 'checked', target: 'Remember me', negated: true });
-    assert.deepEqual(shape(check('Email field contains "a@b.com"')), { type: 'value', target: 'Email', roleHint: 'textbox', expected: 'a@b.com', negated: false });
+    assert.deepEqual(shape(check('Email field contains "a@b.com"')), {
+      type: 'value',
+      target: 'Email',
+      roleHint: 'textbox',
+      expected: 'a@b.com',
+      negated: false,
+    });
   });
   it('reads negative checks', () => {
     assert.deepEqual(shape(check('User cannot open Personal')), { type: 'url', expected: 'Personal', match: 'page', negated: true });
@@ -163,9 +225,15 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
     assert.deepEqual(shape(check('Error "You cannot proceed" is shown')), { type: 'text', expected: 'You cannot proceed', negated: false });
   });
   it('splits joined checks only when every part is a check', () => {
-    assert.deepEqual(tc({ expected: 'User is redirected to Dashboard and Welcome is displayed' }).assertions.map((a) => a.type), ['url', 'visible', 'health']);
+    assert.deepEqual(
+      tc({ expected: 'User is redirected to Dashboard and Welcome is displayed' }).assertions.map((a) => a.type),
+      ['url', 'visible', 'health'],
+    );
     assert.deepEqual(check('Terms and Conditions link is displayed').target, 'Terms and Conditions');
-    assert.deepEqual(tc({ expected: 'Error is shown. User stays on Login page; Save is disabled' }).assertions.map((a) => a.type), ['visible', 'url-unchanged', 'disabled', 'health']);
+    assert.deepEqual(
+      tc({ expected: 'Error is shown. User stays on Login page; Save is disabled' }).assertions.map((a) => a.type),
+      ['visible', 'url-unchanged', 'disabled', 'health'],
+    );
   });
   it('adds the health check to every test (FR-VAL-04)', () => {
     assert.deepEqual(pick(tc({}).assertions.at(-1)!, ['type', 'source']), { type: 'health', source: 'builtin' });
@@ -174,8 +242,18 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
 
 describe('unparsed steps (FR-PA-11)', () => {
   it('marks steps no rule matches, with a reason and a warning', () => {
-    const m = tc({ steps: '1. Login with valid credentials\n2. Enter email and click Continue\n3. Enter username and password', expected: 'User is logged in successfully' });
-    assert.deepEqual(m.steps.map((s) => [s.status, s.reason?.code]), [['unparsed', 'NO_ACTION'], ['unparsed', 'MULTIPLE_ACTIONS'], ['unparsed', 'MULTIPLE_FIELDS']]);
+    const m = tc({
+      steps: '1. Login with valid credentials\n2. Enter email and click Continue\n3. Enter username and password',
+      expected: 'User is logged in successfully',
+    });
+    assert.deepEqual(
+      m.steps.map((s) => [s.status, s.reason?.code]),
+      [
+        ['unparsed', 'NO_ACTION'],
+        ['unparsed', 'MULTIPLE_ACTIONS'],
+        ['unparsed', 'MULTIPLE_FIELDS'],
+      ],
+    );
     assert.equal(m.assertions[0].reason?.code, 'VAGUE_CHECK');
     assert.equal(m.warnings.filter((w) => w.code === 'UNPARSED').length, 4);
   });
@@ -184,12 +262,15 @@ describe('unparsed steps (FR-PA-11)', () => {
 describe('preconditions (FR-PF-01)', () => {
   it('reads fresh context, login state and flows', () => {
     const m = tc({ preconditions: 'Unauthenticated visitor; Logged in as "admin" user\nUser is on Registration page\nApplication is accessible' });
-    assert.deepEqual(m.preconditions.map((p) => ({ ...p, raw: undefined })), [
-      { kind: 'fresh-context', raw: undefined },
-      { kind: 'logged-in', user: 'admin', raw: undefined },
-      { kind: 'flow', name: 'On Registration page', raw: undefined },
-      { kind: 'note', raw: undefined },
-    ]);
+    assert.deepEqual(
+      m.preconditions.map((p) => ({ ...p, raw: undefined })),
+      [
+        { kind: 'fresh-context', raw: undefined },
+        { kind: 'logged-in', user: 'admin', raw: undefined },
+        { kind: 'flow', name: 'On Registration page', raw: undefined },
+        { kind: 'note', raw: undefined },
+      ],
+    );
   });
 });
 

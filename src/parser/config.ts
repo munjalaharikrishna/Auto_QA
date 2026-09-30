@@ -11,8 +11,17 @@ const wordMap = z.record(z.string(), z.string());
 
 const LexiconSchema = z.object({
   actions: z.object({
-    navigate: words, fill: words, clear: words, click: words, select: words, check: words,
-    uncheck: words, hover: words, upload: words, press: words, refresh: words,
+    navigate: words,
+    fill: words,
+    clear: words,
+    click: words,
+    select: words,
+    check: words,
+    uncheck: words,
+    hover: words,
+    upload: words,
+    press: words,
+    refresh: words,
   }),
   browserPhrases: z.object({ back: words, forward: words }),
   assertionVerbs: words,
@@ -81,7 +90,9 @@ function stripComments(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stripComments);
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).filter(([k]) => !k.startsWith('$')).map(([k, v]) => [k, stripComments(v)]),
+      Object.entries(value)
+        .filter(([k]) => !k.startsWith('$'))
+        .map(([k, v]) => [k, stripComments(v)]),
     );
   }
   return value;
