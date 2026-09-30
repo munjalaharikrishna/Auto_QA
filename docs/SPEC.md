@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.4 |
+| **Spec version** | 1.5 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -65,6 +65,10 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D12** | Check the MCP tool names at startup and **pin the MCP version**. | Tool inputs change between versions (e.g. `ref` → `target` in v0.0.83). |
 | **D13** | All MCP capability groups are on (72 tools in v0.0.83). The platform calls a tool only where code uses it. The two tools that run arbitrary page code (`browser_run_code_unsafe`, `browser_evaluate`) are **off** unless explicitly allowed. | The extra tools help later milestones (`browser_generate_locator` for FR-LO-07, `browser_storage_state` for login reuse, tracing/video for evidence). Arbitrary code breaks NFR-02. |
 | **D14** | **API tests do not use MCP or a browser.** They are parsed into the same Test Model and generated as Playwright Test specs that use Playwright's built-in API client (`request` / `APIRequestContext`). | An API has no UI to explore, and Playwright MCP has no tool to send requests. The same runner, reports and CI serve both kinds of test. |
+| **D15** | The **generated project holds only what a test needs to run**: pages, tests, locators, fixtures, data, config, reporter and `reports/`. The document's §9 `utils/` (test-parser, locator-engine, result-validator, evidence-manager, script-generator) are **platform** components and are not copied into it. The run-time parts of result validation and evidence live in `fixtures/test.fixture.ts` and `reporters/`. | The generated project never parses or explores, so it has no use for them (D5). One copy of the engine means one place to fix it. |
+| **D16** | The locator repository is **one file per Page Object** (`locators/login.locators.json` for `LoginPage`), not one file per feature and not one file for everything. | The document shows both of the other layouts (§7 per feature, §9 a single `locator-repository.json`). Per page matches the POM: each Page Object loads its own file, and two features that share a page share its locators. |
+| **D17** | **[Generate & Execute Test]** (document §3) means generate → review → **Approve & Execute**. Review is never skipped in V1. | §11 and §12 require review before execution, and a wrong locator gives a false PASS/FAIL (D6). Optional auto-approve is FR-RV-08 (V2). |
+| **D18** | The form's **Browser** field (document §1, §28) is shown from V1 with only **Chromium** enabled; Firefox and WebKit are enabled in V3. The choice applies to **execution**; exploration always uses Chromium (D8). | The MVP keeps one browser, and the field is in the form from day one so the input does not change later. |
 
 ## 5. Test case input format
 
@@ -80,6 +84,17 @@ Every test case, however it is imported, becomes these fields:
 | Test data | no | `Email=existing.registered@example.com` |
 | Expected result | yes | Error "This email is already registered" is shown |
 | Requirement ID | no (V4) | `REQ-REG-001` |
+| Scenario ID | no (V4) | `SC-REG-003` (the test scenario the case belongs to, FR-EN-01) |
+
+**Run settings.** The web form (FR-IN-04) also asks for the settings a run needs, as in the document's §3 example. They belong to the environment, not to the test case, so an imported sheet does not need them.
+
+| Setting | Required | Stored as |
+|---|---|---|
+| Application URL | yes | `BASE_URL` of the environment |
+| Username | yes, if the app needs a login | `TEST_USERNAME` (FR-ENV-05) |
+| Password | yes, if the app needs a login | `TEST_PASSWORD`; the field is masked and never shown again (FR-ENV-05) |
+| Browser | yes (Chromium in V1, D18) | Playwright project used for execution |
+| Environment | from V2 | Which environment's settings to use (FR-ENV-02) |
 
 ### 5.1 API test cases (V2)
 
@@ -109,7 +124,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases |
 | FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping |
 | FR-IN-03 | Steps in one cell are split on numbering (`1.`, `2)`) and line breaks | V1 | A cell with "1. … 2. … 3. …" gives 3 steps |
-| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc) | V1 | Form fields as in §5 |
+| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc), with the run settings: Application URL, Username, Password and Browser | V1 | Form fields and run settings as in §5; one click starts generation (D17) |
 | FR-IN-05 | Import from **Jira** (Xray/Zephyr) | V2 | Pull test cases by project/filter |
 | FR-IN-06 | Import from **TestRail** | V2 | Pull test cases by suite |
 | FR-IN-07 | Re-import updates changed test cases (matched by ID) and shows what changed | V2 | Changed steps are flagged for re-generation |
@@ -130,6 +145,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-PA-10 | **Data binding**: "valid username" → `env.TEST_USERNAME`; quoted value → literal; value from Test Data column; `{{unique.email}}` → generated | V1 (env, literal, column) · V2 (generators) | Secrets are never literal in the model · ✅ Parsed (M2), generators included |
 | FR-PA-11 | Steps that match no rule are marked **UNPARSED** with a reason. No guessing. | V1 | Shown as a warning in review · ✅ Parsed (M2) |
 | FR-PA-12 | Synonyms table (JSON, editable): username ↔ email ↔ user id; login ↔ sign in ↔ log in; continue ↔ next ↔ proceed | V1 | Team can add entries without code changes · ✅ Parsed (M2) |
+| FR-PA-13 | **Table steps and checks**: act in a row found by its text (`Click Edit in the row containing "Jason"`), check a cell (`Email in the row containing "Jason" is "jsmith@gmail.com"`), the row count (`Users table has 4 rows`), or that the table shows a text | V2 | Parsed into a step or check with a `row` qualifier; locators are row-scoped (FR-LO-13) |
 
 ### 6.3 Test case quality check (FR-QC)
 
@@ -191,6 +207,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage · ✅ Done (M3): named from the tester's page name, else the path, else the title |
 | FR-LO-11 | Store a **fingerprint** (role, name, label, tag, key attributes, parent form) for recovery | V1 | ✅ Built (M3); saved to the locator repository in M5 |
 | FR-LO-12 | Scoped locators when needed (`form "Login"` → `getByRole('form').getByRole('button', …)`) to make a locator unique | V2 | |
+| FR-LO-13 | **Row-scoped locators** for tables: `getByRole('row').filter({ hasText: 'Jason' }).getByRole('link', { name: 'edit' })`, and cells by their column header | V2 | The 8 identical "edit" links on the-internet `/tables` resolve by row, not by position |
 
 ### 6.8 Locator repository (FR-LR) · §7
 
@@ -211,6 +228,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-RV-04 | Show the generated code with a diff against the previous version | V1 | |
 | FR-RV-05 | Edits to steps flow back into the Test Model (not only the code) | V1 | |
 | FR-RV-06 | Approve locator-healing proposals (FR-REC) | V3 | |
+| FR-RV-07 | **Re-discover** a saved test (document §11: UI change, explicit request): explore again for all or chosen steps, compare the new locators with the repository and show the differences for approval | V2 | Only changed locators are updated; unchanged ones keep their history |
+| FR-RV-08 | Optional per-project **auto-approve**: a generated test with no NEEDS_REVIEW step, no UNPARSED item and no warning is approved and run without the review screen | V2 | Off by default (D17) |
 
 ### 6.10 Code generation (FR-GE) · §9, §10
 
@@ -218,9 +237,11 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 |---|---|---|---|
 | FR-GE-01 | Template-based generation (Handlebars + Prettier) | V1 | |
 | FR-GE-02 | Page Objects: `pages/<Name>Page.ts` with locators and action methods | V1 | Matches the §10 example |
+| FR-GE-10 | **Action methods** (document §10, §30 "reusable actions"), by fixed rules: (1) a run of fill / select / check steps on one page that ends with a click or Enter on the same page becomes **one method named after that click** (`Login` → `login()`, `Save changes` → `saveChanges()`); (2) each filled value is a parameter, named after its field (`username`, `password`); (3) any other step becomes a one-action method (`openCart()`, `selectCountry(value)`); (4) checks stay in the spec file, using the page's locators. The spec passes secrets as `process.env.X!` | V1 | The §3 login test generates `LoginPage.login(username, password)` and the spec in document §10 |
+| FR-GE-11 | A method with the same name and the same steps is reused; the same name with different steps gets a number (`login2`) and a warning in review | V1 | Deterministic (FR-GE-06) |
 | FR-GE-03 | Specs: `tests/<name>.spec.ts`. Each step is a `test.step('S2: Enter username', …)` | V1 | Results map back to the tester's step numbers |
 | FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | |
-| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files | V1 | `npx playwright test` works standalone |
+| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files, and a `reports/` folder (git-ignored) for each run's HTML report, results and evidence | V1 | `npx playwright test` works standalone (D15) |
 | FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff |
 | FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Adding a test adds methods, keeps the old ones |
 | FR-GE-08 | Each approval is a git commit in the generated project | V2 | |
@@ -286,6 +307,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-ENV-02 | Several environments: Development, QA, Staging, UAT, Production | V2 | Same test, different env |
 | FR-ENV-03 | **Page name → URL map** per environment (e.g. `Home → /`, `Opportunities → /opportunities`) | V2 | "Open Opportunities page" works in any env |
 | FR-ENV-04 | Secrets encrypted at rest (AES-GCM), shown masked in the UI | V2 | |
+| FR-ENV-05 | **V1 credential storage** (document §30 "enter credentials securely"): the username and password from the form are written only to the generated project's `.env`, which is git-ignored, and passed to the run as environment variables. They are never stored in the database, the Test Model, generated code, logs or reports. The password field is masked and never sent back to the browser. | V1 | A search of the database, the git history and the reports finds no password. Replaced by encrypted storage in V2 (FR-ENV-04) |
 
 ### 6.17 History and reporting (FR-HI) · §20
 
@@ -310,7 +332,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-EN-01 | **Requirement traceability**: Requirement → Test Case → Automation → Execution → Result → Defect | V4 | |
+| FR-EN-01 | **Requirement traceability**: Requirement → Test Scenario → Test Case → Automation → Execution → Result → Defect (document §25) | V4 | `REQ-REG-001 → SC-REG-003 → TC-REG-014 → AUTO-REG-014 → EXEC-2026-00124 → FAIL → BUG-REG-032` |
+| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given |
 | FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | Reuses the API steps from §6.21 inside a UI test |
 | FR-EN-03 | Create a Jira defect from a failed run, with evidence attached | V4 | |
 | FR-EN-04 | Push results back to Jira/TestRail | V4 | |
@@ -364,8 +387,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | Version | Theme | Main features |
 |---|---|---|
-| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation · run in Chromium · expected vs actual · health check · screenshot · masking |
-| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits · **API tests** (requests, auth profiles, checks, chaining) |
+| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation with **action methods** · run settings in the form (URL, credentials, browser) · credentials only in a git-ignored `.env` · run in Chromium · expected vs actual · health check · screenshot · masking |
+| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits · **API tests** (requests, auth profiles, checks, chaining) · **table steps and checks** · **re-discover** a saved test · optional auto-approve |
 | **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · API contract checks + OpenAPI/Postman import · **team mode** (server, login, roles, PostgreSQL) |
 | **V4 · Enterprise QA** | Connected to the QA process | Traceability · API + UI hybrid · Cucumber · Jira defects + result sync · CI/CD · scheduled runs · dashboards |
 | **Backlog** | Ideas, not planned | See §12 |
@@ -399,6 +422,9 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 | **Flow** | A named, reusable sequence of steps used as a precondition |
 | **Fingerprint** | Stored facts about an element used to find it again after the UI changes |
 | **NEEDS_REVIEW** | A step the platform could not resolve safely; the tester decides |
+| **Action method** | A Page Object method that performs one step or a group of steps, e.g. `login(username, password)` (FR-GE-10) |
+| **Re-discovery** | Exploring a saved test again to refresh its locators after the UI changed (FR-RV-07) |
+| **Run settings** | Application URL, credentials, browser and environment for a run. They belong to the environment, not the test case (§5) |
 | **API test** | A test case that sends HTTP requests and checks the responses, with no browser (§6.21) |
 | **API client** | Generated class with one method per endpoint a test uses; the API equivalent of a Page Object |
 | **Auth profile** | A named way to authenticate API requests in an environment (bearer, basic, API key), with values from secrets |
@@ -407,7 +433,7 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 
 ## 10. Data model (summary)
 
-Project · Environment · Secret · TestCase · TestModelVersion · Flow · PageObject · Locator · LocatorChange · Suite · Execution · StepResult · Evidence · ImportMapping · (V4) Requirement · Defect.
+Project · Environment · Secret · TestCase · TestModelVersion · Flow · PageObject · Locator · LocatorChange · Suite · Execution · StepResult · Evidence · ImportMapping · (V4) Requirement · Scenario · Defect.
 The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 
 ---
@@ -460,3 +486,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.2 | 2026-09-29 | M2 done: parser and Test Model. Added a `clear` action and a `checked` assertion type. "Select X" without "from" is read as choosing a radio/checkbox. Secret-looking test data keys become env vars (`Wrong Password` → `TEST_WRONG_PASSWORD`), and a password typed in a step is unparsed (`SECRET_LITERAL`). |
 | 1.3 | 2026-09-30 | Added API testing (§5.1, §6.21 FR-API, D14): API tests skip MCP and run with Playwright's `request` client; core in V2, contract checks and OpenAPI/Postman import in V3. D13: all 72 MCP tools on, unsafe tools off by default. Open questions Q5–Q7. |
 | 1.4 | 2026-09-30 | M3 done: locator matching, ladder and Locator Probe on a Chrome shared with MCP over CDP. An unnamed field just after a heading is named by it (lower score). Position-based locators rank last; generated-looking ids are not used for CSS. FR-LO-07 uses `browser_generate_locator` now; code after an action comes in M4. |
+| 1.5 | 2026-09-30 | Checked against every section of `Auto_QA.docx`. Added: run settings in the form (§5, FR-IN-04), V1 credential storage (FR-ENV-05), table steps and row-scoped locators (FR-PA-13, FR-LO-13), POM action methods (FR-GE-10, FR-GE-11), re-discovery and optional auto-approve (FR-RV-07, FR-RV-08), `reports/` folder (FR-GE-05), Test Scenario level and stable IDs (FR-EN-01, FR-EN-06). Recorded where the spec differs from the document: D15 (no `utils/` in the generated project), D16 (one locator file per page), D17 (Generate & Execute still reviews), D18 (Browser field with Chromium only in V1). |

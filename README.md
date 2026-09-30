@@ -6,7 +6,7 @@ Turns manual test cases into Playwright + Page Object automation. Playwright MCP
 
 | File | What it is |
 |---|---|
-| [docs/SPEC.md](docs/SPEC.md) | Full specification: every feature (FR-…) by version, key decisions (D1–D14), API testing, non-functional rules, tester writing guide, backlog |
+| [docs/SPEC.md](docs/SPEC.md) | Full specification: every feature (FR-…) by version, key decisions (D1–D18), API testing, non-functional rules, tester writing guide, backlog |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture diagrams (Mermaid): components, MCP orchestration, flows, data model, deployment, architecture by version |
 | [docs/architecture.html](docs/architecture.html) | Visual architecture page. Open in a browser (needs internet for the diagrams). |
 

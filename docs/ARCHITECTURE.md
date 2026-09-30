@@ -351,7 +351,8 @@ erDiagram
   EXECUTION ||--o{ STEP_RESULT : records
   EXECUTION ||--o{ EVIDENCE : captures
   USER ||--o{ EXECUTION : starts
-  REQUIREMENT }o--o{ TEST_CASE : "traces (V4)"
+  REQUIREMENT ||--o{ SCENARIO : "splits into (V4)"
+  SCENARIO ||--o{ TEST_CASE : "groups (V4)"
   EXECUTION ||--o| DEFECT : "raises (V4)"
 ```
 
@@ -450,10 +451,23 @@ workspaces/<app-name>/     own git repo, runs without the platform
   fixtures/test.fixture.ts          health check, evidence hooks
   data/login.data.ts
   reporters/auto-qa-reporter.ts
+  reports/                          git-ignored: HTML report, results, evidence per run
   playwright.config.ts
+  .env                              git-ignored: credentials from the form (FR-ENV-05)
   .env.example                      BASE_URL, TEST_USERNAME, TEST_PASSWORD
   package.json
 ```
+
+The generated project has no `utils/` folder (D15): parsing, locator discovery and code generation stay in the platform. Locators are one file per Page Object (D16).
+
+**Action methods (FR-GE-10).** The generator groups steps into Page Object methods by fixed rules, so the same test always gives the same methods:
+
+| Steps on one page | Becomes |
+|---|---|
+| Enter username, Enter password, Click Login | `login(username: string, password: string)` |
+| Select country, Click Save changes | `saveChanges(country: string)` |
+| Click Cart (alone) | `openCart()` |
+| Verify Products heading is visible | stays in the spec: `await expect(inventoryPage.productsHeading).toBeVisible()` |
 
 ## 12. Deployment
 
