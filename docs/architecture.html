@@ -1,0 +1,604 @@
+<title>Auto QA Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#EAEFED; --ink:#15201C; --muted:#56655F; --line:#D3DBD7;
+  --accent:#0E7563; --accent-soft:#DDF0EB; --mcp:#A5621A; --mcp-soft:#F7EAD9;
+  --run:#3553A8; --run-soft:#E3E9F8; --store:#6B4E9B; --store-soft:#ECE6F5;
+  --ok:#1D7A3E; --bad:#B3261E;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0E1412; --surface:#151D1A; --sunk:#1B2521; --ink:#E3ECE8; --muted:#95A6A0; --line:#2A3833;
+  --accent:#43C3AA; --accent-soft:#16342D; --mcp:#E3A558; --mcp-soft:#382818;
+  --run:#8CA6F0; --run-soft:#1C2540; --store:#B79BE6; --store-soft:#2A2140; --ok:#5BCB7F; --bad:#F28B82;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1412; --surface:#151D1A; --sunk:#1B2521; --ink:#E3ECE8; --muted:#95A6A0; --line:#2A3833;
+  --accent:#43C3AA; --accent-soft:#16342D; --mcp:#E3A558; --mcp-soft:#382818;
+  --run:#8CA6F0; --run-soft:#1C2540; --store:#B79BE6; --store-soft:#2A2140; --ok:#5BCB7F; --bad:#F28B82;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--body);padding-inline:20px;padding-block:0 64px}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:68ch}
+code,pre,.mono{font-family:var(--mono);font-size:13px}
+code{background:var(--sunk);padding:1px 5px;border-radius:4px}
+a{color:var(--accent)}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.ref{font:500 11px/1 var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:3px 5px;white-space:nowrap}
+header.top{padding-block:48px 28px;border-bottom:1px solid var(--line);display:grid;gap:16px}
+header.top .lede{font-size:17px;color:var(--muted);max-width:72ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 14px;padding-block:14px;border-bottom:1px solid var(--line);font-size:13.5px}
+nav.toc a{color:var(--muted);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+section{padding-block:44px 8px;display:grid;gap:18px}
+.sechead{display:grid;gap:8px}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.principle{border-top:3px solid var(--accent);background:var(--surface);padding:14px 16px;display:grid;gap:6px;align-content:start}
+.principle b{font-family:var(--display);font-size:15px}
+.principle span{color:var(--muted);font-size:14px}
+
+/* Layered architecture diagram */
+.arch{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:10px;overflow-x:auto}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:stretch;min-width:720px}
+.layer .lname{font:600 11.5px/1.3 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:10px}
+.layer .lname small{display:block;text-transform:none;letter-spacing:0;font-weight:400;margin-top:4px}
+.boxes{display:flex;flex-wrap:wrap;gap:8px}
+.box{flex:1 1 150px;border:1px solid var(--line);background:var(--sunk);border-radius:6px;padding:9px 11px;display:grid;gap:2px}
+.box b{font-size:13.5px}
+.box span{font-size:12px;color:var(--muted);line-height:1.4}
+.box.core{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.box.mcp{background:var(--mcp-soft);border-color:color-mix(in srgb,var(--mcp) 40%,transparent)}
+.box.run{background:var(--run-soft);border-color:color-mix(in srgb,var(--run) 35%,transparent)}
+.box.store{background:var(--store-soft);border-color:color-mix(in srgb,var(--store) 35%,transparent)}
+.boundary{min-width:720px;margin-left:164px;border-top:2px dashed var(--mcp);position:relative;height:0;margin-block:6px}
+.boundary span{position:absolute;top:-10px;left:12px;background:var(--surface);padding:0 8px;font:600 11px/20px var(--body);color:var(--mcp);letter-spacing:.06em;text-transform:uppercase}
+.arrowrow{min-width:720px;margin-left:164px;color:var(--muted);font-size:12px;text-align:center;line-height:1}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid var(--line)}
+
+.callout{border-left:3px solid var(--mcp);background:var(--mcp-soft);padding:14px 18px;display:grid;gap:8px;border-radius:0 6px 6px 0}
+.callout.green{border-color:var(--accent);background:var(--accent-soft)}
+.callout b{font-family:var(--display)}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;gap:10px;align-content:start;min-width:0}
+.panel pre.mermaid{background:transparent;margin:0;overflow-x:auto;font-family:var(--body)}
+
+/* component cards */
+.comps{display:grid;gap:14px}
+.comp{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:grid;gap:10px}
+.comp .chead{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;justify-content:space-between}
+.comp .kind{font:600 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
+.kind.core{color:var(--accent)} .kind.mcp{color:var(--mcp)} .kind.run{color:var(--run)} .kind.store{color:var(--store)}
+.comp ul,.comp ol{margin:0;padding-left:20px;display:grid;gap:4px;max-width:78ch}
+.comp p{color:var(--ink)}
+.io{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.io b{color:var(--ink);font-weight:600}
+
+pre.code{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;line-height:1.55}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11.5px/1.3 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td code{white-space:nowrap}
+.retry-yes{color:var(--ok);font-weight:600}.retry-no{color:var(--bad);font-weight:600}
+
+.roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.ver{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:8px;align-content:start}
+.ver.mvp{border:2px solid var(--accent)}
+.ver .vn{font:800 13px/1 var(--display);color:var(--accent);letter-spacing:.04em}
+.ver ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:3px}
+.ver .adds{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+
+.risks{display:grid;gap:10px}
+.risk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:6px 20px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.risk b{font-size:14.5px}
+.risk span{color:var(--muted);font-size:14px}
+@media (max-width:640px){.risk{grid-template-columns:1fr}}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">System architecture · v1.1 · Auto_QA.docx §1–30 + agreed decisions · requirement IDs in SPEC.md</div>
+  <h1>Auto QA: manual test case to Playwright framework</h1>
+  <p class="lede">A deterministic TypeScript platform that turns a written test case into a reviewed, reusable Playwright + POM project, runs it, and reports expected vs actual with evidence. Playwright MCP is only the browser exploration and interaction layer. The platform owns everything else, and nothing in it needs an AI API key.</p>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#principles">Principles</a><a href="#overview">System overview</a><a href="#orchestration">MCP orchestration</a><a href="#flows">Two modes</a><a href="#components">Components</a><a href="#model">Test model</a><a href="#data">Data model</a><a href="#projects">Code layout</a><a href="#stack">Tech stack</a><a href="#roadmap">Roadmap</a><a href="#milestones">Milestones</a><a href="#risks">Risks & decisions</a>
+</nav>
+
+<section id="principles">
+  <div class="sechead"><div class="eyebrow">Ground rules from the document</div><h2>Design principles</h2></div>
+  <div class="principles">
+    <div class="principle"><b>No AI agent: the platform is the MCP client</b><span>The test case is already the plan. Rule-based code follows it step by step and calls the MCP tools itself. <span class="ref">D1</span></span></div>
+    <div class="principle"><b>Ask, don't guess</b><span>A vague step, an element with no match, or two equal matches stop the process. The tester picks the element on a screenshot. <span class="ref">D6</span></span></div>
+    <div class="principle"><b>The platform owns the lifecycle</b><span>Parsing, modeling, locators, codegen, execution, validation, reporting and history live in platform code. MCP only explores and interacts. <span class="ref">§5 §26</span></span></div>
+    <div class="principle"><b>Deterministic, no AI key</b><span>Rule-based parsing, scored locator matching and template codegen. A local model can be an optional plug-in later, never a requirement. <span class="ref">§27</span></span></div>
+    <div class="principle"><b>Generate once, run many</b><span>Generation mode and execution mode are separate. MCP is called again only for a new test, a locator failure, or an explicit re-discovery. <span class="ref">§11</span></span></div>
+    <div class="principle"><b>Validated before stored</b><span>A locator enters the repository only after the uniqueness, visibility and actionability checks pass. <span class="ref">§6 §7</span></span></div>
+    <div class="principle"><b>Tester stays in control</b><span>Nothing runs until the tester approves it. The parser never invents steps or assertions the tester didn't write. <span class="ref">§12 §19</span></span></div>
+    <div class="principle"><b>Secrets never in code</b><span>Credentials are injected as <code>process.env</code> at run time and masked in reports. <span class="ref">§16</span></span></div>
+  </div>
+</section>
+
+<section id="overview">
+  <div class="sechead"><div class="eyebrow">Logical view</div><h2>System overview</h2>
+  <p>Six layers. The dashed line marks the boundary from §26: everything above it is your platform, and below it is Playwright.</p></div>
+  <div class="arch" role="img" aria-label="Layered architecture diagram">
+    <div class="layer"><div class="lname">Presentation<small>React SPA</small></div><div class="boxes">
+      <div class="box"><b>Import & Column Mapping</b><span>Excel/CSV (V1), Jira/TestRail (V2)</span></div>
+      <div class="box"><b>Test Case Editor</b><span>Preconditions, steps, test data, expected</span></div>
+      <div class="box"><b>Review & Pick Element</b><span>Plan, locators, code diff; Approve / Edit / Regenerate</span></div>
+      <div class="box"><b>Live Run View</b><span>Step-by-step status over WebSocket</span></div>
+      <div class="box"><b>History & Reports</b><span>Runs, evidence, trace viewer link</span></div>
+      <div class="box"><b>Suites & Environments</b><span>Regression sets, env configs, secrets</span></div>
+    </div></div>
+    <div class="arrowrow">▼ REST + WebSocket ▼</div>
+    <div class="layer"><div class="lname">API & orchestration<small>Node.js · Fastify</small></div><div class="boxes">
+      <div class="box core"><b>API Gateway</b><span>Auth, validation, DTOs</span></div>
+      <div class="box core"><b>Job Orchestrator</b><span>Generation / execution / recovery jobs (queue)</span></div>
+      <div class="box core"><b>Event Bus</b><span>Step events → UI stream</span></div>
+      <div class="box core"><b>Secrets Service</b><span>Encrypted per-env credentials</span></div>
+    </div></div>
+    <div class="arrowrow">▼ jobs ▼</div>
+    <div class="layer"><div class="lname">Core engines<small>pure TypeScript packages</small></div><div class="boxes">
+      <div class="box core"><b>Importer</b><span>Excel, CSV, Jira, TestRail</span></div>
+      <div class="box core"><b>Test Case Parser</b><span>Text → structured model</span></div>
+      <div class="box core"><b>Quality Checker</b><span>Vague steps, no start, duplicates</span></div>
+      <div class="box core"><b>Test Model + Flows</b><span>Versioned JSON, reusable preconditions</span></div>
+      <div class="box core"><b>Exploration Controller</b><span>Guided dry-run, step by step</span></div>
+      <div class="box core"><b>Locator Engine</b><span>Candidates → score → validate</span></div>
+      <div class="box core"><b>Script & Framework Generator</b><span>Templates → POM, specs, data, config</span></div>
+      <div class="box core"><b>Execution Manager</b><span>Runs Playwright Test, collects results</span></div>
+      <div class="box core"><b>Result Validator</b><span>Expected vs actual per assertion</span></div>
+      <div class="box core"><b>Failure Classifier</b><span>Rule-based categories</span></div>
+      <div class="box core"><b>Recovery Engine</b><span>Controlled locator self-healing</span></div>
+      <div class="box core"><b>Evidence Manager & Reporter</b><span>Artifacts, masking, HTML/JSON report</span></div>
+      <div class="box"><b>AssistProvider</b><span>Optional AI extension point, no-op (decide later)</span></div>
+    </div></div>
+    <div class="boundary"><span>Platform ↑ · Playwright ↓</span></div>
+    <div class="layer"><div class="lname">Browser adapters<small>the only code that touches a browser</small></div><div class="boxes">
+      <div class="box mcp"><b>MCP Client Adapter</b><span>@modelcontextprotocol/sdk → Playwright MCP server (stdio)</span></div>
+      <div class="box mcp"><b>Locator Probe</b><span>Playwright library: count / visible / enabled checks</span></div>
+      <div class="box run"><b>Test Runner Adapter</b><span>Spawns <code>npx playwright test</code> + custom reporter</span></div>
+    </div></div>
+    <div class="layer"><div class="lname">Playwright<small>unchanged, off the shelf</small></div><div class="boxes">
+      <div class="box mcp"><b>Playwright MCP server</b><span>navigate, snapshot, click, type, select, screenshot</span></div>
+      <div class="box run"><b>Playwright Test</b><span>projects (browsers), workers (parallel), trace, video</span></div>
+      <div class="box run"><b>Chromium · Firefox · WebKit</b><span>+ device emulation later</span></div>
+    </div></div>
+    <div class="layer"><div class="lname">Storage</div><div class="boxes">
+      <div class="box store"><b>Relational DB</b><span>SQLite (MVP) → PostgreSQL</span></div>
+      <div class="box store"><b>Generated project repo</b><span>Git: every locator change is a commit</span></div>
+      <div class="box store"><b>Artifact store</b><span>Screenshots, traces, video: disk → S3/MinIO</span></div>
+      <div class="box store"><b>Secret store</b><span>AES-GCM encrypted at rest</span></div>
+    </div></div>
+  </div>
+  <div class="legend"><span><i style="background:var(--accent-soft)"></i>Platform-owned</span><span><i style="background:var(--mcp-soft)"></i>Exploration (MCP)</span><span><i style="background:var(--run-soft)"></i>Execution (Playwright Test)</span><span><i style="background:var(--store-soft)"></i>Persistence</span></div>
+  <div class="callout">
+    <b>Key decision: MCP without an LLM</b>
+    <p>Playwright MCP is usually driven by an LLM that reads the page snapshot and decides what to click. Here the platform is the MCP client instead. It calls the tools directly (<code>browser_navigate</code>, <code>browser_snapshot</code>, <code>browser_click</code>, <code>browser_type</code>…) and uses deterministic code to match each step against the returned accessibility snapshot. Locator <em>validation</em> goes through the Playwright library (the Locator Probe), because the check has to use the same engine and locator syntax as the generated test. Both adapters sit behind one <code>BrowserExplorer</code> interface, so either one can be swapped out.</p>
+  </div>
+</section>
+
+<section id="orchestration">
+  <div class="sechead"><div class="eyebrow">How MCP is controlled without an AI · D1, D7, D12</div><h2>MCP orchestration</h2>
+  <p>In Cursor, an AI agent decides which MCP tool to call. In Auto QA, three parts of the platform make those decisions with fixed rules.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Job</th><th>In Cursor</th><th>In Auto QA</th></tr></thead>
+    <tbody>
+      <tr><td>Understand the test case</td><td>AI agent</td><td><b>Parser</b> builds the Test Model before the browser opens</td></tr>
+      <tr><td>Find the element on the page</td><td>AI agent reads the snapshot</td><td><b>Locator Engine</b> scores the snapshot's elements (name, synonyms, nearby text, role)</td></tr>
+      <tr><td>Pick the next tool, check the result</td><td>AI agent</td><td><b>Step State Machine</b>: locate → validate → act → verify → settle</td></tr>
+    </tbody></table></div>
+  <div class="two">
+    <div class="panel"><h3>Step state machine</h3>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> LOCATE
+  LOCATE --> VALIDATE: best candidate
+  LOCATE --> NEEDS_REVIEW: no match or ambiguous
+  VALIDATE --> ACT: unique, visible, actionable
+  VALIDATE --> LOCATE: next locator on ladder
+  ACT --> VERIFY_EFFECT
+  VERIFY_EFFECT --> SETTLE: value set or page changed
+  VERIFY_EFFECT --> NEEDS_REVIEW: nothing happened
+  SETTLE --> DONE: loaded, idle, stable
+  NEEDS_REVIEW --> LOCATE: tester picked element
+  DONE --> [*]
+</pre></div>
+    <div class="panel"><h3>Action → MCP tool <span class="ref">@playwright/mcp 0.0.83</span></h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Step action</th><th>MCP tool</th></tr></thead>
+        <tbody>
+          <tr><td>navigate / open URL</td><td><code>browser_navigate</code></td></tr>
+          <tr><td>back</td><td><code>browser_navigate_back</code></td></tr>
+          <tr><td>fill</td><td><code>browser_type</code> · <code>browser_fill_form</code></td></tr>
+          <tr><td>click / check / radio</td><td><code>browser_click</code></td></tr>
+          <tr><td>select</td><td><code>browser_select_option</code></td></tr>
+          <tr><td>hover / key / upload</td><td><code>browser_hover</code> · <code>browser_press_key</code> · <code>browser_file_upload</code></td></tr>
+          <tr><td>dialog / tabs</td><td><code>browser_handle_dialog</code> · <code>browser_tabs</code></td></tr>
+          <tr><td>before every step</td><td><code>browser_snapshot</code></td></tr>
+          <tr><td>evidence</td><td><code>browser_take_screenshot</code> · <code>browser_console_messages</code> · <code>browser_network_requests</code></td></tr>
+        </tbody></table></div>
+      <p style="color:var(--muted);font-size:13.5px">Actions take <code>target</code> (the snapshot ref, e.g. <code>e15</code>). Older versions called it <code>ref</code>, which is why tool names are checked at startup.</p>
+    </div>
+  </div>
+  <div class="callout green"><b>Codegen's role</b><p>Playwright Codegen records a person in its own browser. It can't see what MCP does, it hard-codes passwords, and it creates no POM. So it doesn't write scripts here. It is only a "pick locator" backup in review. MCP already reports the Playwright code of every action it runs, and the platform uses that as an extra locator candidate. <span class="ref">D4</span></p></div>
+</section>
+
+<section id="flows">
+  <div class="sechead"><div class="eyebrow">Process view · §11</div><h2>Two modes, plus recovery</h2>
+  <p>Generation runs once per test case, or again on request. Execution reuses the saved project and never regenerates it. Recovery is the only path that lets execution call MCP again.</p></div>
+  <div class="two">
+    <div class="panel"><h3>Generation mode</h3>
+<pre class="mermaid">
+flowchart TD
+  A0[Import Excel/CSV + column mapping] --> B[Parser]
+  B --> C[Structured Test Model]
+  C --> D{Quality check: unparsed, vague, no start?}
+  D -- yes --> R[Show in review for tester to fix]
+  D -- no --> E0[Resolve preconditions and flows]
+  E0 --> E[Exploration Controller]
+  E --> F[MCP: navigate + snapshot]
+  F --> G[Locator Engine: candidates + score]
+  G --> H[Locator Probe: validate]
+  H -- ambiguous / none --> R2[Review: pick element on screenshot]
+  R2 --> H
+  H -- valid --> I[Perform step via MCP, next step]
+  I --> F
+  I --> J[All steps done]
+  J --> K[Generator: POM + spec + data + config]
+  K --> L[Review: plan, locators, code]
+  L -- Approve --> M[Commit to project repo + locator repo]
+  L -- Edit / Regenerate --> C
+</pre></div>
+    <div class="panel"><h3>Execution mode</h3>
+<pre class="mermaid">
+flowchart TD
+  A[Saved automation + selected env/browser] --> B[Secrets injected as env vars]
+  B --> C[npx playwright test + custom reporter]
+  C --> D[Step events streamed to UI]
+  D --> E{Step failed?}
+  E -- no --> F[Result Validator: expected vs actual]
+  E -- yes --> G[Failure Classifier]
+  G -- Locator failure --> H[Recovery Engine]
+  G -- Assertion / App / Auth / Network --> F
+  H -- candidate validated --> I[Retry once, record change]
+  H -- no candidate --> F
+  I --> F
+  F --> J[Evidence Manager]
+  J --> K[PASS / FAIL report + history]
+</pre></div>
+  </div>
+  <div class="panel"><h3>Smart locator recovery (§8), as a sequence</h3>
+<pre class="mermaid">
+sequenceDiagram
+  participant T as Playwright Test
+  participant X as Execution Manager
+  participant C as Failure Classifier
+  participant R as Recovery Engine
+  participant M as Playwright MCP
+  participant L as Locator Repository
+  T->>X: step 4 failed: getByRole('button',{name:'Login'}) resolved 0 elements
+  X->>C: error + page state (URL, snapshot)
+  C-->>X: LOCATOR_FAILURE (page is the expected page, element missing)
+  X->>R: recover(locatorId, fingerprint)
+  R->>M: browser_snapshot (same page state)
+  M-->>R: accessibility tree
+  R->>R: score nodes vs stored fingerprint (role=button, form, position)
+  R->>R: validate top candidate: getByRole('button',{name:'Sign In'})
+  R->>L: propose change v2 (old → new, reason, evidence)
+  R-->>X: retry step once with new locator
+  X-->>T: result recorded as "PASS (healed)"
+</pre></div>
+</section>
+
+<section id="components">
+  <div class="sechead"><div class="eyebrow">Component view</div><h2>Components in detail</h2>
+  <p>What each engine does, and how it does it without an AI model.</p></div>
+  <div class="comps">
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §4</div><h3>Test Case Parser</h3></div><span class="ref">packages/parser</span></div>
+    <p>A rule-based pipeline turns free text into the Test Model. It never sends raw text to the browser.</p>
+    <ol>
+      <li><b>Segment</b>: split the steps on numbering, line breaks and sentence ends. Split the expected result into separate assertion sentences.</li>
+      <li><b>Normalise</b>: lower-case, strip filler words ("the", "valid", "successfully"), and keep quoted literals such as <code>'abc@x.com'</code> intact.</li>
+      <li><b>Action lexicon</b>: match the verb. <code>open / go to / navigate</code> → navigate, <code>enter / type / input / fill</code> → fill, <code>click / press / tap / submit</code> → click, <code>select / choose</code> → select, <code>check / tick</code> → check, <code>upload</code> → upload.</li>
+      <li><b>Target extraction</b>: the noun phrase after the verb, minus role words ("button", "field", "link"). The role word becomes a <code>roleHint</code>.</li>
+      <li><b>Data binding</b>: "valid username" → <code>{{env.TEST_USERNAME}}</code>, a quoted value → literal, "invalid password" → a data-file key.</li>
+      <li><b>Assertion patterns</b>: "redirected to X" → url, "X should be displayed" → visible, "message 'Y' shown" → text, "remain on login" → url-not-changed. "Observe/verify" mark a check, and "cannot/does not/rejects" make it a negative check.</li>
+      <li><b>Noise and alternatives</b>: "Apply to the Network (or Apply)" gives two candidate names; arrows and filler such as "as applicable" are dropped; browser actions (back, refresh, open URL) are supported.</li>
+    </ol>
+    <p>Any step that matches no rule is marked <code>UNPARSED</code> and shown in review. The parser doesn't guess (§19). The lexicon and synonyms are JSON files, so a team can extend them without code changes.</p>
+    <div class="io"><span><b>In</b> raw test case text</span><span><b>Out</b> TestModel v1 + parse warnings</span></div>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · FR-IN FR-QC FR-PF FR-TD</div><h3>Importer, Quality Checker, Preconditions & Test Data</h3></div><span class="ref">src/importer · src/parser</span></div>
+    <ul>
+      <li><b>Import</b>: Excel/CSV in V1, with a column-mapping screen saved per project (Title, Preconditions, Steps, Test Data, Expected). Jira and TestRail in V2. Steps in one cell are split on numbering.</li>
+      <li><b>Quality check</b>, before any browser opens: vague steps ("as applicable", "reach X step"), no starting page, and near-duplicate test cases are flagged with a suggestion.</li>
+      <li><b>Preconditions</b>: "Unauthenticated visitor" → fresh browser; "Logged in" → saved login state; "On Registration page" → a <b>reusable flow</b> (V2) generated once as a Page Object method.</li>
+      <li><b>Test data</b>: <code>Email=a@b.com</code> pairs from the Test Data column; secrets only from env vars; <code>{{unique.email}}</code> generators (V2) so record-creating tests can run twice.</li>
+    </ul>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §5 §6</div><h3>Exploration Controller + Locator Engine</h3></div><span class="ref">packages/explorer · packages/locators</span></div>
+    <p>Exploration is a <b>guided dry run</b>. The controller performs the steps in order against the real app, because the Dashboard heading only exists after Login is clicked. Before each step it takes a snapshot, finds the target, validates it, then performs the action.</p>
+    <ul>
+      <li><b>Candidate search</b>: walk the snapshot for nodes whose role fits the action (fill → textbox/combobox, click → button/link/menuitem, check → checkbox/radio). Score each node on its accessible name, label, placeholder, <code>data-testid</code>, <code>name</code>/<code>id</code> attributes against the target text, with a synonym table (username ↔ email ↔ user id ↔ login).</li>
+      <li><b>Nearby text</b>: an element with no name (e.g. a checkbox followed by plain text "checkbox 1") gets that text as a fallback name. <span class="ref">done in M1</span></li>
+      <li><b>Strategy ladder</b>: for the winning node, build locators in the §6 order: <code>getByTestId</code> → <code>getByRole</code>+name → <code>getByLabel</code> → <code>getByPlaceholder</code> → <code>getByText</code> → CSS → XPath.</li>
+      <li><b>Validation</b> (Locator Probe): <code>count()===1</code>, visible, enabled/editable, and the action is compatible. The first locator on the ladder that passes wins.</li>
+      <li><b>Ambiguity rule</b>: if the top two candidates score within a set margin of each other, pick neither. Send both to review as a choice.</li>
+      <li><b>Page grouping</b>: each element is tagged with the page it was found on (URL path + title), which decides whether it goes in <code>LoginPage</code> or <code>DashboardPage</code>.</li>
+      <li><b>Fingerprint</b>: store role, name, label, tag, key attributes and parent form. The Recovery Engine uses it later.</li>
+    </ul>
+    <div class="io"><span><b>In</b> TestModel, env URL, browser</span><span><b>Out</b> resolved steps, locator set, page map, per-step screenshots</span></div>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind store">Persistence · §7</div><h3>Locator Repository</h3></div><span class="ref">locators/*.locators.json</span></div>
+    <p>One file per page object, kept in the generated project so it is versioned with the code. The DB mirrors it for querying and history. Each entry holds more than the locator string the document shows, so that recovery and auditing are possible:</p>
+<pre class="code">{
+  "loginButton": {
+    "locator": "getByRole('button', { name: 'Login' })",
+    "strategy": "role",
+    "page": "LoginPage",
+    "validatedAt": "2026-09-29T10:14:03Z",
+    "fingerprint": { "role": "button", "name": "Login", "tag": "button", "form": "#login-form" },
+    "history": []
+  }
+}</pre>
+    <p>At execution time the generated POM imports these entries. At generation time, a validated entry found here is reused instead of exploring again.</p>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §9 §10 §16</div><h3>Script & Framework Generator</h3></div><span class="ref">packages/generator</span></div>
+    <ul>
+      <li>Template-based (Handlebars templates, output formatted by Prettier). For edits to existing files, <code>ts-morph</code> adds a method to a page class without rewriting it.</li>
+      <li>Generates or updates: <code>pages/*Page.ts</code>, <code>tests/*.spec.ts</code>, <code>data/*.data.ts</code>, <code>fixtures/test.fixture.ts</code>, <code>playwright.config.ts</code>, <code>.env.example</code>.</li>
+      <li>Each model step becomes a <code>test.step('S3: Click Login', …)</code>, so results map back to the tester's own step numbers.</li>
+      <li>Credentials are always emitted as <code>process.env.TEST_USERNAME!</code>. There is no code path that writes a literal secret.</li>
+      <li>Output is deterministic: the same model always gives byte-identical code, so review diffs are meaningful.</li>
+    </ul>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind run">Execution · §11 §18 §22</div><h3>Execution Manager</h3></div><span class="ref">packages/executor</span></div>
+    <ul>
+      <li>Spawns <code>npx playwright test --project=&lt;browser&gt; --grep=&lt;testId&gt;</code> in the generated project, with the chosen environment's variables injected into the child process only.</li>
+      <li>A <b>custom Playwright reporter</b> emits <code>onStepBegin/onStepEnd/onTestEnd</code> as JSON lines. The manager relays them to the Event Bus for the live UI.</li>
+      <li>Cross-browser runs use config <code>projects</code>, and parallel runs use <code>workers</code> / <code>fullyParallel</code>. There is no custom browser pool (§22).</li>
+      <li>Auth state: a <code>setup</code> project logs in once and saves <code>storageState</code>. Other tests start logged in (V2).</li>
+      <li>Regression suites (§21) map to a tag or a file list passed to the same command.</li>
+    </ul>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §13 §15</div><h3>Result Validator + Failure Classifier</h3></div><span class="ref">packages/results</span></div>
+    <p>"Actual" is described from captured facts, not generated prose. On any failed step the fixture records the current URL, page title, the first <code>h1</code>/heading, visible <code>role=alert</code> and <code>[aria-invalid]</code> messages, the console errors, and failed network responses. The validator fills the expected/actual template from those facts: "Expected: Dashboard should be displayed. Actual: user remained on /login; alert shown: 'Invalid credentials'."</p>
+    <p>Every test also gets a built-in <b>health check ("No crash")</b>: no uncaught page errors, no 5xx responses, no error page.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Category</th><th>Rule (checked in order)</th><th>Auto-retry?</th></tr></thead>
+      <tbody>
+        <tr><td>Environment Error</td><td>DNS/connection refused on first navigation, browser launch failure</td><td class="retry-yes">Once</td></tr>
+        <tr><td>Network Error</td><td>Failed request or 5xx on the document/XHR tied to the failing step</td><td class="retry-yes">Once</td></tr>
+        <tr><td>Application Error</td><td>Uncaught page exception, error page, 500 banner</td><td class="retry-no">No</td></tr>
+        <tr><td>Authentication Failure</td><td>Still on the login URL after the submit step, or an auth-error alert is visible</td><td class="retry-no">No</td></tr>
+        <tr><td>Test Data Error</td><td>A required env var or data key is missing, or a validation message is tied to an input</td><td class="retry-no">No</td></tr>
+        <tr><td>Locator Failure</td><td>Action error with 0 or &gt;1 matches <em>and</em> the page is the expected page</td><td class="retry-yes">Via recovery</td></tr>
+        <tr><td>Timeout</td><td>Action/navigation timeout that matches none of the rules above</td><td class="retry-yes">Once</td></tr>
+        <tr><td>Assertion Failure</td><td><code>expect</code> failed and the locators resolved: possibly a real defect</td><td class="retry-no">Never</td></tr>
+      </tbody></table></div>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §8</div><h3>Recovery Engine</h3></div><span class="ref">packages/recovery · V3</span></div>
+    <ul>
+      <li>Starts <b>only</b> for a Locator Failure, and at most once per step per run.</li>
+      <li>Asks MCP for a snapshot of the current state, scores nodes against the stored fingerprint (role and form must match, the name may differ), and validates the best candidate with the Probe.</li>
+      <li>Policy is set per project: <code>propose</code> (the default: the run is marked "healed, pending approval" and the change waits in review) or <code>auto-apply</code> (the repo is committed straight away).</li>
+      <li>Every change writes a <code>LocatorChange</code> row with old and new locator, score, run ID and screenshots, plus a git commit in the project repo.</li>
+    </ul>
+  </article>
+
+  <article class="comp">
+    <div class="chead"><div><div class="kind core">Core · §14 §16 §20</div><h3>Evidence Manager & Reporter</h3></div><span class="ref">packages/evidence</span></div>
+    <ul>
+      <li>Collects screenshots (per step in generation, on failure in execution), video, trace, console, network errors, the failed locator and assertion, URL, timestamps and duration.</li>
+      <li><b>Masking</b>: before storage, every string equal to a secret value is replaced with <code>••••</code> in logs, error messages and reports. Playwright traces record typed values, so traces from tests that type a secret are flagged <em>restricted</em> (download needs permission). Using the auth <code>setup</code> project keeps passwords out of most other traces.</li>
+      <li>Produces a JSON result for the history UI, a standalone HTML report, and a link to <code>npx playwright show-trace</code>.</li>
+    </ul>
+  </article>
+  </div>
+</section>
+
+<section id="model">
+  <div class="sechead"><div class="eyebrow">The contract between text and code · §4</div><h2>Structured Test Model</h2>
+  <p>This extends the document's example with IDs, data bindings and locator references, so each step can be traced through review, code and results.</p></div>
+<pre class="code">{
+  "id": "TC-LOGIN-001", "version": 3, "title": "Verify successful login with valid credentials",
+  "type": "positive",
+  "source": { "rawSteps": "1. Open the application...", "rawExpected": "The user should be..." },
+  "steps": [
+    { "id": "S1", "action": "navigate", "target": "application", "value": "{{env.BASE_URL}}" },
+    { "id": "S2", "action": "fill",  "target": "username", "value": "{{env.TEST_USERNAME}}", "locatorRef": "LoginPage.username" },
+    { "id": "S3", "action": "fill",  "target": "password", "value": "{{env.TEST_PASSWORD}}", "secret": true, "locatorRef": "LoginPage.password" },
+    { "id": "S4", "action": "click", "target": "Login", "roleHint": "button", "locatorRef": "LoginPage.loginButton" }
+  ],
+  "assertions": [
+    { "id": "A1", "type": "url",        "expected": "/dashboard/", "afterStep": "S4" },
+    { "id": "A2", "type": "visibility", "target": "Dashboard", "roleHint": "heading", "locatorRef": "DashboardPage.heading" }
+  ],
+  "parseWarnings": []
+}</pre>
+</section>
+
+<section id="data">
+  <div class="sechead"><div class="eyebrow">Persistence · §17 §20 §25</div><h2>Data model</h2></div>
+  <div class="panel">
+<pre class="mermaid">
+erDiagram
+  PROJECT ||--o{ ENVIRONMENT : has
+  ENVIRONMENT ||--o{ SECRET : holds
+  PROJECT ||--o{ TEST_CASE : contains
+  TEST_CASE ||--o{ TEST_MODEL_VERSION : versions
+  PROJECT ||--o{ PAGE_OBJECT : generates
+  PAGE_OBJECT ||--o{ LOCATOR : owns
+  LOCATOR ||--o{ LOCATOR_CHANGE : history
+  PROJECT ||--o{ SUITE : groups
+  SUITE }o--o{ TEST_CASE : includes
+  TEST_CASE ||--o{ EXECUTION : runs
+  EXECUTION ||--o{ STEP_RESULT : records
+  EXECUTION ||--o{ EVIDENCE : captures
+  REQUIREMENT }o--o{ TEST_CASE : traces
+  EXECUTION ||--o| DEFECT : raises
+</pre>
+  <p style="color:var(--muted);font-size:13.5px">REQUIREMENT and DEFECT arrive in V4 (traceability, Jira). The schema reserves the foreign keys from V1, so adding them later doesn't need a migration of the history.</p>
+  </div>
+</section>
+
+<section id="projects">
+  <div class="sechead"><div class="eyebrow">Deployment view · §9</div><h2>Two codebases, not one</h2>
+  <p>The folder tree in §9 puts <code>test-parser.ts</code>, <code>locator-engine.ts</code> and <code>script-generator.ts</code> inside the generated project. I recommend moving them into the platform. Then the generated project is a clean, standard Playwright repo that any QA engineer or CI server can run with <code>npx playwright test</code>, with or without the platform.</p></div>
+  <div class="two">
+    <div class="panel"><h3>Platform (you build this)</h3>
+<pre class="code">Auto_QA/                     # single package (split later if needed)
+  docs/                      # SPEC.md, ARCHITECTURE.md, this page
+  src/
+    explorer/                # ✅ MCP client, snapshot parser (M1)
+    model/  parser/          # ✅ Test Model, rules, lexicon (M2)
+    locators/                # scoring, ladder, probe (M3)
+    explorer/controller.ts   # step state machine (M4)
+    generator/               # templates/*.hbs (M5)
+    executor/ results/       # runner, reporter, validator (M6)
+    evidence/                # capture, masking, report (M6)
+    importer/ server/        # Excel/CSV, Fastify API (M7)
+    recovery/                # self-healing (V3)
+    assist/                  # AssistProvider, no-op
+    cli/                     # ✅ snapshot.ts (M1), parse.ts (M2)
+  web/                       # React UI (M7)
+  workspaces/                # one generated project per app
+</pre></div>
+    <div class="panel"><h3>Generated project (platform writes this)</h3>
+<pre class="code">workspaces/expert-portal/    # its own git repo
+  tests/
+    login.spec.ts
+    registration.spec.ts
+  pages/
+    LoginPage.ts
+    DashboardPage.ts
+  locators/
+    login.locators.json
+    dashboard.locators.json
+  fixtures/test.fixture.ts   # evidence hooks, page objects
+  data/login.data.ts         # non-secret test data
+  reporters/auto-qa-reporter.ts
+  playwright.config.ts       # projects per browser, envs
+  .env.example               # BASE_URL, TEST_USERNAME...
+  package.json
+</pre></div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="sechead"><div class="eyebrow">Technology · §27</div><h2>Tech stack</h2><p>Everything is open source and runs locally. There are no paid APIs.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Concern</th><th>Choice</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Language</td><td>TypeScript on Node.js 20+</td><td>The same language as the generated tests. Model types are shared end to end.</td></tr>
+      <tr><td>Browser exploration</td><td><code>@playwright/mcp</code> + <code>@modelcontextprotocol/sdk</code> client</td><td>Required by the document (§5). Called programmatically, not by an LLM.</td></tr>
+      <tr><td>Locator validation</td><td><code>playwright</code> library</td><td>Validates with the same engine and syntax the test uses.</td></tr>
+      <tr><td>Test execution</td><td><code>@playwright/test</code></td><td>Built-in parallelism, projects, trace, video, retries.</td></tr>
+      <tr><td>API</td><td>Fastify + <code>@fastify/websocket</code>, zod</td><td>Fast, typed, and schema validation is shared with the model package.</td></tr>
+      <tr><td>Jobs</td><td>In-process queue (MVP) → BullMQ + Redis</td><td>Exploration and runs take a long time and must not block HTTP requests.</td></tr>
+      <tr><td>DB / ORM</td><td>SQLite (MVP) → PostgreSQL, via Prisma</td><td>Zero setup for the MVP, and a simple path to multiple users.</td></tr>
+      <tr><td>Code generation</td><td>Handlebars + Prettier, <code>ts-morph</code> for edits</td><td>Deterministic, readable output (§9).</td></tr>
+      <tr><td>Fuzzy matching</td><td><code>fastest-levenshtein</code> + a token-overlap score</td><td>Matches "Login button" to the accessible name "Log in" without AI.</td></tr>
+      <tr><td>Excel/CSV import</td><td><code>exceljs</code>, <code>csv-parse</code></td><td>Reads .xlsx and .csv without Office installed.</td></tr>
+      <tr><td>Frontend</td><td>React + Vite, TanStack Query, Monaco editor</td><td>Monaco for the code review/edit screen (§12).</td></tr>
+      <tr><td>Versioning</td><td><code>simple-git</code> on the generated repo</td><td>Every approval and locator heal is an auditable commit.</td></tr>
+      <tr><td>Packaging</td><td>Docker Compose (api, worker, web, db)</td><td>Browsers pre-installed via the <code>mcr.microsoft.com/playwright</code> image.</td></tr>
+    </tbody></table></div>
+</section>
+
+<section id="roadmap">
+  <div class="sechead"><div class="eyebrow">Delivery · §28 §29</div><h2>Roadmap mapped to components</h2></div>
+  <div class="roadmap">
+    <div class="ver mvp"><div class="vn">V1 · MVP</div><h3>One test case, end to end</h3>
+      <ul><li>Excel/CSV import + column mapping</li><li>Parser: alternatives, checks, negatives, data binding, UNPARSED</li><li>Basic quality check</li><li>MCP exploration with the step state machine</li><li>Locator scoring, ladder, probe, nearby text</li><li>Review with pick element</li><li>POM + spec generation</li><li>Run in Chromium; expected vs actual; health check; screenshot; masking</li></ul>
+      <div class="adds">Single user on your laptop, SQLite, in-process jobs. Username + password logins only.</div></div>
+    <div class="ver"><div class="vn">V2</div><h3>Automation management</h3>
+      <ul><li>Jira / TestRail import</li><li>Reusable flows, unique test data</li><li>Locator repository reuse + history</li><li>Environments, page URL map, encrypted secrets</li><li>Login state reuse, suites</li><li>Trace/video, history, HTML report</li><li>Duplicate detection, git commits</li></ul>
+      <div class="adds">Adds: flows, secrets service, suites, evidence manager (full).</div></div>
+    <div class="ver"><div class="vn">V3</div><h3>Intelligent automation + team</h3>
+      <ul><li>Locator recovery (propose / auto)</li><li>Failure classification, controlled retry</li><li>Firefox, WebKit, parallel, mobile emulation</li><li>Data-driven runs</li><li><b>Team mode</b>: shared server, login, roles, PostgreSQL</li></ul>
+      <div class="adds">Adds: recovery engine, BullMQ workers, Docker Compose.</div></div>
+    <div class="ver"><div class="vn">V4</div><h3>Enterprise QA</h3>
+      <ul><li>Requirement traceability</li><li>API + UI hybrid steps</li><li>Cucumber output</li><li>Jira defects + result sync</li><li>CI/CD, scheduled runs, dashboards</li></ul>
+      <div class="adds">Backlog after V4: OTP/MFA, SSO, optional local AI helper, visual and accessibility checks, draft negative tests.</div></div>
+  </div>
+</section>
+
+<section id="milestones">
+  <div class="sechead"><div class="eyebrow">Building V1</div><h2>Milestones</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Milestone</th><th>What you can see working</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>M1</td><td>Connect to Playwright MCP and list any page's elements, with nearby-text names</td><td class="retry-yes">Done</td></tr>
+      <tr><td>M2</td><td>Parser: written test case → steps, data, checks</td><td class="retry-yes">Done</td></tr>
+      <tr><td>M3</td><td>Match a step to an element and validate the locator</td><td>Next</td></tr>
+      <tr><td>M4</td><td>Explore a full test case, save locators</td><td>Planned</td></tr>
+      <tr><td>M5</td><td>Generate Page Objects and specs</td><td>Planned</td></tr>
+      <tr><td>M6</td><td>Run with Playwright Test, PASS/FAIL report</td><td>Planned</td></tr>
+      <tr><td>M7</td><td>Web UI: import, review, results</td><td>Planned</td></tr>
+    </tbody></table></div>
+</section>
+
+<section id="risks">
+  <div class="sechead"><div class="eyebrow">Things to decide early</div><h2>Risks & open decisions</h2></div>
+  <div class="risks">
+    <div class="risk"><b>Free-text coverage of a rule parser</b><span>Rules will cover the common phrasing and miss unusual sentences. Offer a lightly structured editor (one step per row, with an optional action dropdown), show parse results live as the tester types, and add new lexicon entries whenever a step comes back unparsed.</span></div>
+    <div class="risk"><b>Exploration performs real actions</b><span>The dry run really clicks Register or Submit, which can create data. Allow exploration only on non-production environments by default, and require explicit confirmation for Production (§17).</span></div>
+    <div class="risk"><b>Ambiguous targets</b><span>"Click Save" on a page with three Save buttons. The ambiguity rule sends this to review rather than guessing. The UI should let the tester click the right element in a screenshot to choose it.</span></div>
+    <div class="risk"><b>Login scope</b><span>V1–V4 support username + password only. OTP, MFA and SSO are in the backlog. CAPTCHA must be switched off in the test environment and is never bypassed.</span></div>
+    <div class="risk"><b>MCP version changes</b><span>Tool inputs change between releases (<code>ref</code> became <code>target</code>). Pin the version and check the tool list at startup (already done in M1).</span></div>
+    <div class="risk"><b>Unlabeled elements on "any web app"</b><span>Elements with no name use nearby text first. If that fails, the tester picks the element once, and the locator is saved and reused.</span></div>
+    <div class="risk"><b>Secrets in traces</b><span>Playwright traces store typed values. Treat traces as restricted, mask the reports, and use the auth setup project so most traces contain no password.</span></div>
+    <div class="risk"><b>Auto-heal masking real defects</b><span>A renamed button can be an intentional change or a bug. Default to <code>propose</code> mode. Never heal assertion targets automatically, only action locators.</span></div>
+  </div>
+  <div class="callout green"><b>Suggested first milestone</b><p>Make the §3 login example work end to end against one known app, with Chromium only: parse → explore → validate → generate → approve → run → expected vs actual. Then add one form-heavy test (registration) to stress the parser and the locator scoring before building any V2 features.</p></div>
+</section>
+
+<footer>Architecture v1.1, from every section (1–30) of Auto_QA.docx plus the decisions in SPEC.md. § refers to the source document; D and FR IDs refer to SPEC.md.</footer>
+</div>
+<script>
+if (location.protocol === 'file:') {
+  var m = document.createElement('script');
+  m.src = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js';
+  m.onload = function () {
+    var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
+    mermaid.run({ querySelector: 'pre.mermaid' });
+  };
+  document.head.appendChild(m);
+}
+</script>

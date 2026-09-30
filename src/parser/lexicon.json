@@ -1,0 +1,93 @@
+{
+  "$comment": "Words the parser understands (FR-PA-02, FR-PA-05, FR-PA-06, FR-PA-08). Edit freely; all matching ignores case. Verbs also match their -s/-es/-ed/-ing forms.",
+
+  "actions": {
+    "navigate": ["navigate to", "navigate", "go to", "open", "visit", "launch", "browse to", "load"],
+    "fill": ["enter", "type", "input", "fill in", "fill", "provide", "key in", "write"],
+    "clear": ["clear", "empty"],
+    "click": ["click on", "click", "press", "tap on", "tap", "submit", "hit"],
+    "select": ["select", "choose", "pick"],
+    "check": ["check", "tick", "mark"],
+    "uncheck": ["uncheck", "untick", "unmark", "deselect"],
+    "hover": ["hover over", "hover on", "hover", "mouse over", "move mouse to", "move the mouse to"],
+    "upload": ["upload", "attach"],
+    "press": ["press key", "hit key"],
+    "refresh": ["refresh", "reload"]
+  },
+
+  "browserPhrases": {
+    "back": ["browser back", "browser's back", "back button of the browser", "back button in the browser", "go back", "navigate back"],
+    "forward": ["browser forward", "browser's forward", "go forward", "navigate forward"]
+  },
+
+  "assertionVerbs": [
+    "verify that", "verify", "observe that", "observe", "ensure that", "ensure", "confirm that", "confirm",
+    "validate that", "validate", "check that", "check if", "check whether", "assert that", "assert",
+    "see that", "expect that", "expect", "make sure that", "make sure"
+  ],
+
+  "assertionMarkers": [
+    "should", "must", "is displayed", "are displayed", "is shown", "are shown", "is visible", "are visible",
+    "appears", "is present", "redirected", "navigated to", "taken to", "lands on", "remains on", "remain on",
+    "stays on", "stay on", "is enabled", "is disabled", "is checked", "cannot", "can't", "unable to"
+  ],
+
+  "negations": {
+    "$comment": "Phrase → what it becomes once the negation is removed. The check is then parsed as positive and marked negated.",
+    "cannot": "", "can not": "", "can't": "", "unable to": "", "is unable to": "",
+    "does not": "", "doesn't": "", "do not": "", "don't": "", "did not": "", "didn't": "",
+    "is not": "is", "isn't": "is", "are not": "are", "aren't": "are", "was not": "was",
+    "should not": "should", "shouldn't": "should", "must not": "must", "will not": "will", "won't": "will",
+    "not": "", "never": "", "no longer": ""
+  },
+
+  "vagueOutcomes": ["rejects", "rejected", "blocked", "prevented", "works", "working", "as expected", "correctly", "properly", "successful", "successfully"],
+
+  "fillers": ["as applicable", "if applicable", "where applicable", "if required", "if needed", "if necessary", "if prompted", "if any", "successfully", "please", "properly", "accordingly"],
+
+  "bracketNoise": ["optional", "mandatory", "required", "if shown", "if visible", "if present", "if displayed", "see note", "see notes", "etc", "as applicable", "if applicable"],
+
+  "vague": ["as applicable", "if applicable", "equivalent", "etc", "and so on", "as expected", "works correctly", "appropriate", "relevant", "accordingly", "and/or", "similar"],
+
+  "roleWords": {
+    "$comment": "Role word → roleHint. An empty value means: remove the word but give no hint.",
+    "radio button": "radio", "radio": "radio",
+    "check box": "checkbox", "checkbox": "checkbox", "toggle": "switch", "switch": "switch",
+    "text field": "textbox", "text box": "textbox", "textbox": "textbox", "input field": "textbox", "input box": "textbox",
+    "input": "textbox", "field": "textbox", "textarea": "textbox", "text area": "textbox", "search box": "searchbox", "box": "textbox",
+    "drop-down list": "combobox", "dropdown list": "combobox", "drop down list": "combobox",
+    "drop-down": "combobox", "dropdown": "combobox", "drop down": "combobox", "select box": "combobox", "combo box": "combobox", "combobox": "combobox", "list box": "combobox",
+    "button": "button", "btn": "button",
+    "hyperlink": "link", "link": "link",
+    "menu item": "menuitem", "tab": "tab", "option": "option",
+    "heading": "heading", "image": "img", "icon": "",
+    "page": "page", "screen": "page"
+  },
+
+  "fillQualifiers": {
+    "positive": ["valid", "correct", "registered", "existing", "an existing", "a valid"],
+    "negative": ["invalid", "incorrect", "wrong", "unregistered", "non-existent", "nonexistent", "an invalid", "a wrong"]
+  },
+
+  "keys": {
+    "enter": "Enter", "return": "Enter", "tab": "Tab", "escape": "Escape", "esc": "Escape", "space": "Space", "spacebar": "Space",
+    "backspace": "Backspace", "delete": "Delete", "del": "Delete", "home": "Home", "end": "End",
+    "page up": "PageUp", "pageup": "PageUp", "page down": "PageDown", "pagedown": "PageDown",
+    "arrow up": "ArrowUp", "up arrow": "ArrowUp", "arrowup": "ArrowUp", "arrow down": "ArrowDown", "down arrow": "ArrowDown", "arrowdown": "ArrowDown",
+    "arrow left": "ArrowLeft", "left arrow": "ArrowLeft", "arrowleft": "ArrowLeft", "arrow right": "ArrowRight", "right arrow": "ArrowRight", "arrowright": "ArrowRight",
+    "ctrl": "Control", "control": "Control", "shift": "Shift", "alt": "Alt", "cmd": "Meta", "command": "Meta", "meta": "Meta"
+  },
+
+  "subjects": ["the user", "user", "the tester", "tester", "the visitor", "visitor", "the customer", "customer", "the system", "system", "the application", "the app", "the page", "i"],
+
+  "leadingNoise": ["then", "now", "next", "and", "also", "finally", "please"],
+
+  "appWords": ["the application", "application", "the app", "app", "the site", "site", "the website", "website", "the portal", "portal", "the base url", "base url", "the url", "url"],
+
+  "secretWords": ["password", "passcode", "pwd", "secret", "token", "api key", "apikey", "otp", "pin", "cvv"],
+
+  "preconditions": {
+    "freshContext": ["unauthenticated", "not logged in", "logged out", "anonymous", "guest", "new browser", "fresh browser", "new session", "fresh session", "not signed in", "signed out"],
+    "note": ["application is accessible", "application is up", "application is running", "browser is open", "browser is launched", "internet connection", "test environment is available", "network is available"]
+  }
+}

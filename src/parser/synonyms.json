@@ -1,0 +1,10 @@
+{
+  "$comment": "Words that mean the same thing (FR-PA-12). Used to match Test Data keys now, and element names in M3. Add a group or a word without changing code; matching ignores case, spaces and punctuation.",
+  "groups": [
+    ["username", "user name", "email", "email address", "e-mail", "user id", "userid", "login id"],
+    ["password", "pass word", "pwd", "passcode"],
+    ["login", "log in", "sign in", "signin", "log on"],
+    ["logout", "log out", "sign out", "signout", "log off"],
+    ["continue", "next", "proceed"]
+  ]
+}

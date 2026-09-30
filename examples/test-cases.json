@@ -1,0 +1,54 @@
+[
+  {
+    "id": "TC-LOGIN-001",
+    "title": "Verify a standard user can log in",
+    "type": "positive",
+    "preconditions": "Unauthenticated visitor",
+    "steps": "1. Open Login page\n2. Enter valid username\n3. Enter password\n4. Click the Login button",
+    "expected": "User is redirected to Inventory page and Products heading is displayed",
+    "row": 2
+  },
+  {
+    "id": "TC-LOGIN-002",
+    "title": "Verify a locked out user cannot log in",
+    "type": "negative",
+    "preconditions": "Unauthenticated visitor",
+    "steps": "1. Open Login page\n2. Enter Username\n3. Enter password\n4. Click Login",
+    "testData": "Username=locked_out_user",
+    "expected": "Error \"Epic sadface: Sorry, this user has been locked out.\" is shown. User stays on the Login page",
+    "row": 3
+  },
+  {
+    "id": "TC-LOGIN-003",
+    "title": "Verify a wrong password is rejected",
+    "type": "negative",
+    "steps": "1. Open https://www.saucedemo.com\n2. Enter valid username\n3. Enter wrong password\n4. Click Login",
+    "testData": "Wrong Password=not-the-password",
+    "expected": "Error message: Epic sadface: Username and password do not match any user in this service",
+    "row": 4
+  },
+  {
+    "id": "TC-CHK-001",
+    "title": "Verify checkboxes can be ticked and unticked",
+    "steps": "1. Open https://the-internet.herokuapp.com/checkboxes\n2. Check checkbox 1\n3. Uncheck checkbox 2",
+    "expected": "checkbox 1 is checked; checkbox 2 is unchecked",
+    "row": 5
+  },
+  {
+    "id": "TC-DD-001",
+    "title": "Verify an option can be chosen from the dropdown",
+    "steps": "1. Open https://the-internet.herokuapp.com/dropdown\n2. Select \"Option 2\" from the dropdown list",
+    "expected": "Dropdown list has value \"2\"",
+    "row": 6
+  },
+  {
+    "id": "TC-REG-014",
+    "title": "Verify email rejects an already registered address",
+    "type": "negative",
+    "preconditions": "Unauthenticated visitor; On Registration page",
+    "steps": "1. Enter Email (Email Address)\n2. Continue as applicable\n3. Reach the OTP step",
+    "testData": "Email=existing.registered@example.com",
+    "expected": "Error \"This email is already registered\" is shown. System rejects the email",
+    "row": 7
+  }
+]
