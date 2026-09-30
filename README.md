@@ -166,4 +166,5 @@ npm run format    # apply formatting and safe fixes
 - [x] M4: explore a full test case and save locators
 - [x] M5: generate Page Objects and specs
 - [ ] M6: run with Playwright Test and report PASS/FAIL
-- [ ] M7: web UI with Excel import and review screen
+- [ ] M6b: run a whole workbook and write PASS/FAIL and actual results into a copy of the sheet
+- [ ] M7: web UI with upload, progress, review screen and results
