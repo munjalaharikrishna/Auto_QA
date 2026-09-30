@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.2 |
-| **Date** | 2026-09-29 |
+| **Spec version** | 1.3 |
+| **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
 | **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html) |
@@ -26,6 +26,7 @@ It works **without any paid AI API**. Every decision is made by the platform's o
 - Username + password login
 - Test case import from Excel/CSV (V1) and Jira/TestRail (V2)
 - Generated code: Playwright Test + TypeScript + Page Object Model
+- **API tests** for HTTP/JSON (REST) services, written in the same sheet as UI tests (V2, §6.21)
 - Local, single-user use first; a shared team server later
 
 ### Out of scope (for now)
@@ -62,6 +63,8 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D10** | Locator self-healing is **proposed for approval** by default (not auto-applied). Assertion targets are never healed. | A changed element may be a real defect. |
 | **D11** | An AI helper is **not planned**. The code keeps one extension point (`AssistProvider`) so one could be added later. | "Decide later". The platform must be complete without it. |
 | **D12** | Check the MCP tool names at startup and **pin the MCP version**. | Tool inputs change between versions (e.g. `ref` → `target` in v0.0.83). |
+| **D13** | All MCP capability groups are on (72 tools in v0.0.83). The platform calls a tool only where code uses it. The two tools that run arbitrary page code (`browser_run_code_unsafe`, `browser_evaluate`) are **off** unless explicitly allowed. | The extra tools help later milestones (`browser_generate_locator` for FR-LO-07, `browser_storage_state` for login reuse, tracing/video for evidence). Arbitrary code breaks NFR-02. |
+| **D14** | **API tests do not use MCP or a browser.** They are parsed into the same Test Model and generated as Playwright Test specs that use Playwright's built-in API client (`request` / `APIRequestContext`). | An API has no UI to explore, and Playwright MCP has no tool to send requests. The same runner, reports and CI serve both kinds of test. |
 
 ## 5. Test case input format
 
@@ -77,6 +80,21 @@ Every test case, however it is imported, becomes these fields:
 | Test data | no | `Email=existing.registered@example.com` |
 | Expected result | yes | Error "This email is already registered" is shown |
 | Requirement ID | no (V4) | `REQ-REG-001` |
+
+### 5.1 API test cases (V2)
+
+An API test uses the same fields, with **Type = `api`** (or a first step that sends a request). Steps and checks are plain English, parsed by the same rule-based parser with an API vocabulary. No JSON knowledge is needed beyond the request body.
+
+| Field | Example |
+|---|---|
+| Title | Verify a new user can be created |
+| Type | `api` |
+| Preconditions | `Authenticated as admin` (a named auth profile, §6.21) |
+| Steps | 1. Send POST `/api/users` with body `NewUser`  2. Save response field `id` as `userId`  3. Send GET `/api/users/{{userId}}` |
+| Test data | `NewUser={"name":"Asha","role":"tester"}` |
+| Expected result | Status is 201 · Response field `name` is "Asha" · Response header `Content-Type` contains "json" |
+
+The base URL comes from the environment (FR-ENV), so steps use paths, not full URLs. Tokens and passwords come from secrets, never from the sheet (same rule as UI tests, FR-TD).
 
 ---
 
@@ -293,7 +311,7 @@ Every test case, however it is imported, becomes these fields:
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-EN-01 | **Requirement traceability**: Requirement → Test Case → Automation → Execution → Result → Defect | V4 | |
-| FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | `api` action in the model |
+| FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | Reuses the API steps from §6.21 inside a UI test |
 | FR-EN-03 | Create a Jira defect from a failed run, with evidence attached | V4 | |
 | FR-EN-04 | Push results back to Jira/TestRail | V4 | |
 | FR-EN-05 | Cucumber / Gherkin generation | V4 | Same as FR-GE-09 |
@@ -306,6 +324,22 @@ Every test case, however it is imported, becomes these fields:
 | FR-AI-02 | If added: a **local** model only (e.g. Ollama), used only at fallback points (unparsed step, low match score, recovery ranking, failure summary) | Decide later | |
 | FR-AI-03 | AI output is only a suggestion: it goes through the same validation and human review | Decide later | |
 | FR-AI-04 | Never used during test execution | Always | |
+
+### 6.21 API testing (FR-API) · D14
+
+| ID | Requirement | Version | Acceptance |
+|---|---|---|---|
+| FR-API-01 | Test cases with Type `api` (or a first step that sends a request) are API tests. They skip MCP exploration and go straight from the parser to code generation. | V2 | No browser opens |
+| FR-API-02 | **Request steps**: `Send GET/POST/PUT/PATCH/DELETE <path>`, optionally `with body <data key>` and `with query <data key>` | V2 | Parsed into an `api` step in the Test Model |
+| FR-API-03 | **Headers**: `Set header <name> to <value>` for the rest of the test | V2 | |
+| FR-API-04 | **Auth profiles** per environment: bearer token, basic, API key header. Chosen by a precondition such as `Authenticated as admin`. Values come from secrets. | V2 | Tokens never appear in code, reports or logs (FR-EV-03) |
+| FR-API-05 | **Checks**: status code (`Status is 201`), response field by path (`Response field user.name is "Asha"`), field exists / is empty, response contains text, header value, list length, response time under N ms | V2 | Each check reports expected vs actual (FR-VAL) |
+| FR-API-06 | **Chaining**: `Save response field <path> as <name>`, then use `{{name}}` in later paths, bodies and checks | V2 | |
+| FR-API-07 | **Generated code**: `tests/api/<id>.spec.ts` using Playwright's `request` fixture, and one API client per service (`api/<Service>Client.ts`), the API equivalent of a Page Object | V2 | Runs with `npx playwright test` like UI tests (D5) |
+| FR-API-08 | **Evidence**: method, URL, status, request and response bodies, timings, with secrets masked | V2 | |
+| FR-API-09 | **Contract check**: `Response matches schema <Name>`, using JSON Schema or an imported OpenAPI file | V3 | |
+| FR-API-10 | Import request definitions from OpenAPI or a Postman collection so testers pick endpoints instead of typing paths | V3 | |
+| FR-API-11 | API tests that change data run only on non-production environments by default | V2 | Same rule as D9 |
 
 ---
 
@@ -331,8 +365,8 @@ Every test case, however it is imported, becomes these fields:
 | Version | Theme | Main features |
 |---|---|---|
 | **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation · run in Chromium · expected vs actual · health check · screenshot · masking |
-| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits |
-| **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · **team mode** (server, login, roles, PostgreSQL) |
+| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits · **API tests** (requests, auth profiles, checks, chaining) |
+| **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · API contract checks + OpenAPI/Postman import · **team mode** (server, login, roles, PostgreSQL) |
 | **V4 · Enterprise QA** | Connected to the QA process | Traceability · API + UI hybrid · Cucumber · Jira defects + result sync · CI/CD · scheduled runs · dashboards |
 | **Backlog** | Ideas, not planned | See §12 |
 
@@ -365,6 +399,9 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 | **Flow** | A named, reusable sequence of steps used as a precondition |
 | **Fingerprint** | Stored facts about an element used to find it again after the UI changes |
 | **NEEDS_REVIEW** | A step the platform could not resolve safely; the tester decides |
+| **API test** | A test case that sends HTTP requests and checks the responses, with no browser (§6.21) |
+| **API client** | Generated class with one method per endpoint a test uses; the API equivalent of a Page Object |
+| **Auth profile** | A named way to authenticate API requests in an environment (bearer, basic, API key), with values from secrets |
 
 ---
 
@@ -410,6 +447,9 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | Q2 | Which Jira test plugin (Xray, Zephyr, none)? | V2 |
 | Q3 | Keep evidence for how long? | V3 |
 | Q4 | AI helper: yes or no? | After V2 |
+| Q5 | Which API auth types do our services use (bearer, basic, API key, OAuth client credentials)? | V2 |
+| Q6 | Do our services publish OpenAPI files or Postman collections? | V3 |
+| Q7 | Are GraphQL or SOAP services in scope, or only REST/JSON? | V2 |
 
 ## 14. Change log
 
@@ -418,3 +458,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.0 | 2026-09-29 | First version from `Auto_QA.docx` |
 | 1.1 | 2026-09-29 | Added decisions D1–D12 (MCP orchestration, no agent, Codegen role), import + column mapping, preconditions/flows, test data rules, quality check, health check, pick element, team mode, backlog. Scope: any web app, username/password only. M1 done. |
 | 1.2 | 2026-09-29 | M2 done: parser and Test Model. Added a `clear` action and a `checked` assertion type. "Select X" without "from" is read as choosing a radio/checkbox. Secret-looking test data keys become env vars (`Wrong Password` → `TEST_WRONG_PASSWORD`), and a password typed in a step is unparsed (`SECRET_LITERAL`). |
+| 1.3 | 2026-09-30 | Added API testing (§5.1, §6.21 FR-API, D14): API tests skip MCP and run with Playwright's `request` client; core in V2, contract checks and OpenAPI/Postman import in V3. D13: all 72 MCP tools on, unsafe tools off by default. Open questions Q5–Q7. |

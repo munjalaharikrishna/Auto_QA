@@ -496,6 +496,7 @@ flowchart LR
     v2c[Locator repo reuse + history]
     v2d[Environments + page routes + secrets]
     v2e[Suites + history + trace/video]
+    v2f[API tests: request client, no MCP]
   end
   subgraph v3["V3 · Intelligent + team"]
     v3a[Recovery engine]
@@ -515,10 +516,10 @@ flowchart LR
 | Component | V1 | V2 | V3 | V4 |
 |---|---|---|---|---|
 | Importer | Excel, CSV | + Jira, TestRail, re-import diff | | + result sync |
-| Parser | Core rules | + generators, tabs, dialogs | + data sets | + `api` steps, Gherkin |
+| Parser | Core rules | + generators, tabs, dialogs, API steps and checks | + data sets | + API steps inside UI tests, Gherkin |
 | Exploration | Chromium, state machine | + pop-up handling | | |
 | Locator engine | Score, ladder, probe | + scoped locators, repo reuse | + healing | |
-| Generator | POM + specs | + ts-morph updates, flows, git | | + Cucumber |
+| Generator | POM + specs | + ts-morph updates, flows, git, API specs + API clients | + API contract checks | + Cucumber |
 | Execution | Chromium, single test | + suites, login state | + browsers, parallel, mobile | + CI, schedules |
 | Results | Expected vs actual, health | + history, HTML report | + classification, retry | + dashboards |
 | Evidence | Screenshot, masking | + trace, video, restricted | + retention | + attach to defects |
