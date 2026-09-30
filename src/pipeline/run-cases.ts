@@ -6,6 +6,7 @@ import { type ExplorationResult, explore, type Resolver } from '../explorer/cont
 import { loadPageUrls, savePageUrls } from '../explorer/page-store.js';
 import { type GenerateInput, generateProject, workspaceName, writeProject } from '../generator/index.js';
 import { automationId } from '../generator/names.js';
+import { planProject } from '../generator/plan.js';
 import { openSession } from '../locators/session.js';
 import type { TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
@@ -54,37 +55,66 @@ export async function runCases(models: TestModel[], options: PipelineOptions): P
   const explored: GenerateInput[] = [];
   let pageUrls = await loadPageUrls(options.baseUrl);
 
-  for (const model of models) {
+  /** Complete explorations from this run by case signature: an identical case is not explored twice. */
+  const bySignature = new Map<string, ExplorationResult>();
+
+  for (const [index, model] of models.entries()) {
+    const at = `[${index + 1}/${models.length}] ${model.id}`;
     const unparsed = [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed');
     if (unparsed.length) {
       // Nothing to explore until the tester rewrites these; no browser needed to say so.
       early.set(model.id, stopped(model, 'NEEDS REVIEW', `${unparsed.map((x) => `${x.id} "${x.raw}": ${x.reason?.text ?? ''}`).join(' ')}`));
-      progress(`? ${model.id}: needs review before it can be automated`);
+      progress(`? ${at}: needs review before it can be automated`);
       continue;
     }
 
     const file = path.join(exploreDir, model.id, 'exploration.json');
+    const signature = signatureOf(model);
     let result: ExplorationResult | undefined;
     if (!options.reexplore && existsSync(file)) {
       const saved = JSON.parse(await readFile(file, 'utf8')) as ExplorationResult;
-      if (saved.status === 'complete' && saved.baseUrl === options.baseUrl && sameSteps(saved, model)) result = saved;
+      // Explorations saved before the login steps were recorded cannot be generated on their own.
+      const stale = saved.items.some((i) => i.phase === 'setup') && !saved.setup;
+      if (saved.status === 'complete' && saved.baseUrl === options.baseUrl && sameSteps(saved, model) && !stale) result = saved;
+    }
+    const twin = bySignature.get(signature);
+    if (!result && twin) {
+      result = { ...twin, testId: model.id, title: model.title };
+      progress(`✔ ${at}: same steps as ${twin.testId}, exploration reused`);
     }
     if (!result) {
-      progress(`… ${model.id}: exploring`);
+      progress(`… ${at}: exploring`);
       const before = options.questions?.().length ?? 0;
-      const session = await openSession({ headless: options.headless ?? true, testIdAttribute: options.testIdAttribute });
       try {
-        result = await explore(model, session, {
-          config: options.config,
-          baseUrl: options.baseUrl,
-          env: options.env,
-          pageUrls,
-          resolver: options.resolver,
-          outDir: path.dirname(file),
-          login: model.preconditions.some((p) => p.kind === 'logged-in') ? options.login : undefined,
-        });
-      } finally {
-        await session.close();
+        const session = await openSession({ headless: options.headless ?? true, testIdAttribute: options.testIdAttribute });
+        try {
+          result = await explore(model, session, {
+            config: options.config,
+            baseUrl: options.baseUrl,
+            env: options.env,
+            pageUrls,
+            resolver: options.resolver,
+            outDir: path.dirname(file),
+            login: model.preconditions.some((p) => p.kind === 'logged-in') ? options.login : undefined,
+          });
+        } finally {
+          await session.close();
+        }
+      } catch (e) {
+        // One case must not stop a batch (FR-IN-08): the browser or the app failed under it.
+        const message = (e as Error).message.split('\n')[0];
+        early.set(
+          model.id,
+          stopped(
+            model,
+            'BLOCKED',
+            `Exploration stopped: ${message}`,
+            undefined,
+            /net::ERR_|ECONNREFUSED|ENOTFOUND/i.test(message) ? 'Network' : 'Environment',
+          ),
+        );
+        progress(`■ ${at}: ${message}`);
+        continue;
       }
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, JSON.stringify(result, null, 2));
@@ -93,10 +123,19 @@ export async function runCases(models: TestModel[], options: PipelineOptions): P
       if (result.status !== 'complete') {
         const asked = options.questions?.().slice(before) ?? [];
         early.set(model.id, fromExploration(model, result, asked));
-        progress(`${early.get(model.id)?.status === 'BLOCKED' ? '■' : '?'} ${model.id}: ${early.get(model.id)?.reason}`);
+        progress(`${early.get(model.id)?.status === 'BLOCKED' ? '■' : '?'} ${at}: ${early.get(model.id)?.reason}`);
         continue;
       }
     }
+    // One case that cannot be generated must not stop the others: check each on its own first.
+    try {
+      planProject([{ model, exploration: result }]);
+    } catch (e) {
+      early.set(model.id, stopped(model, 'NEEDS REVIEW', `Could not generate the test: ${(e as Error).message}`));
+      progress(`? ${at}: ${(e as Error).message}`);
+      continue;
+    }
+    bySignature.set(signature, result);
     explored.push({ model, exploration: result });
   }
 
@@ -124,6 +163,16 @@ export async function runCases(models: TestModel[], options: PipelineOptions): P
   const verdicts = models.map((m) => ran.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
   for (const v of verdicts) if (executionId && !ran.has(v.testId)) v.executionId = executionId;
   return { verdicts, workspace, executionId };
+}
+
+/** Everything that decides what exploring a case finds: identical signatures give identical explorations. */
+function signatureOf(model: TestModel): string {
+  return JSON.stringify([
+    model.steps.map((s) => `${s.id} ${s.raw}`),
+    model.assertions.map((a) => `${a.id} ${a.raw}`),
+    model.data,
+    model.preconditions.map((p) => p.raw),
+  ]);
 }
 
 /** A saved exploration is reused only if the test case's steps and checks have not changed since. */

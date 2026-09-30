@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.10 |
+| **Spec version** | 1.11 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -126,15 +126,15 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases |
+| FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases · ✅ Done (M6b): .xlsx and .csv (comma, semicolon or tab); old .xls must be saved as .xlsx |
 | FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping |
 | FR-IN-03 | Steps in one cell are split on numbering (`1.`, `2)`) and line breaks | V1 | A cell with "1. … 2. … 3. …" gives 3 steps · ✅ Done (M2) |
 | FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc), with the run settings: Application URL, Username, Password and Browser | V1 | Form fields and run settings as in §5; one click starts generation (D17) |
 | FR-IN-05 | Import from **Jira** (Xray/Zephyr) | V2 | Pull test cases by project/filter |
 | FR-IN-06 | Import from **TestRail** | V2 | Pull test cases by suite |
 | FR-IN-07 | Re-import updates changed test cases (matched by ID) and shows what changed | V2 | Changed steps are flagged for re-generation |
-| FR-IN-08 | **Unattended batch run of a workbook**: every test case, one by one, each in a fresh browser context: parse → explore → generate → run (D22). Cases that need the tester are set aside, and a review queue lists them at the end; after review only those run again. A "Logged in" precondition reuses the sheet's login case. The run can be stopped and resumed, skipping finished cases. | V1 | A 100-row sheet runs to the end without stopping; one case needing review does not block the others; a resumed run skips finished cases |
-| FR-IN-09 | **Automatic column matching** for command-line and batch imports: the sheet's headers are matched to the §5 fields by name and synonyms (`Test Case` → Title, `Expected Result` → Expected), with a saved mapping file for anything else. The mapping screen (FR-IN-02) uses the same matcher as its first guess. | V1 | A sheet with the usual headers imports with no mapping |
+| FR-IN-08 | **Unattended batch run of a workbook**: every test case, one by one, each in a fresh browser context: parse → explore → generate → run (D22). Cases that need the tester are set aside, and a review queue lists them at the end; after review only those run again. A "Logged in" precondition reuses the sheet's login case. The run can be stopped and resumed, skipping finished cases. | V1 | A 100-row sheet runs to the end without stopping; one case needing review does not block the others; a resumed run skips finished cases · ✅ Done (M6b): a 100-row sheet runs unattended in about 4 minutes, 2 on a resumed run; identical cases share one exploration |
+| FR-IN-09 | **Automatic column matching** for command-line and batch imports: the sheet's headers are matched to the §5 fields by name and synonyms (`Test Case` → Title, `Expected Result` → Expected), with a saved mapping file for anything else. The mapping screen (FR-IN-02) uses the same matcher as its first guess. | V1 | A sheet with the usual headers imports with no mapping · ✅ Done (M6b): header row found under title rows; `--map field="Header"` for anything else |
 
 ### 6.2 Test case parser (FR-PA) · §4
 
@@ -326,8 +326,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-HI-03 | Open any past run: steps, evidence, trace, logs, generated code at that time | V2 | |
 | FR-HI-04 | Standalone HTML report per run/suite | V2 | |
 | FR-HI-05 | Dashboards: pass rate trend, flaky tests, most-healed locators | V4 | |
-| FR-HI-06 | **Results written back to the workbook** (D23): a copy `<name>.results.xlsx` with the columns **Status**, **Actual Result**, **Failed Step**, **Executed At**, **Automation ID** and **Evidence** (link to the screenshot) added next to each test case. The original formatting is kept. Running again updates the same columns. | V1 | The tester opens the results file and sees PASS/FAIL and the actual result on every row |
-| FR-HI-07 | **Batch summary**: totals by status, duration, and the review queue (case, step, question) | V1 | "82 pass · 9 fail · 3 blocked · 6 need review" |
+| FR-HI-06 | **Results written back to the workbook** (D23): a copy `<name>.results.xlsx` with the columns **Status**, **Actual Result**, **Failed Step**, **Executed At**, **Automation ID** and **Evidence** (link to the screenshot) added next to each test case. The original formatting is kept. Running again updates the same columns. | V1 | The tester opens the results file and sees PASS/FAIL and the actual result on every row · ✅ Done (M6b) |
+| FR-HI-07 | **Batch summary**: totals by status, duration, and the review queue (case, step, question) | V1 | "82 pass · 9 fail · 3 blocked · 6 need review" · ✅ Done (M6b): in the terminal and on an "Auto QA" sheet in the results copy |
 
 ### 6.18 Team mode (FR-TM)
 
@@ -413,8 +413,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
 | M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ✅ Done |
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
-| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ⬜ Next |
-| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
+| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
+| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) |⬜ Next |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
 
@@ -507,3 +507,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.8 | 2026-09-30 | Batch run of a whole workbook (FR-IN-08, D22), automatic column matching (FR-IN-09), result statuses (FR-VAL-05), results written back to a copy of the workbook (FR-HI-06, D23), batch summary and review queue (FR-HI-07). New milestone M6b; Excel/CSV import moves from M7 to M6b. |
 | 1.9 | 2026-09-30 | M5 done: code generation into a standalone Playwright project (Page Objects with grouped action methods, specs, locator files, data, config). Locators are written in the Page Object and recorded in the locator JSON (FR-LR-01). Grouped steps share one `test.step` (FR-GE-03). Two page names for one path become one Page Object. |
 | 1.10 | 2026-09-30 | M6 done: execution with Playwright Test, verdicts PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual, health check, evidence kept per execution ID, basic failure labels, `npm run auto-qa` for the whole flow. Masking applies to run output only (FR-EV-03). A script error in a generated test is BLOCKED (FR-VAL-05). |
+| 1.11 | 2026-09-30 | M6b done: batch run of a workbook with automatic column matching, results written to a copy with an "Auto QA" summary and review queue sheet, resume, `--only-review`, the sheet's login case reused for "Logged in" cases, identical cases explored once. Explorations now record the login steps they ran. |

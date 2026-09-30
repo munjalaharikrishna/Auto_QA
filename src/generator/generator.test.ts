@@ -119,6 +119,31 @@ describe('generation plan (FR-GE-10, FR-GE-11)', () => {
     assert.doesNotMatch(spec, /new DashboardPage/, 'no unused instance');
   });
 
+  it('generates a "Logged in" test on its own, from the login steps it recorded', async () => {
+    const [login, , profile] = demoInputs();
+    const model = parseTestCase(
+      { id: 'TC-DEMO-020', title: 'Profile opens', preconditions: 'Logged in', steps: '1. Click Profile', expected: 'Profile heading is displayed.' },
+      config,
+    );
+    const clickProfile = profile.exploration.items.find((i) => i.raw === 'Click Profile')!;
+    const exploration: ExplorationResult = {
+      ...profile.exploration,
+      testId: model.id,
+      setup: { testId: login.model.id, steps: login.model.steps, data: login.model.data },
+      items: [
+        ...login.exploration.items.filter((i) => i.kind === 'step').map((i) => ({ ...i, phase: 'setup' as const })),
+        { ...clickProfile, id: 'S1' },
+        { ...profile.exploration.items.find((i) => i.kind === 'check' && i.type === 'health')!, id: 'A2' },
+      ],
+    };
+    // Alone, as the batch checks each case: the setup's S1 is the login's, not this test's S1.
+    const { files } = await generateProject([{ model, exploration }], 'demo');
+    const spec = files['tests/tc-demo-020.spec.ts'];
+    assert.match(spec, /'Precondition · S2, S3, S4: Enter valid username; Enter valid password; Click the Login button'/);
+    assert.match(spec, /await loginPage\.login\(process\.env\.TEST_USERNAME!, process\.env\.TEST_PASSWORD!\);/);
+    assert.match(spec, /await dashboardPage\.openProfile\(\);/);
+  });
+
   it('refuses a test that was not fully explored', () => {
     const [input] = demoInputs();
     const ex = {

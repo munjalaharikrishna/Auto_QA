@@ -108,6 +108,8 @@ export interface ExplorationResult {
   pages: Record<string, { path: string; title: string }>;
   /** Page name → URL learned during this run, to save with the environment (D19). */
   learnedPageUrls: Record<string, string>;
+  /** The login test case run for a "Logged in" precondition, so the setup steps can be generated on their own. */
+  setup?: { testId: string; steps: Step[]; data: Record<string, string> };
 }
 
 class Aborted extends Error {}
@@ -437,6 +439,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         });
         if (!ok) throw new Aborted();
       } else {
+        result.setup = { testId: options.login.id, steps: options.login.steps, data: options.login.data };
         await run(options.login, 'setup');
       }
     }

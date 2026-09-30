@@ -5,6 +5,7 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 ## Unreleased
 
 ### Added
+- M6b: batch run of a workbook (`npm run auto-qa -- tests.xlsx`): automatic column matching, unattended run with a review queue, results written to `<name>.results.xlsx` (Status, Actual Result, Failed Step, Executed At, Automation ID, Evidence) plus an Auto QA summary sheet, resume and `--only-review`. `uuid` is overridden to 11.1.1 for a moderate advisory in the version ExcelJS pins.
 - M6: run and judge (`npm run execute`, `npm run auto-qa`): PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual for every check, a health check in every test, basic failure labels, execution IDs, screenshots and traces kept per run, secrets masked in run output. The demo app has a deliberately broken Reports page.
 - M5: code generation (`npm run generate`): a standalone Playwright project with Page Objects, grouped action methods, specs with the tester's step numbers, locator files, data, config and `.env.example`. Deterministic, with golden-file tests; the generated demo, saucedemo and the-internet projects pass on their own.
 - M4: explore a whole test case (`npm run explore`). Steps run in order through LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE; NEEDS_REVIEW waits for the tester; preconditions, Production guard, per-step screenshots, learned page URLs per environment. Local demo app (`npm run demo`) with end-to-end tests.

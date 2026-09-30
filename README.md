@@ -149,6 +149,23 @@ Each run gets an ID (`EXEC-2026-00012`). Its verdicts, screenshots and traces ar
 | `--login TC-LOGIN-001` | Test case to run first for "Logged in" preconditions |
 | `--workspace dir` | Where to generate the project (default `workspaces/<site>`) |
 
+## Milestone 6b: a whole workbook, with results written back
+
+```bash
+npm run auto-qa -- tests.xlsx --base-url https://app.example.com
+npm run auto-qa -- tests.xlsx --base-url https://app.example.com --only-review    # answer the review queue
+```
+
+Every test case in the sheet is parsed, explored, generated and run, one by one, without stopping to ask: a case that needs the tester is set aside as **NEEDS REVIEW** and the batch moves on. At the end:
+
+- **`tests.results.xlsx`**: a copy of your workbook (the original is never changed) with **Status**, **Actual Result**, **Failed Step**, **Executed At**, **Automation ID** and **Evidence** (link to the screenshot) on every row, the status coloured, your formatting kept.
+- An **Auto QA** sheet in it with the totals and the **review queue**: each set-aside case and what it needs.
+- The generated Playwright project with a test for every case that could be automated.
+
+Headers are matched automatically (`Test Case Name`, `Steps to Reproduce`, `Expected Result(s)`…), even under a title row; `--map steps="What to do"` names anything else. A stopped batch resumes where it was: finished explorations are reused, and identical cases are explored once. Rows without steps, duplicated IDs and `.csv` files with semicolons are handled.
+
+Try it on the demo app: `npm run demo`, then `npm run demo:workbook` (writes a 100-row `examples/demo-app/demo-tests.xlsx`) and `npm run auto-qa -- examples/demo-app/demo-tests.xlsx --base-url http://127.0.0.1:4173`. Expected: 72 pass · 18 fail · 10 need review.
+
 ## Tests
 
 ```bash
@@ -187,7 +204,12 @@ npm run format    # apply formatting and safe fixes
 | `src/results/verdict.ts` | PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual. Pure. |
 | `src/results/report.ts` | Terminal report. |
 | `src/pipeline/run-cases.ts` | The whole flow for a set of test cases. |
-| `src/cli/execute.ts`, `src/cli/auto-qa.ts` | Milestone 6 command line tools. |
+| `src/cli/execute.ts`, `src/cli/auto-qa.ts` | Milestone 6 command line tools; `auto-qa` also takes a workbook (M6b). |
+| `src/importer/columns.ts` | Header → field matching. |
+| `src/importer/workbook.ts` | Reads .xlsx/.csv test cases with their row numbers. |
+| `src/importer/results.ts` | Writes the results copy and the Auto QA sheet. |
+| `src/pipeline/batch.ts` | A whole workbook: progress, resume, review queue. |
+| `examples/demo-app/make-workbook.ts` | Builds a realistic 100-row workbook for the demo app. |
 | `examples/demo-app/` | Local app and test cases for end-to-end tests (`npm run demo`). |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
@@ -199,5 +221,5 @@ npm run format    # apply formatting and safe fixes
 - [x] M4: explore a full test case and save locators
 - [x] M5: generate Page Objects and specs
 - [x] M6: run with Playwright Test and report PASS/FAIL
-- [ ] M6b: run a whole workbook and write PASS/FAIL and actual results into a copy of the sheet
+- [x] M6b: run a whole workbook and write PASS/FAIL and actual results into a copy of the sheet
 - [ ] M7: web UI with upload, progress, review screen and results

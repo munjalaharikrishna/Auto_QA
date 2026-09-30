@@ -174,7 +174,9 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
 
   for (const { model, exploration } of sorted) {
     const file = kebabId(model.id);
-    const dataKeys = new Map(Object.keys(model.data).map((k) => [k, camel(k)]));
+    // The login's own Test Data joins this test's, for a "Logged in" precondition.
+    const allData = { ...exploration.setup?.data, ...model.data };
+    const dataKeys = new Map(Object.keys(allData).map((k) => [k, camel(k)]));
     let usesData = false;
     const helpers = new Set<string>();
     const usedPages = new Set<string>();
@@ -363,7 +365,8 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
 
     const setup = exploration.items.filter((i) => i.phase === 'setup');
     if (setup.length) {
-      const loginModel = loginModelFor(sorted, setup) ?? model;
+      const loginModel = exploration.setup ? { ...model, steps: exploration.setup.steps } : loginModelFor(sorted, setup);
+      if (!loginModel) throw new Error(`${model.id}: the login steps of its "Logged in" precondition are not known. Explore it again.`);
       run(setup, loginModel);
     }
     run(
@@ -380,7 +383,7 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
       checks: model.assertions.map((a) => ({ id: a.id, raw: a.raw, type: a.type, expected: a.expected, target: a.target, negated: a.negated })),
       unparsed: [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed').map((x) => x.id),
     });
-    if (usesData) data.push({ file, values: Object.fromEntries([...dataKeys].map(([k, v]) => [v, model.data[k]])) });
+    if (usesData) data.push({ file, values: Object.fromEntries([...dataKeys].map(([k, v]) => [v, allData[k]])) });
     specs.push({
       file,
       testId: model.id,

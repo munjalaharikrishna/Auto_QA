@@ -14,12 +14,14 @@
     "explore": "tsx src/cli/explore.ts",
     "generate": "tsx src/cli/generate.ts",
     "execute": "tsx src/cli/execute.ts",
-    "auto-qa": "tsx src/cli/auto-qa.ts"
+    "auto-qa": "tsx src/cli/auto-qa.ts",
+    "demo:workbook": "tsx examples/demo-app/make-workbook.ts"
   },
   "description": "Manual test cases to Playwright automation, using Playwright MCP without an AI API",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.31.0",
     "@playwright/mcp": "0.0.83",
+    "exceljs": "4.4.0",
     "handlebars": "4.7.9",
     "playwright": "1.64.0-alpha-1790635538000",
     "prettier": "3.9.9",
@@ -36,5 +38,8 @@
   "type": "module",
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   }
 }
