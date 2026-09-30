@@ -1,0 +1,33 @@
+{
+  "dashboardHeading": {
+    "locator": "getByRole('heading', { name: 'Dashboard', exact: true })",
+    "strategy": "role",
+    "page": "DashboardPage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:32:54.204Z",
+    "fingerprint": {
+      "role": "heading",
+      "name": "Dashboard",
+      "tag": "h1",
+      "text": "Dashboard"
+    },
+    "alternatives": [],
+    "history": []
+  },
+  "profileLink": {
+    "locator": "getByRole('link', { name: 'Profile', exact: true })",
+    "strategy": "role",
+    "page": "DashboardPage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:33:19.136Z",
+    "fingerprint": {
+      "role": "link",
+      "name": "Profile",
+      "tag": "a",
+      "text": "Profile",
+      "context": "navigation \"Main\""
+    },
+    "alternatives": [],
+    "history": []
+  }
+}

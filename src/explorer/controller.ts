@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { type LocateResult, locate } from '../locators/engine.js';
 import { type Fingerprint, type PageRef, pageOf } from '../locators/ladder.js';
-import { parseLocatorCode, toLocator } from '../locators/locator.js';
+import { parseLocatorCode, spec, toCode, toLocator } from '../locators/locator.js';
 import type { Candidate, TargetQuery } from '../locators/match.js';
 import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
@@ -76,6 +76,8 @@ export interface ExploredItem {
   status: 'done' | 'skipped' | 'failed';
   resolvedBy?: 'rules' | 'tester';
   locator?: { code: string; strategy: string; source: string; validated: boolean };
+  /** The element the step acts on or checks: its role and the name it was matched by. Names Page Object members. */
+  element?: { role: string; name: string };
   /** Other locators that also validated, including MCP's code after the action (FR-LO-07). */
   alternatives?: string[];
   score?: number;
@@ -96,6 +98,8 @@ export interface ExplorationResult {
   testId: string;
   title: string;
   baseUrl: string;
+  /** The attribute `getByTestId` used, so the generated config matches (FR-LO-09). */
+  testIdAttribute: string;
   startedAt: string;
   finishedAt: string;
   status: 'complete' | 'incomplete' | 'aborted';
@@ -127,6 +131,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
     testId: model.id,
     title: model.title,
     baseUrl: options.baseUrl,
+    testIdAttribute: session.testIdAttribute,
     startedAt: now.toISOString(),
     finishedAt: '',
     status: 'complete',
@@ -216,6 +221,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
       r = again;
     }
     item.locator = { code: r.locator.code, strategy: r.locator.spec.strategy, source: r.locator.spec.source, validated: true };
+    item.element = { role: r.match.node.role, name: r.match.matchedName || r.match.node.name };
     item.alternatives = r.tried.filter((v) => v.ok && v !== r.locator).map((v) => v.code);
     item.score = r.match.score;
     item.candidates ??= r.candidates.slice(0, 5).map(summary);
@@ -396,11 +402,14 @@ export async function explore(model: TestModel, session: Session, options: Explo
     if (assertion.negated && type === 'visible') {
       // An element that must not be visible is usually not on the page, so it cannot be validated.
       const r = await locate(query, mcp, probe, { config: options.config, testIdAttribute: session.testIdAttribute }, { state });
+      item.page = pageOf(state.url, state.title, pathNames[pathOf(state.url)]);
       if (r.status === 'resolved') {
         item.locator = { code: r.locator.code, strategy: r.locator.spec.strategy, source: r.locator.spec.source, validated: true };
+        item.element = { role: r.match.node.role, name: r.match.matchedName || r.match.node.name };
       } else {
         const text = assertion.target ?? '';
-        item.locator = { code: `getByText('${text.replace(/'/g, "\\'")}', { exact: true })`, strategy: 'text', source: 'ladder', validated: false };
+        item.locator = { code: toCode(spec('getByText', text, { exact: true })), strategy: 'text', source: 'ladder', validated: false };
+        item.element = { role: 'text', name: text };
         item.warnings.push('UNVALIDATED: the element is not on the page now, so this locator could not be checked. Confirm it in review.');
       }
       return;

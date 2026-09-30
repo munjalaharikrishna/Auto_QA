@@ -1,0 +1,485 @@
+{
+  "testId": "TC-DEMO-003",
+  "title": "Verify the profile can be saved",
+  "baseUrl": "http://127.0.0.1:4173",
+  "testIdAttribute": "data-testid",
+  "startedAt": "2026-09-30T10:33:08.322Z",
+  "finishedAt": "2026-09-30T10:33:19.136Z",
+  "status": "complete",
+  "items": [
+    {
+      "id": "S1",
+      "kind": "step",
+      "raw": "Open Login page",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "navigate",
+      "effect": "url /"
+    },
+    {
+      "id": "S2",
+      "kind": "step",
+      "raw": "Enter valid username",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "fill",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('textbox', { name: 'Username', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "textbox",
+        "name": "Username"
+      },
+      "alternatives": ["getByRole('textbox', { name: 'Username' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e5",
+          "role": "textbox",
+          "name": "Username",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "textbox",
+        "name": "Username",
+        "tag": "input",
+        "label": "Username",
+        "id": "username",
+        "nameAttr": "username",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "value set",
+      "url": "http://127.0.0.1:4173/"
+    },
+    {
+      "id": "S3",
+      "kind": "step",
+      "raw": "Enter valid password",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "fill",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('textbox', { name: 'Password', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "textbox",
+        "name": "Password"
+      },
+      "alternatives": ["getByRole('textbox', { name: 'Password' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e7",
+          "role": "textbox",
+          "name": "Password",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "textbox",
+        "name": "Password",
+        "tag": "input",
+        "type": "password",
+        "label": "Password",
+        "id": "password",
+        "nameAttr": "password",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "value set",
+      "url": "http://127.0.0.1:4173/"
+    },
+    {
+      "id": "S4",
+      "kind": "step",
+      "raw": "Click Login",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "click",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByTestId('login')",
+        "strategy": "testid",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "button",
+        "name": "Login"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e9",
+          "role": "button",
+          "name": "Login",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "button",
+        "name": "Login",
+        "tag": "button",
+        "type": "submit",
+        "testId": "login",
+        "text": "Login",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "url /dashboard",
+      "url": "http://127.0.0.1:4173/dashboard"
+    },
+    {
+      "id": "S5",
+      "kind": "step",
+      "raw": "Click Profile",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "click",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('link', { name: 'Profile', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "link",
+        "name": "Profile"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f1e4",
+          "role": "link",
+          "name": "Profile",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "link",
+        "name": "Profile",
+        "tag": "a",
+        "text": "Profile",
+        "context": "navigation \"Main\""
+      },
+      "page": {
+        "name": "DashboardPage",
+        "path": "/dashboard",
+        "title": "Dashboard · Demo"
+      },
+      "effect": "url /profile",
+      "url": "http://127.0.0.1:4173/profile"
+    },
+    {
+      "id": "S6",
+      "kind": "step",
+      "raw": "Enter Full name",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "fill",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('textbox', { name: 'Full name', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "textbox",
+        "name": "Full name"
+      },
+      "alternatives": ["getByRole('textbox', { name: 'Full name' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f2e5",
+          "role": "textbox",
+          "name": "Full name",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "textbox",
+        "name": "Full name",
+        "tag": "input",
+        "label": "Full name",
+        "id": "name",
+        "nameAttr": "name",
+        "form": "profile",
+        "context": "form \"Profile\""
+      },
+      "page": {
+        "name": "ProfilePage",
+        "path": "/profile",
+        "title": "Profile · Demo"
+      },
+      "effect": "value set",
+      "url": "http://127.0.0.1:4173/profile"
+    },
+    {
+      "id": "S7",
+      "kind": "step",
+      "raw": "Select India from Country",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "select",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('combobox', { name: 'Country', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "combobox",
+        "name": "Country"
+      },
+      "alternatives": ["getByLabel('Country')  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f2e7",
+          "role": "combobox",
+          "name": "Country",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "combobox",
+        "name": "Country",
+        "tag": "select",
+        "label": "Country",
+        "id": "country",
+        "nameAttr": "country",
+        "form": "profile",
+        "context": "form \"Profile\""
+      },
+      "page": {
+        "name": "ProfilePage",
+        "path": "/profile",
+        "title": "Profile · Demo"
+      },
+      "effect": "option selected",
+      "url": "http://127.0.0.1:4173/profile"
+    },
+    {
+      "id": "S8",
+      "kind": "step",
+      "raw": "Check Send me news",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "check",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('checkbox', { name: 'Send me news', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "checkbox",
+        "name": "Send me news"
+      },
+      "alternatives": ["getByRole('checkbox', { name: 'Send me news' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f2e9",
+          "role": "checkbox",
+          "name": "Send me news",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "checkbox",
+        "name": "Send me news",
+        "tag": "input",
+        "type": "checkbox",
+        "label": "Send me news",
+        "id": "news",
+        "form": "profile",
+        "context": "form \"Profile\""
+      },
+      "page": {
+        "name": "ProfilePage",
+        "path": "/profile",
+        "title": "Profile · Demo"
+      },
+      "effect": "checked",
+      "url": "http://127.0.0.1:4173/profile"
+    },
+    {
+      "id": "S9",
+      "kind": "step",
+      "raw": "Click Save changes",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "click",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('button', { name: 'Save changes', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "button",
+        "name": "Save changes"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f2e11",
+          "role": "button",
+          "name": "Save changes",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "button",
+        "name": "Save changes",
+        "tag": "button",
+        "type": "submit",
+        "text": "Save changes",
+        "form": "profile",
+        "context": "form \"Profile\""
+      },
+      "page": {
+        "name": "ProfilePage",
+        "path": "/profile",
+        "title": "Profile · Demo"
+      },
+      "effect": "page changed",
+      "url": "http://127.0.0.1:4173/profile"
+    },
+    {
+      "id": "A1",
+      "kind": "check",
+      "raw": "Message \"Profile saved\" is shown.",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "text",
+      "observed": {
+        "url": "http://127.0.0.1:4173/profile",
+        "title": "Profile · Demo",
+        "textFound": true
+      }
+    },
+    {
+      "id": "A2",
+      "kind": "check",
+      "raw": "Send me news is checked.",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "checked",
+      "observed": {
+        "url": "http://127.0.0.1:4173/profile",
+        "title": "Profile · Demo"
+      },
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('checkbox', { name: 'Send me news', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "checkbox",
+        "name": "Send me news"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f2e9",
+          "role": "checkbox",
+          "name": "Send me news",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "checkbox",
+        "name": "Send me news",
+        "tag": "input",
+        "type": "checkbox",
+        "label": "Send me news",
+        "id": "news",
+        "form": "profile",
+        "context": "form \"Profile\""
+      },
+      "page": {
+        "name": "ProfilePage",
+        "path": "/profile",
+        "title": "Profile · Demo"
+      }
+    },
+    {
+      "id": "A3",
+      "kind": "check",
+      "raw": "",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "health",
+      "observed": {
+        "url": "http://127.0.0.1:4173/profile",
+        "title": "Profile · Demo"
+      }
+    }
+  ],
+  "pages": {
+    "LoginPage": {
+      "path": "/",
+      "title": "Login · Demo"
+    },
+    "DashboardPage": {
+      "path": "/dashboard",
+      "title": "Dashboard · Demo"
+    },
+    "ProfilePage": {
+      "path": "/profile",
+      "title": "Profile · Demo"
+    }
+  },
+  "learnedPageUrls": {}
+}

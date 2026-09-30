@@ -426,7 +426,7 @@ Auto_QA/
                               preconditions, quality, lexicon.json, synonyms.json
     locators/              ✅ match, locator, ladder, probe,         (M3)
                               engine, session (shared Chrome)
-    generator/             ⬜ templates/*.hbs                         (M5)
+    generator/             ✅ names, plan, render, templates/*.hbs   (M5)
     executor/              ⬜ runner adapter, custom reporter         (M6)
     results/               ⬜ validator, classifier                  (M6)
     evidence/              ⬜ capture, masking, report               (M6)
@@ -434,7 +434,7 @@ Auto_QA/
     server/                ⬜ Fastify API, jobs, WebSocket           (M7)
     recovery/              ⬜ self-healing                           (V3)
     assist/                ⬜ AssistProvider (no-op)                 (V1 interface)
-    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), explore.ts (M4), tools.ts
+    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), explore.ts (M4), generate.ts (M5), tools.ts
   examples/                test-cases.json (sample input for npm run parse)
                            demo-app/ (local app + test cases for end-to-end tests)
   web/                     ⬜ React UI                               (M7)

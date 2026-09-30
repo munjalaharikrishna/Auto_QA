@@ -1,0 +1,25 @@
+import { {{{helperImports}}} } from '../fixtures/test.fixture';
+{{#each pages}}
+import { {{this}} } from '../pages/{{this}}';
+{{/each}}
+{{#if dataFile}}
+import { data } from '../data/{{dataFile}}.data';
+{{/if}}
+
+test(
+  {{{quote titleLine}}},
+  { {{#if tags.length}}tag: [{{#each tags}}{{{quote this}}}{{#unless @last}}, {{/unless}}{{/each}}], {{/if}}annotation: [{ type: 'automation', description: {{{quote automationId}}} }] },
+  async ({ page }) => {
+{{#each pageVars}}
+    const {{var}} = new {{className}}(page);
+{{/each}}
+
+{{#each steps}}
+    await test.step({{{quote label}}}, async () => {
+{{#each lines}}
+      {{{this}}}
+{{/each}}
+    });
+{{/each}}
+  },
+);

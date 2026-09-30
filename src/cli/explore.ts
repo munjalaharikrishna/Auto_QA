@@ -62,7 +62,7 @@ const rl = interactive ? createInterface({ input: process.stdin, output: process
 const resolver: Resolver = {
   async choose(r) {
     console.log(`\n⚠ ${r.item} "${r.raw}"\n  ${r.code}: ${r.text}`);
-    r.candidates.slice(0, 9).forEach((c, i) => console.log(`  ${i + 1}) ${describe(c)}`));
+    for (const [i, c] of r.candidates.slice(0, 9).entries()) console.log(`  ${i + 1}) ${describe(c)}`);
     if (!rl) return 'skip';
     const a = (await rl.question(`  Pick 1-${Math.min(9, r.candidates.length)}, s to skip, q to stop: `)).trim().toLowerCase();
     if (a === 'q') return 'abort';

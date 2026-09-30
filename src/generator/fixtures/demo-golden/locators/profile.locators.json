@@ -1,0 +1,83 @@
+{
+  "fullName": {
+    "locator": "getByRole('textbox', { name: 'Full name', exact: true })",
+    "strategy": "role",
+    "page": "ProfilePage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:33:19.136Z",
+    "fingerprint": {
+      "role": "textbox",
+      "name": "Full name",
+      "tag": "input",
+      "label": "Full name",
+      "id": "name",
+      "nameAttr": "name",
+      "form": "profile",
+      "context": "form \"Profile\""
+    },
+    "alternatives": [
+      "getByRole('textbox', { name: 'Full name' })"
+    ],
+    "history": []
+  },
+  "countrySelect": {
+    "locator": "getByRole('combobox', { name: 'Country', exact: true })",
+    "strategy": "role",
+    "page": "ProfilePage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:33:19.136Z",
+    "fingerprint": {
+      "role": "combobox",
+      "name": "Country",
+      "tag": "select",
+      "label": "Country",
+      "id": "country",
+      "nameAttr": "country",
+      "form": "profile",
+      "context": "form \"Profile\""
+    },
+    "alternatives": [
+      "getByLabel('Country')"
+    ],
+    "history": []
+  },
+  "sendMeNewsCheckbox": {
+    "locator": "getByRole('checkbox', { name: 'Send me news', exact: true })",
+    "strategy": "role",
+    "page": "ProfilePage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:33:19.136Z",
+    "fingerprint": {
+      "role": "checkbox",
+      "name": "Send me news",
+      "tag": "input",
+      "type": "checkbox",
+      "label": "Send me news",
+      "id": "news",
+      "form": "profile",
+      "context": "form \"Profile\""
+    },
+    "alternatives": [
+      "getByRole('checkbox', { name: 'Send me news' })"
+    ],
+    "history": []
+  },
+  "saveChangesButton": {
+    "locator": "getByRole('button', { name: 'Save changes', exact: true })",
+    "strategy": "role",
+    "page": "ProfilePage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:33:19.136Z",
+    "fingerprint": {
+      "role": "button",
+      "name": "Save changes",
+      "tag": "button",
+      "type": "submit",
+      "text": "Save changes",
+      "form": "profile",
+      "context": "form \"Profile\""
+    },
+    "alternatives": [],
+    "history": []
+  }
+}

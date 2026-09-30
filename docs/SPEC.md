@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.8 |
+| **Spec version** | 1.9 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -179,7 +179,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 |---|---|---|---|
 | FR-TD-01 | Parse `key=value` pairs (one per line or `;`-separated) from the Test Data column | V1 | `Email=a@b.com` → data key `Email` · ✅ Parsed (M2) |
 | FR-TD-02 | Credentials and secrets come only from environment variables (`TEST_USERNAME`, `TEST_PASSWORD`, `BASE_URL`) | V1 | No secret in generated code, model or report · ✅ Parser side (M2): secret-looking values become env refs and are masked |
-| FR-TD-03 | Non-secret data goes to `data/*.data.ts` in the generated project | V1 | |
+| FR-TD-03 | Non-secret data goes to `data/*.data.ts` in the generated project | V1 | ✅ Done (M5) |
 | FR-TD-04 | **Unique data generators**: `{{unique.email}}`, `{{unique.number}}`, `{{today}}` for tests that create records | V2 | Registration test passes twice in a row |
 | FR-TD-05 | Data sets: run one test with several data rows (data-driven) | V3 | 3 rows → 3 test runs |
 
@@ -220,7 +220,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-LR-01 | One JSON file per page in the generated project: `locators/<page>.locators.json` with locator, strategy, page, validatedAt, fingerprint, history | V1 | |
+| FR-LR-01 | One JSON file per page in the generated project: `locators/<page>.locators.json` with locator, strategy, page, validatedAt, fingerprint, history | V1 | ✅ Done (M5). The Page Object holds the locator code, as in the document's §10; the JSON holds the same locator with its fingerprint and history, and both are written together |
 | FR-LR-02 | Reuse a validated locator before exploring again | V2 | A second generation of the same page is faster |
 | FR-LR-03 | Locator history (who/what changed it, when, why) | V2 | |
 | FR-LR-04 | Mirror in the database for search ("which tests use this locator?") | V2 | |
@@ -242,14 +242,14 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-GE-01 | Template-based generation (Handlebars + Prettier) | V1 | |
-| FR-GE-02 | Page Objects: `pages/<Name>Page.ts` with locators and action methods | V1 | Matches the §10 example |
-| FR-GE-10 | **Action methods** (document §10, §30 "reusable actions"), by fixed rules: (1) a run of fill / select / check steps on one page that ends with a click or Enter on the same page becomes **one method named after that click** (`Login` → `login()`, `Save changes` → `saveChanges()`); (2) each filled value is a parameter, named after its field (`username`, `password`); (3) any other step becomes a one-action method (`openCart()`, `selectCountry(value)`); (4) checks stay in the spec file, using the page's locators. The spec passes secrets as `process.env.X!` | V1 | The §3 login test generates `LoginPage.login(username, password)` and the spec in document §10 |
-| FR-GE-11 | A method with the same name and the same steps is reused; the same name with different steps gets a number (`login2`) and a warning in review | V1 | Deterministic (FR-GE-06) |
-| FR-GE-03 | Specs: `tests/<name>.spec.ts`. Each step is a `test.step('S2: Enter username', …)` | V1 | Results map back to the tester's step numbers |
-| FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | |
-| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files, and a `reports/` folder (git-ignored) for each run's HTML report, results and evidence | V1 | `npx playwright test` works standalone (D15) |
-| FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff |
+| FR-GE-01 | Template-based generation (Handlebars + Prettier) | V1 | ✅ Done (M5) |
+| FR-GE-02 | Page Objects: `pages/<Name>Page.ts` with locators and action methods | V1 | Matches the §10 example · ✅ Done (M5) |
+| FR-GE-10 | **Action methods** (document §10, §30 "reusable actions"), by fixed rules: (1) a run of fill / select / check steps on one page that ends with a click or Enter on the same page becomes **one method named after that click** (`Login` → `login()`, `Save changes` → `saveChanges()`); (2) each filled value is a parameter, named after its field (`username`, `password`); (3) any other step becomes a one-action method (`openCart()`, `selectCountry(value)`); (4) checks stay in the spec file, using the page's locators. The spec passes secrets as `process.env.X!` | V1 | The §3 login test generates `LoginPage.login(username, password)` and the spec in document §10 · ✅ Done (M5) |
+| FR-GE-11 | A method with the same name and the same steps is reused; the same name with different steps gets a number (`login2`) and a warning in review | V1 | Deterministic (FR-GE-06) · ✅ Done (M5) |
+| FR-GE-03 | Specs: `tests/<name>.spec.ts`. Each step is a `test.step('S2: Enter username', …)` | V1 | Results map back to the tester's step numbers · ✅ Done (M5). Steps grouped into one method share one `test.step`, labelled with all their numbers (`S2, S3, S4: …`) |
+| FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | ✅ Done (M5) |
+| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files, and a `reports/` folder (git-ignored) for each run's HTML report, results and evidence | V1 | `npx playwright test` works standalone (D15) · ✅ Done (M5); the reporter follows in M6 |
+| FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff · ✅ Done (M5): golden-file test, and the same output whatever order the tests come in |
 | FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Adding a test adds methods, keeps the old ones |
 | FR-GE-08 | Each approval is a git commit in the generated project | V2 | |
 | FR-GE-09 | Cucumber output: `features/`, `step-definitions/` (optional) | V4 | |
@@ -343,7 +343,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-EN-01 | **Requirement traceability**: Requirement → Test Scenario → Test Case → Automation → Execution → Result → Defect (document §25) | V4 | `REQ-REG-001 → SC-REG-003 → TC-REG-014 → AUTO-REG-014 → EXEC-2026-00124 → FAIL → BUG-REG-032` |
-| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given |
+| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given · ✅ Automation IDs (M5); execution IDs in M6 |
 | FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | Reuses the API steps from §6.21 inside a UI test |
 | FR-EN-03 | Create a Jira defect from a failed run, with evidence attached | V4 | |
 | FR-EN-04 | Push results back to Jira/TestRail | V4 | |
@@ -411,8 +411,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M2 | Parser: text → Test Model (FR-PA-*, FR-TD-01, FR-TD-02, FR-PF-01 parsing, FR-QC-01/02) | ✅ Done |
 | M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ✅ Done |
 | M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
-| M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ⬜ Next |
-| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ⬜ |
+| M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ✅ Done |
+| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ⬜ Next |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ⬜ |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
 
@@ -505,3 +505,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.6 | 2026-09-30 | Decisions D19 (V1 page names: first page is `BASE_URL`, later pages ask), D20 (React + Fastify + SQLite), D21 (ExcelJS). Every open V1 requirement assigned to a milestone. Added PLAN.md. FR-IN-03 marked done. |
 | 1.7 | 2026-09-30 | M4 done: exploration controller with the step state machine, resolver for NEEDS_REVIEW, settle and verify-effect rules, preconditions, Production guard, per-step screenshots. Learned page URLs are per environment and stored as paths (D19). A "shown" check may target plain text. A role locator without a name ranks after a CSS id. Local demo app for end-to-end tests. |
 | 1.8 | 2026-09-30 | Batch run of a whole workbook (FR-IN-08, D22), automatic column matching (FR-IN-09), result statuses (FR-VAL-05), results written back to a copy of the workbook (FR-HI-06, D23), batch summary and review queue (FR-HI-07). New milestone M6b; Excel/CSV import moves from M7 to M6b. |
+| 1.9 | 2026-09-30 | M5 done: code generation into a standalone Playwright project (Page Objects with grouped action methods, specs, locator files, data, config). Locators are written in the Page Object and recorded in the locator JSON (FR-LR-01). Grouped steps share one `test.step` (FR-GE-03). Two page names for one path become one Page Object. |

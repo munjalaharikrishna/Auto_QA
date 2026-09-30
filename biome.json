@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/**", "*.json", "examples/**"]
+    "includes": ["src/**", "*.json", "examples/**", "!src/generator/fixtures/demo-golden"]
   },
   "formatter": {
     "indentStyle": "space",

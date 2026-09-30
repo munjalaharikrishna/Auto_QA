@@ -102,6 +102,25 @@ Values come from the environment or a `.env` file: `BASE_URL`, `TEST_USERNAME`, 
 
 Output: `.auto-qa/explore/<id>/exploration.json` (per step: locator, alternatives, scores, fingerprint, page, effect) and a screenshot per step. Page URLs learned on the way are kept per environment in `.auto-qa/pages.json` (D19). Secret values are never written.
 
+## Milestone 5: generate the Playwright project
+
+```bash
+npm run generate -- examples/demo-app/test-cases.json            # every explored case in the file
+npm run generate -- examples/test-cases.json --id TC-LOGIN-001 --id TC-LOGIN-002 --out workspaces/saucedemo
+```
+
+Reads each case's exploration (M4) and writes a standalone project to `workspaces/<app>/`:
+
+| Path | Contents |
+|---|---|
+| `pages/LoginPage.ts` | Page Object: validated locators and action methods. Fields filled on a page plus the click that submits them become one method, e.g. `login(username, password)` (FR-GE-10) |
+| `tests/tc-demo-001.spec.ts` | One test per test case; each step a `test.step` with the tester's step numbers; secrets only as `process.env.X!` |
+| `locators/login.locators.json` | The locator repository: locator, strategy, fingerprint, validation time, alternatives |
+| `data/tc-demo-003.data.ts` | Non-secret Test Data |
+| `fixtures/test.fixture.ts`, `playwright.config.ts`, `package.json`, `tsconfig.json`, `.env.example` | Everything `npx playwright test` needs |
+
+The same input always gives byte-identical files; `src/generator/fixtures/demo-golden/` holds the expected output for the demo app (`UPDATE_GOLDEN=1 npm test` after an intended change). Run the project with `cd workspaces/<app> && npm install && npx playwright test`, after filling `.env` from `.env.example`.
+
 ## Tests
 
 ```bash
@@ -132,6 +151,10 @@ npm run format    # apply formatting and safe fixes
 | `src/explorer/controller.ts` | Exploration: the step state machine, resolver, settle and verify-effect rules. |
 | `src/explorer/values.ts` | Step values from env, Test Data, literals and generators; secret masking. |
 | `src/cli/explore.ts` | Milestone 4 command line tool, with a terminal resolver. |
+| `src/generator/plan.ts` | What to generate: pages, properties, grouped action methods, spec steps. Pure. |
+| `src/generator/names.ts` | Naming rules for properties, methods and files. |
+| `src/generator/render.ts`, `templates/` | Handlebars templates + Prettier → files. |
+| `src/cli/generate.ts` | Milestone 5 command line tool. |
 | `examples/demo-app/` | Local app and test cases for end-to-end tests (`npm run demo`). |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
@@ -141,6 +164,6 @@ npm run format    # apply formatting and safe fixes
 - [x] M2: parse a written test case into steps, test data and checks
 - [x] M3: match a step to an element and validate the locator
 - [x] M4: explore a full test case and save locators
-- [ ] M5: generate Page Objects and specs
+- [x] M5: generate Page Objects and specs
 - [ ] M6: run with Playwright Test and report PASS/FAIL
 - [ ] M7: web UI with Excel import and review screen
