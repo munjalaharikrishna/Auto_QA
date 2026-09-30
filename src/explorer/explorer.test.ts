@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { describe, it } from 'node:test';
 import { pageState, parseToolReply } from './mcp-browser.js';
 import { contextOf, flatten, listElements, nearbyText, parseSnapshot } from './snapshot-parser.js';
@@ -75,6 +76,15 @@ describe('nearby text and context (FR-LO-02)', () => {
   it('reports the named form an element is inside', () => {
     assert.equal(contextOf(byRef(saucedemo, 'e15')), 'form "Login"');
     assert.equal(contextOf(byRef(saucedemo, 'e19')), '');
+  });
+});
+
+describe('dependencies (D7)', () => {
+  it('uses the same Playwright version as Playwright MCP', () => {
+    const require = createRequire(import.meta.url);
+    const ours = require('playwright/package.json').version;
+    const mcp = require('@playwright/mcp/package.json').dependencies.playwright;
+    assert.equal(ours, mcp, 'Upgrade playwright and @playwright/mcp together so the Locator Probe runs the same engine as MCP.');
   });
 });
 

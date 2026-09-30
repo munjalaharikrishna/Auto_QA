@@ -18,6 +18,8 @@ npm install
 
 Uses the Google Chrome installed on this machine.
 
+`playwright` is pinned to the exact version `@playwright/mcp` depends on, so the Locator Probe runs the same engine as MCP (D7). Upgrade the two together; a test fails if they differ.
+
 ## Milestone 1: see what MCP sees on a page
 
 ```bash
