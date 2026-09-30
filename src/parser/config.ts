@@ -25,6 +25,7 @@ const LexiconSchema = z.object({
   }),
   browserPhrases: z.object({ back: words, forward: words }),
   assertionVerbs: words,
+  browserStart: z.object({ phrases: words }),
   assertionMarkers: words,
   negations: wordMap,
   vagueOutcomes: words,

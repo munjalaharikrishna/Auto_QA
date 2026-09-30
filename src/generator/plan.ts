@@ -303,9 +303,9 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
     function pageLines(item: ExploredItem, step: Step, ex: ExplorationResult): string[] {
       switch (step.action) {
         case 'navigate': {
-          const name = step.page ? pageNameFor(step.page, ex) : pageByUrl(step.url ?? '', ex);
+          const name = step.page ? pageNameFor(step.page, ex) : pageByUrl(step.baseUrl ? ex.baseUrl : (step.url ?? ''), ex);
           if (name) return [`await ${pageVar(pageFor(name, ex).className)}.goto();`];
-          return [`await page.goto(${quote(step.url ?? '')});`];
+          return [`await page.goto(${quote(step.baseUrl ? pathOf(ex.baseUrl) : (step.url ?? ''))});`];
         }
         case 'back':
           return ['await page.goBack();'];

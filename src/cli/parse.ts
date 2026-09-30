@@ -78,7 +78,7 @@ function describe(item: Step | Assertion): string {
 
   if ('action' in item) {
     const s = item as Step;
-    const parts = [s.action!.toUpperCase().padEnd(8), s.url ?? (s.page ? `page "${s.page}"` : ''), s.key ?? '', element(s)];
+    const parts = [s.action!.toUpperCase().padEnd(8), s.url ?? (s.page ? `page "${s.page}"` : s.baseUrl ? 'the base URL' : ''), s.key ?? '', element(s)];
     if (s.value) parts.push(`= ${value(s.value)}`);
     return `${mark} ${s.id.padEnd(4)} ${parts.filter(Boolean).join(' ')}`;
   }

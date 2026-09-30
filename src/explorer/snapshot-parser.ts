@@ -130,7 +130,29 @@ export function nearbyText(node: SnapshotNode): string | undefined {
     return s && (s.role === 'text' || (s.role === 'generic' && !s.children.length)) ? s.text?.trim() || undefined : undefined;
   };
   const textAfterFirst = ['checkbox', 'radio', 'switch'].includes(node.role);
-  return textAfterFirst ? (textAt(i + 1) ?? textAt(i - 1)) : (textAt(i - 1) ?? textAt(i + 1));
+  const near = textAfterFirst ? (textAt(i + 1) ?? textAt(i - 1)) : (textAt(i - 1) ?? textAt(i + 1));
+  return tidyLabel(near ?? cellLabel(node));
+}
+
+/**
+ * Table layouts: `row > cell "Login Name :" | cell > textbox`. A field alone in its cell is named by
+ * the cell before it in the same row.
+ */
+function cellLabel(node: SnapshotNode): string | undefined {
+  const cell = node.parent;
+  if (!cell || !['cell', 'gridcell'].includes(cell.role) || cell.children.length !== 1) return undefined;
+  const row = cell.parent;
+  if (!row || row.role !== 'row') return undefined;
+  const prev = row.children[row.children.indexOf(cell) - 1];
+  if (!prev || !['cell', 'gridcell', 'rowheader'].includes(prev.role)) return undefined;
+  const only = prev.children.length === 1 && prev.children[0].role === 'text' ? prev.children[0].text : undefined;
+  return prev.name || prev.text || only;
+}
+
+/** "Login Name :" → "Login Name", "Email *" → "Email". */
+function tidyLabel(text: string | undefined): string | undefined {
+  const t = text?.replace(/\s*[:*]+\s*$/, '').trim();
+  return t || undefined;
 }
 
 /** Readable context for a node, e.g. `form "Login"`, so testers can tell duplicates apart. */

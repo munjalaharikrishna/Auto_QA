@@ -138,7 +138,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
   const learned: Record<string, string> = {};
   /** URL path → the page name the tester used for it, so elements found there join that Page Object (FR-LO-10). */
   const pathNames: Record<string, string> = {};
-  const namePage = (url: string, title: string, hint: string) => {
+  const namePage = (url: string, title: string, hint?: string) => {
     const page = pageOf(url, title, hint);
     pathNames[page.path] ??= page.name;
     result.pages[pathNames[page.path]] ??= { path: page.path, title };
@@ -234,6 +234,24 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
   }
 
+  /** Messages the page shows now, e.g. "Invalid Login", quoted for a question or an error. */
+  async function pageMessages(url: string): Promise<string | undefined> {
+    try {
+      const page = browserPage(url);
+      const marked = page
+        .locator('[role=alert], [role=status], [aria-live], [class*="error" i], [class*="alert" i], [class*="message" i]')
+        .filter({ visible: true });
+      const failure = page.getByText(/invalid|incorrect|failed|wrong|denied|not match|error/i).filter({ visible: true });
+      const texts = [...(await marked.allInnerTexts()), ...(await failure.allInnerTexts())]
+        .map((t) => t.replace(/\s+/g, ' ').trim())
+        .filter((t) => t && t.length <= 160);
+      const unique = [...new Set(texts)].slice(0, 2);
+      return unique.length ? unique.map((t) => `"${t}"`).join(' and ') : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async function screenshot(item: ExploredItem): Promise<void> {
     const file = path.join(options.outDir, `${model.id}-${item.phase === 'setup' ? 'setup-' : ''}${item.id}.png`);
     try {
@@ -299,7 +317,8 @@ export async function explore(model: TestModel, session: Session, options: Explo
   }
 
   async function navigate(step: Step, item: ExploredItem, first: boolean): Promise<void> {
-    let url = step.url;
+    // "Open the application", "Enter the URL": the base URL exactly as set, path included.
+    let url = step.baseUrl ? options.baseUrl : step.url;
     if (!url && step.page) {
       // D19: the first step's page is the base URL; any other page name is asked for once.
       const known = pageUrls[step.page];
@@ -318,7 +337,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
     await mcp.navigate(target);
     const state = await settle(item);
     item.effect = `url ${pathOf(state.url)}`;
-    if (step.page) namePage(state.url, state.title, step.page);
+    if (step.page || step.baseUrl) namePage(state.url, state.title, step.page);
   }
 
   async function act(step: Step, item: ExploredItem): Promise<void> {
@@ -450,9 +469,32 @@ export async function explore(model: TestModel, session: Session, options: Explo
     item.observed = { url: state.url, title: state.title };
     const type = assertion.type!;
     if (type === 'url' && assertion.match === 'page' && assertion.expected && !assertion.negated) {
-      // The page a check expects, e.g. "redirected to Dashboard", names the current page (D19).
+      // The page a check expects, e.g. "redirected to Dashboard", names the current page (D19)
+      // — but not a page that already has another name: then the expected page was not reached,
+      // e.g. the login failed, and learning it would make the test pass without getting there.
+      const path = pathOf(state.url);
+      const wanted = pageOf(state.url, state.title, assertion.expected).name;
+      const known = pageUrls[assertion.expected];
+      const current = pathNames[path];
+      // Not reached: the path already belongs to another page, or a saved URL for this page is elsewhere.
+      const reached = (!current || current === wanted) && (!known || pathOf(new URL(known, options.baseUrl).toString()) === path);
+      if (!reached) {
+        const shown = await pageMessages(state.url);
+        const ok = await options.resolver.confirm({
+          item: item.id,
+          code: 'NOT_ON_PAGE',
+          text: `The test expects the ${assertion.expected} page, but the browser is on ${current ?? path} (${path})${shown ? `, which shows ${shown}` : ''}. An earlier step may not have worked. Is this the ${assertion.expected} page?`,
+        });
+        if (!ok) {
+          item.status = 'failed';
+          item.error = `Not on the ${assertion.expected} page: still on ${current ?? path}${shown ? `, which shows ${shown}` : ''}.`;
+          return;
+        }
+        // The tester says it is: this path is the expected page from now on.
+        pathNames[path] = wanted;
+      }
       namePage(state.url, state.title, assertion.expected);
-      if (!pageUrls[assertion.expected]) learned[assertion.expected] = pageUrls[assertion.expected] = pathOf(state.url);
+      if (!known) learned[assertion.expected] = pageUrls[assertion.expected] = path;
     }
     if (type === 'text' && assertion.expected) {
       item.observed.textFound = (await browserPage(state.url).getByText(assertion.expected).count()) > 0;

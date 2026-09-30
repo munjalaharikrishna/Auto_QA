@@ -69,6 +69,25 @@ describe('nearby text and context (FR-LO-02)', () => {
     assert.equal(nearbyText(root.children[1]), 'Email');
   });
 
+  it('names a field in a table form from the cell before it', () => {
+    const [table] = parseSnapshot(
+      [
+        '- table:',
+        '  - row:',
+        '    - cell "Login Name :"',
+        '    - cell:',
+        '      - textbox [ref=e41]',
+        '  - row:',
+        '    - cell "Password *"',
+        '    - cell:',
+        '      - textbox [ref=e45]',
+      ].join('\n'),
+    );
+    const [login, password] = flatten([table]).filter((n) => n.role === 'textbox');
+    assert.equal(nearbyText(login), 'Login Name');
+    assert.equal(nearbyText(password), 'Password');
+  });
+
   it('does not use nearby text when the element has a name', () => {
     assert.equal(nearbyText(byRef(saucedemo, 'e11')), undefined);
   });

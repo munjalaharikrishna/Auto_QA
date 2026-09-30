@@ -59,6 +59,8 @@ export const StepSchema = z.object({
   value: ValueRefSchema.optional(),
   /** navigate: a full URL or a path such as `/login`. */
   url: z.string().optional(),
+  /** navigate: the environment's BASE_URL exactly as set, path included ("Enter the URL", "Open the application"). */
+  baseUrl: z.boolean().optional(),
   /** navigate: a page name such as `Home`, resolved to a URL per environment (FR-ENV-03). */
   page: z.string().optional(),
   /** press: a Playwright key name such as `Enter` or `Control+A`. */

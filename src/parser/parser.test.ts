@@ -85,11 +85,70 @@ describe('action lexicon and targets (FR-PA-02, FR-PA-03)', () => {
     assert.deepEqual(pick(step('Select Male'), ['action', 'target']), { action: 'check', target: 'Male' });
     assert.equal(step('Select Country dropdown').reason?.code, 'NO_VALUE');
   });
-  it('reads navigate targets as page, URL or the app root', () => {
+  it('reads navigate targets as page, URL or the base URL', () => {
     assert.equal(step('Open Home page').page, 'Home');
     assert.equal(step('Navigate to https://www.saucedemo.com/inventory.html').url, 'https://www.saucedemo.com/inventory.html');
     assert.equal(step('Open /login').url, '/login');
-    assert.equal(step('Launch the application').url, '/');
+    // The environment's BASE_URL exactly, path included (not the site root).
+    assert.deepEqual(pick(step('Launch the application'), ['action', 'baseUrl', 'url']), { action: 'navigate', baseUrl: true });
+  });
+});
+
+describe("testers' own wording (real test cases)", () => {
+  it('reads "Enter the URL" as opening the application', () => {
+    for (const s of ['Enter url for Orange Hrm server', 'Enter the URL', 'Type the application URL', 'Open the application URL']) {
+      assert.deepEqual(pick(step(s), ['action', 'baseUrl']), { action: 'navigate', baseUrl: true }, s);
+    }
+    // An address field is still a field.
+    assert.equal(step('Enter "a@b.com" in Email address field').action, 'fill');
+  });
+
+  it('reads "Enter <value> in <field>" with the value named first', () => {
+    assert.deepEqual(pick(step('Enter user name in Login Name text box'), ['action', 'target', 'roleHint', 'value']), {
+      action: 'fill',
+      target: 'Login Name',
+      roleHint: 'textbox',
+      value: { kind: 'env', name: 'TEST_USERNAME' },
+    });
+    assert.deepEqual(pick(step('Enter password in Password  text box'), ['target', 'value']), {
+      target: 'Password',
+      value: { kind: 'env', name: 'TEST_PASSWORD' },
+    });
+    assert.deepEqual(pick(step('Enter Email into the Login field', 'Email=a@b.com'), ['target', 'value']), {
+      target: 'Login',
+      value: { kind: 'data', key: 'Email' },
+    });
+    // Something that is not a known value is not guessed.
+    assert.equal(step('Enter John in First name').reason?.code, 'NO_VALUE');
+  });
+
+  it('needs no step for opening the browser', () => {
+    const m = tc({ steps: '1. Open Browser\n2. Open Home page' });
+    assert.deepEqual(
+      m.steps.map((s) => s.id),
+      ['S2'],
+    );
+    assert.ok(m.warnings.some((w) => w.at === 'S1' && w.code === 'NO_STEP_NEEDED'));
+    assert.ok(!m.warnings.some((w) => w.code === 'NO_START'));
+  });
+
+  it('reads a step written inside quotes', () => {
+    const m = tc({ steps: '1. Open Home page\n2. "Checking the login section at middle of the page"' });
+    const a = m.assertions.find((x) => x.step === 'S2')!;
+    assert.deepEqual(pick(a, ['type', 'target', 'status']), { type: 'visible', target: 'login section', status: 'parsed' });
+    assert.ok(m.warnings.some((w) => w.code === 'POSITION_IGNORED'));
+  });
+
+  it('reads "able to navigate to X" as a redirect check', () => {
+    assert.deepEqual(pick(check('User able to navigate to PIM page'), ['type', 'expected', 'match']), { type: 'url', expected: 'PIM', match: 'page' });
+    assert.deepEqual(pick(check('User should be able to open the Reports page'), ['type', 'expected']), { type: 'url', expected: 'Reports' });
+    assert.equal(check('User is unable to navigate to Admin page').negated, true);
+  });
+
+  it('explains how to split an action and a check', () => {
+    const s = step('Click on the login button and validate the title');
+    assert.equal(s.reason?.code, 'MULTIPLE_ACTIONS');
+    assert.match(s.reason?.text ?? '', /starts a check inside an action/);
   });
 });
 

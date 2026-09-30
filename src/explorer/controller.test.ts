@@ -161,6 +161,17 @@ describe('exploration controller on the demo app', { skip, concurrency: 3 }, () 
     assert.equal(byId(r, 'A1').observed?.textFound, true, 'the picked button, not the first one, was clicked');
   });
 
+  it('does not learn a page the test never reached, e.g. after a failed login', async () => {
+    const { resolver, asked } = scripted({ confirm: false });
+    const r = await run(demo('TC-DEMO-001'), resolver, { env: { ...env, TEST_PASSWORD: 'wrong' } });
+    assert.ok(asked.includes('confirm A1 NOT_ON_PAGE'), asked.join());
+    const a1 = byId(r, 'A1');
+    assert.equal(a1.status, 'failed');
+    assert.match(a1.error ?? '', /Not on the Dashboard page: still on LoginPage, which shows "Invalid username or password"/);
+    assert.equal(r.learnedPageUrls.Dashboard, undefined);
+    assert.equal(r.status, 'incomplete');
+  });
+
   it('asks before exploring Production (FR-EX-08)', async () => {
     const { resolver, asked } = scripted({ confirm: false });
     const r = await run(demo('TC-DEMO-001'), resolver, { production: true });

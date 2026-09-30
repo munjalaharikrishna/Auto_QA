@@ -18,6 +18,8 @@ export interface ParsedAction {
   roleHint?: string;
   value?: ValueRef;
   url?: string;
+  /** navigate: the environment's BASE_URL exactly as set. */
+  baseUrl?: boolean;
   page?: string;
   key?: string;
   reason?: { code: string; text: string };
@@ -26,7 +28,8 @@ export interface ParsedAction {
   warnings: Target['warnings'];
 }
 
-type LineResult = { kind: 'action'; action: ParsedAction } | { kind: 'checks'; checks: ParsedAssertion[] };
+/** `note`: a line that needs no step, e.g. "Open Browser" (the browser opens by itself). */
+type LineResult = { kind: 'action'; action: ParsedAction } | { kind: 'checks'; checks: ParsedAssertion[] } | { kind: 'note'; text: string };
 
 export type ParsedLine = LineResult & {
   /** Warnings about the whole line, e.g. filler words removed. */
@@ -56,7 +59,13 @@ function removeFillers(text: string, ctx: StepContext): { text: string; warnings
 function parseCleanLine(text: string, ctx: StepContext): LineResult {
   const { lexicon } = ctx.config;
   let t = clean(text);
+  // A whole step in quotes ("Checking the login section") is read without them.
+  const wrapped = /^["“]([^"“”]+)["”]\.?$/.exec(t);
+  if (wrapped) t = clean(wrapped[1]);
   for (let lead = leadingNoise(t, ctx); lead !== undefined; lead = leadingNoise(t, ctx)) t = lead;
+  if (lexicon.browserStart.phrases.some((b) => new RegExp(`^${b.replace(/\s+/g, '\\s+')}\\b`, 'i').test(t) && !/https?:\/\//i.test(t))) {
+    return { kind: 'note', text: `"${text}" needs no step: the browser opens by itself.` };
+  }
 
   const checkVerb = matchLeading(
     t,
@@ -85,7 +94,15 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
 
   const second = secondAction(verb.rest, ctx);
   if (second) {
-    return action(unparsed('MULTIPLE_ACTIONS', `"${second}" starts a second action. Write one action per step.`));
+    const isCheck = ctx.config.lexicon.assertionVerbs.some((v) => v.toLowerCase() === second.toLowerCase());
+    return action(
+      unparsed(
+        'MULTIPLE_ACTIONS',
+        isCheck
+          ? `"${second}" starts a check inside an action. Keep the action in this step and write the check on its own, saying what should be seen, e.g. Page title is "…" in the Expected Result.`
+          : `"${second}" starts a second action. Write one action per step.`,
+      ),
+    );
   }
   return action(parseVerb(verb.value, verb.phrase, verb.rest, ctx));
 }
@@ -95,6 +112,8 @@ function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): 
     case 'navigate':
       return navigate(rest, ctx);
     case 'fill':
+      // "Enter url for Orange Hrm server", "Type the application URL": that is opening the application.
+      if (URL_PHRASE.test(clean(rest))) return navigate(rest, ctx);
       return fill(rest, ctx);
     case 'select':
       return select(rest, ctx);
@@ -136,8 +155,9 @@ function navigate(rest: string, ctx: StepContext): ParsedAction {
 
   const t = extractTarget(r, ctx.config);
   if (!t.target) return unparsed('NO_TARGET', 'Say which page or URL to open, e.g. Open Login page or Open https://….');
-  if (!removePhrases(t.target, ctx.config.lexicon.appWords).text) {
-    return { action: 'navigate', url: '/', alternatives: [], warnings: t.warnings };
+  // "Open the application", "Enter the URL for the HR server": the environment's BASE_URL, path included.
+  if (!removePhrases(t.target, ctx.config.lexicon.appWords).text || URL_PHRASE.test(r)) {
+    return { action: 'navigate', baseUrl: true, alternatives: [], warnings: t.warnings };
   }
   return { action: 'navigate', page: t.target, alternatives: t.alternatives, warnings: t.warnings };
 }
@@ -162,6 +182,22 @@ function fill(rest: string, ctx: StepContext): ParsedAction {
   } else if ((m = /^(\S*[@\d.]\S*)\s+(?:in|into)\s+(.+)$/i.exec(p.text))) {
     valueText = m[1];
     targetText = p.restore(m[2]);
+  } else if ((m = /^(.+?)\s+(?:in|into|in to|inside)\s+(?:the\s+)?(.+)$/i.exec(p.text))) {
+    // "Enter user name in Login Name text box": the value is named first, the field after "in".
+    const named = extractTarget(p.restore(m[1]), ctx.config, { qualifiers: true });
+    const bound = named.target ? bindValue(named, ctx) : undefined;
+    const field = extractTarget(p.restore(m[2]), ctx.config);
+    if (bound?.value && field.target) {
+      return {
+        action: 'fill',
+        target: field.target,
+        alternatives: field.alternatives,
+        exact: field.exact,
+        roleHint: field.roleHint,
+        value: bound.value,
+        warnings: [...named.warnings, ...field.warnings, ...bound.warnings],
+      };
+    }
   }
 
   const t = extractTarget(targetText, ctx.config, { qualifiers: true });
@@ -305,6 +341,10 @@ function noActionAdvice(text: string): string {
   const q = findQuoted(text);
   return `No action word found${q ? ` before "${q.value}"` : ''}. Start the step with an action such as Open, Enter, Click, Select, Check or Verify.`;
 }
+
+/** "url", "the application URL", "URL for the HR server", "web address": the application's address. */
+const URL_PHRASE =
+  /^(?:the\s+)?(?:(?:application|app|site|web\s*site|portal|base|login|server|test)\s+)?(?:url|web\s+address|address)\b(?!\s*(?:field|box|text\s*box|input))/i;
 
 function unparsed(code: string, text: string): ParsedAction {
   return { alternatives: [], warnings: [], reason: { code, text } };

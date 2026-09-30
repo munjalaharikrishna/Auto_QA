@@ -92,11 +92,19 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     lexicon.subjects.map((w) => [w, w] as [string, string]),
   );
   if (subject?.rest) s = subject.rest;
+  // "User able to navigate to PIM page", "User is able to open Reports": what the user can reach.
+  s = s.replace(/^(?:is\s+|are\s+|be\s+)?(?:able|allowed)\s+to\s+/i, '');
+  // Where on the page something is cannot be checked; the check keeps the element.
+  const positionWarnings: ParsedAssertion['warnings'] = [];
+  s = s.replace(POSITION, (found) => {
+    positionWarnings.push({ code: 'POSITION_IGNORED', text: `"${found.trim()}" ignored: where something is on the page is not checked` });
+    return '';
+  });
 
   const result = (r: Omit<ParsedAssertion, 'negated' | 'alternatives' | 'warnings'> & Partial<ParsedAssertion>): ParsedAssertion => ({
     alternatives: [],
-    warnings: [],
     ...r,
+    warnings: [...positionWarnings, ...(r.warnings ?? [])],
     negated: r.negated ?? negated,
   });
   const named = (raw: string) => extractTarget(p.restore(raw), config);
@@ -228,6 +236,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled.',
   );
 }
+
+/** "at middle of the page", "on the top right of the screen", "on the page". */
+const POSITION =
+  /\s+(?:at|in|on|towards)\s+(?:the\s+)?(?:(?:top|bottom|middle|centre|center|left|right|upper|lower)(?:\s+(?:left|right))?(?:\s+(?:side|part|corner|half))?\s+of\s+(?:the\s+)?)?(?:page|screen|window)\b/i;
 
 function isRoleWord(text: string, config: ParserConfig): boolean {
   const t = text.toLowerCase().replace(/^(?:the|a|an)\s+/, '');

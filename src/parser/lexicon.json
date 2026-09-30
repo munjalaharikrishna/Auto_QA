@@ -23,8 +23,16 @@
   "assertionVerbs": [
     "verify that", "verify", "observe that", "observe", "ensure that", "ensure", "confirm that", "confirm",
     "validate that", "validate", "check that", "check if", "check whether", "assert that", "assert",
-    "see that", "expect that", "expect", "make sure that", "make sure"
+    "see that", "expect that", "expect", "make sure that", "make sure",
+    "verifying that", "verifying", "checking that", "checking if", "checking", "validating that", "validating",
+    "ensuring that", "ensuring", "confirming that", "confirming", "observing"
   ],
+
+  "browserStart": {
+    "$comment": "Steps that only start the browser. They need no step: exploration and the tests open the browser themselves.",
+    "phrases": ["open browser", "open the browser", "open a browser", "launch browser", "launch the browser", "start browser", "start the browser",
+      "open chrome", "open google chrome", "open the chrome browser", "open chrome browser", "launch chrome", "open firefox", "open edge", "open any browser"]
+  },
 
   "assertionMarkers": [
     "should", "must", "is displayed", "are displayed", "is shown", "are shown", "is visible", "are visible",

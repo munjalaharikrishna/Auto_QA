@@ -48,6 +48,10 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
       for (const c of parsed.checks) checks.push(toAssertion(c, lineText, 'step', id));
       continue;
     }
+    if (parsed.kind === 'note') {
+      warnings.push({ at: id, code: 'NO_STEP_NEEDED', text: parsed.text });
+      continue;
+    }
     const a = parsed.action;
     warnings.push(...a.warnings.map((w) => ({ at: id, ...w })));
     steps.push(
@@ -60,6 +64,7 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
         roleHint: a.roleHint,
         value: a.value,
         url: a.url,
+        baseUrl: a.baseUrl,
         page: a.page,
         key: a.key,
         raw: lineText,
