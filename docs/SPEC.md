@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.7 |
+| **Spec version** | 1.8 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -72,6 +72,8 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D19** | **V1 page names**: the first step's page ("Open Login page") opens the environment's `BASE_URL`. A page name in any later step asks the tester for its URL once, and the answer is saved with the environment, keyed by its base URL and stored as a path. A check such as "redirected to Dashboard" also teaches the page's path. | The page map (FR-ENV-03) is V2. The first page is almost always the base URL; guessing any other URL would break D6. |
 | **D20** | The web UI is **React**, served by a **Fastify** API with a job runner and WebSocket, storing data in **SQLite** (PostgreSQL from V3). | Confirmed 2026-09-30. One Node process on a laptop in V1–V2 (§3), with a clear path to the team server. |
 | **D21** | Excel import uses **ExcelJS**. | Maintained and on npm. Current SheetJS versions are only on its own CDN. |
+| **D22** | A **batch run never waits for the tester**. A case that needs review is set aside with status NEEDS REVIEW and the batch moves on; the tester answers the review queue at the end, and only those cases run again. | A 100-case sheet must not stall on case 37. Setting a case aside keeps D6 (never guess). |
+| **D23** | Results are written to a **copy** of the workbook (`<name>.results.xlsx`), never to the original. | A failed or interrupted run cannot damage the tester's source sheet. |
 
 ## 5. Test case input format
 
@@ -131,6 +133,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-IN-05 | Import from **Jira** (Xray/Zephyr) | V2 | Pull test cases by project/filter |
 | FR-IN-06 | Import from **TestRail** | V2 | Pull test cases by suite |
 | FR-IN-07 | Re-import updates changed test cases (matched by ID) and shows what changed | V2 | Changed steps are flagged for re-generation |
+| FR-IN-08 | **Unattended batch run of a workbook**: every test case, one by one, each in a fresh browser context: parse → explore → generate → run (D22). Cases that need the tester are set aside, and a review queue lists them at the end; after review only those run again. A "Logged in" precondition reuses the sheet's login case. The run can be stopped and resumed, skipping finished cases. | V1 | A 100-row sheet runs to the end without stopping; one case needing review does not block the others; a resumed run skips finished cases |
+| FR-IN-09 | **Automatic column matching** for command-line and batch imports: the sheet's headers are matched to the §5 fields by name and synonyms (`Test Case` → Title, `Expected Result` → Expected), with a saved mapping file for anything else. The mapping screen (FR-IN-02) uses the same matcher as its first guess. | V1 | A sheet with the usual headers imports with no mapping |
 
 ### 6.2 Test case parser (FR-PA) · §4
 
@@ -273,6 +277,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" |
 | FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | |
 | FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test |
+| FR-VAL-05 | **Result statuses**: `PASS` every check passed; `FAIL` a check failed, or a step failed because of the application; `BLOCKED` the run could not be done (environment, network, missing credentials or test data); `NEEDS REVIEW` a step or check the rules cannot decide (UNPARSED, vague, ambiguous). A vague expected result is never judged. | V1 | "Works correctly" gives NEEDS REVIEW, never PASS |
 
 ### 6.13 Failure classification and retry (FR-FC) · §15
 
@@ -321,6 +326,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-HI-03 | Open any past run: steps, evidence, trace, logs, generated code at that time | V2 | |
 | FR-HI-04 | Standalone HTML report per run/suite | V2 | |
 | FR-HI-05 | Dashboards: pass rate trend, flaky tests, most-healed locators | V4 | |
+| FR-HI-06 | **Results written back to the workbook** (D23): a copy `<name>.results.xlsx` with the columns **Status**, **Actual Result**, **Failed Step**, **Executed At**, **Automation ID** and **Evidence** (link to the screenshot) added next to each test case. The original formatting is kept. Running again updates the same columns. | V1 | The tester opens the results file and sees PASS/FAIL and the actual result on every row |
+| FR-HI-07 | **Batch summary**: totals by status, duration, and the review queue (case, step, question) | V1 | "82 pass · 9 fail · 3 blocked · 6 need review" |
 
 ### 6.18 Team mode (FR-TM)
 
@@ -390,7 +397,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | Version | Theme | Main features |
 |---|---|---|
-| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation with **action methods** · run settings in the form (URL, credentials, browser) · credentials only in a git-ignored `.env` · run in Chromium · expected vs actual · health check · screenshot · masking |
+| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation with **action methods** · run settings in the form (URL, credentials, browser) · **batch run of a whole workbook** with results written back to a copy · credentials only in a git-ignored `.env` · run in Chromium · expected vs actual · health check · screenshot · masking |
 | **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits · **API tests** (requests, auth profiles, checks, chaining) · **table steps and checks** · **re-discover** a saved test · optional auto-approve |
 | **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · API contract checks + OpenAPI/Postman import · **team mode** (server, login, roles, PostgreSQL) |
 | **V4 · Enterprise QA** | Connected to the QA process | Traceability · API + UI hybrid · Cucumber · Jira defects + result sync · CI/CD · scheduled runs · dashboards |
@@ -406,7 +413,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
 | M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ⬜ Next |
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ⬜ |
-| M7 | Web UI (D20): server + storage, import (D21), column mapping, review with pick element, results (FR-IN-01…04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
+| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ⬜ |
+| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
 
@@ -429,6 +437,8 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 | **NEEDS_REVIEW** | A step the platform could not resolve safely; the tester decides |
 | **Action method** | A Page Object method that performs one step or a group of steps, e.g. `login(username, password)` (FR-GE-10) |
 | **Re-discovery** | Exploring a saved test again to refresh its locators after the UI changed (FR-RV-07) |
+| **Batch run** | Running every test case in a workbook unattended, setting aside the ones that need the tester (FR-IN-08) |
+| **Review queue** | The cases a batch set aside, with the question each one needs answered (FR-HI-07) |
 | **Run settings** | Application URL, credentials, browser and environment for a run. They belong to the environment, not the test case (§5) |
 | **API test** | A test case that sends HTTP requests and checks the responses, with no browser (§6.21) |
 | **API client** | Generated class with one method per endpoint a test uses; the API equivalent of a Page Object |
@@ -494,3 +504,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.5 | 2026-09-30 | Checked against every section of `Auto_QA.docx`. Added: run settings in the form (§5, FR-IN-04), V1 credential storage (FR-ENV-05), table steps and row-scoped locators (FR-PA-13, FR-LO-13), POM action methods (FR-GE-10, FR-GE-11), re-discovery and optional auto-approve (FR-RV-07, FR-RV-08), `reports/` folder (FR-GE-05), Test Scenario level and stable IDs (FR-EN-01, FR-EN-06). Recorded where the spec differs from the document: D15 (no `utils/` in the generated project), D16 (one locator file per page), D17 (Generate & Execute still reviews), D18 (Browser field with Chromium only in V1). |
 | 1.6 | 2026-09-30 | Decisions D19 (V1 page names: first page is `BASE_URL`, later pages ask), D20 (React + Fastify + SQLite), D21 (ExcelJS). Every open V1 requirement assigned to a milestone. Added PLAN.md. FR-IN-03 marked done. |
 | 1.7 | 2026-09-30 | M4 done: exploration controller with the step state machine, resolver for NEEDS_REVIEW, settle and verify-effect rules, preconditions, Production guard, per-step screenshots. Learned page URLs are per environment and stored as paths (D19). A "shown" check may target plain text. A role locator without a name ranks after a CSS id. Local demo app for end-to-end tests. |
+| 1.8 | 2026-09-30 | Batch run of a whole workbook (FR-IN-08, D22), automatic column matching (FR-IN-09), result statuses (FR-VAL-05), results written back to a copy of the workbook (FR-HI-06, D23), batch summary and review queue (FR-HI-07). New milestone M6b; Excel/CSV import moves from M7 to M6b. |

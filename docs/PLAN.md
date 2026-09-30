@@ -2,7 +2,7 @@
 
 How the rest of [SPEC.md](SPEC.md) gets built. V1 is planned in detail by milestone; V2–V4 in order only. Decisions referenced as D… are in SPEC §4.
 
-**Approach:** M4–M6 build the whole flow as command line tools first (parse → explore → generate → run → report). M7 then puts a web UI on parts that already work.
+**Approach:** M4–M6b build the whole flow as command line tools first (parse → explore → generate → run → report, then a whole workbook at once). M7 then puts a web UI on parts that already work.
 
 ## Step 0: housekeeping
 
@@ -55,11 +55,27 @@ How the rest of [SPEC.md](SPEC.md) gets built. V1 is planned in detail by milest
 
 **Done when** `npm run auto-qa -- … --id TC-LOGIN-001` goes from parse to a PASS/FAIL report, and a broken login fails with a correct expected vs actual.
 
+## M6b: batch run of a workbook (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07)
+
+`npm run auto-qa -- tests.xlsx --base-url https://app.example.com`
+
+| # | Work | Requirements |
+|---|---|---|
+| 1 | Excel/CSV import with ExcelJS; headers matched to the §5 fields by name and synonyms, plus a saved mapping file | FR-IN-01, FR-IN-09, D21 |
+| 2 | Batch runner: each case in a fresh context through parse → explore → generate → run | FR-IN-08 |
+| 3 | Never wait (D22): the CLI resolver in batch mode sets the case aside as NEEDS REVIEW and records the question | D22 |
+| 4 | Login once: "Logged in" cases reuse the sheet's login case | FR-PF-01 |
+| 5 | Progress file: stop and resume, skipping finished cases; `--only-review` re-runs the review queue | FR-IN-08 |
+| 6 | Write `<name>.results.xlsx`: Status, Actual Result, Failed Step, Executed At, Automation ID, Evidence; original formatting kept | FR-HI-06, D23 |
+| 7 | Summary with totals and the review queue | FR-HI-07, FR-VAL-05 |
+
+**Done when** a 100-row sheet (generated from the demo app, with some deliberately vague and some failing cases) runs to the end unattended and the results file shows the right status and actual result on every row.
+
 ## M7: web UI (D20: React + Fastify + SQLite)
 
 - **M7a server:** Fastify API, job runner, WebSocket, SQLite with a default user (§3). The CLI steps become jobs.
 - **M7b UI:**
-  - Excel/CSV import with ExcelJS (D21) and column mapping (FR-IN-01, FR-IN-02)
+  - The M6b batch run on screen: upload, progress, review queue (FR-IN-08); column mapping screen (FR-IN-02)
   - Single test case form with run settings (FR-IN-04)
   - Review: steps, scores, screenshots, code diff, Approve & Execute / Edit / Regenerate (FR-RV-01, 03, 04, 05)
   - **Pick element on screenshot** (FR-RV-02): the paused exploration maps the click to an element with `elementFromPoint`, then the same ladder and validation
