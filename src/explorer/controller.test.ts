@@ -8,7 +8,7 @@ import { DEMO_USER, startDemoApp } from '../../examples/demo-app/server.js';
 import { openSession, type Session } from '../locators/session.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
-import { type ExplorationResult, type ExploreOptions, explore, type Resolver } from './controller.js';
+import { type ExplorationResult, type ExploreOptions, explore, type Resolver, type ReviewRequest } from './controller.js';
 
 /**
  * Exploration of whole test cases (FR-EX-02…09) against the local demo app.
@@ -135,6 +135,30 @@ describe('exploration controller on the demo app', { skip, concurrency: 3 }, () 
     assert.equal(byId(r, 'S2').status, 'skipped');
     assert.equal(byId(r, 'S3').status, 'done');
     assert.equal(r.status, 'incomplete');
+  });
+
+  it('lets the tester pick the element on the screenshot (FR-RV-02)', async () => {
+    let view: ReviewRequest['view'];
+    const resolver: Resolver = {
+      ...scripted().resolver,
+      async choose(r) {
+        view = r.view;
+        // Like a click in the UI: the second "Details" box on the screenshot.
+        const boxes = r.view?.elements.filter((e) => e.name === 'Details') ?? [];
+        return boxes[1] ? { ref: boxes[1].ref } : 'skip';
+      },
+    };
+    const r = await run(
+      inline('1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Details', 'Message "Security details" is shown'),
+      resolver,
+    );
+    assert.equal(r.status, 'complete', JSON.stringify(r.items.map((i) => [i.id, i.status, i.error, i.warnings])));
+    assert.ok(view && readFileSync(view.screenshot).length > 0, 'the question has a screenshot');
+    assert.equal(view?.elements.filter((e) => e.name === 'Details').length, 2);
+    assert.ok(view?.elements.every((e) => e.box.width > 0 && e.box.height > 0));
+    const s5 = byId(r, 'S5');
+    assert.equal(s5.resolvedBy, 'tester');
+    assert.equal(byId(r, 'A1').observed?.textFound, true, 'the picked button, not the first one, was clicked');
   });
 
   it('asks before exploring Production (FR-EX-08)', async () => {

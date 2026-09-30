@@ -48,7 +48,25 @@ export interface PipelineResult {
   executionId?: string;
 }
 
+/** What exploring and generating produced, before anything runs: the plan the tester reviews (FR-RV-01). */
+export interface Prepared {
+  /** Cases that are explored and generated, ready to run. */
+  explored: GenerateInput[];
+  /** Cases that stopped before generation, with their verdict (NEEDS REVIEW or BLOCKED). */
+  early: Map<string, TestVerdict>;
+  workspace?: string;
+  /** Generated files that are new or changed, with what was there before (FR-RV-04). */
+  changes: Array<{ path: string; before?: string; after: string }>;
+}
+
+/** parse → explore → generate → run → verdict. */
 export async function runCases(models: TestModel[], options: PipelineOptions): Promise<PipelineResult> {
+  const prepared = await prepareCases(models, options);
+  return executeCases(models, prepared, options);
+}
+
+/** Explores each case (or reuses its exploration) and writes the generated project. Nothing runs yet. */
+export async function prepareCases(models: TestModel[], options: PipelineOptions): Promise<Prepared> {
   const progress = options.onProgress ?? (() => {});
   const exploreDir = options.exploreDir ?? path.join('.auto-qa', 'explore');
   const early = new Map<string, TestVerdict>();
@@ -140,16 +158,33 @@ export async function runCases(models: TestModel[], options: PipelineOptions): P
   }
 
   let workspace: string | undefined;
-  let executionId: string | undefined;
-  const ran = new Map<string, TestVerdict>();
+  const changes: Prepared['changes'] = [];
   if (explored.length) {
     workspace = options.workspace ?? path.join('workspaces', workspaceName(options.baseUrl));
     progress(`… generating ${explored.length} test(s) into ${workspace}`);
     const { files } = await generateProject(explored, path.basename(workspace));
+    for (const [rel, after] of Object.entries(files)) {
+      const before = await readFile(path.join(workspace, rel), 'utf8').catch(() => undefined);
+      if (before !== after) changes.push({ path: rel, before, after });
+    }
     // The project holds exactly this run's tests, so an old test or page for a changed case cannot linger.
     for (const dir of ['tests', 'pages', 'locators', 'data']) await rm(path.join(workspace, dir), { recursive: true, force: true });
     await writeProject(workspace, files);
-    progress('… running');
+  }
+  return { explored, early, workspace, changes };
+}
+
+/** Runs what `prepareCases` generated and puts every case's verdict in the models' order. */
+export async function executeCases(
+  models: TestModel[],
+  prepared: Prepared,
+  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent'>,
+): Promise<PipelineResult> {
+  const { explored, early, workspace } = prepared;
+  let executionId: string | undefined;
+  const ran = new Map<string, TestVerdict>();
+  if (explored.length && workspace) {
+    options.onProgress?.('… running');
     const run = await runWorkspace(workspace, {
       testIds: explored.map((e) => e.model.id),
       env: options.env,

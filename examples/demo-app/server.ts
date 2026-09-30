@@ -40,6 +40,11 @@ document.getElementById('login').addEventListener('submit', (e) => {
 <nav aria-label="Main"><a href="/profile">Profile</a> · <a href="/reports">Reports</a> · <a href="/">Log out</a></nav>
 <p><button disabled>Delete account</button></p>
 <section aria-label="Activity"><h2>Recent activity</h2><p id="activity">Loading…</p></section>
+<section aria-label="Messages"><h2>Messages</h2>
+  <p>Invoice ready <button onclick="shown.textContent = 'Invoice details'">Details</button></p>
+  <p>Password changed <button onclick="shown.textContent = 'Security details'">Details</button></p>
+  <p id="shown" role="status"></p>
+</section>
 <script>setTimeout(() => { activity.textContent = '3 new messages'; }, 800);</script>`,
   ),
   // Looks fine, but throws in the page and gets a 500 from its API: the health check must catch it (FR-VAL-04).

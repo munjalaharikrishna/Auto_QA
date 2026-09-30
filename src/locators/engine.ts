@@ -83,7 +83,8 @@ export async function locate(
   });
 
   // Pin the snapshot element in the probe's view of the page. MCP knows which element the ref is,
-  // so its generated locator is the anchor; role + name is the fallback.
+  // so its generated locator is the anchor; role + name is the fallback; last, the probe's own
+  // snapshot, whose refs are MCP's when the page has not changed (aria-ref).
   const browserPage = probe.page(state.url);
   const suggestion = await suggestLocator(mcp, node.ref!, node.name || node.role);
   const pins = [suggestion, node.name ? spec('getByRole', node.role, { name: node.name, exact: true }) : undefined].filter((s): s is LocatorSpec => !!s);
@@ -92,6 +93,7 @@ export async function locate(
     anchor = (await probe.resolve(browserPage, s)).handle;
     if (anchor) break;
   }
+  anchor ??= await probe.resolveRef(browserPage, node.ref!, state.snapshotYaml);
   if (!anchor) return review('CANNOT_PIN', `Found ${node.role} "${node.name}" [${node.ref}] but could not point to it on its own. Pick it on the screenshot.`);
 
   try {

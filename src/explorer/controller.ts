@@ -3,12 +3,13 @@ import path from 'node:path';
 import { type LocateResult, locate } from '../locators/engine.js';
 import { type Fingerprint, type PageRef, pageOf } from '../locators/ladder.js';
 import { parseLocatorCode, spec, toCode, toLocator } from '../locators/locator.js';
-import type { Candidate, TargetQuery } from '../locators/match.js';
+import { type Candidate, rolesFor, type TargetQuery } from '../locators/match.js';
 import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { executionOrder } from '../parser/index.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
+import { flatten, nearbyText, parseSnapshot, type SnapshotNode } from './snapshot-parser.js';
 import { masker, resolveValue } from './values.js';
 
 /**
@@ -53,12 +54,25 @@ export interface ReviewRequest {
   code: string;
   text: string;
   candidates: Candidate[];
+  /** The page as it is now, for pick-element on the screenshot (FR-RV-02). */
+  view?: PageView;
 }
+
+/** A screenshot and, for every element the step's action could use, its box on that screenshot. */
+export interface PageView {
+  screenshot: string;
+  width: number;
+  height: number;
+  elements: Array<{ ref: string; role: string; name: string; box: { x: number; y: number; width: number; height: number }; candidate?: number }>;
+}
+
+/** A candidate by its index, an element picked on the screenshot by its ref, or skip / stop. */
+export type ReviewAnswer = number | { ref: string } | 'skip' | 'abort';
 
 /** Answers the questions exploration cannot decide by rule. */
 export interface Resolver {
   /** Pick one of `candidates` by index, or skip the step, or stop exploring. */
-  choose(request: ReviewRequest): Promise<number | 'skip' | 'abort'>;
+  choose(request: ReviewRequest): Promise<ReviewAnswer>;
   /** The URL (or path) of a page the tester named, e.g. "Open Profile page" (D19). */
   pageUrl(request: { item: string; page: string }): Promise<string | 'abort'>;
   /** Yes/no, e.g. "Explore on Production?" or "The click changed nothing. Continue?". */
@@ -111,6 +125,9 @@ export interface ExplorationResult {
   /** The login test case run for a "Logged in" precondition, so the setup steps can be generated on their own. */
   setup?: { testId: string; steps: Step[]; data: Record<string, string> };
 }
+
+/** How often one step may ask the tester before it gives up. */
+const MAX_QUESTIONS = 5;
 
 class Aborted extends Error {}
 
@@ -182,6 +199,41 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
   }
 
+  /** Screenshot + element boxes, taken together so the boxes match the picture (FR-RV-02). */
+  async function pageView(query: TargetQuery, candidates: Candidate[], name: string): Promise<PageView | undefined> {
+    try {
+      const page = browserPage();
+      const file = path.join(options.outDir, `${model.id}-${name}.png`);
+      await page.screenshot({ path: file });
+      const size = page.viewportSize() ?? { width: 1280, height: 720 };
+      const roles = rolesFor(query.kind);
+      const nodes = flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true })));
+      const elements = nodes.flatMap((n) => {
+        const box = typeof n.attributes.box === 'string' ? n.attributes.box.split(',').map(Number) : [];
+        if (!n.ref || box.length !== 4 || box[2] <= 0 || box[3] <= 0) return [];
+        if (roles && !roles.includes(n.role)) return [];
+        if (
+          !roles &&
+          ['generic', 'text', 'paragraph', 'main', 'document', 'region', 'form', 'list', 'group', 'navigation', 'banner', 'contentinfo'].includes(n.role)
+        )
+          return [];
+        const candidate = candidates.findIndex((c) => c.node.ref === n.ref);
+        return [
+          {
+            ref: n.ref,
+            role: n.role,
+            name: n.name || nearbyText(n) || n.text || '',
+            box: { x: box[0], y: box[1], width: box[2], height: box[3] },
+            ...(candidate >= 0 ? { candidate } : {}),
+          },
+        ];
+      });
+      return { screenshot: file, width: size.width, height: size.height, elements };
+    } catch {
+      return undefined;
+    }
+  }
+
   async function screenshot(item: ExploredItem): Promise<void> {
     const file = path.join(options.outDir, `${model.id}-${item.phase === 'setup' ? 'setup-' : ''}${item.id}.png`);
     try {
@@ -197,23 +249,36 @@ export async function explore(model: TestModel, session: Session, options: Explo
     const locateOptions = { config: options.config, testIdAttribute: session.testIdAttribute, pageHint: pathNames[pathOf(state.url)] };
     let r = await locate(query, mcp, probe, locateOptions, { state });
     item.resolvedBy = 'rules';
+    let asked = 0;
     while (r.status === 'needs-review') {
       item.candidates = r.candidates.slice(0, 5).map(summary);
-      const answer = await options.resolver.choose({ item: item.id, raw: item.raw, code: r.code, text: r.text, candidates: r.candidates });
+      if (asked >= MAX_QUESTIONS) {
+        // Every answer so far pointed to something this step cannot use; stop asking.
+        item.status = 'failed';
+        item.error = `No usable element after ${asked} answers. ${r.text}`;
+        return undefined;
+      }
+      const view = await pageView(query, r.candidates, `${item.id}-q${++asked}`);
+      const answer = await options.resolver.choose({ item: item.id, raw: item.raw, code: r.code, text: r.text, candidates: r.candidates, view });
       if (answer === 'abort') throw new Aborted();
       if (answer === 'skip') {
         item.status = 'skipped';
         item.warnings.push(`${r.code}: ${r.text} Skipped by the tester.`);
         return undefined;
       }
-      const chosen = r.candidates[answer];
-      if (!chosen) continue;
+      // A candidate from the list, or any element picked on the screenshot (FR-RV-02).
+      const node = typeof answer === 'number' ? r.candidates[answer]?.node : nodeByRef(state, answer.ref);
+      if (!node) {
+        item.warnings.push(typeof answer === 'number' ? `No candidate ${answer + 1}.` : `No element ${answer.ref} on the page any more.`);
+        continue;
+      }
       item.resolvedBy = 'tester';
-      const again = await locate(query, mcp, probe, locateOptions, { state, node: chosen.node });
+      const again = await locate(query, mcp, probe, locateOptions, { state, node });
       if (again.status === 'needs-review') {
+        // The picked element cannot be used for this step (not unique, not actionable): ask again.
         item.warnings.push(`${again.code}: ${again.text}`);
-        r = { ...again, candidates: r.candidates.filter((c) => c !== chosen) };
-        if (!r.candidates.length) {
+        r = { ...again, candidates: r.candidates.filter((c) => c.node.ref !== node.ref) };
+        if (!r.candidates.length && typeof answer === 'number') {
           item.status = 'failed';
           item.error = again.text;
           return undefined;
@@ -506,6 +571,11 @@ export async function explore(model: TestModel, session: Session, options: Explo
   if (result.status === 'complete' && result.items.some((i) => i.status !== 'done')) result.status = 'incomplete';
   result.finishedAt = new Date().toISOString();
   return result;
+}
+
+/** The snapshot node with this ref, from the snapshot the step was matched on. */
+function nodeByRef(state: PageState, ref: string): SnapshotNode | undefined {
+  return flatten(parseSnapshot(state.snapshotYaml)).find((n) => n.ref === ref);
 }
 
 const summary = (c: Candidate) => ({ ref: c.node.ref, role: c.node.role, name: c.matchedName || c.node.name, score: c.score });

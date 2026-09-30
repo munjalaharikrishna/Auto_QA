@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { type BrowserContext, chromium, type ElementHandle, type Page, selectors } from 'playwright';
 import type { ElementFacts } from './ladder.js';
-import { type LocatorSpec, toCode, toLocator } from './locator.js';
+import { type LocatorSpec, spec, toCode, toLocator } from './locator.js';
 import type { TargetQuery } from './match.js';
 
 /**
@@ -64,6 +64,17 @@ export class LocatorProbe {
     const locator = toLocator(page, s);
     const count = await locator.count();
     return { handle: count === 1 ? ((await locator.elementHandle({ timeout: this.timeout })) ?? undefined) : undefined, count };
+  }
+
+  /**
+   * The element with this snapshot ref, if the probe's own snapshot of the page is the one the ref came
+   * from: then its refs are MCP's (the same snapshot code on the same page).
+   */
+  async resolveRef(page: Page, ref: string, snapshotYaml: string): Promise<ElementHandle | undefined> {
+    const own = await page.ariaSnapshot({ mode: 'ai', timeout: this.timeout }).catch(() => undefined);
+    if (own?.trimEnd() !== snapshotYaml.trimEnd()) return undefined;
+    const { handle } = await this.resolve(page, spec('locator', `aria-ref=${ref}`));
+    return handle;
   }
 
   async facts(handle: ElementHandle, testIdAttribute: string): Promise<ElementFacts> {
