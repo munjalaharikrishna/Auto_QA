@@ -68,13 +68,7 @@ export class McpBrowser {
   }
 
   async snapshot(): Promise<PageState> {
-    const reply = await this.call('browser_snapshot', {});
-    const page = reply.sections['Page'] ?? '';
-    return {
-      url: /- Page URL: (.*)/.exec(page)?.[1]?.trim() ?? '',
-      title: /- Page Title: (.*)/.exec(page)?.[1]?.trim() ?? '',
-      snapshotYaml: extractFence(reply.sections['Snapshot'] ?? '', 'yaml'),
-    };
+    return pageState(await this.call('browser_snapshot', {}));
   }
 
   /** `target` is a snapshot ref such as "e11". `element` is a readable description for logs. */
@@ -97,15 +91,29 @@ export class McpBrowser {
   private async call(name: string, args: Record<string, unknown>): Promise<ToolReply> {
     const result = await this.client.callTool({ name, arguments: args });
     const content = (result.content ?? []) as Array<{ type: string; text?: string }>;
-    const raw = content.filter((c) => c.type === 'text').map((c) => c.text ?? '').join('\n');
-    const sections = splitSections(raw);
-
-    if (result.isError || sections['Error'] !== undefined) {
-      throw new Error(`MCP tool ${name} failed: ${(sections['Error'] ?? raw).trim()}`);
+    const reply = parseToolReply(content.filter((c) => c.type === 'text').map((c) => c.text ?? '').join('\n'));
+    if (result.isError || reply.sections['Error'] !== undefined) {
+      throw new Error(`MCP tool ${name} failed: ${(reply.sections['Error'] ?? reply.raw).trim()}`);
     }
-    const ran = sections['Ran Playwright code'];
-    return { sections, raw, code: ran ? extractFence(ran, 'js') : undefined };
+    return reply;
   }
+}
+
+/** Splits an MCP text reply into its "### Heading" sections and pulls out the code it ran. */
+export function parseToolReply(raw: string): ToolReply {
+  const sections = splitSections(raw);
+  const ran = sections['Ran Playwright code'];
+  return { sections, raw, code: ran ? extractFence(ran, 'js') : undefined };
+}
+
+/** Reads the page URL, title and YAML snapshot out of a browser_snapshot reply. */
+export function pageState(reply: ToolReply): PageState {
+  const page = reply.sections['Page'] ?? '';
+  return {
+    url: /- Page URL: (.*)/.exec(page)?.[1]?.trim() ?? '',
+    title: /- Page Title: (.*)/.exec(page)?.[1]?.trim() ?? '',
+    snapshotYaml: extractFence(reply.sections['Snapshot'] ?? '', 'yaml'),
+  };
 }
 
 function splitSections(text: string): Record<string, string> {
