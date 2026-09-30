@@ -423,7 +423,8 @@ Auto_QA/
     model/                 ✅ test-model.ts (types + zod schema)    (M2)
     parser/                ✅ steps, assertions, target, test-data,  (M2)
                               preconditions, quality, lexicon.json, synonyms.json
-    locators/              ⬜ scoring, ladder, probe, fingerprint    (M3)
+    locators/              ✅ match, locator, ladder, probe,         (M3)
+                              engine, session (shared Chrome)
     generator/             ⬜ templates/*.hbs                         (M5)
     executor/              ⬜ runner adapter, custom reporter         (M6)
     results/               ⬜ validator, classifier                  (M6)
@@ -432,7 +433,7 @@ Auto_QA/
     server/                ⬜ Fastify API, jobs, WebSocket           (M7)
     recovery/              ⬜ self-healing                           (V3)
     assist/                ⬜ AssistProvider (no-op)                 (V1 interface)
-    cli/                   ✅ snapshot.ts (M1), parse.ts (M2)
+    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), tools.ts
   examples/                test-cases.json (sample input for npm run parse)
   web/                     ⬜ React UI                               (M7)
   workspaces/              generated projects, one per app under test

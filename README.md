@@ -55,10 +55,33 @@ The input is a JSON array of test cases with the fields in [SPEC §5](docs/SPEC.
 
 The parser's vocabulary is in [src/parser/lexicon.json](src/parser/lexicon.json) and [src/parser/synonyms.json](src/parser/synonyms.json). You can add words there without changing code.
 
+## Milestone 3: find the element a step means and validate its locator
+
+```bash
+npm run match -- https://www.saucedemo.com "Enter username" "Enter password" "Click the Login button" --test-id-attribute data-test
+npm run match -- https://the-internet.herokuapp.com/checkboxes "Check checkbox 1" --all
+```
+
+Each step is parsed (M2), then matched against the live page. Nothing is clicked or typed; running the steps in order is M4. For each step it shows:
+
+- the candidates with their scores and why (exact, synonym, contains, fuzzy, nearby text, role hint)
+- **NEEDS_REVIEW** when nothing matches well enough or two elements match almost equally
+- the locator ladder, each rung validated by the Locator Probe (exactly one element, the same element, the action is possible), and the one that won
+
+| Option | Meaning |
+|---|---|
+| `--all` | Validate every rung, not just up to the first valid one |
+| `--page Login` | The page name to group the elements under (default: from the URL path, then the title) |
+| `--test-id-attribute data-test` | The attribute the app uses for test ids |
+| `--headed` | Show the browser window |
+| `--json file.json` | Save the full result |
+
+The Locator Probe starts Chrome with a debugging port and Playwright MCP connects to the same Chrome, so both see the same page (D7). Scoring constants are in `src/locators/match.ts`.
+
 ## Tests
 
 ```bash
-npm test
+npm test          # includes browser tests on a local page; AUTO_QA_SKIP_BROWSER=1 skips them
 npm run typecheck
 npm run lint      # Biome: lint + format check
 npm run format    # apply formatting and safe fixes
@@ -75,13 +98,20 @@ npm run format    # apply formatting and safe fixes
 | `src/parser/` | Test case → Test Model. `index.ts` (entry), `steps.ts` (actions, data binding), `assertions.ts` (checks), `target.ts` (element names), `test-data.ts`, `preconditions.ts`, `quality.ts`, `text.ts` (splitting, quotes). |
 | `src/cli/parse.ts` | Milestone 2 command line tool. |
 | `src/cli/tools.ts` | Lists every MCP tool by capability. |
+| `src/locators/match.ts` | Candidate filter by role, scoring, ambiguity rule. Pure. |
+| `src/locators/locator.ts` | Locators as data: print as code, run as a Playwright locator, read MCP's code without `eval`. |
+| `src/locators/ladder.ts` | Locator ladder, fingerprint, page grouping. Pure. |
+| `src/locators/probe.ts` | Locator Probe: starts the shared Chrome, reads element facts, validates locators. |
+| `src/locators/engine.ts` | One step: snapshot → match → pin the element → ladder → first valid locator. |
+| `src/locators/session.ts` | Starts the probe's Chrome and Playwright MCP on it together. |
+| `src/cli/match.ts` | Milestone 3 command line tool. |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
 ## Milestones
 
 - [x] M1: connect to Playwright MCP and list page elements
 - [x] M2: parse a written test case into steps, test data and checks
-- [ ] M3: match a step to an element and validate the locator
+- [x] M3: match a step to an element and validate the locator
 - [ ] M4: explore a full test case and save locators
 - [ ] M5: generate Page Objects and specs
 - [ ] M6: run with Playwright Test and report PASS/FAIL

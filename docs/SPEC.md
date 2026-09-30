@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.3 |
+| **Spec version** | 1.4 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -180,16 +180,16 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-LO-01 | Parse the MCP snapshot into elements (role, name, ref, attributes, context) | V1 | ✅ Done (M1) |
-| FR-LO-02 | **Nearby-text fallback** for unlabeled elements (text after a checkbox/radio, before a field) | V1 | ✅ Done (M1) |
-| FR-LO-03 | Filter candidates by role compatibility with the action (fill → textbox/combobox, click → button/link/menuitem/tab, check → checkbox/radio/switch) | V1 | |
-| FR-LO-04 | **Score** candidates: exact name, contains, fuzzy (Levenshtein), synonyms, nearby text, roleHint, context (form/dialog) | V1 | Scores shown in review |
-| FR-LO-05 | **Ambiguity rule**: if no candidate reaches the minimum score, or the top two are within the margin → NEEDS_REVIEW with the candidates | V1 | Never picks between two equal "Save" buttons |
-| FR-LO-06 | **Locator ladder**: getByTestId → getByRole+name → getByLabel → getByPlaceholder → getByText → CSS → XPath. The first one that validates wins. | V1 | |
-| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | |
-| FR-LO-08 | **Validation (Locator Probe)**: `count() === 1`, visible, enabled/editable, the action is possible | V1 | Invalid locators are never stored |
-| FR-LO-09 | Configurable test-id attribute per project (`data-testid`, `data-test`, `data-qa`…) | V1 | |
-| FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage |
-| FR-LO-11 | Store a **fingerprint** (role, name, label, tag, key attributes, parent form) for recovery | V1 | |
+| FR-LO-02 | **Nearby-text fallback** for unlabeled elements (text after a checkbox/radio, before a field; a heading just above an unnamed field, with a lower score) | V1 | ✅ Done (M1; heading in M3) |
+| FR-LO-03 | Filter candidates by role compatibility with the action (fill → textbox/combobox, click → button/link/menuitem/tab, check → checkbox/radio/switch) | V1 | ✅ Done (M3) |
+| FR-LO-04 | **Score** candidates: exact name, contains, fuzzy (Levenshtein), synonyms, nearby text, roleHint, context (form/dialog) | V1 | Scores shown in review · ✅ Done (M3); constants in `src/locators/match.ts` (`SCORE`) |
+| FR-LO-05 | **Ambiguity rule**: if no candidate reaches the minimum score, or the top two are within the margin → NEEDS_REVIEW with the candidates | V1 | Never picks between two equal "Save" buttons · ✅ Done (M3): minimum 0.6, margin 0.1 |
+| FR-LO-06 | **Locator ladder**: getByTestId → getByRole+name → getByLabel → getByPlaceholder → getByText → CSS → XPath. The first one that validates wins. | V1 | ✅ Done (M3). CSS skips generated-looking ids; position-based locators (`.nth()`) come after all others |
+| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | ✅ M3: MCP's `browser_generate_locator` suggestion joins the ladder and pins the element. Code reported after an action: M4 |
+| FR-LO-08 | **Validation (Locator Probe)**: `count() === 1`, visible, enabled/editable, the action is possible | V1 | Invalid locators are never stored · ✅ Done (M3): also checks it is the same element the matcher chose; "possible" uses Playwright's trial actions |
+| FR-LO-09 | Configurable test-id attribute per project (`data-testid`, `data-test`, `data-qa`…) | V1 | ✅ Done (M3) |
+| FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage · ✅ Done (M3): named from the tester's page name, else the path, else the title |
+| FR-LO-11 | Store a **fingerprint** (role, name, label, tag, key attributes, parent form) for recovery | V1 | ✅ Built (M3); saved to the locator repository in M5 |
 | FR-LO-12 | Scoped locators when needed (`form "Login"` → `getByRole('form').getByRole('button', …)`) to make a locator unique | V2 | |
 
 ### 6.8 Locator repository (FR-LR) · §7
@@ -376,8 +376,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 |---|---|---|
 | M1 | Connect to Playwright MCP, list page elements (FR-EX-01, FR-LO-01, FR-LO-02) | ✅ Done |
 | M2 | Parser: text → Test Model (FR-PA-*, FR-TD-01, FR-TD-02, FR-PF-01 parsing, FR-QC-01/02) | ✅ Done |
-| M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ⬜ Next |
-| M4 | Full exploration of one test case (FR-EX-02…09) | ⬜ |
+| M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ✅ Done |
+| M4 | Full exploration of one test case (FR-EX-02…09) | ⬜ Next |
 | M5 | Code generation (FR-GE-01…06) | ⬜ |
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03) | ⬜ |
 | M7 | Web UI: import, column mapping, review with pick element, results (FR-IN-01…04, FR-RV-*, FR-HI-01) | ⬜ |
@@ -459,3 +459,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.1 | 2026-09-29 | Added decisions D1–D12 (MCP orchestration, no agent, Codegen role), import + column mapping, preconditions/flows, test data rules, quality check, health check, pick element, team mode, backlog. Scope: any web app, username/password only. M1 done. |
 | 1.2 | 2026-09-29 | M2 done: parser and Test Model. Added a `clear` action and a `checked` assertion type. "Select X" without "from" is read as choosing a radio/checkbox. Secret-looking test data keys become env vars (`Wrong Password` → `TEST_WRONG_PASSWORD`), and a password typed in a step is unparsed (`SECRET_LITERAL`). |
 | 1.3 | 2026-09-30 | Added API testing (§5.1, §6.21 FR-API, D14): API tests skip MCP and run with Playwright's `request` client; core in V2, contract checks and OpenAPI/Postman import in V3. D13: all 72 MCP tools on, unsafe tools off by default. Open questions Q5–Q7. |
+| 1.4 | 2026-09-30 | M3 done: locator matching, ladder and Locator Probe on a Chrome shared with MCP over CDP. An unnamed field just after a heading is named by it (lower score). Position-based locators rank last; generated-looking ids are not used for CSS. FR-LO-07 uses `browser_generate_locator` now; code after an action comes in M4. |
