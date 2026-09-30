@@ -18,7 +18,21 @@ export interface McpBrowserOptions {
   outputDir?: string;
   /** Connect to an already running browser (used later by the Locator Probe). */
   cdpEndpoint?: string;
+  /** Optional tool groups to turn on. Defaults to all of them. */
+  capabilities?: readonly McpCapability[];
+  /** Allow tools that run arbitrary code in the page. Off by default (NFR-02: deterministic). */
+  allowUnsafe?: boolean;
 }
+
+/**
+ * Optional MCP tool groups. `--help` lists only vision, pdf and devtools; the others exist in
+ * the server but are undocumented, so the tool list test catches it if a new version drops them.
+ */
+export const MCP_CAPABILITIES = ['vision', 'pdf', 'devtools', 'network', 'storage', 'testing', 'config'] as const;
+export type McpCapability = (typeof MCP_CAPABILITIES)[number];
+
+/** Tools that run any code the caller passes. Their result depends on that code, not on the platform's rules. */
+export const UNSAFE_TOOLS = ['browser_run_code_unsafe', 'browser_evaluate'];
 
 export interface PageState {
   url: string;
@@ -38,19 +52,30 @@ export interface ToolReply {
 /** Tools the platform depends on. Checked at start-up because names change between MCP versions. */
 const REQUIRED_TOOLS = ['browser_navigate', 'browser_snapshot', 'browser_click', 'browser_type', 'browser_close'];
 
+/** Command-line arguments for the MCP server. The browser only opens on the first browser tool call. */
+export function serverArgs(options: McpBrowserOptions = {}): string[] {
+  const require = createRequire(import.meta.url);
+  const cli = path.join(path.dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js');
+
+  const args = [cli, '--isolated', '--output-dir', options.outputDir ?? '.auto-qa/mcp-output'];
+  if (options.headless ?? true) args.push('--headless');
+  if (options.testIdAttribute) args.push('--test-id-attribute', options.testIdAttribute);
+  if (options.cdpEndpoint) args.push('--cdp-endpoint', options.cdpEndpoint);
+  const caps = options.capabilities ?? MCP_CAPABILITIES;
+  if (caps.length) args.push('--caps', caps.join(','));
+  return args;
+}
+
 export class McpBrowser {
-  private constructor(private readonly client: Client) {}
+  private constructor(
+    private readonly client: Client,
+    /** Every tool this MCP server offers, including unsafe ones. */
+    readonly tools: ReadonlySet<string>,
+    private readonly allowUnsafe: boolean,
+  ) {}
 
   static async start(options: McpBrowserOptions = {}): Promise<McpBrowser> {
-    const require = createRequire(import.meta.url);
-    const cli = path.join(path.dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js');
-
-    const args = [cli, '--isolated', '--output-dir', options.outputDir ?? '.auto-qa/mcp-output'];
-    if (options.headless ?? true) args.push('--headless');
-    if (options.testIdAttribute) args.push('--test-id-attribute', options.testIdAttribute);
-    if (options.cdpEndpoint) args.push('--cdp-endpoint', options.cdpEndpoint);
-
-    const transport = new StdioClientTransport({ command: process.execPath, args, stderr: 'pipe' });
+    const transport = new StdioClientTransport({ command: process.execPath, args: serverArgs(options), stderr: 'pipe' });
     const client = new Client({ name: 'auto-qa-explorer', version: '0.1.0' });
     await client.connect(transport);
 
@@ -60,7 +85,19 @@ export class McpBrowser {
       await client.close();
       throw new Error(`This Playwright MCP version is missing tools the platform needs: ${missing.join(', ')}`);
     }
-    return new McpBrowser(client);
+    return new McpBrowser(client, available, options.allowUnsafe ?? false);
+  }
+
+  /**
+   * Calls any MCP tool by name, e.g. `callTool('browser_generate_locator', { element, target })`.
+   * Unsafe tools are refused unless the browser was started with `allowUnsafe`.
+   */
+  async callTool(name: string, args: Record<string, unknown> = {}): Promise<ToolReply> {
+    if (!this.tools.has(name)) throw new Error(`Playwright MCP has no tool "${name}". Check the version or the capabilities option.`);
+    if (UNSAFE_TOOLS.includes(name) && !this.allowUnsafe) {
+      throw new Error(`"${name}" runs arbitrary code in the page and is off by default. Start McpBrowser with allowUnsafe: true to use it.`);
+    }
+    return this.call(name, args);
   }
 
   async navigate(url: string): Promise<ToolReply> {

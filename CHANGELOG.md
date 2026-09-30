@@ -5,6 +5,8 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 ## Unreleased
 
 ### Added
+- All 72 Playwright MCP tools: every capability group is on by default, and `McpBrowser.callTool` calls any tool. Unsafe tools need `allowUnsafe`.
+- `npm run tools` lists the tools by capability; a test fails if an MCP upgrade changes the list.
 - Tests for M1 snapshot parsing, nearby text and MCP reply handling, using real snapshots from the practice sites.
 - Test that `playwright` matches the version `@playwright/mcp` uses (D7).
 - Biome linting and formatting (`npm run lint`, `npm run format`).

@@ -34,6 +34,16 @@ Options:
 | `--test-id-attribute data-test` | The attribute the app uses for test ids (default `data-testid`) |
 | `--json file.json` | Also save the element list as JSON |
 
+## Playwright MCP tools
+
+```bash
+npm run tools
+```
+
+Lists all 72 Playwright MCP tools, grouped by capability. `McpBrowser` turns on every group by default (`vision, pdf, devtools, network, storage, testing, config`); pass `capabilities` to choose fewer. Any tool can be called with `browser.callTool(name, args)`. The two tools that run arbitrary page code (`browser_run_code_unsafe`, `browser_evaluate`) are refused unless the browser is started with `allowUnsafe: true`.
+
+After upgrading `@playwright/mcp`, run `npm run tools -- --update` and review the change to `src/explorer/fixtures/mcp-tools.txt`; a test fails until you do.
+
 ## Milestone 2: see how a written test case is understood
 
 ```bash
@@ -64,6 +74,7 @@ npm run format    # apply formatting and safe fixes
 | `src/model/test-model.ts` | The Structured Test Model: types and zod schema. |
 | `src/parser/` | Test case → Test Model. `index.ts` (entry), `steps.ts` (actions, data binding), `assertions.ts` (checks), `target.ts` (element names), `test-data.ts`, `preconditions.ts`, `quality.ts`, `text.ts` (splitting, quotes). |
 | `src/cli/parse.ts` | Milestone 2 command line tool. |
+| `src/cli/tools.ts` | Lists every MCP tool by capability. |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
 ## Milestones

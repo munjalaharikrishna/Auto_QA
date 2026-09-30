@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { describe, it } from 'node:test';
-import { pageState, parseToolReply } from './mcp-browser.js';
+import { after, before, describe, it } from 'node:test';
+import { McpBrowser, pageState, parseToolReply, serverArgs } from './mcp-browser.js';
 import { contextOf, flatten, listElements, nearbyText, parseSnapshot } from './snapshot-parser.js';
 
 // Real snapshots captured from the practice sites with Playwright MCP.
@@ -76,6 +76,44 @@ describe('nearby text and context (FR-LO-02)', () => {
   it('reports the named form an element is inside', () => {
     assert.equal(contextOf(byRef(saucedemo, 'e15')), 'form "Login"');
     assert.equal(contextOf(byRef(saucedemo, 'e19')), '');
+  });
+});
+
+describe('MCP tools', () => {
+  it('turns on every capability group by default', () => {
+    const args = serverArgs();
+    assert.equal(args[args.indexOf('--caps') + 1], 'vision,pdf,devtools,network,storage,testing,config');
+  });
+
+  it('can start with only the core tools', () => {
+    assert.ok(!serverArgs({ capabilities: [] }).includes('--caps'));
+  });
+
+  // Starts the real MCP server. No browser opens because no browser tool is called.
+  describe('with a running server', () => {
+    let browser: McpBrowser;
+    before(async () => {
+      browser = await McpBrowser.start();
+    });
+    after(async () => {
+      await browser.close();
+    });
+
+    it('offers exactly the tools in fixtures/mcp-tools.txt (run `npm run tools -- --update` after an upgrade)', () => {
+      const expected = readFileSync(new URL('./fixtures/mcp-tools.txt', import.meta.url), 'utf8')
+        .trim()
+        .split(/\r?\n/);
+      assert.deepEqual([...browser.tools].sort(), expected);
+    });
+
+    it('refuses unsafe tools unless allowed', async () => {
+      await assert.rejects(browser.callTool('browser_run_code_unsafe', { code: '1' }), /allowUnsafe/);
+      await assert.rejects(browser.callTool('browser_evaluate', { function: '() => 1' }), /allowUnsafe/);
+    });
+
+    it('refuses a tool the server does not have', async () => {
+      await assert.rejects(browser.callTool('browser_teleport'), /no tool "browser_teleport"/);
+    });
   });
 });
 

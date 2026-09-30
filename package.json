@@ -7,7 +7,8 @@
     "parse": "tsx src/cli/parse.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "tools": "tsx src/cli/tools.ts"
   },
   "description": "Manual test cases to Playwright automation, using Playwright MCP without an AI API",
   "dependencies": {
