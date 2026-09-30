@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.11 |
+| **Spec version** | 1.12 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -67,7 +67,7 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D14** | **API tests do not use MCP or a browser.** They are parsed into the same Test Model and generated as Playwright Test specs that use Playwright's built-in API client (`request` / `APIRequestContext`). | An API has no UI to explore, and Playwright MCP has no tool to send requests. The same runner, reports and CI serve both kinds of test. |
 | **D15** | The **generated project holds only what a test needs to run**: pages, tests, locators, fixtures, data, config, reporter and `reports/`. The document's §9 `utils/` (test-parser, locator-engine, result-validator, evidence-manager, script-generator) are **platform** components and are not copied into it. The run-time parts of result validation and evidence live in `fixtures/test.fixture.ts` and `reporters/`. | The generated project never parses or explores, so it has no use for them (D5). One copy of the engine means one place to fix it. |
 | **D16** | The locator repository is **one file per Page Object** (`locators/login.locators.json` for `LoginPage`), not one file per feature and not one file for everything. | The document shows both of the other layouts (§7 per feature, §9 a single `locator-repository.json`). Per page matches the POM: each Page Object loads its own file, and two features that share a page share its locators. |
-| **D17** | **[Generate & Execute Test]** (document §3) means generate → review → **Approve & Execute**. Review is never skipped in V1. | §11 and §12 require review before execution, and a wrong locator gives a false PASS/FAIL (D6). Optional auto-approve is FR-RV-08 (V2). |
+| **D17** | **[Generate & Execute Test]** (document §3) means generate → review → **Approve & Execute**. Review is never skipped in V1. | §11 and §12 require review before execution, and a wrong locator gives a false PASS/FAIL (D6). Optional auto-approve is FR-RV-08 (V2). A workbook run is approved when the tester starts it: it runs every case unattended (D22) and its results are reviewed afterwards. |
 | **D18** | The form's **Browser** field (document §1, §28) is shown from V1 with only **Chromium** enabled; Firefox and WebKit are enabled in V3. The choice applies to **execution**; exploration always uses Chromium (D8). | The MVP keeps one browser, and the field is in the form from day one so the input does not change later. |
 | **D19** | **V1 page names**: the first step's page ("Open Login page") opens the environment's `BASE_URL`. A page name in any later step asks the tester for its URL once, and the answer is saved with the environment, keyed by its base URL and stored as a path. A check such as "redirected to Dashboard" also teaches the page's path. | The page map (FR-ENV-03) is V2. The first page is almost always the base URL; guessing any other URL would break D6. |
 | **D20** | The web UI is **React**, served by a **Fastify** API with a job runner and WebSocket, storing data in **SQLite** (PostgreSQL from V3). | Confirmed 2026-09-30. One Node process on a laptop in V1–V2 (§3), with a clear path to the team server. |
@@ -127,9 +127,9 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases · ✅ Done (M6b): .xlsx and .csv (comma, semicolon or tab); old .xls must be saved as .xlsx |
-| FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping |
+| FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping · ✅ Done (M7): each field's column pre-selected, with a live preview; the project's last mapping is reused for the next upload when that sheet has its headers |
 | FR-IN-03 | Steps in one cell are split on numbering (`1.`, `2)`) and line breaks | V1 | A cell with "1. … 2. … 3. …" gives 3 steps · ✅ Done (M2) |
-| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc), with the run settings: Application URL, Username, Password and Browser | V1 | Form fields and run settings as in §5; one click starts generation (D17) |
+| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc), with the run settings: Application URL, Username, Password and Browser | V1 | Form fields and run settings as in §5; one click starts generation (D17) · ✅ Done (M7) |
 | FR-IN-05 | Import from **Jira** (Xray/Zephyr) | V2 | Pull test cases by project/filter |
 | FR-IN-06 | Import from **TestRail** | V2 | Pull test cases by suite |
 | FR-IN-07 | Re-import updates changed test cases (matched by ID) and shows what changed | V2 | Changed steps are flagged for re-generation |
@@ -162,7 +162,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-QC-02 | Flag a missing starting point (first step is not navigate and there is no precondition) | V1 | Warning shown · ✅ Done (M2) |
 | FR-QC-03 | Flag near-duplicate test cases (same steps, data and expected result) | V2 | Similar pair shown with a similarity % |
 | FR-QC-04 | Quality score per imported sheet (ready / needs fixes / blocked) | V2 | Summary after import |
-| FR-QC-05 | Built-in **writing guide** for testers (§11) | V1 | Linked from the import and review screens |
+| FR-QC-05 | Built-in **writing guide** for testers (§11) | V1 | Linked from the import and review screens · ✅ Done (M7) |
 
 ### 6.4 Preconditions and reusable flows (FR-PF)
 
@@ -193,7 +193,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-EX-04 | **Settle rule**: page loaded + no network activity for 500 ms + two identical snapshots in a row, within a timeout | V1 | No step runs on a half-loaded page · ✅ Done (M4): the snapshot must stay unchanged for 500 ms |
 | FR-EX-05 | **Verify effect**: after a fill, the value is present; after a click, the URL, the snapshot, a dialog or the network changed | V1 | A click that does nothing is flagged · ✅ Done (M4) for value, checked, option, URL and snapshot; dialogs in V2 (FR-PA-09) |
 | FR-EX-06 | Exploration performs the steps in order (a guided dry run), so later pages can be explored | V1 | Dashboard elements found after Login · ✅ Done (M4) |
-| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review · ✅ Taken (M4); shown in review in M7 |
+| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review · ✅ Taken (M4); shown in review in M7 · ✅ Shown in review (M7) |
 | FR-EX-08 | Exploration refused on Production unless confirmed | V1 | Confirmation dialog · ✅ Done (M4, `--production`) |
 | FR-EX-09 | Chromium only for exploration | V1 | ✅ Done (M4) |
 | FR-EX-10 | Handle an unexpected dialog/pop-up/cookie banner (dismiss, or ask) | V2 | |
@@ -229,11 +229,11 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-RV-01 | Show the plan: steps, locators with scores, assertions, per-step screenshots, warnings | V1 | |
-| FR-RV-02 | **Pick element on screenshot**: the tester clicks the right element for a NEEDS_REVIEW step. The platform builds and validates the locator. | V1 | Resolves ambiguous and unnamed elements |
-| FR-RV-03 | Actions: **Approve & Execute**, **Edit**, **Regenerate** | V1 | |
-| FR-RV-04 | Show the generated code with a diff against the previous version | V1 | |
-| FR-RV-05 | Edits to steps flow back into the Test Model (not only the code) | V1 | |
+| FR-RV-01 | Show the plan: steps, locators with scores, assertions, per-step screenshots, warnings | V1 | ✅ Done (M7) |
+| FR-RV-02 | **Pick element on screenshot**: the tester clicks the right element for a NEEDS_REVIEW step. The platform builds and validates the locator. | V1 | Resolves ambiguous and unnamed elements · ✅ Done (M7): the screenshot and the element boxes come from the same moment (the probe's snapshot, whose refs are MCP's); the smallest box under the click wins |
+| FR-RV-03 | Actions: **Approve & Execute**, **Edit**, **Regenerate** | V1 | ✅ Done (M7) for a single test case; a workbook run is approved by starting it (D17) |
+| FR-RV-04 | Show the generated code with a diff against the previous version | V1 | ✅ Done (M7) |
+| FR-RV-05 | Edits to steps flow back into the Test Model (not only the code) | V1 | ✅ Done (M7) |
 | FR-RV-06 | Approve locator-healing proposals (FR-REC) | V3 | |
 | FR-RV-07 | **Re-discover** a saved test (document §11: UI change, explicit request): explore again for all or chosen steps, compare the new locators with the repository and show the differences for approval | V2 | Only changed locators are updated; unchanged ones keep their history |
 | FR-RV-08 | Optional per-project **auto-approve**: a generated test with no NEEDS_REVIEW step, no UNPARSED item and no warning is approved and run without the review screen | V2 | Off by default (D17) |
@@ -250,7 +250,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | ✅ Done (M5) |
 | FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files, and a `reports/` folder (git-ignored) for each run's HTML report, results and evidence | V1 | `npx playwright test` works standalone (D15) · ✅ Done (M5); the reporter follows in M6 |
 | FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff · ✅ Done (M5): golden-file test, and the same output whatever order the tests come in |
-| FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Adding a test adds methods, keeps the old ones |
+| FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Until then, a single test case from the form is generated into its own project, so it cannot disturb the workbook suite |
 | FR-GE-08 | Each approval is a git commit in the generated project | V2 | |
 | FR-GE-09 | Cucumber output: `features/`, `step-definitions/` (optional) | V4 | |
 
@@ -259,7 +259,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-RUN-01 | Run a test with `npx playwright test` in the generated project, injecting the environment's variables | V1 | ✅ Done (M6) |
-| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | ✅ Done (M6): one `AUTOQA {json}` line per event on stdout; the UI shows them in M7 |
+| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | ✅ Done (M6): one `AUTOQA {json}` line per event on stdout; the UI shows them in M7 · ✅ Shown live in the UI over a WebSocket (M7) |
 | FR-RUN-03 | Chromium | V1 | ✅ Done (M6) |
 | FR-RUN-04 | Log in once and reuse the session (`storageState` setup project) | V2 | |
 | FR-RUN-05 | Regression suites: select tests → Run Selected / Run All, with a summary | V2 | |
@@ -315,13 +315,13 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-ENV-02 | Several environments: Development, QA, Staging, UAT, Production | V2 | Same test, different env |
 | FR-ENV-03 | **Page name → URL map** per environment (e.g. `Home → /`, `Opportunities → /opportunities`) | V2 | "Open Opportunities page" works in any env |
 | FR-ENV-04 | Secrets encrypted at rest (AES-GCM), shown masked in the UI | V2 | |
-| FR-ENV-05 | **V1 credential storage** (document §30 "enter credentials securely"): the username and password from the form are written only to the generated project's `.env`, which is git-ignored, and passed to the run as environment variables. They are never stored in the database, the Test Model, generated code, logs or reports. The password field is masked and never sent back to the browser. | V1 | A search of the database, the git history and the reports finds no password. Replaced by encrypted storage in V2 (FR-ENV-04) |
+| FR-ENV-05 | **V1 credential storage** (document §30 "enter credentials securely"): the username and password from the form are written only to the generated project's `.env`, which is git-ignored, and passed to the run as environment variables. They are never stored in the database, the Test Model, generated code, logs or reports. The password field is masked and never sent back to the browser. | V1 | A search of the database, the git history and the reports finds no password. Replaced by encrypted storage in V2 (FR-ENV-04) · ✅ Done (M7): the project form writes the workspace .env; the API reports only whether a secret is set |
 
 ### 6.17 History and reporting (FR-HI) · §20
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-HI-01 | Result screen for the last run: PASS/FAIL, steps, expected vs actual, screenshot, duration, code | V1 | |
+| FR-HI-01 | Result screen for the last run: PASS/FAIL, steps, expected vs actual, screenshot, duration, code | V1 | ✅ Done (M7) |
 | FR-HI-02 | Execution history list (test, status, duration, env, browser, date) | V2 | |
 | FR-HI-03 | Open any past run: steps, evidence, trace, logs, generated code at that time | V2 | |
 | FR-HI-04 | Standalone HTML report per run/suite | V2 | |
@@ -353,7 +353,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-AI-01 | Keep an `AssistProvider` interface with a "no-op" default | V1 (interface only) | The platform works without it |
+| FR-AI-01 | Keep an `AssistProvider` interface with a "no-op" default | V1 (interface only) | The platform works without it · ✅ Done (M7): `src/assist/provider.ts`, used for unreadable steps |
 | FR-AI-02 | If added: a **local** model only (e.g. Ollama), used only at fallback points (unparsed step, low match score, recovery ranking, failure summary) | Decide later | |
 | FR-AI-03 | AI output is only a suggestion: it goes through the same validation and human review | Decide later | |
 | FR-AI-04 | Never used during test execution | Always | |
@@ -414,7 +414,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ✅ Done |
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
-| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) |⬜ Next |
+| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
 
@@ -508,3 +508,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.9 | 2026-09-30 | M5 done: code generation into a standalone Playwright project (Page Objects with grouped action methods, specs, locator files, data, config). Locators are written in the Page Object and recorded in the locator JSON (FR-LR-01). Grouped steps share one `test.step` (FR-GE-03). Two page names for one path become one Page Object. |
 | 1.10 | 2026-09-30 | M6 done: execution with Playwright Test, verdicts PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual, health check, evidence kept per execution ID, basic failure labels, `npm run auto-qa` for the whole flow. Masking applies to run output only (FR-EV-03). A script error in a generated test is BLOCKED (FR-VAL-05). |
 | 1.11 | 2026-09-30 | M6b done: batch run of a workbook with automatic column matching, results written to a copy with an "Auto QA" summary and review queue sheet, resume, `--only-review`, the sheet's login case reused for "Logged in" cases, identical cases explored once. Explorations now record the login steps they ran. |
+| 1.12 | 2026-09-30 | M7 done: server (Fastify, node:sqlite, job runner, WebSocket) and web UI (React, Vite): projects with run settings, workbook upload with column mapping, batch runs with results download and the review queue, single test cases with questions, pick element on the screenshot, review with code diff, Approve & Execute / Edit / Regenerate, results, writing guide. AssistProvider no-op (FR-AI-01). D17 clarified for workbook runs; single tests use their own project until FR-GE-07. |

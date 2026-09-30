@@ -166,6 +166,22 @@ Headers are matched automatically (`Test Case Name`, `Steps to Reproduce`, `Expe
 
 Try it on the demo app: `npm run demo`, then `npm run demo:workbook` (writes a 100-row `examples/demo-app/demo-tests.xlsx`) and `npm run auto-qa -- examples/demo-app/demo-tests.xlsx --base-url http://127.0.0.1:4173`. Expected: 72 pass · 18 fail · 10 need review.
 
+## Milestone 7: the web UI
+
+```bash
+npm run web:build     # once, or after changing web/
+npm run serve         # http://127.0.0.1:4400
+```
+
+Everything the command line does, in the browser:
+
+- **Projects**: the application URL, test user, password (write-only: kept in the project's git-ignored `.env`, never shown again), browser (Chromium in V1), test id attribute, and other values tests need.
+- **Run a workbook**: upload an .xlsx or .csv, check the columns it found (change any), see the first rows and any problem rows, run all. Progress is live; the results page shows totals, every case's status and actual result, the evidence, the results workbook to download, and a button to answer the review queue.
+- **Single test case**: write one, and the platform explores it. When it is unsure, it asks: **click the element on the screenshot**, choose from the matches, or skip. It then shows the steps with their locators, scores and screenshots and the generated code as a diff: **Approve & Execute**, **Edit** or **Regenerate**.
+- **Runs** history and the **writing guide**.
+
+The server listens on 127.0.0.1 only (V1 is single-user). Data is kept in `.auto-qa/` (SQLite database, uploads, explorations, runs) and generated projects in `workspaces/`. For UI development, `npm run web:dev` serves it with live reload on http://127.0.0.1:5173 next to `npm run serve`.
+
 ## Tests
 
 ```bash
@@ -210,6 +226,9 @@ npm run format    # apply formatting and safe fixes
 | `src/importer/results.ts` | Writes the results copy and the Auto QA sheet. |
 | `src/pipeline/batch.ts` | A whole workbook: progress, resume, review queue. |
 | `examples/demo-app/make-workbook.ts` | Builds a realistic 100-row workbook for the demo app. |
+| `src/server/` | API (`app.ts`), job runner (`jobs.ts`), SQLite storage (`store.ts`), credentials in `.env` (`credentials.ts`), entry (`index.ts`). |
+| `src/assist/provider.ts` | Extension point for an optional helper; does nothing by default. |
+| `web/` | The React UI: pages (`web/src/pages`), pick element (`web/src/components/PickElement.tsx`). |
 | `examples/demo-app/` | Local app and test cases for end-to-end tests (`npm run demo`). |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
@@ -222,4 +241,4 @@ npm run format    # apply formatting and safe fixes
 - [x] M5: generate Page Objects and specs
 - [x] M6: run with Playwright Test and report PASS/FAIL
 - [x] M6b: run a whole workbook and write PASS/FAIL and actual results into a copy of the sheet
-- [ ] M7: web UI with upload, progress, review screen and results
+- [x] M7: web UI with upload, progress, review screen and results

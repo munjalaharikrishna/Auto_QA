@@ -434,13 +434,15 @@ Auto_QA/
     evidence/              ⬜ capture, masking, report               (M6)
     importer/              ✅ columns, workbook, results (xlsx, csv) (M6b)
                            ⬜ jira, testrail                         (V2)
-    server/                ⬜ Fastify API, jobs, WebSocket           (M7)
+    server/                ✅ app (API), jobs (runner), store         (M7)
+                              (node:sqlite), credentials (.env)
     recovery/              ⬜ self-healing                           (V3)
-    assist/                ⬜ AssistProvider (no-op)                 (V1 interface)
+    assist/                ✅ AssistProvider (no-op)                 (M7)
     cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), explore.ts (M4), generate.ts (M5), tools.ts
   examples/                test-cases.json (sample input for npm run parse)
                            demo-app/ (local app + test cases for end-to-end tests)
-  web/                     ⬜ React UI                               (M7)
+  web/                     ✅ React UI (Vite): projects, workbook,   (M7)
+                              single test, question, review, results
   workspaces/              generated projects, one per app under test
 ```
 

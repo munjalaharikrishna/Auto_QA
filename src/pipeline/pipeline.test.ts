@@ -107,3 +107,38 @@ describe('whole flow: test case → verdict (M6)', { skip: !!process.env.AUTO_QA
     assert.notEqual(blocked.executionId, wrong.executionId);
   });
 });
+
+describe('assist extension point (FR-AI-01)', () => {
+  const vague = () =>
+    parseTestCase({ id: 'TC-V', title: 'v', steps: '1. Open Login page\n2. Do the needful', expected: 'User stays on the same page' }, config);
+  const options = (assist?: Parameters<typeof runCases>[1]['assist']) => ({
+    config,
+    baseUrl: 'http://127.0.0.1:1',
+    env: {},
+    resolver: unattended,
+    assist,
+    exploreDir: path.join(root, '.auto-qa', 'test-assist'),
+  });
+
+  it("works with no helper: the reason is the parser's", async () => {
+    const r = await runCases([vague()], options());
+    assert.equal(r.verdicts[0].status, 'NEEDS REVIEW');
+    assert.doesNotMatch(r.verdicts[0].reason, /Suggested/);
+  });
+
+  it("shows a helper's rewrite as a suggestion only; the case still needs review", async () => {
+    const asked: string[] = [];
+    const r = await runCases(
+      [vague()],
+      options({
+        async suggestRewrite(i) {
+          asked.push(`${i.kind}: ${i.raw}`);
+          return 'Click Login';
+        },
+      }),
+    );
+    assert.deepEqual(asked, ['step: Do the needful']);
+    assert.equal(r.verdicts[0].status, 'NEEDS REVIEW');
+    assert.match(r.verdicts[0].reason, /S2 "Do the needful": .* Suggested: "Click Login"\./);
+  });
+});

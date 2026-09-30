@@ -136,7 +136,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const file = path.join(dir, name);
     await writeFile(file, await part.toBuffer());
     const upload = store.createUpload({ projectId: project.id, file, originalName: part.filename });
-    return reply.status(201).send({ uploadId: upload.id, ...(await preview(file, {})) });
+    // FR-IN-02: the mapping used last time is reused when this sheet has its headers; otherwise the automatic match.
+    const saved = await savedMapping(project);
+    const withSaved = Object.keys(saved).length ? await preview(file, saved) : undefined;
+    if (withSaved?.ok) return reply.status(201).send({ uploadId: upload.id, mapping: saved, ...withSaved });
+    return reply.status(201).send({ uploadId: upload.id, mapping: {}, ...(await preview(file, {})) });
   });
 
   app.post('/api/uploads/:id/preview', async (req) => {
@@ -156,7 +160,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         throw notFound('Upload');
       })();
     const { mapping } = MappingBody.parse(req.body ?? {});
-    await preview(upload.file, mapping); // Refuse a mapping that does not work before queueing.
+    const checked = await preview(upload.file, mapping); // Refuse a mapping that does not work before queueing.
+    if (!checked.ok) throw bad(checked.error ?? 'The columns do not work.');
+    const project = projectOf(upload.projectId);
+    await writeFile(mappingFile(project), `${JSON.stringify(mapping, null, 2)}\n`);
     const job = store.createJob({ projectId: upload.projectId, kind: 'workbook', input: { uploadId: upload.id, mapping, originalName: upload.originalName } });
     runner.enqueue(job);
     return reply.status(202).send(job);
@@ -246,13 +253,21 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   // The web UI (M7b), with its routes falling back to index.html.
   if (options.webDir && existsSync(path.join(options.webDir, 'index.html'))) {
-    await app.register(fastifyStatic, { root: path.resolve(options.webDir), wildcard: false });
-    const index = await readFile(path.join(options.webDir, 'index.html'), 'utf8');
-    app.setNotFoundHandler((req, reply) =>
-      req.url.startsWith('/api/') ? reply.status(404).send({ error: 'Not found' }) : reply.type('text/html').send(index),
+    await app.register(fastifyStatic, { root: path.resolve(options.webDir) });
+    // Read on every request: a rebuilt UI has new asset names, and a running server must serve them.
+    const indexFile = path.join(options.webDir, 'index.html');
+    app.setNotFoundHandler(async (req, reply) =>
+      req.url.startsWith('/api/') ? reply.status(404).send({ error: 'Not found' }) : reply.type('text/html').send(await readFile(indexFile, 'utf8')),
     );
   }
   return app;
+
+  function mappingFile(project: Project): string {
+    return runner.projectDir(project, 'mapping.json');
+  }
+  async function savedMapping(project: Project): Promise<Partial<Record<Field, string>>> {
+    return JSON.parse(await readFile(mappingFile(project), 'utf8').catch(() => '{}'));
+  }
 }
 
 /** What the mapping screen shows: the columns found and the first rows as test cases (FR-IN-02). */

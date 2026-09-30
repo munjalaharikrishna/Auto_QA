@@ -104,6 +104,21 @@ describe('API (M7a)', () => {
     const bad = await app.inject({ method: 'POST', url: `/api/uploads/${p.uploadId}/preview`, payload: { mapping: { steps: 'Nope' } } });
     assert.equal(bad.json().ok, false);
     assert.match(bad.json().error, /no such column/);
+    // The mapping a run used is offered again for the next upload (FR-IN-02).
+    const wb = new (await import('exceljs')).default.Workbook();
+    wb.addWorksheet('S').addRow(['Scenario', 'What to do', 'Outcome']);
+    wb.getWorksheet('S')!.addRow(['Login', '1. Open Login page', 'User is redirected to Dashboard page']);
+    const custom = path.join(dir, 'custom.xlsx');
+    await wb.xlsx.writeFile(custom);
+    const first = (await app.inject({ method: 'POST', url: '/api/projects/demo-app/uploads', ...multipart(custom) })).json();
+    assert.equal(first.ok, false, 'no Steps column without a mapping');
+    const mapping = { steps: 'What to do', expected: 'Outcome' };
+    const started = await app.inject({ method: 'POST', url: `/api/uploads/${first.uploadId}/run`, payload: { mapping } });
+    assert.equal(started.statusCode, 202);
+    // Only the saved mapping matters here; the run itself is not wanted.
+    await app.inject({ method: 'POST', url: `/api/jobs/${started.json().id}/cancel` });
+    const second = (await app.inject({ method: 'POST', url: '/api/projects/demo-app/uploads', ...multipart(custom) })).json();
+    assert.deepEqual([second.ok, second.mapping, second.total], [true, mapping, 1]);
     const txt = path.join(dir, 'notes.txt');
     await (await import('node:fs/promises')).writeFile(txt, 'x');
     assert.equal((await app.inject({ method: 'POST', url: '/api/projects/demo-app/uploads', ...multipart(txt) })).statusCode, 400);

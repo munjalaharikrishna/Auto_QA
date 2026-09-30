@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { loadPageUrls, savePageUrls } from '../explorer/page-store.js';
@@ -40,6 +41,8 @@ export interface PipelineOptions {
   reexplore?: boolean;
   onProgress?: (message: string) => void;
   onRunEvent?: (event: RunEvent) => void;
+  /** Optional helper for unreadable steps (FR-AI-01). Default: none. */
+  assist?: AssistProvider;
 }
 
 export interface PipelineResult {
@@ -81,7 +84,15 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     const unparsed = [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed');
     if (unparsed.length) {
       // Nothing to explore until the tester rewrites these; no browser needed to say so.
-      early.set(model.id, stopped(model, 'NEEDS REVIEW', `${unparsed.map((x) => `${x.id} "${x.raw}": ${x.reason?.text ?? ''}`).join(' ')}`));
+      const assist = options.assist ?? noAssist;
+      const why = await Promise.all(
+        unparsed.map(async (x) => {
+          const reason = x.reason?.text ?? '';
+          const suggestion = await assist.suggestRewrite({ raw: x.raw, kind: 'source' in x ? 'check' : 'step', reason });
+          return `${x.id} "${x.raw}": ${reason}${suggestion ? ` Suggested: "${suggestion}".` : ''}`;
+        }),
+      );
+      early.set(model.id, stopped(model, 'NEEDS REVIEW', why.join(' ')));
       progress(`? ${at}: needs review before it can be automated`);
       continue;
     }
