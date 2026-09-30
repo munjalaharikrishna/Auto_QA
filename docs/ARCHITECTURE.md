@@ -420,7 +420,7 @@ Auto_QA/
   docs/                    SPEC.md, ARCHITECTURE.md, architecture.html
   src/
     explorer/              ✅ mcp-browser.ts, snapshot-parser.ts   (M1)
-                           ⬜ controller.ts (state machine)          (M4)
+                           ✅ controller.ts (state machine), values.ts (M4)
     model/                 ✅ test-model.ts (types + zod schema)    (M2)
     parser/                ✅ steps, assertions, target, test-data,  (M2)
                               preconditions, quality, lexicon.json, synonyms.json
@@ -434,8 +434,9 @@ Auto_QA/
     server/                ⬜ Fastify API, jobs, WebSocket           (M7)
     recovery/              ⬜ self-healing                           (V3)
     assist/                ⬜ AssistProvider (no-op)                 (V1 interface)
-    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), tools.ts
+    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), explore.ts (M4), tools.ts
   examples/                test-cases.json (sample input for npm run parse)
+                           demo-app/ (local app + test cases for end-to-end tests)
   web/                     ⬜ React UI                               (M7)
   workspaces/              generated projects, one per app under test
 ```

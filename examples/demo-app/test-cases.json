@@ -1,0 +1,25 @@
+[
+  {
+    "id": "TC-DEMO-001",
+    "title": "Verify a user can log in",
+    "type": "positive",
+    "preconditions": "Unauthenticated visitor",
+    "steps": "1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click the Login button",
+    "expected": "User is redirected to Dashboard page. Dashboard heading is displayed."
+  },
+  {
+    "id": "TC-DEMO-002",
+    "title": "Verify a wrong password is rejected",
+    "type": "negative",
+    "steps": "1. Open Login page\n2. Enter valid username\n3. Enter wrong password\n4. Click Login",
+    "testData": "Wrong Password=nope",
+    "expected": "Error \"Invalid username or password\" is shown. User stays on the Login page."
+  },
+  {
+    "id": "TC-DEMO-003",
+    "title": "Verify the profile can be saved",
+    "steps": "1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Profile\n6. Enter Full name\n7. Select India from Country\n8. Check Send me news\n9. Click Save changes",
+    "testData": "Full name=Asha Rao",
+    "expected": "Message \"Profile saved\" is shown. Send me news is checked."
+  }
+]

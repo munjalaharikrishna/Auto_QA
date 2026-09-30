@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.6 |
+| **Spec version** | 1.7 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
@@ -69,7 +69,7 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D16** | The locator repository is **one file per Page Object** (`locators/login.locators.json` for `LoginPage`), not one file per feature and not one file for everything. | The document shows both of the other layouts (§7 per feature, §9 a single `locator-repository.json`). Per page matches the POM: each Page Object loads its own file, and two features that share a page share its locators. |
 | **D17** | **[Generate & Execute Test]** (document §3) means generate → review → **Approve & Execute**. Review is never skipped in V1. | §11 and §12 require review before execution, and a wrong locator gives a false PASS/FAIL (D6). Optional auto-approve is FR-RV-08 (V2). |
 | **D18** | The form's **Browser** field (document §1, §28) is shown from V1 with only **Chromium** enabled; Firefox and WebKit are enabled in V3. The choice applies to **execution**; exploration always uses Chromium (D8). | The MVP keeps one browser, and the field is in the form from day one so the input does not change later. |
-| **D19** | **V1 page names**: the first step's page ("Open Login page") opens the environment's `BASE_URL`. A page name in any later step asks the tester for its URL once, and the answer is saved with the environment. | The page map (FR-ENV-03) is V2. The first page is almost always the base URL; guessing any other URL would break D6. |
+| **D19** | **V1 page names**: the first step's page ("Open Login page") opens the environment's `BASE_URL`. A page name in any later step asks the tester for its URL once, and the answer is saved with the environment, keyed by its base URL and stored as a path. A check such as "redirected to Dashboard" also teaches the page's path. | The page map (FR-ENV-03) is V2. The first page is almost always the base URL; guessing any other URL would break D6. |
 | **D20** | The web UI is **React**, served by a **Fastify** API with a job runner and WebSocket, storing data in **SQLite** (PostgreSQL from V3). | Confirmed 2026-09-30. One Node process on a laptop in V1–V2 (§3), with a clear path to the team server. |
 | **D21** | Excel import uses **ExcelJS**. | Maintained and on npm. Current SheetJS versions are only on its own CDN. |
 
@@ -164,7 +164,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-PF-01 | Precondition keywords: "Unauthenticated visitor" → fresh browser context; "Logged in as X" → saved login state | V1 | Both work · ✅ Parsed (M2); applied in M4 |
+| FR-PF-01 | Precondition keywords: "Unauthenticated visitor" → fresh browser context; "Logged in as X" → saved login state | V1 | Both work · ✅ Done (M4): fresh context per exploration; "Logged in" runs the login test case first (`--login`) |
 | FR-PF-02 | **Reusable flows**: save a sequence of steps under a name (e.g. `On Registration page`) and use it as a precondition or step | V2 | One flow is used by many tests |
 | FR-PF-03 | Flows are generated as Page Object methods / fixtures, not copied into every test | V2 | One method, many callers |
 | FR-PF-04 | A flow can take parameters (e.g. `Login as {user}`) | V2 | |
@@ -184,14 +184,14 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-EX-01 | The platform starts Playwright MCP itself (stdio) and checks the required tools at startup | V1 | ✅ Done (M1) |
-| FR-EX-02 | **Step state machine**: LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE → DONE; any failure → NEEDS_REVIEW | V1 | Each step shows its state in the log |
-| FR-EX-03 | Fixed **action → MCP tool** mapping (see ARCHITECTURE.md §5) | V1 | |
-| FR-EX-04 | **Settle rule**: page loaded + no network activity for 500 ms + two identical snapshots in a row, within a timeout | V1 | No step runs on a half-loaded page |
-| FR-EX-05 | **Verify effect**: after a fill, the value is present; after a click, the URL, the snapshot, a dialog or the network changed | V1 | A click that does nothing is flagged |
-| FR-EX-06 | Exploration performs the steps in order (a guided dry run), so later pages can be explored | V1 | Dashboard elements found after Login |
-| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review |
-| FR-EX-08 | Exploration refused on Production unless confirmed | V1 | Confirmation dialog |
-| FR-EX-09 | Chromium only for exploration | V1 | |
+| FR-EX-02 | **Step state machine**: LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE → DONE; any failure → NEEDS_REVIEW | V1 | Each step shows its state in the log · ✅ Done (M4): NEEDS_REVIEW waits for a resolver with the browser open |
+| FR-EX-03 | Fixed **action → MCP tool** mapping (see ARCHITECTURE.md §5) | V1 | ✅ Done (M4). Forward, refresh and upload use the Locator Probe (MCP has no tool for them) |
+| FR-EX-04 | **Settle rule**: page loaded + no network activity for 500 ms + two identical snapshots in a row, within a timeout | V1 | No step runs on a half-loaded page · ✅ Done (M4): the snapshot must stay unchanged for 500 ms |
+| FR-EX-05 | **Verify effect**: after a fill, the value is present; after a click, the URL, the snapshot, a dialog or the network changed | V1 | A click that does nothing is flagged · ✅ Done (M4) for value, checked, option, URL and snapshot; dialogs in V2 (FR-PA-09) |
+| FR-EX-06 | Exploration performs the steps in order (a guided dry run), so later pages can be explored | V1 | Dashboard elements found after Login · ✅ Done (M4) |
+| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review · ✅ Taken (M4); shown in review in M7 |
+| FR-EX-08 | Exploration refused on Production unless confirmed | V1 | Confirmation dialog · ✅ Done (M4, `--production`) |
+| FR-EX-09 | Chromium only for exploration | V1 | ✅ Done (M4) |
 | FR-EX-10 | Handle an unexpected dialog/pop-up/cookie banner (dismiss, or ask) | V2 | |
 
 ### 6.7 Locator discovery and validation (FR-LO) · §6
@@ -204,7 +204,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-LO-04 | **Score** candidates: exact name, contains, fuzzy (Levenshtein), synonyms, nearby text, roleHint, context (form/dialog) | V1 | Scores shown in review · ✅ Done (M3); constants in `src/locators/match.ts` (`SCORE`) |
 | FR-LO-05 | **Ambiguity rule**: if no candidate reaches the minimum score, or the top two are within the margin → NEEDS_REVIEW with the candidates | V1 | Never picks between two equal "Save" buttons · ✅ Done (M3): minimum 0.6, margin 0.1 |
 | FR-LO-06 | **Locator ladder**: getByTestId → getByRole+name → getByLabel → getByPlaceholder → getByText → CSS → XPath. The first one that validates wins. | V1 | ✅ Done (M3). CSS skips generated-looking ids; position-based locators (`.nth()`) come after all others |
-| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | ✅ M3: MCP's `browser_generate_locator` suggestion joins the ladder and pins the element. Code reported after an action: M4 |
+| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | ✅ Done: MCP's `browser_generate_locator` suggestion joins the ladder and pins the element (M3); the code MCP reports after an action is validated and kept as an alternative (M4) |
 | FR-LO-08 | **Validation (Locator Probe)**: `count() === 1`, visible, enabled/editable, the action is possible | V1 | Invalid locators are never stored · ✅ Done (M3): also checks it is the same element the matcher chose; "possible" uses Playwright's trial actions |
 | FR-LO-09 | Configurable test-id attribute per project (`data-testid`, `data-test`, `data-qa`…) | V1 | ✅ Done (M3) |
 | FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage · ✅ Done (M3): named from the tester's page name, else the path, else the title |
@@ -403,8 +403,8 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M1 | Connect to Playwright MCP, list page elements (FR-EX-01, FR-LO-01, FR-LO-02) | ✅ Done |
 | M2 | Parser: text → Test Model (FR-PA-*, FR-TD-01, FR-TD-02, FR-PF-01 parsing, FR-QC-01/02) | ✅ Done |
 | M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ✅ Done |
-| M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ⬜ Next |
-| M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ⬜ |
+| M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
+| M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ⬜ Next |
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ⬜ |
 | M7 | Web UI (D20): server + storage, import (D21), column mapping, review with pick element, results (FR-IN-01…04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ⬜ |
 
@@ -493,3 +493,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.4 | 2026-09-30 | M3 done: locator matching, ladder and Locator Probe on a Chrome shared with MCP over CDP. An unnamed field just after a heading is named by it (lower score). Position-based locators rank last; generated-looking ids are not used for CSS. FR-LO-07 uses `browser_generate_locator` now; code after an action comes in M4. |
 | 1.5 | 2026-09-30 | Checked against every section of `Auto_QA.docx`. Added: run settings in the form (§5, FR-IN-04), V1 credential storage (FR-ENV-05), table steps and row-scoped locators (FR-PA-13, FR-LO-13), POM action methods (FR-GE-10, FR-GE-11), re-discovery and optional auto-approve (FR-RV-07, FR-RV-08), `reports/` folder (FR-GE-05), Test Scenario level and stable IDs (FR-EN-01, FR-EN-06). Recorded where the spec differs from the document: D15 (no `utils/` in the generated project), D16 (one locator file per page), D17 (Generate & Execute still reviews), D18 (Browser field with Chromium only in V1). |
 | 1.6 | 2026-09-30 | Decisions D19 (V1 page names: first page is `BASE_URL`, later pages ask), D20 (React + Fastify + SQLite), D21 (ExcelJS). Every open V1 requirement assigned to a milestone. Added PLAN.md. FR-IN-03 marked done. |
+| 1.7 | 2026-09-30 | M4 done: exploration controller with the step state machine, resolver for NEEDS_REVIEW, settle and verify-effect rules, preconditions, Production guard, per-step screenshots. Learned page URLs are per environment and stored as paths (D19). A "shown" check may target plain text. A role locator without a name ranks after a CSS id. Local demo app for end-to-end tests. |

@@ -1,5 +1,5 @@
-import type { McpBrowser } from '../explorer/mcp-browser.js';
-import { contextOf, parseSnapshot } from '../explorer/snapshot-parser.js';
+import type { McpBrowser, PageState } from '../explorer/mcp-browser.js';
+import { contextOf, parseSnapshot, type SnapshotNode } from '../explorer/snapshot-parser.js';
 import type { ParserConfig } from '../parser/config.js';
 import { buildLadder, type Fingerprint, fingerprint, type PageRef, pageOf } from './ladder.js';
 import { type LocatorSpec, parseLocatorCode, spec } from './locator.js';
@@ -40,11 +40,37 @@ export type LocateResult =
       tried: Validation[];
     };
 
-export async function locate(query: TargetQuery, mcp: McpBrowser, probe: LocatorProbe, options: LocateOptions): Promise<LocateResult> {
-  const state = await mcp.snapshot();
+/**
+ * `given.state` reuses a snapshot the caller already took. `given.node` skips matching and
+ * locates that element, e.g. the candidate the tester picked for a NEEDS_REVIEW step.
+ */
+export async function locate(
+  query: TargetQuery,
+  mcp: McpBrowser,
+  probe: LocatorProbe,
+  options: LocateOptions,
+  given: { state?: PageState; node?: SnapshotNode } = {},
+): Promise<LocateResult> {
+  const state = given.state ?? (await mcp.snapshot());
   const page = pageOf(state.url, state.title, options.pageHint);
-  const match = findCandidates(query, parseSnapshot(state.snapshotYaml), options.config);
-  if (match.status === 'needs-review') return { ...match, page, tried: [] };
+  const found = findCandidates(query, parseSnapshot(state.snapshotYaml), options.config);
+  let best: Candidate;
+  if (given.node) {
+    const ref = given.node.ref;
+    best = found.candidates.find((c) => c.node.ref === ref) ?? {
+      node: given.node,
+      score: 0,
+      matchedName: given.node.name,
+      source: 'name',
+      how: 'exact',
+      notes: ['picked by the tester'],
+    };
+  } else if (found.status === 'needs-review') {
+    return { ...found, page, tried: [] };
+  } else {
+    best = found.best;
+  }
+  const match = { best, candidates: found.candidates };
 
   const { node } = match.best;
   const review = (code: string, text: string, tried: Validation[] = []): LocateResult => ({

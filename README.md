@@ -79,6 +79,29 @@ Each step is parsed (M2), then matched against the live page. Nothing is clicked
 
 The Locator Probe starts Chrome with a debugging port and Playwright MCP connects to the same Chrome, so both see the same page (D7). Scoring constants are in `src/locators/match.ts`.
 
+## Milestone 4: explore a whole test case
+
+```bash
+npm run demo        # in a second terminal: the local demo app on http://127.0.0.1:4173
+npm run explore -- examples/demo-app/test-cases.json --id TC-DEMO-003 --base-url http://127.0.0.1:4173
+npm run explore -- examples/test-cases.json --id TC-LOGIN-001 --base-url https://www.saucedemo.com --test-id-attribute data-test
+```
+
+The steps really run, in order, in Chrome: each goes LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE. Checks are not judged yet (M6), but their elements are located so the generated test can use them. When the rules cannot decide (two equal buttons, an unknown page URL, a click that changed nothing), it asks in the terminal and waits with the browser open.
+
+Values come from the environment or a `.env` file: `BASE_URL`, `TEST_USERNAME`, `TEST_PASSWORD`, and any `TEST_…` secret from Test Data. The demo app's login is `demo` / `demo123`.
+
+| Option | Meaning |
+|---|---|
+| `--id TC-1` | Which test case in the file (default: the first) |
+| `--base-url URL` | Overrides `BASE_URL` |
+| `--login TC-LOGIN-001` | Test case to run first for a "Logged in" precondition |
+| `--env-file file` | Where to read variables from (default `.env`) |
+| `--production` | Asks for confirmation before exploring (it really clicks) |
+| `--headed`, `--test-id-attribute`, `--out dir` | As for `match` |
+
+Output: `.auto-qa/explore/<id>/exploration.json` (per step: locator, alternatives, scores, fingerprint, page, effect) and a screenshot per step. Page URLs learned on the way are kept per environment in `.auto-qa/pages.json` (D19). Secret values are never written.
+
 ## Tests
 
 ```bash
@@ -106,6 +129,10 @@ npm run format    # apply formatting and safe fixes
 | `src/locators/engine.ts` | One step: snapshot → match → pin the element → ladder → first valid locator. |
 | `src/locators/session.ts` | Starts the probe's Chrome and Playwright MCP on it together. |
 | `src/cli/match.ts` | Milestone 3 command line tool. |
+| `src/explorer/controller.ts` | Exploration: the step state machine, resolver, settle and verify-effect rules. |
+| `src/explorer/values.ts` | Step values from env, Test Data, literals and generators; secret masking. |
+| `src/cli/explore.ts` | Milestone 4 command line tool, with a terminal resolver. |
+| `examples/demo-app/` | Local app and test cases for end-to-end tests (`npm run demo`). |
 | `examples/test-cases.json` | Sample test cases (saucedemo, the-internet, and one with deliberate problems). |
 
 ## Milestones
@@ -113,7 +140,7 @@ npm run format    # apply formatting and safe fixes
 - [x] M1: connect to Playwright MCP and list page elements
 - [x] M2: parse a written test case into steps, test data and checks
 - [x] M3: match a step to an element and validate the locator
-- [ ] M4: explore a full test case and save locators
+- [x] M4: explore a full test case and save locators
 - [ ] M5: generate Page Objects and specs
 - [ ] M6: run with Playwright Test and report PASS/FAIL
 - [ ] M7: web UI with Excel import and review screen

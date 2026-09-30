@@ -124,6 +124,17 @@ export class LocatorProbe {
     return { spec: s, code, ok: true, count };
   }
 
+  /** Validates `s` as another locator for the element `winner` points to (FR-LO-07: MCP's code after an action). */
+  async validateAgainst(page: Page, s: LocatorSpec, kind: TargetQuery['kind'], winner: LocatorSpec): Promise<Validation | undefined> {
+    const { handle } = await this.resolve(page, winner);
+    if (!handle) return undefined;
+    try {
+      return await this.validate(page, s, kind, handle);
+    } finally {
+      await handle.dispose();
+    }
+  }
+
   async close(): Promise<void> {
     await this.context.close();
     await rm(this.userDataDir, { recursive: true, force: true }).catch(() => {});
@@ -147,14 +158,14 @@ function freePort(): Promise<number> {
  * Runs in the page and returns ElementFacts. Plain DOM reads only. It is a string, not a function,
  * because tsx adds a `__name` helper to compiled functions that does not exist in the page.
  */
-const READ_FACTS = `(el, testIdAttribute) => {
+const READ_FACTS = String.raw`(el, testIdAttribute) => {
   const attr = (name) => (el.getAttribute(name) || '').trim() || undefined;
-  const clean = (s) => (s || '').replace(/s+/g, ' ').trim() || undefined;
+  const clean = (s) => (s || '').replace(/\s+/g, ' ').trim() || undefined;
 
   const labels = [];
   const labelled = attr('aria-labelledby');
   if (labelled) {
-    const text = clean(labelled.split(/s+/).map((id) => (document.getElementById(id) || {}).textContent || '').join(' '));
+    const text = clean(labelled.split(/\s+/).map((id) => (document.getElementById(id) || {}).textContent || '').join(' '));
     if (text) labels.push(text);
   }
   for (const l of Array.from(el.labels || [])) {

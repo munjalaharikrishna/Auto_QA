@@ -27,6 +27,7 @@ export interface ElementFacts {
   xpath: string;
 }
 
+const PLAIN_ROLES = new Set(['generic', 'text', 'paragraph']);
 const FIELD_ROLES = new Set(['textbox', 'searchbox', 'combobox', 'spinbutton', 'listbox', 'checkbox', 'radio', 'switch', 'slider']);
 
 /** Ids with long numbers or framework prefixes change between builds, so they make poor CSS locators. */
@@ -40,7 +41,8 @@ export function buildLadder(node: SnapshotNode, facts: ElementFacts, suggestions
 
   if (facts.testId) out.push(spec('getByTestId', facts.testId));
   // Without a name, the role alone is still a valid rung when the page has one element of it.
-  out.push(node.name ? spec('getByRole', node.role, { name: node.name, exact: true }) : spec('getByRole', node.role));
+  // Plain text has no useful role (`getByRole('generic')`), so it relies on test id and text.
+  if (!PLAIN_ROLES.has(node.role)) out.push(node.name ? spec('getByRole', node.role, { name: node.name, exact: true }) : spec('getByRole', node.role));
   if (isField && facts.labels[0]) out.push(spec('getByLabel', facts.labels[0], { exact: true }));
   if (facts.placeholder) out.push(spec('getByPlaceholder', facts.placeholder, { exact: true }));
   if (!isField && facts.text) out.push(spec('getByText', facts.text, { exact: true }));
@@ -50,8 +52,12 @@ export function buildLadder(node: SnapshotNode, facts: ElementFacts, suggestions
 
   // MCP's suggestion (FR-LO-07) joins at its strategy's place unless it is already there.
   for (const s of suggestions) if (!out.some((o) => sameSpec(o, s))) out.push(s);
-  // Position-based locators break when the page order changes, so they come last.
-  const rank = (s: LocatorSpec) => (s.nth === undefined ? 0 : STRATEGIES.length) + STRATEGIES.indexOf(s.strategy);
+  // A role without a name only works while the page has one such element, so it ranks after CSS
+  // (a stable id) but before XPath. Position-based locators break when the order changes, so they come last.
+  const rank = (s: LocatorSpec) => {
+    const base = s.strategy === 'role' && !s.options?.name ? STRATEGIES.indexOf('css') + 0.5 : STRATEGIES.indexOf(s.strategy);
+    return (s.nth === undefined ? 0 : STRATEGIES.length) + base;
+  };
   return out.sort((a, b) => rank(a) - rank(b));
 }
 
@@ -118,10 +124,13 @@ export function pageOf(url: string, title: string, hint?: string): PageRef {
 }
 
 function pascal(text: string): string {
-  return text
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
-    .join('')
-    .replace(/^\d+/, '');
+  return (
+    text
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+      // Keep inner capitals ("LoginPage"); only an all-caps word ("LOGIN") is lowered.
+      .map((w) => w[0].toUpperCase() + (w === w.toUpperCase() ? w.slice(1).toLowerCase() : w.slice(1)))
+      .join('')
+      .replace(/^\d+/, '')
+  );
 }

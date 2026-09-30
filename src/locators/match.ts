@@ -95,7 +95,11 @@ export function rolesFor(kind: TargetQuery['kind']): string[] | undefined {
 
 export function findCandidates(query: TargetQuery, nodes: SnapshotNode[], config: ParserConfig): MatchResult {
   const roles = rolesFor(query.kind);
-  const pool = flatten(nodes).filter((n) => n.ref && !STRUCTURE.has(n.role) && (!roles || roles.includes(n.role)));
+  // A check that something is shown may point at plain text, e.g. saucedemo's "Products" title is a span.
+  const textOk = query.kind === 'visible' || query.kind === 'text';
+  const pool = flatten(nodes).filter(
+    (n) => n.ref && (!STRUCTURE.has(n.role) || (textOk && !!n.text && !n.children.length)) && (!roles || roles.includes(n.role)),
+  );
   const wanted = [query.target, ...query.alternatives].filter((w): w is string => !!w?.trim());
 
   if (!wanted.length) return onlyOfRole(query, pool);
