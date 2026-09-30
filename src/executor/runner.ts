@@ -92,7 +92,7 @@ export async function runWorkspace(workspace: string, options: RunOptions = {}):
   const verdicts: TestVerdict[] = [];
   for (const t of tests) {
     const r = reported.find((x) => x.testId === t.testId);
-    const v = verdictFor(t, r, { executionId, missingEnv: needs(t) });
+    const v = verdictFor(t, r, { executionId, missingEnv: needs(t), runError: reported.length ? undefined : runErrorOf(output) });
     v.evidence.screenshots = await keep(workspace, dir, v.evidence.screenshots);
     if (v.evidence.trace) v.evidence.trace = (await keep(workspace, dir, [v.evidence.trace]))[0];
     verdicts.push(maskVerdict(v, mask));
@@ -127,6 +127,12 @@ export function maskVerdict(v: TestVerdict, mask: (text: string) => string): Tes
   };
 }
 
+/** The first error Playwright printed when no test ran at all, e.g. a missing module or a config error. */
+function runErrorOf(output: string): string | undefined {
+  const line = output.split(/\r?\n/).find((l) => /^\s*(Error|TypeError|SyntaxError|ReferenceError)\b|Cannot find module|MODULE_NOT_FOUND/.test(l));
+  return line?.trim();
+}
+
 /** EXEC-2026-00001, EXEC-2026-00002… one sequence per year (FR-EN-06). */
 export async function nextExecutionId(runsDir: string): Promise<string> {
   await mkdir(runsDir, { recursive: true });
@@ -140,15 +146,19 @@ export async function nextExecutionId(runsDir: string): Promise<string> {
 
 function spawnPlaywright(workspace: string, tests: ManifestTest[], env: Record<string, string | undefined>, onEvent?: (e: RunEvent) => void): Promise<string> {
   const require = createRequire(import.meta.url);
-  // The workspace's own Playwright when it was installed there, otherwise the platform's (same version).
+  // The workspace's own Playwright when it was installed there (npm install), otherwise the platform's,
+  // which is the same version: NODE_PATH lets the generated tests import it from wherever the workspace is.
   let cli: string;
+  let childEnv = env;
   try {
     cli = require.resolve('@playwright/test/cli', { paths: [path.resolve(workspace)] });
   } catch {
     cli = require.resolve('@playwright/test/cli');
+    const platformModules = cli.slice(0, cli.lastIndexOf(`${path.sep}@playwright${path.sep}`));
+    childEnv = { ...env, NODE_PATH: [platformModules, env.NODE_PATH].filter(Boolean).join(path.delimiter) };
   }
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cli, 'test', ...tests.map((t) => t.file)], { cwd: workspace, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [cli, 'test', ...tests.map((t) => t.file)], { cwd: workspace, env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
     let buffered = '';
     const onData = (chunk: Buffer) => {

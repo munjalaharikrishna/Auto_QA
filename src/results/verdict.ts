@@ -67,6 +67,8 @@ export interface VerdictContext {
   executionId: string;
   /** Environment variables the test needs that are not set: the test is BLOCKED without running. */
   missingEnv?: string[];
+  /** Why no test ran at all, from Playwright's output. */
+  runError?: string;
 }
 
 export function verdictFor(test: ManifestTest, reported: ReportedTest | undefined, ctx: VerdictContext): TestVerdict {
@@ -92,7 +94,7 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
     return { ...base, ...notRun, status: 'BLOCKED', category: 'Test Data', reason, actual: `Not run: ${reason}` };
   }
   if (!reported) {
-    const reason = 'The test did not run (see the runner output).';
+    const reason = ctx.runError ? `The test did not run: ${ctx.runError}` : 'The test did not run (see the runner output).';
     return { ...base, ...notRun, status: 'BLOCKED', category: 'Environment', reason, actual: `Not run: ${reason}` };
   }
 
