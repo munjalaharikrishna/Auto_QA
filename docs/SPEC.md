@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.13 |
+| **Spec version** | 1.14 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
-| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html), [PLAN.md](PLAN.md) |
+| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html), [PLAN.md](PLAN.md), [DATABASE.md](DATABASE.md) |
 
 ---
 
@@ -74,6 +74,11 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D21** | Excel import uses **ExcelJS**. | Maintained and on npm. Current SheetJS versions are only on its own CDN. |
 | **D22** | A **batch run never waits for the tester**. A case that needs review is set aside with status NEEDS REVIEW and the batch moves on; the tester answers the review queue at the end, and only those cases run again. | A 100-case sheet must not stall on case 37. Setting a case aside keeps D6 (never guess). |
 | **D23** | Results are written to a **copy** of the workbook (`<name>.results.xlsx`), never to the original. | A failed or interrupted run cannot damage the tester's source sheet. |
+| **D24** | **Hybrid storage**: the database is the system of record for metadata, structure and history; bulk artifacts (screenshots, traces, workbooks, generated projects) stay as files and are referenced from rows. | Queries and history need rows; files do not belong in them. Keeps D15. Details: [DATABASE.md](DATABASE.md). |
+| **D25** | **Portable SQL**: one schema, two dialects (SQLite now, PostgreSQL in V3), only the common SQL subset, all SQL behind repositories in `src/db/`. | Moving to the team server (SPEC §3) is a driver change and a data copy, not a rewrite. |
+| **D26** | **Forward-only, checksummed migrations**, applied automatically, additive first (expand, then contract), with a backup first and a refusal to run on a newer database. | Old and new versions must never corrupt each other's data. |
+| **D27** | **Storage references**: files are saved as `scheme:key` relative to a root (`local:…`, later `s3:…`), never an absolute path. | SPEC §3: no hard-coded paths. |
+| **D28** | **Secrets in the database** only from V2, as AES-256-GCM ciphertext with the key outside the database; never in V1 (FR-ENV-05). | NFR-03. |
 
 ## 5. Test case input format
 
@@ -376,6 +381,10 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 ---
 
+### 6.22 Database (FR-DB) · [DATABASE.md](DATABASE.md)
+
+Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, storage references, PostgreSQL, traceability tables) are in [DATABASE.md §11](DATABASE.md#11-requirements-fr-db). V1 part (FR-DB-01…18) is milestone **M8**; FR-DB-19…22 are V2, FR-DB-23/24 are V3, FR-DB-25/26 are V4. It also closes FR-LR-04 (V2), FR-ENV-04 (V2), FR-HI-02/03 (V2) and FR-TM-04 (V3).
+
 ## 7. Non-functional requirements
 
 | ID | Requirement |
@@ -415,6 +424,7 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
+| M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | Planned |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
 
@@ -449,7 +459,7 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 ## 10. Data model (summary)
 
 Project · Environment · Secret · TestCase · TestModelVersion · Flow · PageObject · Locator · LocatorChange · Suite · Execution · StepResult · Evidence · ImportMapping · (V4) Requirement · Scenario · Defect.
-The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
+The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tables and rules are in [DATABASE.md](DATABASE.md).
 
 ---
 
@@ -490,6 +500,7 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | Q4 | AI helper: yes or no? | After V2 |
 | Q5 | Which API auth types do our services use (bearer, basic, API key, OAuth client credentials)? | V2 |
 | Q6 | Do our services publish OpenAPI files or Postman collections? | V3 |
+| Q8–Q11 | Database choices (one file or one per project, query builder, generated code storage, result sheets): see [DATABASE.md §12](DATABASE.md#12-risks-and-open-questions) | M8 |
 | Q7 | Are GraphQL or SOAP services in scope, or only REST/JSON? | V2 |
 
 ## 14. Change log
@@ -510,3 +521,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.11 | 2026-09-30 | M6b done: batch run of a workbook with automatic column matching, results written to a copy with an "Auto QA" summary and review queue sheet, resume, `--only-review`, the sheet's login case reused for "Logged in" cases, identical cases explored once. Explorations now record the login steps they ran. |
 | 1.12 | 2026-09-30 | M7 done: server (Fastify, node:sqlite, job runner, WebSocket) and web UI (React, Vite): projects with run settings, workbook upload with column mapping, batch runs with results download and the review queue, single test cases with questions, pick element on the screenshot, review with code diff, Approve & Execute / Edit / Regenerate, results, writing guide. AssistProvider no-op (FR-AI-01). D17 clarified for workbook runs; single tests use their own project until FR-GE-07. |
 | 1.13 | 2026-09-30 | From a real OrangeHRM test case: "Enter url…"/"Open the application" open BASE_URL with its path (it opened the site root before), "Enter user name in Login Name text box", "Open Browser" as no step, steps in quotes, "Checking X", "able to navigate to X", positions ignored, table-cell labels. D19: a check no longer teaches a page that was not reached, which could have given a false PASS. |
+| 1.14 | 2026-10-01 | Database specification and architecture ([DATABASE.md](DATABASE.md)): decisions D24–D28, requirements FR-DB-01…26, milestone M8. Plan to adopt the existing SQLite store as a baseline, add versioned migrations, repositories, environments, test case versions, executions/results/evidence, storage references, and the PostgreSQL path for V3. |

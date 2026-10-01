@@ -332,6 +332,8 @@ sequenceDiagram
 
 ## 9. Data model
 
+The full database design (tables, migrations, repositories, SQLite → PostgreSQL) is in [DATABASE.md](DATABASE.md). This diagram is the overview; DATABASE.md §5.1 refines it (an execution is one run holding many test results).
+
 ```mermaid
 erDiagram
   PROJECT ||--o{ ENVIRONMENT : has
@@ -560,3 +562,6 @@ Interfaces that keep the design open for future versions without rewrites:
 | `EvidenceStore` | Local disk | S3 / MinIO |
 | `JobQueue` | In-process | BullMQ + Redis |
 | `DefectTracker` | none | Jira |
+| `Driver` (database) | SQLite (`node:sqlite`) | PostgreSQL (`pg`) |
+| `ArtifactStore` | Local disk, storage refs | S3 / MinIO |
+| `SearchIndex` | SQLite FTS5 | PostgreSQL `tsvector` |

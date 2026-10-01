@@ -83,6 +83,12 @@ How the rest of [SPEC.md](SPEC.md) gets built. V1 is planned in detail by milest
 
 **Done when** a tester imports a sheet, reviews a test, picks an ambiguous element, approves and sees PASS/FAIL, all in the browser.
 
+## M8: database foundation (D24–D28, [DATABASE.md](DATABASE.md))
+
+Moves every piece of state that is only in a JSON file into the database, adds versioned migrations, and leaves room for V2–V4. Nine steps are in [DATABASE.md §10](DATABASE.md#10-build-plan-m8) (driver and migrations, repositories, environments and page routes, test case versions, explorations, executions and results, evidence and storage references, reads from the database, `db` commands).
+
+**Done when** a fresh install and the current `.auto-qa/auto-qa.db` reach the same schema, a workbook run leaves no state only in JSON files (other than artifacts), and CI upgrades a database from the previous release.
+
 ## After V1
 
 1. **V2:** locator repository reuse → environments + page map → encrypted secrets → login state reuse → suites, history, HTML report → flows, unique data → table steps → re-discovery → API tests → Jira/TestRail import
