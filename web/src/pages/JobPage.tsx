@@ -380,8 +380,12 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
       </div>
       {summary && (
         <div className="tiles">
-          {(['PASS', 'FAIL', 'BLOCKED', 'NEEDS REVIEW'] as const).map((s) => (
-            <div key={s} className={`tile badge ${s === 'NEEDS REVIEW' ? 'NEEDS' : s}`} style={{ borderRadius: 8, textAlign: 'left' }}>
+          {(['PASS', 'FAIL', 'BLOCKED', 'NEEDS REVIEW', 'NOT VERIFIED'] as const).map((s) => (
+            <div
+              key={s}
+              className={`tile badge ${s === 'NEEDS REVIEW' ? 'NEEDS' : s === 'NOT VERIFIED' ? 'NOTV' : s}`}
+              style={{ borderRadius: 8, textAlign: 'left' }}
+            >
               <strong>{summary.totals[s]}</strong>
               {s.toLowerCase()}
             </div>
@@ -410,6 +414,9 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
                 open={expanded === testId}
                 toggle={() => setExpanded(expanded === testId ? undefined : testId)}
                 zoom={setZoom}
+                saveSeen={async (check) => {
+                  await api.saveObservation(job.projectId, testId, { check, facts: v.evidence?.facts ?? {} });
+                }}
                 editing={editing === testId}
                 edit={() => setEditing(editing === testId ? undefined : testId)}
                 editor={<EditCase job={job} testId={testId} onClose={() => setEditing(undefined)} />}
@@ -431,6 +438,8 @@ function VerdictRow(props: {
   open: boolean;
   toggle: () => void;
   zoom: (file: string) => void;
+  /** Turn what the page showed into the expected result, for a check that could not be verified. */
+  saveSeen: (check: string) => Promise<void>;
   /** Edit this test case in place (the Edit button of each row). */
   editing: boolean;
   edit: () => void;
@@ -494,7 +503,7 @@ function VerdictRow(props: {
       {props.open && (
         <tr>
           <td colSpan={5}>
-            <Details v={v} zoom={props.zoom} />
+            <Details v={v} zoom={props.zoom} saveSeen={props.saveSeen} />
           </td>
         </tr>
       )}
@@ -557,7 +566,9 @@ function EditCase({ job, testId, onClose }: { job: JobDetail; testId: string; on
 }
 
 /** Everything a run recorded: the video, every step with its time and screenshot, each check, the page facts. */
-function Details({ v, zoom }: { v: TestVerdict; zoom: (file: string) => void }) {
+function Details({ v, zoom, saveSeen }: { v: TestVerdict; zoom: (file: string) => void; saveSeen: (check: string) => Promise<void> }) {
+  const [saved, setSaved] = useState<string[]>([]);
+  const [problem, setProblem] = useState<string>();
   const ev = v.evidence;
   const facts = ev?.facts;
   return (
@@ -622,6 +633,7 @@ function Details({ v, zoom }: { v: TestVerdict; zoom: (file: string) => void }) 
           </table>
         </div>
       )}
+      <ErrorNote error={problem} />
       {!!v.checks?.length && (
         <div className="table-wrap">
           <table>
@@ -640,8 +652,27 @@ function Details({ v, zoom }: { v: TestVerdict; zoom: (file: string) => void }) 
                   <td>{c.expected}</td>
                   <td>{c.actual}</td>
                   <td>
-                    <StatusBadge status={c.result === 'passed' ? 'PASS' : c.result === 'failed' ? 'FAIL' : 'NEEDS REVIEW'} />
-                    {c.result !== 'passed' && c.result !== 'failed' && <div className="muted">{c.result}</div>}
+                    <StatusBadge
+                      status={c.result === 'passed' ? 'PASS' : c.result === 'failed' ? 'FAIL' : c.result === 'not verified' ? 'NOT VERIFIED' : 'NEEDS REVIEW'}
+                    />
+                    {c.result === 'not verified' &&
+                      (saved.includes(c.id) ? (
+                        <div className="muted">Saved. Run it again to check it.</div>
+                      ) : (
+                        <button
+                          type="button"
+                          style={{ marginTop: '0.4rem' }}
+                          onClick={() =>
+                            saveSeen(c.raw).then(
+                              () => setSaved([...saved, c.id]),
+                              (e: Error) => setProblem(e.message),
+                            )
+                          }
+                        >
+                          Save what was seen as the expected result
+                        </button>
+                      ))}
+                    {c.result !== 'passed' && c.result !== 'failed' && c.result !== 'not verified' && <div className="muted">{c.result}</div>}
                   </td>
                 </tr>
               ))}

@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 import type { JobStatus } from '../../../src/server/store.js';
-import type { ProjectInput, ProjectView, RawTestCase } from '../api';
+import type { Policy, ProjectInput, ProjectView, RawTestCase } from '../api';
 import { Link } from '../router';
 
 export function StatusBadge({ status }: { status: string }) {
-  const cls = status === 'NEEDS REVIEW' ? 'NEEDS' : status;
+  const cls = status === 'NEEDS REVIEW' ? 'NEEDS' : status === 'NOT VERIFIED' ? 'NOTV' : status;
   return <span className={`badge ${cls}`}>{status}</span>;
 }
 
@@ -39,6 +39,7 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
   const [testIdAttribute, setTestIdAttribute] = useState(init?.testIdAttribute ?? 'data-testid');
   const [username, setUsername] = useState(init?.env.username ?? '');
   const [password, setPassword] = useState('');
+  const [policy, setPolicy] = useState<Policy>(init?.policy ?? 'balanced');
   const known = init?.env.variables.filter((v) => !['BASE_URL', 'TEST_USERNAME', 'TEST_PASSWORD'].includes(v.name)) ?? [];
   const [extra, setExtra] = useState<Array<{ key: number; name: string; value: string; secret: boolean; set: boolean }>>(
     known.map((v, i) => ({ key: i, name: v.name, value: v.value ?? '', secret: v.secret, set: true })),
@@ -53,7 +54,7 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
     setError(undefined);
     try {
       const variables = Object.fromEntries(extra.filter((v) => v.name.trim()).map((v) => [v.name.trim(), v.value]));
-      await props.onSubmit({ name, baseUrl, testIdAttribute, browser: 'chromium', username, password, variables });
+      await props.onSubmit({ name, baseUrl, testIdAttribute, browser: 'chromium', username, password, variables, policy });
       setPassword('');
     } catch (err) {
       setError((err as Error).message);
@@ -106,6 +107,20 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
           </label>
           <small id={`${hintId}-testid`}>The attribute your app uses for test ids, e.g. data-testid or data-test.</small>
         </div>
+      </div>
+      <div className="field">
+        <label className="field">
+          <span>When the wording is unclear</span>
+          <select aria-describedby={`${hintId}-policy`} value={policy} onChange={(e) => setPolicy(e.target.value as Policy)}>
+            <option value="balanced">Balanced (recommended)</option>
+            <option value="strict">Strict: ask about everything unclear</option>
+            <option value="lenient">Lenient: also pick the first of two equally good elements</option>
+          </select>
+        </label>
+        <small id={`${hintId}-policy`}>
+          Balanced runs a test case even if one of its expected results cannot be checked from the page; that check is reported NOT VERIFIED, and made-up or
+          learned values are listed next to PASS. Strict asks first, so the test case waits.
+        </small>
       </div>
       <fieldset className="panel" style={{ margin: 0 }}>
         <legend>Other values the tests need</legend>

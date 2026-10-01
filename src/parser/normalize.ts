@@ -23,12 +23,12 @@ const ABBREVIATIONS: Array<[RegExp, string]> = [
 /** Quoted pieces are kept exactly: they are replaced by a marker while the rest is cleaned, then put back. */
 export function normalizeText(text: string): string {
   const saved: string[] = [];
-  const hold = (m: string) => `\u0007${saved.push(m) - 1}\u0007`;
+  const hold = (m: string) => `§${saved.push(m) - 1}§`;
   let t = text
     .replace(/"[^"]*"|“[^”]*”|‘[^’]*’|`[^`]*`/g, hold)
     // Zero-width and non-breaking characters from copy and paste.
-    .replace(/[​‌‍﻿]/g, '')
-    .replace(/ /g, ' ')
+    .replace(/\u200b|\u200c|\u200d|\ufeff/g, '')
+    .replace(/\u00a0/g, ' ')
     // Bullets and numbering that survived the split.
     .replace(/^\s*(?:[-*•●▪]|\(\d+\)|\d+[.)])\s+/, '')
     // A placeholder names data: <username>, {username}, [username]. ({{generators}} are kept.)
@@ -40,5 +40,5 @@ export function normalizeText(text: string): string {
     .replace(/\s+/g, ' ')
     .replace(/\s+([,;:.!?])/g, '$1')
     .trim();
-  return t.replace(/\u0007(\d+)\u0007/g, (_, i) => saved[Number(i)]);
+  return t.replace(/§(\d+)§/g, (_, i) => saved[Number(i)]);
 }

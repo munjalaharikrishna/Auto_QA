@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { DEFAULT_POLICY, isPolicy, type Policy } from '../model/policy.js';
 import type { RawTestCase } from '../model/test-model.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
@@ -497,6 +498,27 @@ export class Store {
       });
     }
     return runs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+  }
+
+  // Settings (the small per-project choices)
+
+  async setting(scope: 'global' | 'project' | 'user', scopeId: string, key: string): Promise<unknown> {
+    const r = await this.db.get<Row>('SELECT value FROM settings WHERE scope = ? AND scope_id = ? AND key = ?', [scope, scopeId, key]);
+    return r ? JSON.parse(String(r.value)) : undefined;
+  }
+
+  async setSetting(scope: 'global' | 'project' | 'user', scopeId: string, key: string, value: unknown): Promise<void> {
+    await this.db.run(
+      `INSERT INTO settings (scope, scope_id, key, value, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (scope, scope_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      [scope, scopeId, key, JSON.stringify(value), now()],
+    );
+  }
+
+  /** How much the platform may decide without asking for this project (D30). Balanced unless the tester chose otherwise. */
+  async projectPolicy(projectId: string): Promise<Policy> {
+    const v = await this.setting('project', projectId, 'policy');
+    return isPolicy(v) ? v : DEFAULT_POLICY;
   }
 
   // Counters and audit

@@ -35,6 +35,7 @@ const COLORS: Record<Status, { fill: string; font: string }> = {
   FAIL: { fill: 'FFFFC7CE', font: 'FF9C0006' },
   BLOCKED: { fill: 'FFD9D9D9', font: 'FF3F3F3F' },
   'NEEDS REVIEW': { fill: 'FFFFEB9C', font: 'FF9C5700' },
+  'NOT VERIFIED': { fill: 'FFDDEBF7', font: 'FF1F4E78' },
 };
 
 export function defaultResultsFile(file: string): string {

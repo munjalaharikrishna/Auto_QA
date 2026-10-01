@@ -37,9 +37,10 @@ async function server(dir: string, headless = true) {
 describe('API (M7a)', () => {
   let dir: string;
   let app: FastifyInstance;
+  let store: Store;
   before(async () => {
     dir = await mkdtemp(path.join(os.tmpdir(), 'auto-qa-api-'));
-    ({ app } = await server(dir));
+    ({ app, store } = await server(dir));
   });
   after(async () => {
     await app.close();
@@ -79,6 +80,44 @@ describe('API (M7a)', () => {
     const kept = await app.inject({ method: 'PATCH', url: '/api/projects/demo-app', payload: { name: 'Demo' } });
     assert.deepEqual([kept.json().name, kept.json().testIdAttribute, kept.json().baseUrl], ['Demo', 'data-test', 'http://127.0.0.1:4173']);
     assert.equal(readEnvFile(p.workspace).TEST_PASSWORD, 's3cret #1');
+  });
+
+  it('keeps a policy per project, balanced unless chosen (D30)', async () => {
+    const first = await app.inject({ url: '/api/projects/demo-app' });
+    assert.equal(first.json().policy, 'balanced');
+    const strict = await app.inject({ method: 'PATCH', url: '/api/projects/demo-app', payload: { policy: 'strict' } });
+    assert.equal(strict.json().policy, 'strict');
+    assert.equal((await app.inject({ url: '/api/projects/demo-app' })).json().policy, 'strict');
+    assert.equal((await app.inject({ method: 'PATCH', url: '/api/projects/demo-app', payload: { policy: 'reckless' } })).statusCode, 400);
+    await app.inject({ method: 'PATCH', url: '/api/projects/demo-app', payload: { policy: 'balanced' } });
+  });
+
+  it('saves what the page showed as the expected result of a check that could not be verified (FR-VAL-13)', async () => {
+    await store.upsertTestCase(
+      'demo-app',
+      {
+        id: 'TC-OBS',
+        title: 'Whitespace',
+        steps: '1. Open Login page',
+        expected: 'Login works properly; The system handles the whitespace according to the rules',
+      },
+      { kind: 'form' },
+      'written in the form',
+    );
+    const url = '/api/projects/demo-app/test-cases/TC-OBS/accept-observation';
+    const facts = { path: '/legacy', headings: [], messages: ['Invalid credentials'], dialogs: [] };
+    const ok = await app.inject({ method: 'POST', url, payload: { check: 'The system handles the whitespace according to the rules', facts } });
+    assert.equal(ok.statusCode, 200);
+    assert.equal(ok.json().raw.expected, 'Login works properly; The URL contains "/legacy"; Message "Invalid credentials" is shown');
+    assert.equal(
+      (await app.inject({ method: 'POST', url, payload: { check: 'The system handles the whitespace according to the rules', facts } })).statusCode,
+      409,
+    );
+    assert.equal(
+      (await app.inject({ method: 'POST', url, payload: { check: 'Login works properly', facts: { path: '/', headings: [], messages: [], dialogs: [] } } }))
+        .statusCode,
+      400,
+    );
   });
 
   it('refuses bad input with a reason', async () => {
@@ -228,7 +267,7 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     const job = await post(`/api/uploads/${up.uploadId}/run`);
     const j = await until(job.id, ['done', 'failed']);
     assert.equal(j.status, 'done', j.error);
-    assert.deepEqual(j.output.summary.totals, { PASS: 8, FAIL: 2, BLOCKED: 0, 'NEEDS REVIEW': 3 });
+    assert.deepEqual(j.output.summary.totals, { PASS: 8, FAIL: 2, BLOCKED: 0, 'NEEDS REVIEW': 3, 'NOT VERIFIED': 0 });
     assert.equal(j.verdicts.length, 13);
     // Item 1: every case of the sheet is kept.
     const cases = await get('/api/projects/demo/test-cases');

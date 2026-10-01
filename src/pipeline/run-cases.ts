@@ -13,6 +13,7 @@ import { openSession } from '../locators/session.js';
 import type { TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
+import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
 
 /**
  * The whole flow for a set of test cases (M6): parse → explore → generate → run → verdict.
@@ -40,6 +41,8 @@ export interface PipelineOptions {
   login?: TestModel;
   /** Explore again even when a complete exploration is already saved. */
   reexplore?: boolean;
+  /** How much may be decided without asking (D30). Default: balanced. */
+  policy?: Policy;
   onProgress?: (message: string) => void;
   onRunEvent?: (event: RunEvent) => void;
   /** Optional helper for unreadable steps (FR-AI-01). Default: none. */
@@ -80,7 +83,10 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   /** Complete explorations from this run by case signature: an identical case is not explored twice. */
   const bySignature = new Map<string, ExplorationResult>();
 
-  for (const [index, model] of models.entries()) {
+  const policy = options.policy ?? DEFAULT_POLICY;
+  for (const [index, original] of models.entries()) {
+    // A check nothing can verify does not stop the test (balanced and lenient); under strict it is asked about.
+    const model = policy === 'strict' ? original : observeUnclearChecks(original);
     const at = `[${index + 1}/${models.length}] ${model.id}`;
     const unparsed = [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed');
     if (unparsed.length) {
@@ -126,6 +132,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
             pageUrls,
             resolver: options.resolver,
             outDir: path.dirname(file),
+            policy,
             login: model.preconditions.some((p) => p.kind === 'logged-in') ? options.login : undefined,
           });
         } finally {
@@ -155,6 +162,22 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         const asked = options.questions?.().slice(before) ?? [];
         early.set(model.id, fromExploration(model, result, asked));
         progress(`${early.get(model.id)?.status === 'BLOCKED' ? '■' : '?'} ${at}: ${early.get(model.id)?.reason}`);
+        continue;
+      }
+    }
+    // Strict asks before using a value that was made up or a message that was learned (D30, D31).
+    if (policy === 'strict') {
+      const reasons: ReviewReason[] = [
+        ...model.warnings
+          .filter((w) => w.code === 'ASSUMED_VALUE')
+          .map((w) => ({ id: w.at ?? '', raw: model.steps.find((s) => s.id === w.at)?.raw ?? '', ...explain({ code: 'NEEDS_VALUE', text: w.text }) })),
+        ...result.items
+          .filter((i) => i.learned && i.phase === 'test')
+          .map((i) => ({ id: i.id, raw: i.raw, ...explain({ code: 'LEARNED', text: i.learned?.text }) })),
+      ];
+      if (reasons.length) {
+        early.set(model.id, stopped(model, 'NEEDS REVIEW', reasonText(reasons), undefined, undefined, reasons));
+        progress(`? ${at}: the Strict policy asks first`);
         continue;
       }
     }

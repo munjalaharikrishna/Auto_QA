@@ -956,7 +956,9 @@ export async function expectErrorShown(page: Page, want: { text?: string } = {})
   const shown = (await page.evaluate(errorMessagesInPage).catch(() => [])).slice(0, 3);
   throw new Error(
     `Error message check failed\n\nExpected: an error message${want.text ? ` "${want.text}"` : ''} appears after the previous step\nActual: ${
-      value.length ? `messages appeared, but not that one: ${value.slice(0, 3).join(' | ')}` : `no new error message appeared${shown.length ? ` (the page already showed: ${shown.join(' | ')})` : ''}`
+      value.length
+        ? `messages appeared, but not that one: ${value.slice(0, 3).join(' | ')}`
+        : `no new error message appeared${shown.length ? ` (the page already showed: ${shown.join(' | ')})` : ''}`
     }`,
   );
 }

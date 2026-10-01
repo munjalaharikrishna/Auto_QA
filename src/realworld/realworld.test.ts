@@ -91,11 +91,61 @@ describe('real-world login test cases (REAL-WORLD-TEST-CASES.md §9)', { skip: !
     );
   });
 
+  // Phase R3: a check nothing can verify does not stop the test (D30).
+  it('TC_LOGIN_010 runs and is NOT VERIFIED, with what the page showed', () => {
+    const v = of('TC_LOGIN_010');
+    assert.equal(v?.status, 'NOT VERIFIED', detail('TC_LOGIN_010'));
+    assert.deepEqual(
+      v.checks.filter((c) => c.result === 'not verified').map((c) => c.id),
+      ['A1'],
+    );
+    assert.match(v.checks[0].actual, /Not verified\. The page showed .*Invalid credentials/);
+    assert.ok(
+      v.steps.every((s) => s.result === 'passed'),
+      'every step ran',
+    );
+    assert.match(v.review?.[0]?.todo.join(' ') ?? '', /Save what was seen/);
+  });
+
+  it('all ten cases ran: nine passed and one is not verified, with no question', () => {
+    assert.deepEqual(verdicts.map((v) => v.status).sort(), ['NOT VERIFIED', ...Array(9).fill('PASS')]);
+  });
+
   it('asked nothing for the cases that can run', () => {
     assert.deepEqual(
       asked.filter((q) => !/S3|A1/.test(q) || true),
       asked,
     );
     assert.deepEqual(asked, [], asked.join(' | '));
+  });
+});
+
+describe('the Strict policy asks first (D30)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER }, () => {
+  it('stops the cases that need a made-up value, a learned message or an unverifiable check', async () => {
+    const app = await startDemoApp();
+    const base = path.join(root, '.auto-qa', 'test-realworld-strict');
+    await rm(base, { recursive: true, force: true });
+    try {
+      const run = await runCases(
+        ['TC_LOGIN_001', 'TC_LOGIN_002', 'TC_LOGIN_010'].map((id) => parseTestCase(cases.find((c) => c.id === id)!, config)),
+        {
+          config,
+          baseUrl: `${app.url}/legacy`,
+          env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
+          resolver: unattended,
+          policy: 'strict',
+          exploreDir: path.join(base, 'explore'),
+          runsDir: path.join(base, 'runs'),
+          workspace: path.join(base, 'workspace'),
+        },
+      );
+      const by = (id: string) => run.verdicts.find((v) => v.testId === id)!;
+      assert.equal(by('TC_LOGIN_001').status, 'PASS');
+      assert.equal(by('TC_LOGIN_002').status, 'NEEDS REVIEW');
+      assert.match(by('TC_LOGIN_002').reason, /needs a value|Strict/);
+      assert.equal(by('TC_LOGIN_010').status, 'NEEDS REVIEW');
+    } finally {
+      await app.close();
+    }
   });
 });

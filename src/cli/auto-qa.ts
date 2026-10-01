@@ -93,14 +93,16 @@ try {
     console.log('');
     for (const v of failures) console.log(`${formatVerdict(v)}\n`);
     const t = batch.summary.totals;
-    console.log(`${executionId ?? 'no run'}: ${t.PASS} pass · ${t.FAIL} fail · ${t.BLOCKED} blocked · ${t['NEEDS REVIEW']} need review`);
+    console.log(
+      `${executionId ?? 'no run'}: ${t.PASS} pass · ${t.FAIL} fail · ${t.BLOCKED} blocked · ${t['NEEDS REVIEW']} need review · ${t['NOT VERIFIED']} not verified`,
+    );
     if (batch.summary.review.length) {
       console.log(`\nReview queue (${batch.summary.review.length}):`);
       for (const q of batch.summary.review) console.log(`  ? ${q.testId} (row ${q.row})${q.step ? ` ${q.step}` : ''}: ${q.question}`);
       console.log(`\nFix the rows in the workbook, or answer the questions with: npm run auto-qa -- ${file} --only-review`);
     }
     console.log(`\nResults: ${batch.out}`);
-    process.exitCode = t.FAIL + t.BLOCKED + t['NEEDS REVIEW'] ? 1 : 0;
+    process.exitCode = t.FAIL + t.BLOCKED + t['NEEDS REVIEW'] + t['NOT VERIFIED'] ? 1 : 0;
   } else {
     const input: unknown = JSON.parse(await readFile(file, 'utf8'));
     const models = (Array.isArray(input) ? input : [input]).map((raw) => parseTestCase(raw, config));

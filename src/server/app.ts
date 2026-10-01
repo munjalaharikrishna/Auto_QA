@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FIELDS, type Field } from '../importer/columns.js';
 import { readWorkbook } from '../importer/workbook.js';
+import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
@@ -43,6 +44,7 @@ const ProjectBody = z.object({
   password: z.string().optional(),
   /** Other variables the tests read, e.g. TEST_WRONG_PASSWORD. An empty value keeps the current one; null removes it. */
   variables: z.record(z.string().regex(/^[A-Za-z_]\w*$/), z.string().nullable()).default({}),
+  policy: z.enum(POLICIES).default('balanced'),
 });
 /** An update: only what is sent changes. No defaults here, or an update would reset them. */
 const ProjectPatch = z.object({
@@ -56,6 +58,7 @@ const ProjectPatch = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   variables: z.record(z.string().regex(/^[A-Za-z_]\w*$/), z.string().nullable()).optional(),
+  policy: z.enum(POLICIES).optional(),
 });
 const MappingBody = z.object({ mapping: z.partialRecord(z.enum(FIELDS), z.string()).default({}) });
 const AnswerBody = z.object({ answer: z.unknown() });
@@ -78,7 +81,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     (() => {
       throw notFound('Project');
     })();
-  const withEnv = (p: Project) => ({ ...p, env: describeEnv(p.workspace) });
+  const withEnv = async (p: Project) => ({ ...p, env: describeEnv(p.workspace), policy: await store.projectPolicy(p.id) });
 
   // Live events for every open page (FR-RUN-02).
   const sockets = new Set<{ send(data: string): void }>();
@@ -96,7 +99,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   // Projects and their run settings (FR-IN-04, FR-ENV-01, FR-ENV-05)
 
-  app.get('/api/projects', async () => (await store.projects()).map(withEnv));
+  app.get('/api/projects', async () => Promise.all((await store.projects()).map(withEnv)));
 
   app.post('/api/projects', async (req, reply) => {
     const body = ProjectBody.parse(req.body);
@@ -117,7 +120,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       workspace,
     });
     await writeEnvFile(workspace, { BASE_URL: body.baseUrl, TEST_USERNAME: body.username, TEST_PASSWORD: body.password, ...body.variables });
-    return reply.status(201).send(withEnv(project));
+    await store.setSetting('project', project.id, 'policy', body.policy);
+    return reply.status(201).send(await withEnv(project));
   });
 
   app.get('/api/projects/:id', async (req) => withEnv(await projectOf((req.params as { id: string }).id)));
@@ -127,6 +131,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const body = ProjectPatch.parse(req.body);
     const updated = (await store.updateProject(project.id, { name: body.name, baseUrl: body.baseUrl, testIdAttribute: body.testIdAttribute }))!;
     await writeEnvFile(project.workspace, { BASE_URL: body.baseUrl, TEST_USERNAME: body.username, TEST_PASSWORD: body.password, ...body.variables });
+    if (body.policy) {
+      await store.setSetting('project', project.id, 'policy', body.policy);
+      await store.audit('project.policy', 'project', project.id, project.id, { policy: body.policy });
+    }
     return withEnv(updated);
   });
 
@@ -229,6 +237,42 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const project = await projectOf(params.id);
     if (!(await store.deleteTestCase(project.id, params.caseId))) throw notFound('Test case');
     return { ok: true };
+  });
+
+  /**
+   * "Save what was seen as the expected result" (FR-VAL-13): the check could not be verified, the tester looked at what the
+   * page showed and says it is right, so the sentence is replaced by checks that say it. They are verified from now on.
+   */
+  app.post('/api/projects/:id/test-cases/:caseId/accept-observation', async (req) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    const record = await caseOf(project.id, params.caseId);
+    const body = z
+      .object({
+        check: z.string().min(1),
+        facts: z.object({
+          path: z.string().optional(),
+          headings: z.array(z.string()).default([]),
+          messages: z.array(z.string()).default([]),
+          dialogs: z.array(z.string()).default([]),
+        }),
+      })
+      .parse(req.body);
+    const lines = [
+      ...(body.facts.path && body.facts.path !== '/' ? [`The URL contains "${body.facts.path}"`] : []),
+      ...body.facts.headings.slice(0, 1).map((h) => `"${h}" is displayed`),
+      ...body.facts.messages.slice(0, 2).map((m) => `Message "${m}" is shown`),
+      ...body.facts.dialogs.slice(0, 1).map((d) => `The browser shows ${/"([\s\S]*)"/.exec(d)?.[1] ?? d}`),
+    ];
+    if (!lines.length) throw bad('The page showed nothing that can be saved as a check.');
+    if (!record.raw.expected.includes(body.check)) throw Object.assign(new Error('That sentence is no longer in the expected result.'), { statusCode: 409 });
+    const raw = { ...record.raw, expected: record.raw.expected.replace(body.check, lines.join('; ')) };
+    return store.upsertTestCase(
+      project.id,
+      { ...raw, id: record.extId },
+      { kind: record.sourceKind, ref: record.sourceRef, row: record.sourceRow },
+      'edited: what the page showed was saved as the expected result',
+    );
   });
 
   /** Run a saved test case again. If its steps are unchanged the earlier exploration is reused and it runs straight away. */

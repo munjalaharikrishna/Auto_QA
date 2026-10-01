@@ -40,7 +40,12 @@ export function errorMessagesInPage(): string[] {
   // Red text, as old applications write their errors: <font color="red">, a red cell, a red paragraph.
   for (const el of document.querySelectorAll('font, span, div, p, td, li, label, small, strong, b, em')) {
     if (!visible(el)) continue;
-    const own = clean([...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' '));
+    const own = clean(
+      [...el.childNodes]
+        .filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent)
+        .join(' '),
+    );
     if (!own) continue;
     const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(el).color);
     if (m && Number(m[1]) >= 150 && Number(m[2]) <= 90 && Number(m[3]) <= 90) add(own);

@@ -58,7 +58,7 @@ describe('batch run of a workbook (M6b)', { skip: !!process.env.AUTO_QA_SKIP_BRO
       const status = got?.verdict?.status ?? (got?.problem ? 'NEEDS REVIEW' : undefined);
       assert.equal(status, r.expect, `row ${r.row} ${r.id} (${r.kind}): ${got?.verdict?.reason ?? got?.problem}`);
     }
-    const expected = { PASS: 0, FAIL: 0, BLOCKED: 0, 'NEEDS REVIEW': 0 };
+    const expected = { PASS: 0, FAIL: 0, BLOCKED: 0, 'NEEDS REVIEW': 0, 'NOT VERIFIED': 0 };
     for (const r of rows) expected[r.expect as keyof typeof expected]++;
     assert.deepEqual(first.summary.totals, expected);
   });

@@ -83,7 +83,7 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     const tiles = await page.locator('.tile').allInnerTexts();
     assert.deepEqual(
       tiles.map((t) => t.replace(/\s+/g, ' ').trim()),
-      ['8 pass', '2 fail', '0 blocked', '3 needs review'],
+      ['8 pass', '2 fail', '0 blocked', '3 needs review', '0 not verified'],
     );
     await page.getByText('"Changes saved" was not shown', { exact: false }).waitFor();
     const download = page.waitForEvent('download');

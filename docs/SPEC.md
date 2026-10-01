@@ -409,7 +409,7 @@ Goal: run test cases **as testers really write them**; ask only when the meaning
 | FR-PA-18 | **Outcome intents library** (LOGIN_SUCCESS, LOGIN_REJECTED, ERROR_SHOWN, FIELD_ERROR, SUCCESS_SHOWN, FIELD_CLEARED, MASKED, STAYS, NAVIGATED, ACCESS_DENIED, LOGGED_OUT, DISABLED_UNTIL, LIST_CONTAINS, NO_CHANGE): vague outcome phrases become concrete checks | R1–R2 | RW-E03, E04, E06, E07, E10 |
 | FR-PA-19 | Step references: "Repeat steps 1–3", "Same as TC_x" | R5 | RW-S10 |
 | FR-PA-20 | Conditional / optional steps ("If a cookie banner appears, accept it") | R5 | RW-S13 |
-| FR-PA-21 | Position words: first, last, second → `.first()`, `.last()`, `.nth()` | R1 | RW-L10 |
+| FR-PA-21 | Position words: first, last, second → `.first()`, `.last()`, `.nth()` | R5 | RW-L10 (moved from R1: it needs a change in how the locator is chosen) |
 | FR-LO-14 | A label in a separate cell or text right before a field is merged with the field ("Password :" + textbox) | R1 | RW-L01 |
 | FR-LO-15 | The element type follows the check type (masked, cleared, empty → fields; selected → dropdown/radio; clicked → button/link) | R1 | RW-L02 |
 | FR-LO-16 | Icon dictionary for unnamed icon buttons (title, aria-label, class names) | R5 | RW-L07 |
@@ -476,9 +476,9 @@ Goal: run test cases **as testers really write them**; ask only when the meaning
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
 | R0 | **Edit a test case from the review list** (FR-RV-12) | ✅ Done |
-| R1 | Real-world test cases, phase 1: parser and element fixes (FR-PA-14…17, 21, FR-LO-14, 15, intents that need no learning) | In progress |
-| R2 | Phase 2: outcome intents with learning, PASS (with assumptions) (FR-LRN, FR-VAL-12) | Planned |
-| R3 | Phase 3: NOT VERIFIED and the policy setting (FR-VAL-11, 13, 14) | Planned |
+| R1 | Real-world test cases, phase 1: parser and element fixes (FR-PA-14…18, FR-LO-14, 15; position words FR-PA-21 not yet) | ✅ Done |
+| R2 | Phase 2: outcome intents with learning, PASS (with assumptions) (FR-LRN-01, 03, FR-VAL-12; page-name learning FR-LRN-02 only as the alias rule) | ✅ Done |
+| R3 | Phase 3: NOT VERIFIED and the policy setting (FR-VAL-11, 13, 14) | ✅ Done |
 | R4 | Phase 4: grouped review and project rules (FR-RULE, FR-RV-09…11) | Planned |
 | R5 | Phase 5: import repair, run-time guards, suggested wording (FR-IN-10, FR-EX-11, FR-RUN-11, 12, FR-PA-19, 20, FR-LO-16, 17, FR-HI-08) | Planned |
 | M9 | Fixes from real use and the validation catalogue: plain-language review reasons, browser pop-ups handled, a test case list with Run again, a screenshot after every step and a video, clearer run status, and the validation registry (FR-VAL-06) | ✅ Done |
@@ -584,3 +584,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tabl
 | 1.16 | 2026-10-01 | Validation catalogue ([VALIDATIONS.md](VALIDATIONS.md)): 164 check types in 18 groups with wording, Playwright check, failure text and version; three layers (explicit, guard rails, quality gates); page identity check (FR-VAL-07); FR-VAL-06…10. |
 | 1.16 | 2026-10-01 | M9: fixes from real use. Review reasons in plain words (headline, why, what to do); browser alerts and confirms accepted automatically and reported; a test case list with versions and **Run again**; a screenshot after every step, a video and a trace per run, shown with step times; runs show where a cancelled run was stopped and refresh by themselves; the validation catalogue built as a registry (D29, FR-VAL-06), about 70 check types, tested on a real page and on a real OrangeHRM server. |
 | 1.17 | 2026-10-01 | Real-world test cases adopted ([REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md), §6.23, D6 revised, D30 confidence policy, D31 learned values agree with intent) and planned as phases R1–R5. R0 done: every row of the results and the review queue has an **Edit** button that opens that test case, saves it as a new version, and the next run of the review queue uses the edited version (FR-RV-12). |
+| 1.18 | 2026-10-01 | Real-world test cases R1–R3 built. The 10 OrangeHRM login cases (`examples/real-world/login-cases.json`, run against a login page laid out like OrangeHRM) now run unattended with no question: 9 PASS and 1 NOT VERIFIED. New: text normaliser, outcome intents (login rejected/success, error shown, fields cleared, masked), "leave blank", "both A and B", invalid values made up and marked assumed, one line with several actions becomes steps S3.1/S3.2, error text learned from the application (DOM message or browser alert) and listed as assumed/learned, PASS (with assumptions), the NOT VERIFIED status with "save what was seen as the expected result", and the project policy strict / balanced / lenient. |

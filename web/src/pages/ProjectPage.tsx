@@ -383,7 +383,7 @@ function RunsTab({ project }: { project: ProjectView }) {
                 </td>
                 <td>
                   {totals ? (
-                    `${totals.PASS} pass · ${totals.FAIL} fail · ${totals.BLOCKED} blocked · ${totals['NEEDS REVIEW']} review`
+                    `${totals.PASS} pass · ${totals.FAIL} fail · ${totals.BLOCKED} blocked · ${totals['NEEDS REVIEW']} review${totals['NOT VERIFIED'] ? ` · ${totals['NOT VERIFIED']} not verified` : ''}`
                   ) : verdicts?.length ? (
                     [...new Set(verdicts.map((v) => v.status))].map((status) => <StatusBadge key={status} status={status} />)
                   ) : j.status === 'review' || j.status === 'waiting' ? (

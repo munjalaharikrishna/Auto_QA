@@ -7,7 +7,11 @@ import type { Job, Project, Question, TestCaseRecord, TestCaseRun } from '../../
 
 export type { BatchSummary, Job, Project, Question, RawTestCase, ReviewReason, TestCaseRecord, TestCaseRun, TestVerdict };
 
+export type Policy = 'strict' | 'balanced' | 'lenient';
+
 export interface ProjectView extends Project {
+  /** How much may be decided without asking (D30). */
+  policy: Policy;
   env: { username?: string; hasPassword: boolean; variables: Array<{ name: string; secret: boolean; value?: string }> };
 }
 
@@ -19,6 +23,7 @@ export interface ProjectInput {
   username?: string;
   password?: string;
   variables?: Record<string, string | null>;
+  policy?: Policy;
 }
 
 export type Field = 'id' | 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId';
@@ -110,6 +115,8 @@ export const api = {
   updateTestCase: (projectId: string, id: string, c: Omit<RawTestCase, 'row'>) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, json('PUT', c)),
   deleteTestCase: (projectId: string, id: string) => call(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  saveObservation: (projectId: string, id: string, body: { check: string; facts: unknown }) =>
+    call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/accept-observation`, json('POST', body)),
   runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
   answer: (questionId: number, answer: unknown) => call(`/api/questions/${questionId}/answer`, json('POST', { answer })),
 };

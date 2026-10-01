@@ -501,6 +501,7 @@ function assumptionsOf(model: TestModel, exploration: ExplorationResult): string
   const codes = new Set(['ASSUMED_VALUE', 'PAGE_ALIAS', 'SPELLING_FIXED']);
   return [
     ...model.warnings.filter((w) => codes.has(w.code)).map((w) => `${w.at ? `${w.at}: ` : ''}${w.text}`),
+    ...exploration.items.filter((i) => i.assumed).map((i) => `${i.id}: ${i.assumed}`),
     ...exploration.items
       .filter((i) => i.learned && i.phase === 'test')
       .map((i) => `${i.id}: the error message "${i.learned?.text}" was learned from the application.`),

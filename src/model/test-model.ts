@@ -149,6 +149,7 @@ export const EXTRA_ASSERTIONS = [
   // H. network and I. health
   'request',
   'error-shown',
+  'observe',
   'console-clean',
   'not-blank',
   'no-mixed-content',

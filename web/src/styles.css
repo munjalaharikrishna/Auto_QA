@@ -253,6 +253,10 @@ th {
   background: var(--review-bg);
   color: var(--review-ink);
 }
+.badge.NOTV {
+  background: var(--notv-bg, #e3effa);
+  color: var(--notv-ink, #174a7c);
+}
 .badge.job {
   background: var(--sunk);
   color: var(--ink);

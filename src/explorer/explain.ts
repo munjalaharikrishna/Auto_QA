@@ -76,6 +76,21 @@ export function explain(input: ExplainInput): Explanation {
           'Or name it more exactly in the check.',
         ],
       };
+    case 'NEEDS_VALUE':
+      return {
+        headline: 'This step needs a value that was not given.',
+        why: `${text ?? ''} The project policy is Strict, so values are not made up.`.trim(),
+        todo: ['Add the value to the Test Data column, for example Invalid Username=…', 'Or change the project policy to Balanced in Settings.'],
+      };
+    case 'LEARNED':
+      return {
+        headline: `The application showed "${text ?? ''}" and I would use it as the expected message.`,
+        why: 'The expected result did not give the exact text. The project policy is Strict, so a text taken from the application is not used until you say so.',
+        todo: [
+          `Write the message in the expected result: Error "${text ?? '…'}" is shown.`,
+          'Or change the project policy to Balanced in Settings, which uses it and lists it as learned.',
+        ],
+      };
     case 'CANNOT_PIN':
     case 'NO_VALID_LOCATOR':
       return {

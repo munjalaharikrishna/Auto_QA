@@ -106,7 +106,7 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
 }
 
 function summarize(results: RowResult[], executionId: string | undefined, models: TestModel[]): BatchSummary {
-  const totals: Record<Status, number> = { PASS: 0, FAIL: 0, BLOCKED: 0, 'NEEDS REVIEW': 0 };
+  const totals: Record<Status, number> = { PASS: 0, FAIL: 0, BLOCKED: 0, 'NEEDS REVIEW': 0, 'NOT VERIFIED': 0 };
   const review: BatchSummary['review'] = [];
   for (const r of results) {
     const status = r.verdict?.status ?? 'NEEDS REVIEW';

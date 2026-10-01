@@ -310,9 +310,9 @@ To be added to [SPEC.md](SPEC.md) after review. IDs are provisional.
 
 | Phase | Builds | Result on the OrangeHRM batch |
 |---|---|---|
-| **R1** Parser and element fixes | M1, M2 (RW-S01…S15, RW-E01…E07, E10…E12), M4 (RW-L01, L02, L05, L10) | 6 of 10 run |
-| **R2** Intents and learning | §5 intents, M5 learning, PASS (with assumptions) | 9 of 10 run |
-| **R3** Non-blocking | M7 NOT VERIFIED, M6 policy setting | 10 of 10 run (1 not verified) |
+| **R1** Parser and element fixes ✅ | M1, M2 (RW-S01…S15, RW-E01…E07, E10…E12), M4 (RW-L01, L02, L05; L10 position words moved to R5) | built: the wording of 9 of 10 is understood |
+| **R2** Intents and learning ✅ | §5 intents (the ones the benchmark needs), M5 learning of error texts, PASS (with assumptions) | built: 9 of 10 run |
+| **R3** Non-blocking ✅ | M7 NOT VERIFIED, M6 policy setting (strict, balanced, lenient) | built: **10 of 10 run (9 PASS, 1 NOT VERIFIED), 0 questions**. This is the acceptance test, `src/realworld/realworld.test.ts` |
 | **R4** Review and rules | M8 grouped review, M3 project rules, rules page | Remaining questions asked once |
 | **R5** Import and runtime | M9 import repair, RW-R01…R07, M10 suggested wording | Messy spreadsheets and long batches |
 

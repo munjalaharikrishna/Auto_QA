@@ -8,6 +8,17 @@ const DIALOG = '(?:dialog|modal|pop-?up|popup|dialog box|overlay)';
 
 export const messageSpecs: ValidationSpec[] = [
   {
+    id: 'VAL-X01',
+    type: 'observe',
+    title: 'A check that cannot be verified from the page',
+    targets: 'none',
+    // Made from an expected result nothing could verify (policy balanced or lenient, REAL-WORLD-TEST-CASES.md M7); no words of its own.
+    parse: () => undefined,
+    code: () => [],
+    passed: () => 'Observed, not verified',
+    examples: [],
+  },
+  {
     id: 'VAL-E01b',
     type: 'error-shown',
     title: 'An error message appears',

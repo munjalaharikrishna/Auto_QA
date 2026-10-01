@@ -38,6 +38,8 @@ export interface ExploreOptions {
   /** Steps to run first for a "Logged in" precondition, e.g. the login test case (FR-PF-01). */
   login?: TestModel;
   timeouts?: Partial<Timeouts>;
+  /** With `lenient`, of two equally good elements the first is used and marked as assumed (D30). */
+  policy?: 'strict' | 'balanced' | 'lenient';
 }
 
 interface Timeouts {
@@ -114,6 +116,8 @@ export interface ExploredItem {
   dialogs?: string[];
   /** Why the step was set aside or failed, in the tester's words (see explain.ts). */
   review?: Explanation;
+  /** A choice made under the Lenient policy instead of asking: listed with the result (D30). */
+  assumed?: string;
   /**
    * A value the platform took from what the application showed, not from the tester (D31). It is written into the
    * generated test as a normal check, listed in the result, and can be changed in review.
@@ -376,6 +380,17 @@ export async function explore(model: TestModel, session: Session, options: Explo
     let asked = 0;
     while (r.status === 'needs-review') {
       item.candidates = r.candidates.slice(0, 5).map(summary);
+      // Lenient: of equally good elements the first is used, and the result says so.
+      if (options.policy === 'lenient' && r.code === 'AMBIGUOUS' && r.candidates[0]?.score >= 0.6 && !item.assumed) {
+        const pick = r.candidates[0];
+        item.assumed = `${r.candidates.length} elements matched "${query.target ?? ''}" about equally; the first (${pick.node.role} "${pick.matchedName || pick.node.name}") was used.`;
+        item.warnings.push(`Assumed: ${item.assumed}`);
+        const chosen = await locate(query, mcp, probe, locateOptions, { state, node: pick.node });
+        if (chosen.status === 'resolved') {
+          r = chosen;
+          break;
+        }
+      }
       if (asked >= MAX_QUESTIONS) {
         // Every answer so far pointed to something this step cannot use; stop asking.
         item.status = 'failed';

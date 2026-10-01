@@ -5,6 +5,7 @@ import type { ExplorationResult, Resolver } from '../explorer/controller.js';
 import { explain, sentence } from '../explorer/explain.js';
 import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
+import type { Policy } from '../model/policy.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
@@ -202,8 +203,9 @@ export class JobRunner extends EventEmitter {
     };
   }
 
-  private common(project: Project) {
+  private common(project: Project, policy: Policy) {
     return {
+      policy,
       config: this.options.config,
       baseUrl: project.baseUrl,
       env: { ...process.env, ...readEnvFile(project.workspace) },
@@ -221,7 +223,7 @@ export class JobRunner extends EventEmitter {
     const onlyReview = job.input.onlyReview === true;
     const asked: string[] = [];
     const batch = await runBatch(upload.file, {
-      ...this.common(project),
+      ...this.common(project, await this.options.store.projectPolicy(project.id)),
       resolver: this.resolver(job, onlyReview, asked),
       questions: () => asked,
       workspace: project.workspace,
@@ -282,7 +284,7 @@ export class JobRunner extends EventEmitter {
       // A single test gets its own project, so it cannot disturb the workbook's suite (merging it in is V2, FR-GE-07).
       const workspace = this.projectDir(project, 'single', model.id, 'workspace');
       const options = {
-        ...this.common(project),
+        ...this.common(project, await this.options.store.projectPolicy(project.id)),
         resolver: this.resolver(job, true, []),
         workspace,
         reexplore,

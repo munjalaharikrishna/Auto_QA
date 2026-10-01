@@ -123,7 +123,7 @@ describe('results written back (FR-HI-06, D23)', () => {
   const summary: BatchSummary = {
     executionId: 'EXEC-2026-00001',
     finishedAt: '2026-09-30T10:05:00.000Z',
-    totals: { PASS: 1, FAIL: 1, BLOCKED: 0, 'NEEDS REVIEW': 1 },
+    totals: { PASS: 1, FAIL: 1, BLOCKED: 0, 'NEEDS REVIEW': 1, 'NOT VERIFIED': 0 },
     review: [{ row: 5, testId: 'TC-3', title: 'Vague', question: 'S2 could not be read.' }],
   };
   const hash = (f: string) => createHash('sha1').update(readFileSync(f)).digest('hex');
@@ -166,7 +166,7 @@ describe('results written back (FR-HI-06, D23)', () => {
     assert.equal(ws.getRow(c.row).getCell(col('Actual Result')).text, 'Not run: Row has no Steps.');
     const s = wb.getWorksheet(SUMMARY_SHEET)!;
     assert.equal(s.getCell('B2').text, 'EXEC-2026-00001');
-    assert.equal(s.getRow(11).getCell(1).text, 'TC-3');
+    assert.equal(s.getRow(12).getCell(1).text, 'TC-3');
 
     // Running again on the results copy reuses its columns instead of adding more.
     const again = await readWorkbook(out);

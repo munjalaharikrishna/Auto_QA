@@ -7,7 +7,8 @@ import { passedText } from '../validations/registry.js';
  * tester wrote → a verdict with expected and actual for every check. Pure and deterministic.
  */
 
-export type Status = 'PASS' | 'FAIL' | 'BLOCKED' | 'NEEDS REVIEW';
+/** NOT VERIFIED: every step ran and no check failed, but at least one check could not be verified from the page (D30). */
+export type Status = 'PASS' | 'FAIL' | 'BLOCKED' | 'NEEDS REVIEW' | 'NOT VERIFIED';
 export type Category = 'Assertion' | 'Locator' | 'Application' | 'Network' | 'Environment' | 'Timeout' | 'Test Data' | 'Authentication';
 
 /** What the generated reporter writes per test (reporters/auto-qa-reporter.ts). */
@@ -46,7 +47,7 @@ export interface CheckVerdict {
   raw: string;
   expected: string;
   actual: string;
-  result: 'passed' | 'failed' | 'not run' | 'not checked';
+  result: 'passed' | 'failed' | 'not run' | 'not checked' | 'not verified';
 }
 
 export interface StepVerdict {
@@ -154,6 +155,9 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
   const checks: CheckVerdict[] = test.checks.map((c) => {
     const expected = expectedOf(c);
     if (unparsed.has(c.id)) return { id: c.id, raw: c.raw, expected, actual: 'Not checked: the expected result could not be read.', result: 'not checked' };
+    // "Handles the whitespace according to the rules": nothing on the page can verify it, so say what was seen (M7).
+    if (c.type === 'observe')
+      return { id: c.id, raw: c.raw, expected, actual: `Not verified. ${describePage(facts) || 'Nothing to report from the page.'}`, result: 'not verified' };
     if (c.type === 'health') {
       const ok = !healthError && reported.status !== 'skipped';
       return {
@@ -197,6 +201,27 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
       };
     }
     const assumptions = test.assumptions?.length ? test.assumptions : undefined;
+    const unverified = checks.filter((c) => c.result === 'not verified');
+    if (unverified.length) {
+      const review: ReviewReason[] = unverified.map((c) => ({
+        id: c.id,
+        raw: c.raw,
+        headline: `I cannot verify "${c.raw}" from the page.`,
+        why: `It describes behaviour, or something the page does not show. The steps ran with no failure, so here is what was seen: ${describePage(facts) || 'nothing to report'}`,
+        todo: [
+          'If what was seen is right, press "Save what was seen as the expected result", and it is checked from now on.',
+          'Or rewrite the expected result as something the page shows, for example: Error "…" is shown.',
+        ],
+      }));
+      return {
+        ...common,
+        status: 'NOT VERIFIED',
+        assumptions,
+        review,
+        reason: `The steps ran and no check failed, but ${unverified.length === 1 ? 'one check' : `${unverified.length} checks`} could not be verified: ${unverified.map((c) => c.id).join(', ')}.`,
+        actual: `${summary(checks)} Not verified: ${unverified.map((c) => `${c.id} "${c.raw}"`).join('; ')}. ${describePage(facts)}`.trim(),
+      };
+    }
     return {
       ...common,
       status: 'PASS',
@@ -340,6 +365,7 @@ function describePage(facts?: PageFacts, skipPath = false): string {
   if (facts.headings[0]) parts.push(`heading "${facts.headings[0]}"`);
   for (const m of facts.messages.slice(0, 2)) parts.push(`message "${m}"`);
   for (const v of facts.invalid.slice(0, 1)) parts.push(`field error "${v}"`);
+  for (const d of (facts.dialogs ?? []).slice(0, 2)) parts.push(`pop-up ${d}`);
   return parts.length ? `The page showed ${parts.join('; ')}.` : '';
 }
 
