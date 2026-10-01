@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type Field, type Job, type Preview, type ProjectView } from '../api';
-import { CaseForm, ErrorNote, JobBadge, ProjectForm, when } from '../components/common';
+import { api, type Field, type Job, type Preview, type ProjectView, type TestCaseRecord } from '../api';
+import { CaseForm, ErrorNote, JobBadge, ProjectForm, StatusBadge, when } from '../components/common';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
 
-type Tab = 'workbook' | 'single' | 'runs' | 'settings';
+type Tab = 'workbook' | 'single' | 'cases' | 'runs' | 'settings';
 const TABS: Array<[Tab, string]> = [
   ['workbook', 'Run a workbook'],
   ['single', 'Single test case'],
+  ['cases', 'Test cases'],
   ['runs', 'Runs'],
   ['settings', 'Settings'],
 ];
@@ -54,6 +55,7 @@ export function ProjectPage({ id }: { id: string }) {
           />
         </section>
       )}
+      {tab === 'cases' && <TestCasesTab project={project} />}
       {tab === 'runs' && <RunsTab project={project} />}
       {tab === 'settings' && (
         <section className="panel">
@@ -251,6 +253,78 @@ function WorkbookTab({ project }: { project: ProjectView }) {
   );
 }
 
+/** Every test case written or imported, with its last result and Run again (item 1, item 3). */
+function TestCasesTab({ project }: { project: ProjectView }) {
+  const [cases, setCases] = useState<TestCaseRecord[]>();
+  const [error, setError] = useState<string>();
+  const load = useCallback(() => {
+    api.testCases(project.id).then(setCases, (e: Error) => setError(e.message));
+  }, [project.id]);
+  useEffect(load, [load]);
+  useServerEvents((e) => {
+    if (e.type === 'job' && e.job.projectId === project.id) load();
+  });
+  useEffect(() => {
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  if (error) return <ErrorNote error={error} />;
+  if (!cases) return <p className="muted">Loading…</p>;
+  if (!cases.length) return <p className="muted">No test cases yet. Write one in "Single test case" or upload a workbook.</p>;
+  return (
+    <section className="panel table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Test case</th>
+            <th>Steps</th>
+            <th>Last result</th>
+            <th>Last run</th>
+            <th>Runs</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {cases.map((c) => (
+            <tr key={c.id}>
+              <td>
+                <Link to={`/projects/${project.id}/cases/${encodeURIComponent(c.extId)}`}>
+                  <strong>{c.extId}</strong>
+                </Link>
+                <span className="case-title">{c.title}</span>
+              </td>
+              <td>{c.raw.steps.split(/\r?\n/).filter(Boolean).length}</td>
+              <td>{c.lastStatus ? <StatusBadge status={c.lastStatus} /> : <span className="muted">not run</span>}</td>
+              <td>{when(c.lastRunAt)}</td>
+              <td>{c.runCount}</td>
+              <td>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={async () => {
+                    const job = await api.runTestCase(project.id, c.extId);
+                    navigate(`/jobs/${job.id}`);
+                  }}
+                >
+                  Run again
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+const STAGE: Record<string, string> = {
+  queued: 'waiting to start',
+  running: 'running',
+  waiting: 'waiting for your answer',
+  review: 'waiting for your review',
+};
+
 /** Run history (FR-HI-01; the full history list is FR-HI-02, V2). */
 function RunsTab({ project }: { project: ProjectView }) {
   const [jobs, setJobs] = useState<Job[]>();
@@ -261,6 +335,12 @@ function RunsTab({ project }: { project: ProjectView }) {
   useServerEvents((e) => {
     if (e.type === 'job' && e.job.projectId === project.id) load();
   });
+  // Without a live connection the list still catches up while a run is going.
+  const active = jobs?.some((j) => ['queued', 'running', 'waiting', 'review'].includes(j.status));
+  useEffect(() => {
+    const t = setInterval(load, active ? 3000 : 15000);
+    return () => clearInterval(t);
+  }, [load, active]);
   if (!jobs) return <p className="muted">Loading…</p>;
   if (!jobs.length) return <p className="muted">No runs yet.</p>;
   return (
@@ -279,23 +359,42 @@ function RunsTab({ project }: { project: ProjectView }) {
           {jobs.map((j) => {
             const totals = (j.output.summary as { totals?: Record<string, number> } | undefined)?.totals;
             const verdicts = j.output.verdicts as Array<{ status: string }> | undefined;
+            const blocked = (j.output.review as { blocked?: unknown } | undefined)?.blocked;
+            const theCase = j.input.case as { id?: string; title?: string } | undefined;
+            const from = j.output.cancelledFrom as string | undefined;
             return (
               <tr key={j.id}>
                 <td>
                   <Link to={`/jobs/${j.id}`}>{j.executionId ?? j.id}</Link>
                 </td>
                 <td>
-                  {j.kind === 'workbook'
-                    ? `Workbook ${String(j.input.originalName ?? '')}${j.input.onlyReview ? ' (review queue)' : ''}`
-                    : `Test: ${String((j.input.case as { title?: string })?.title ?? '')}`}
+                  {j.kind === 'workbook' ? (
+                    `Workbook ${String(j.input.originalName ?? '')}${j.input.onlyReview ? ' (review queue)' : ''}`
+                  ) : theCase?.id ? (
+                    <Link to={`/projects/${project.id}/cases/${encodeURIComponent(theCase.id)}`}>{theCase.title ?? theCase.id}</Link>
+                  ) : (
+                    'Test'
+                  )}
+                  {j.input.rerun === true && <span className="muted"> · run again</span>}
                 </td>
                 <td>
                   <JobBadge status={j.status} />
+                  {j.status === 'cancelled' && from && STAGE[from] && <div className="muted">while {STAGE[from]}</div>}
                 </td>
                 <td>
-                  {totals
-                    ? `${totals.PASS} pass · ${totals.FAIL} fail · ${totals.BLOCKED} blocked · ${totals['NEEDS REVIEW']} review`
-                    : (verdicts?.map((v) => v.status).join(', ') ?? '')}
+                  {totals ? (
+                    `${totals.PASS} pass · ${totals.FAIL} fail · ${totals.BLOCKED} blocked · ${totals['NEEDS REVIEW']} review`
+                  ) : verdicts?.length ? (
+                    verdicts.map((v, i) => <StatusBadge key={`${i}-${v.status}`} status={v.status} />)
+                  ) : j.status === 'review' || j.status === 'waiting' ? (
+                    <span className="muted">{blocked ? 'Cannot run yet: open it to see why' : `Open it: ${STAGE[j.status]}`}</span>
+                  ) : j.status === 'failed' ? (
+                    <span className="muted">{j.error}</span>
+                  ) : j.status === 'cancelled' ? (
+                    <span className="muted">No result: it was stopped before the test ran</span>
+                  ) : (
+                    ''
+                  )}
                 </td>
                 <td>{when(j.createdAt)}</td>
               </tr>

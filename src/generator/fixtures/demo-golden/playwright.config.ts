@@ -18,8 +18,10 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? 'http://127.0.0.1:4173',
     testIdAttribute: 'data-testid',
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    // Evidence for every run (FR-EV-01): a screenshot after each step, a video and a trace.
+    screenshot: 'on',
+    video: 'on',
+    trace: 'on',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }],
 });

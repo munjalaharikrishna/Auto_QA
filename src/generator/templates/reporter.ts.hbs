@@ -29,7 +29,10 @@ interface TestRecord {
   errors: string[];
   facts?: unknown;
   screenshots: string[];
+  /** The page after each step, in order: the step's label and the image file. */
+  stepScreenshots: Array<{ step: string; file: string }>;
   trace?: string;
+  video?: string;
 }
 
 const root = path.dirname(__dirname);
@@ -82,10 +85,13 @@ export default class AutoQaReporter implements Reporter {
       steps,
       errors: result.errors.map((e) => plain(e.message ?? e.value ?? 'unknown error')),
       facts: facts ? JSON.parse(mask(facts)) : undefined,
-      screenshots: result.attachments.filter((a) => a.name === 'screenshot' && a.path).map((a) => path.relative(root, a.path!).replace(/\\/g, '/')),
+      screenshots: result.attachments.filter((a) => a.name === 'screenshot' && a.path).map((a) => rel(a.path!)),
+      stepScreenshots: result.attachments.filter((a) => a.name.startsWith('step: ') && a.path).map((a) => ({ step: a.name.slice(6), file: rel(a.path!) })),
       trace: result.attachments.find((a) => a.name === 'trace' && a.path)?.path,
+      video: result.attachments.find((a) => a.name === 'video' && a.path)?.path,
     };
-    if (record.trace) record.trace = path.relative(root, record.trace).replace(/\\/g, '/');
+    if (record.trace) record.trace = rel(record.trace);
+    if (record.video) record.video = rel(record.video);
     this.tests.push(record);
     this.emit({ event: 'test-end', testId: record.testId, status: record.status, duration: record.duration });
   }
@@ -101,6 +107,10 @@ export default class AutoQaReporter implements Reporter {
   printsToStdio(): boolean {
     return false;
   }
+}
+
+function rel(file: string): string {
+  return path.relative(root, file).replace(/\\/g, '/');
 }
 
 /** "TC-DEMO-001: Verify a user can log in" → TC-DEMO-001. */

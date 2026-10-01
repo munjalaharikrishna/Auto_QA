@@ -265,10 +265,42 @@ export function Diff({ patch }: { patch: string }) {
 
 export function duration(ms?: number): string {
   if (!ms) return '';
+  if (ms < 1000) return `${ms} ms`;
   const s = Math.round(ms / 1000);
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
 export function when(iso?: string): string {
   return iso ? new Date(iso).toLocaleString() : '';
+}
+
+export interface Explanation {
+  headline: string;
+  why: string;
+  todo: string[];
+}
+
+/** What happened and what to do, in the tester's words (src/explorer/explain.ts). */
+export function Explain({ e, id, raw }: { e: Explanation; id?: string; raw?: string }) {
+  return (
+    <div className="explain">
+      {(id || raw) && (
+        <div className="muted">
+          {id} {raw && `"${raw}"`}
+        </div>
+      )}
+      <strong>{e.headline}</strong>
+      <p style={{ margin: '0.25rem 0' }}>{e.why}</p>
+      {!!e.todo.length && (
+        <>
+          <div className="muted">What you can do:</div>
+          <ul style={{ margin: '0.15rem 0 0', paddingLeft: '1.2rem' }}>
+            {e.todo.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
 }

@@ -408,3 +408,10 @@ dialog {
   display: block;
   color: var(--muted);
 }
+
+.explain {
+  line-height: 1.45;
+}
+.explain ul {
+  margin: 0;
+}

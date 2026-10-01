@@ -95,6 +95,14 @@ export async function runWorkspace(workspace: string, options: RunOptions = {}):
     const v = verdictFor(t, r, { executionId, missingEnv: needs(t), runError: reported.length ? undefined : runErrorOf(output) });
     v.evidence.screenshots = await keep(workspace, dir, v.evidence.screenshots);
     if (v.evidence.trace) v.evidence.trace = (await keep(workspace, dir, [v.evidence.trace]))[0];
+    if (v.evidence.video) v.evidence.video = (await keep(workspace, dir, [v.evidence.video]))[0];
+    // Each step's screenshot is copied once, even when one step covers several (S2, S3, S4).
+    const kept = new Map<string, string | undefined>();
+    for (const s of v.steps) {
+      if (!s.screenshot) continue;
+      if (!kept.has(s.screenshot)) kept.set(s.screenshot, (await keep(workspace, dir, [s.screenshot], `${t.testId}-step`))[0]);
+      s.screenshot = kept.get(s.screenshot);
+    }
     verdicts.push(maskVerdict(v, mask));
   }
 
@@ -122,6 +130,7 @@ export function maskVerdict(v: TestVerdict, mask: (text: string) => string): Tes
     reason: mask(v.reason),
     actual: mask(v.actual),
     error: m(v.error),
+    steps: v.steps.map((s) => ({ ...s, error: m(s.error) })),
     checks: v.checks.map((c) => ({ ...c, actual: mask(c.actual) })),
     evidence: { ...v.evidence, facts: v.evidence.facts && (JSON.parse(mask(JSON.stringify(v.evidence.facts))) as typeof v.evidence.facts) },
   };
@@ -184,12 +193,12 @@ function spawnPlaywright(workspace: string, tests: ManifestTest[], env: Record<s
 }
 
 /** Copies evidence out of the workspace, whose reports/ folder the next run replaces (FR-EV-01). */
-async function keep(workspace: string, dir: string, files: string[]): Promise<string[]> {
+async function keep(workspace: string, dir: string, files: string[], prefix = ''): Promise<string[]> {
   const kept: string[] = [];
   for (const [i, rel] of files.entries()) {
     const from = path.join(workspace, rel);
     if (!existsSync(from)) continue;
-    const to = path.join(dir, 'evidence', `${i}-${path.basename(path.dirname(from))}-${path.basename(from)}`);
+    const to = path.join(dir, 'evidence', `${prefix ? `${prefix}-` : ''}${i}-${path.basename(path.dirname(from))}-${path.basename(from)}`);
     await mkdir(path.dirname(to), { recursive: true });
     await copyFile(from, to);
     kept.push(to);

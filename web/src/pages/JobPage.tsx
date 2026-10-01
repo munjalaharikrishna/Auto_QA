@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type BatchSummary, fileUrl, type JobDetail, type Question, type RawTestCase, type Review, resultsUrl, type TestVerdict } from '../api';
-import { CaseForm, Diff, duration, ErrorNote, JobBadge, StatusBadge, when } from '../components/common';
+import { CaseForm, Diff, duration, ErrorNote, Explain, type Explanation, JobBadge, StatusBadge, when } from '../components/common';
 import { PickElement, type ViewElement } from '../components/PickElement';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
@@ -17,9 +17,25 @@ export function JobPage({ id }: { id: string }) {
     else if ((e.type === 'job' && e.job.id === id) || (e.type === 'question' && e.question.jobId === id) || (e.type === 'answered' && e.jobId === id)) load();
   });
 
+  const live = !!job && ['queued', 'running', 'waiting', 'review'].includes(job.status);
+  // If the live connection is down the page still catches up while the run is going.
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(load, 3000);
+    return () => clearInterval(t);
+  }, [live, load]);
+
   if (error) return <ErrorNote error={error} />;
   if (!job) return <p className="muted">Loading…</p>;
   const active = ['queued', 'running', 'waiting', 'review'].includes(job.status);
+  const theCase = job.kind === 'single' ? (job.input.case as RawTestCase | undefined) : undefined;
+  const stoppedAt = job.output.cancelledFrom as string | undefined;
+  const STOPPED: Record<string, string> = {
+    queued: 'before it started',
+    running: 'while it was running',
+    waiting: 'while it was waiting for your answer',
+    review: 'while it was waiting for your review',
+  };
   const summary = job.output.summary as BatchSummary | undefined;
   const title =
     job.kind === 'workbook'
@@ -36,6 +52,18 @@ export function JobPage({ id }: { id: string }) {
           {title}
         </h1>
         <JobBadge status={job.status} />
+        {!active && theCase?.id && (
+          <button
+            type="button"
+            className="primary"
+            onClick={async () => {
+              const next = await api.runTestCase(job.projectId, theCase.id!);
+              navigate(`/jobs/${next.id}`);
+            }}
+          >
+            Run again
+          </button>
+        )}
         {active && (
           <button type="button" className="danger" onClick={() => void api.cancel(job.id)}>
             Cancel
@@ -43,6 +71,17 @@ export function JobPage({ id }: { id: string }) {
         )}
       </div>
       {job.status === 'failed' && <ErrorNote error={job.error} />}
+      {job.status === 'cancelled' && (
+        <p className="notice warn">
+          Cancelled {stoppedAt ? (STOPPED[stoppedAt] ?? '') : ''}. No test was run, so there is no result.
+          {theCase?.id && ' Press Run again to start it again.'}
+        </p>
+      )}
+      {theCase?.id && (
+        <p className="muted" style={{ margin: '0 0 0.5rem' }}>
+          Test case: <Link to={`/projects/${job.projectId}/cases/${encodeURIComponent(theCase.id)}`}>{theCase.id}</Link>
+        </p>
+      )}
 
       {job.questions.map((q) => (
         <QuestionPanel key={q.id} question={q} />
@@ -77,6 +116,7 @@ function QuestionPanel({ question }: { question: Question }) {
     code: string;
     text: string;
     page?: string;
+    explain?: Explanation;
     candidates?: Array<{ ref?: string; role: string; name: string; score: number; notes: string[] }>;
     view?: { screenshot: string; width: number; height: number; elements: ViewElement[] };
   };
@@ -93,9 +133,9 @@ function QuestionPanel({ question }: { question: Question }) {
         {p.item}
         {p.raw ? `: ${p.raw}` : ''}
       </h2>
-      <p className="notice warn" style={{ margin: 0 }}>
-        {p.text}
-      </p>
+      <div className="notice warn" style={{ margin: 0 }}>
+        {p.explain ? <Explain e={p.explain} /> : p.text}
+      </div>
       {question.kind === 'choose' && (
         <>
           {p.view && <PickElement view={p.view} busy={busy} onPick={(ref) => void send({ ref })} />}
@@ -201,9 +241,17 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
         </button>
       </div>
       {review.blocked && (
-        <p className="notice warn">
-          <StatusBadge status={review.blocked.status} /> {review.blocked.reason} Edit the test case or regenerate.
-        </p>
+        <div className="notice warn stack">
+          <div>
+            <StatusBadge status={review.blocked.status} /> This test cannot run yet. Fix the {review.blocked.review?.length === 1 ? 'point' : 'points'} below,
+            then press Edit (or Regenerate if you changed the application).
+          </div>
+          {review.blocked.review?.length ? (
+            review.blocked.review.map((r) => <Explain key={r.id} e={r} id={r.id} raw={r.raw} />)
+          ) : (
+            <div>{review.blocked.reason}</div>
+          )}
+        </div>
       )}
       {!!review.warnings.length && <p className="notice warn">{review.warnings.map((w) => `${w.at ? `${w.at} ` : ''}${w.text}`).join(' ')}</p>}
       <div className="table-wrap">
@@ -300,7 +348,9 @@ function ZoomDialog({ file, onClose }: { file: string; onClose: () => void }) {
 
 /** PASS / FAIL with expected vs actual for every case (FR-HI-01, FR-VAL-01). */
 function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary }) {
-  const [expanded, setExpanded] = useState<string>();
+  // A single test case shows its details straight away; a workbook opens one case at a time.
+  const [expanded, setExpanded] = useState<string | undefined>(job.verdicts.length === 1 ? job.verdicts[0].testId : undefined);
+  const [zoom, setZoom] = useState<string>();
   const review = summary?.review ?? [];
   return (
     <section className="panel stack">
@@ -358,16 +408,26 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
                 v={v}
                 open={expanded === testId}
                 toggle={() => setExpanded(expanded === testId ? undefined : testId)}
+                zoom={setZoom}
               />
             ))}
           </tbody>
         </table>
       </div>
+      {zoom && <ZoomDialog file={zoom} onClose={() => setZoom(undefined)} />}
     </section>
   );
 }
 
-function VerdictRow(props: { testId: string; row?: number; status: string; v: TestVerdict & { problem?: string }; open: boolean; toggle: () => void }) {
+function VerdictRow(props: {
+  testId: string;
+  row?: number;
+  status: string;
+  v: TestVerdict & { problem?: string };
+  open: boolean;
+  toggle: () => void;
+  zoom: (file: string) => void;
+}) {
   const { v } = props;
   const shot = v.evidence?.screenshots?.[0];
   return (
@@ -386,14 +446,24 @@ function VerdictRow(props: { testId: string; row?: number; status: string; v: Te
           {v.category && <div className="muted">{v.category}</div>}
         </td>
         <td>
-          {v.actual ?? (v.problem ? `Not run: ${v.problem}` : '')}
-          {v.status !== 'PASS' && v.reason && !v.actual?.includes(v.reason) && <div className="muted">{v.reason}</div>}
+          {v.review?.length ? (
+            <div className="stack">
+              {v.review.map((r) => (
+                <Explain key={r.id} e={r} id={r.id} raw={r.raw} />
+              ))}
+            </div>
+          ) : (
+            <>
+              {v.actual ?? (v.problem ? `Not run: ${v.problem}` : '')}
+              {v.status !== 'PASS' && v.reason && !v.actual?.includes(v.reason) && <div className="muted">{v.reason}</div>}
+            </>
+          )}
         </td>
         <td>
           {shot && (
-            <a href={fileUrl(shot)} target="_blank" rel="noreferrer">
-              Screenshot
-            </a>
+            <button type="button" className="thumb-button" onClick={() => props.zoom(shot)} aria-label="Final screenshot, full size">
+              <img className="thumb" src={fileUrl(shot)} alt="" />
+            </button>
           )}
           <div className="muted">{duration(v.durationMs)}</div>
         </td>
@@ -401,38 +471,113 @@ function VerdictRow(props: { testId: string; row?: number; status: string; v: Te
       {props.open && (
         <tr>
           <td colSpan={5}>
-            {v.steps && (
-              <table>
-                <tbody>
-                  {v.steps.map((s) => (
-                    <tr key={s.id}>
-                      <td style={{ width: '3rem' }}>{s.id}</td>
-                      <td>{s.raw}</td>
-                      <td>{s.result}</td>
-                    </tr>
-                  ))}
-                  {v.checks?.map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.id}</td>
-                      <td>
-                        <div>
-                          <strong>Expected:</strong> {c.expected}
-                        </div>
-                        {c.actual && (
-                          <div>
-                            <strong>Actual:</strong> {c.actual}
-                          </div>
-                        )}
-                      </td>
-                      <td>{c.result}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            <Details v={v} zoom={props.zoom} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+/** Everything a run recorded: the video, every step with its time and screenshot, each check, the page facts. */
+function Details({ v, zoom }: { v: TestVerdict; zoom: (file: string) => void }) {
+  const ev = v.evidence;
+  const facts = ev?.facts;
+  return (
+    <div className="stack">
+      {ev?.video && (
+        // biome-ignore lint/a11y/useMediaCaption: a silent screen recording of the test
+        <video
+          controls
+          preload="metadata"
+          src={fileUrl(ev.video)}
+          style={{ maxWidth: '100%', width: 720, borderRadius: 8, border: '1px solid var(--line, #ddd)' }}
+        />
+      )}
+      {!ev?.video && v.status !== 'BLOCKED' && v.steps?.some((s) => s.result !== 'not run') && (
+        <p className="muted">No video was recorded for this run (runs made before video was added have none).</p>
+      )}
+      {!!v.steps?.length && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Step</th>
+                <th>As written</th>
+                <th>Result</th>
+                <th>Time</th>
+                <th>Page after the step</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v.steps.map((s) => (
+                <tr key={s.id}>
+                  <td style={{ width: '3rem' }}>{s.id}</td>
+                  <td>
+                    {s.raw}
+                    {s.error && <div className="notice error">{s.error}</div>}
+                  </td>
+                  <td>
+                    <StatusBadge status={s.result === 'passed' ? 'PASS' : s.result === 'failed' ? 'FAIL' : 'BLOCKED'} />
+                    {s.result === 'not run' && <div className="muted">not run</div>}
+                  </td>
+                  <td>{s.durationMs !== undefined ? duration(s.durationMs) : ''}</td>
+                  <td>
+                    {s.screenshot && (
+                      <button type="button" className="thumb-button" onClick={() => zoom(s.screenshot!)} aria-label={`Page after ${s.id}, full size`}>
+                        <img className="thumb" src={fileUrl(s.screenshot)} alt="" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {!!v.checks?.length && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Check</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v.checks.map((c) => (
+                <tr key={c.id}>
+                  <td style={{ width: '3rem' }}>{c.id}</td>
+                  <td>{c.expected}</td>
+                  <td>{c.actual}</td>
+                  <td>
+                    <StatusBadge status={c.result === 'passed' ? 'PASS' : c.result === 'failed' ? 'FAIL' : 'NEEDS REVIEW'} />
+                    {c.result !== 'passed' && c.result !== 'failed' && <div className="muted">{c.result}</div>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {facts && (
+        <p className="muted" style={{ margin: 0 }}>
+          The page ended on <code>{facts.path}</code> titled "{facts.title}".
+          {facts.headings[0] && ` Heading: "${facts.headings[0]}".`}
+          {facts.messages.map((m) => ` Message: "${m}".`)}
+          {facts.dialogs?.map((d) => ` Pop-up: ${d}.`)}
+          {!!facts.problems.length && ` Problems: ${facts.problems.join('; ')}.`}
+        </p>
+      )}
+      <div className="row">
+        {ev?.trace && (
+          <a href={fileUrl(ev.trace)} download>
+            Download the trace (open it at trace.playwright.dev or with npx playwright show-trace)
+          </a>
+        )}
+      </div>
+    </div>
   );
 }

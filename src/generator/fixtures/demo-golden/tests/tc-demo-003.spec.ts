@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/test.fixture';
+import { test, step, expect } from '../fixtures/test.fixture';
 import { DashboardPage } from '../pages/DashboardPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
@@ -12,22 +12,26 @@ test(
     const loginPage = new LoginPage(page);
     const profilePage = new ProfilePage(page);
 
-    await test.step('S1: Open Login page', async () => {
+    await step('S1: Open Login page', page, async () => {
       await loginPage.goto();
     });
-    await test.step('S2, S3, S4: Enter valid username; Enter valid password; Click Login', async () => {
+    await step('S2, S3, S4: Enter valid username; Enter valid password; Click Login', page, async () => {
       await loginPage.login(process.env.TEST_USERNAME!, process.env.TEST_PASSWORD!);
     });
-    await test.step('S5: Click Profile', async () => {
+    await step('S5: Click Profile', page, async () => {
       await dashboardPage.openProfile();
     });
-    await test.step('S6, S7, S8, S9: Enter Full name; Select India from Country; Check Send me news; Click Save changes', async () => {
-      await profilePage.saveChanges(data.fullName, 'India');
-    });
-    await test.step('A1: Message "Profile saved" is shown.', async () => {
+    await step(
+      'S6, S7, S8, S9: Enter Full name; Select India from Country; Check Send me news; Click Save changes',
+      page,
+      async () => {
+        await profilePage.saveChanges(data.fullName, 'India');
+      },
+    );
+    await step('A1: Message "Profile saved" is shown.', page, async () => {
       await expect(page.getByText('Profile saved').first()).toBeVisible();
     });
-    await test.step('A2: Send me news is checked.', async () => {
+    await step('A2: Send me news is checked.', page, async () => {
       await expect(profilePage.sendMeNewsCheckbox).toBeChecked();
     });
   },

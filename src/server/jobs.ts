@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { createTwoFilesPatch } from 'diff';
 import type { ExplorationResult, Resolver } from '../explorer/controller.js';
+import { explain, sentence } from '../explorer/explain.js';
 import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
@@ -99,7 +100,7 @@ export class JobRunner extends EventEmitter {
     const queued = this.queue.indexOf(jobId);
     if (queued >= 0) {
       this.queue.splice(queued, 1);
-      await this.update(jobId, { status: 'cancelled', finishedAt: new Date().toISOString() });
+      await this.update(jobId, { status: 'cancelled', output: { ...job.output, cancelledFrom: job.status }, finishedAt: new Date().toISOString() });
       return;
     }
     this.decide(jobId, { action: 'cancel' });
@@ -138,8 +139,11 @@ export class JobRunner extends EventEmitter {
       if (job.kind === 'workbook') await this.runWorkbook(job);
       else await this.runSingle(job);
     } catch (e) {
-      if (e instanceof Cancelled || this.cancelled.has(id)) await this.update(id, { status: 'cancelled', finishedAt: new Date().toISOString() });
-      else await this.update(id, { status: 'failed', error: (e as Error).message, finishedAt: new Date().toISOString() });
+      if (e instanceof Cancelled || this.cancelled.has(id)) {
+        // Remember where it was stopped, so the list can say "cancelled while waiting for your review".
+        const at = await this.options.store.job(id);
+        await this.update(id, { status: 'cancelled', output: { ...at?.output, cancelledFrom: at?.status }, finishedAt: new Date().toISOString() });
+      } else await this.update(id, { status: 'failed', error: (e as Error).message, finishedAt: new Date().toISOString() });
     } finally {
       this.cancelled.delete(id);
       this.busy = false;
@@ -167,24 +171,33 @@ export class JobRunner extends EventEmitter {
     };
     return {
       async choose(r) {
-        asked.push(`${r.item} "${r.raw}": ${r.code}: ${r.text}`);
+        const why = explain({
+          code: r.code,
+          raw: r.raw,
+          label: r.target,
+          text: r.text,
+          candidates: r.candidates.map((c) => ({ role: c.node.role, name: c.matchedName || c.node.name, score: c.score })),
+        });
+        asked.push(`${r.item} "${r.raw}": ${sentence(why)}`);
         if (!interactive) return 'skip';
         const candidates = r.candidates
           .slice(0, 9)
           .map((c) => ({ ref: c.node.ref, role: c.node.role, name: c.matchedName || c.node.name, score: c.score, how: c.how, notes: c.notes }));
-        const a = await ask('choose', { item: r.item, raw: r.raw, code: r.code, text: r.text, candidates, view: r.view });
+        const a = await ask('choose', { item: r.item, raw: r.raw, code: r.code, text: r.text, explain: why, candidates, view: r.view });
         return a === 'skip' || a === 'abort' || typeof a === 'number' || (typeof a === 'object' && a && 'ref' in a) ? (a as never) : 'skip';
       },
       async pageUrl(r) {
-        asked.push(`${r.item}: the URL of the "${r.page}" page is not known.`);
+        const why = explain({ code: 'PAGE_URL', page: r.page });
+        asked.push(`${r.item}: ${sentence(why)}`);
         if (!interactive) return 'abort';
-        const a = await ask('pageUrl', { item: r.item, page: r.page });
+        const a = await ask('pageUrl', { item: r.item, page: r.page, explain: why });
         return typeof a === 'string' && a.trim() ? a.trim() : 'abort';
       },
       async confirm(r) {
-        asked.push(`${r.item} ${r.code}: ${r.text}`);
+        const why = explain({ code: r.code, text: r.text, raw: r.raw, page: r.page });
+        asked.push(`${r.item}: ${sentence(why)}`);
         if (!interactive) return false;
-        return (await ask('confirm', { item: r.item, code: r.code, text: r.text })) === true;
+        return (await ask('confirm', { item: r.item, code: r.code, text: r.text, explain: why })) === true;
       },
     };
   }
@@ -215,6 +228,18 @@ export class JobRunner extends EventEmitter {
       batchesDir: this.projectDir(project, 'batches'),
       mapping: (job.input.mapping ?? {}) as Partial<Record<Field, string>>,
       onlyReview,
+      onImported: async (cases) => {
+        // Every case of the sheet is kept, so it can be seen in the test case list and run again.
+        for (const c of cases) {
+          const id = c.raw.id ?? `ROW-${c.row}`;
+          await this.options.store.upsertTestCase(
+            project.id,
+            { ...c.raw, id },
+            { kind: 'workbook', ref: upload.id, row: c.row },
+            `imported from ${upload.originalName}`,
+          );
+        }
+      },
       out: defaultResultsFile(upload.file),
       onProgress: (m) => void this.log(job.id, m),
     });
@@ -227,6 +252,17 @@ export class JobRunner extends EventEmitter {
         verdict: r.verdict ?? { problem: r.problem, title: r.title },
       })),
     );
+    const doneAt = new Date().toISOString();
+    for (const r of batch.results) {
+      const id = r.verdict?.testId ?? r.id;
+      if (!id) continue;
+      await this.options.store.recordResult(project.id, id, {
+        jobId: job.id,
+        executionId: r.verdict?.executionId || batch.summary.executionId,
+        status: r.verdict?.status ?? 'NEEDS REVIEW',
+        at: doneAt,
+      });
+    }
     await this.update(job.id, {
       status: 'done',
       executionId: batch.summary.executionId,
@@ -254,8 +290,13 @@ export class JobRunner extends EventEmitter {
       const prepared = await prepareCases([model], options);
       // A cancel while exploring ends the exploration early; it must not then wait in review.
       if (this.cancelled.has(job.id)) throw new Cancelled();
-      await this.update(job.id, { status: 'review', output: { review: reviewOf(model, prepared), workspace } });
-      let decision = await this.decision(job.id);
+      // A saved test that is run again was approved before: when it can be generated as it is, it runs straight away.
+      const again = job.input.rerun === true && prepared.explored.length > 0 && prepared.early.size === 0;
+      const early = prepared.early.get(model.id);
+      if (early) await this.options.store.recordResult(project.id, model.id, { jobId: job.id, status: early.status, at: new Date().toISOString() });
+      await this.update(job.id, { status: again ? 'running' : 'review', output: { review: reviewOf(model, prepared), workspace } });
+      let decision: Decision = again ? { action: 'approve' } : await this.decision(job.id);
+      if (again) await this.log(job.id, 'Running the saved test again');
       // Approving a test that could not be generated changes nothing: it stays in review, with the reason.
       while (decision.action === 'approve' && !prepared.explored.length) {
         await this.log(job.id, 'Nothing to run yet: the test case could not be generated. Edit it or regenerate.');
@@ -270,6 +311,7 @@ export class JobRunner extends EventEmitter {
       if (decision.action === 'edit') {
         // FR-RV-05: the edit goes into the test case, which is parsed and explored again.
         raw = { ...decision.case, id: model.id };
+        await this.options.store.upsertTestCase(project.id, { ...raw, id: model.id }, { kind: 'form' }, 'edited during review');
         reexplore = false;
         await this.update(job.id, { status: 'running', input: { ...job.input, case: raw } });
         await this.log(job.id, 'Edited: exploring the changed test case');
@@ -285,6 +327,14 @@ export class JobRunner extends EventEmitter {
         job.id,
         result.verdicts.map((v) => ({ testId: v.testId, status: v.status, verdict: v })),
       );
+      for (const v of result.verdicts) {
+        await this.options.store.recordResult(project.id, v.testId, {
+          jobId: job.id,
+          executionId: result.executionId,
+          status: v.status,
+          at: new Date().toISOString(),
+        });
+      }
       await this.update(job.id, {
         status: 'done',
         executionId: result.executionId,
@@ -304,7 +354,7 @@ function reviewOf(model: TestModel, prepared: Prepared) {
     testId: model.id,
     title: model.title,
     warnings: model.warnings,
-    blocked: early && { status: early.status, reason: early.reason, category: early.category },
+    blocked: early && { status: early.status, reason: early.reason, category: early.category, review: early.review },
     items: (exploration?.items ?? []).map((i) => ({
       id: i.id,
       phase: i.phase,

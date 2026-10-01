@@ -49,7 +49,7 @@ export async function renderProject(plan: ProjectPlan, name: string): Promise<Re
     files[`locators/${page.fileBase}.locators.json`] = `${JSON.stringify(entries, null, 2)}\n`;
   }
   for (const spec of plan.specs) {
-    const helpers = ['test', ...(spec.steps.some((s) => s.lines.some((l) => l.includes('expect('))) ? ['expect'] : []), ...spec.helpers];
+    const helpers = ['test', 'step', ...(spec.steps.some((s) => s.lines.some((l) => l.includes('expect('))) ? ['expect'] : []), ...spec.helpers];
     await ts(
       `tests/${spec.file}.spec.ts`,
       T.spec({

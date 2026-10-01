@@ -1,4 +1,5 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import type { RawTestCase } from '../model/test-model.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
 import { MIGRATIONS } from './migrations/index.js';
@@ -56,6 +57,39 @@ export interface Upload {
   file: string;
   originalName: string;
   createdAt: string;
+}
+
+export interface TestCaseRecord {
+  id: string;
+  projectId: string;
+  /** The id the tester gave it (or we did), e.g. TC-LOGIN-001; unique within the project. */
+  extId: string;
+  title: string;
+  raw: RawTestCase;
+  sourceKind: 'form' | 'workbook';
+  sourceRef?: string;
+  sourceRow?: number;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  lastStatus?: string;
+  lastJobId?: string;
+  lastExecutionId?: string;
+  lastRunAt?: string;
+  runCount: number;
+}
+
+export interface TestCaseRun {
+  jobId: string;
+  executionId?: string;
+  kind: JobKind;
+  jobStatus: JobStatus;
+  /** PASS / FAIL / BLOCKED / NEEDS REVIEW, or the job's status when it never produced a result. */
+  status: string;
+  at: string;
+  finishedAt?: string;
+  summary?: string;
+  durationMs?: number;
 }
 
 export interface Environment {
@@ -319,6 +353,139 @@ export class Store {
     }));
   }
 
+  // Test cases (DATABASE.md §5.4): kept after the run, with their versions, so they can be seen and run again
+
+  /** Adds a test case, or a new version of it when its steps, data or expected result changed. */
+  async upsertTestCase(
+    projectId: string,
+    raw: RawTestCase & { id: string },
+    source: { kind: 'form' | 'workbook'; ref?: string; row?: number },
+    reason: string,
+  ): Promise<TestCaseRecord> {
+    const { row: _row, ...kept } = raw;
+    const hash = createHash('sha256')
+      .update(JSON.stringify([kept.title, kept.type, kept.preconditions, kept.steps, kept.testData, kept.expected, kept.requirementId]))
+      .digest('hex')
+      .slice(0, 16);
+    const at = now();
+    await this.transaction(async (s) => {
+      const found = await s.db.get<Row>('SELECT * FROM test_cases WHERE project_id = ? AND ext_id = ?', [projectId, raw.id]);
+      if (!found) {
+        const id = newId('TCS');
+        await s.db.run(
+          `INSERT INTO test_cases (id, project_id, ext_id, title, raw, source_kind, source_ref, source_row, current_version, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          [id, projectId, raw.id, raw.title, JSON.stringify(kept), source.kind, source.ref ?? null, source.row ?? null, at, at],
+        );
+        await s.db.run('INSERT INTO test_case_versions (test_case_id, version, raw, content_hash, reason, created_at) VALUES (?, 1, ?, ?, ?, ?)', [
+          id,
+          JSON.stringify(kept),
+          hash,
+          reason,
+          at,
+        ]);
+        await s.audit('testcase.create', 'testcase', id, projectId, { ext_id: raw.id, source: source.kind });
+        return;
+      }
+      const last = await s.db.get<Row>('SELECT content_hash FROM test_case_versions WHERE test_case_id = ? AND version = ?', [
+        String(found.id),
+        Number(found.current_version),
+      ]);
+      if (last?.content_hash === hash) {
+        await s.db.run('UPDATE test_cases SET source_kind = ?, source_ref = ?, source_row = ?, updated_at = ?, deleted_at = NULL WHERE id = ?', [
+          source.kind,
+          source.ref ?? null,
+          source.row ?? null,
+          at,
+          String(found.id),
+        ]);
+        return;
+      }
+      const version = Number(found.current_version) + 1;
+      await s.db.run('INSERT INTO test_case_versions (test_case_id, version, raw, content_hash, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)', [
+        String(found.id),
+        version,
+        JSON.stringify(kept),
+        hash,
+        reason,
+        at,
+      ]);
+      await s.db.run(
+        'UPDATE test_cases SET title = ?, raw = ?, source_kind = ?, source_ref = ?, source_row = ?, current_version = ?, updated_at = ?, deleted_at = NULL WHERE id = ?',
+        [raw.title, JSON.stringify(kept), source.kind, source.ref ?? null, source.row ?? null, version, at, String(found.id)],
+      );
+      await s.audit('testcase.update', 'testcase', String(found.id), projectId, { ext_id: raw.id, version, reason });
+    });
+    return (await this.testCase(projectId, raw.id))!;
+  }
+
+  async testCases(projectId: string): Promise<TestCaseRecord[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM test_cases WHERE project_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC', [projectId]);
+    return rows.map(toTestCase);
+  }
+
+  async testCase(projectId: string, extId: string): Promise<TestCaseRecord | undefined> {
+    const r = await this.db.get<Row>('SELECT * FROM test_cases WHERE project_id = ? AND ext_id = ? AND deleted_at IS NULL', [projectId, extId]);
+    return r && toTestCase(r);
+  }
+
+  async testCaseVersions(id: string): Promise<Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase }>> {
+    const rows = await this.db.all<Row>('SELECT * FROM test_case_versions WHERE test_case_id = ? ORDER BY version DESC', [id]);
+    return rows.map((r) => ({ version: Number(r.version), reason: String(r.reason), createdAt: String(r.created_at), raw: JSON.parse(String(r.raw)) }));
+  }
+
+  /** Taking a test case out of the list; its results stay. */
+  async deleteTestCase(projectId: string, extId: string): Promise<boolean> {
+    const r = await this.db.run('UPDATE test_cases SET deleted_at = ? WHERE project_id = ? AND ext_id = ? AND deleted_at IS NULL', [now(), projectId, extId]);
+    return r.changes > 0;
+  }
+
+  /** The last result of a case, shown in the list. */
+  async recordResult(projectId: string, extId: string, result: { jobId: string; executionId?: string; status: string; at: string }): Promise<void> {
+    await this.db.run(
+      'UPDATE test_cases SET last_status = ?, last_job_id = ?, last_execution_id = ?, last_run_at = ?, run_count = run_count + 1 WHERE project_id = ? AND ext_id = ?',
+      [result.status, result.jobId, result.executionId ?? null, result.at, projectId, extId],
+    );
+  }
+
+  /** Every run of a case, newest first: runs with a result, and single runs that never got one (cancelled, failed). */
+  async testCaseRuns(projectId: string, extId: string, limit = 50): Promise<TestCaseRun[]> {
+    const withResult = await this.db.all<Row>(
+      `SELECT v.job_id, v.status, v.verdict, j.created_at, j.finished_at, j.execution_id, j.status AS job_status, j.kind
+       FROM verdicts v JOIN jobs j ON j.id = v.job_id WHERE j.project_id = ? AND v.test_id = ? ORDER BY j.created_at DESC LIMIT ?`,
+      [projectId, extId, limit],
+    );
+    const runs: TestCaseRun[] = withResult.map((r) => {
+      const v = JSON.parse(String(r.verdict)) as { actual?: string; reason?: string; durationMs?: number };
+      return {
+        jobId: String(r.job_id),
+        executionId: r.execution_id === null ? undefined : String(r.execution_id),
+        kind: r.kind as JobKind,
+        jobStatus: r.job_status as JobStatus,
+        status: String(r.status),
+        at: String(r.created_at),
+        finishedAt: r.finished_at === null ? undefined : String(r.finished_at),
+        summary: v.actual ?? v.reason,
+        durationMs: v.durationMs,
+      };
+    });
+    const seen = new Set(runs.map((r) => r.jobId));
+    const singles = await this.db.all<Row>("SELECT * FROM jobs WHERE project_id = ? AND kind = 'single' ORDER BY created_at DESC LIMIT 200", [projectId]);
+    for (const row of singles.map(toJob)) {
+      if (seen.has(row.id) || (row.input.case as { id?: string } | undefined)?.id !== extId) continue;
+      runs.push({
+        jobId: row.id,
+        kind: row.kind,
+        jobStatus: row.status,
+        status: row.status,
+        at: row.createdAt,
+        finishedAt: row.finishedAt,
+        summary: row.error,
+      });
+    }
+    return runs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+  }
+
   // Counters and audit
 
   /** The next number of a named sequence, safe when two callers ask at once (FR-DB-12). */
@@ -357,6 +524,27 @@ export class Store {
   async problems(): Promise<string[]> {
     return problems(this.db);
   }
+}
+
+function toTestCase(r: Row): TestCaseRecord {
+  return {
+    id: String(r.id),
+    projectId: String(r.project_id),
+    extId: String(r.ext_id),
+    title: String(r.title),
+    raw: JSON.parse(String(r.raw)),
+    sourceKind: r.source_kind as 'form' | 'workbook',
+    sourceRef: r.source_ref === null ? undefined : String(r.source_ref),
+    sourceRow: r.source_row === null ? undefined : Number(r.source_row),
+    version: Number(r.current_version),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+    lastStatus: r.last_status === null ? undefined : String(r.last_status),
+    lastJobId: r.last_job_id === null ? undefined : String(r.last_job_id),
+    lastExecutionId: r.last_execution_id === null ? undefined : String(r.last_execution_id),
+    lastRunAt: r.last_run_at === null ? undefined : String(r.last_run_at),
+    runCount: Number(r.run_count),
+  };
 }
 
 function toProject(r: Row): Project {

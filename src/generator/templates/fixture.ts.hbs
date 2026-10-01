@@ -8,11 +8,19 @@ import { type Page, test as base, expect } from '@playwright/test';
  *   `{ type: 'health', description: 'off' }`.
  * - Facts (FR-VAL-02): at the end of every test the page's URL, title, headings and visible messages
  *   are attached as `auto-qa-facts`, so a failure can say what actually happened.
+ * - Pop-ups: browser alerts and confirms are accepted and written down (as they were when the test was
+ *   explored), so they never block the test and a check can say what they said.
+ * - Evidence: `step()` takes a screenshot when each step ends, passed or failed.
  */
 export const test = base.extend<{ autoQa: void }>({
   autoQa: [
     async ({ page }, use, testInfo) => {
       const problems: string[] = [];
+      const dialogs: string[] = [];
+      page.on('dialog', async (dialog) => {
+        dialogs.push(`${dialog.type()} "${dialog.message()}"`);
+        await dialog.accept().catch(() => undefined);
+      });
       page.on('pageerror', (error) => problems.push(`uncaught error: ${error.message}`));
       page.on('response', (response) => {
         if (response.status() >= 500) problems.push(`${response.status()} from ${response.request().method()} ${new URL(response.url()).pathname}`);
@@ -24,7 +32,7 @@ export const test = base.extend<{ autoQa: void }>({
       if (facts && /internal server error|bad gateway|service unavailable|^50[0-4]\b/i.test(`${facts.title}\n${facts.headings.join('\n')}`)) {
         problems.push(`error page shown: "${facts.headings[0] ?? facts.title}"`);
       }
-      await testInfo.attach('auto-qa-facts', { body: JSON.stringify({ ...facts, problems }), contentType: 'application/json' });
+      await testInfo.attach('auto-qa-facts', { body: JSON.stringify({ ...facts, problems, dialogs }), contentType: 'application/json' });
 
       const off = testInfo.annotations.some((a) => a.type === 'health' && a.description === 'off');
       if (!off && problems.length && testInfo.status === testInfo.expectedStatus) {
@@ -35,6 +43,23 @@ export const test = base.extend<{ autoQa: void }>({
   ],
 });
 export { expect };
+
+/** A test step that keeps a screenshot of the page when it ends, passed or failed (FR-EV-01). */
+export async function step(title: string, page: Page, body: () => Promise<void>): Promise<void> {
+  await test.step(title, async () => {
+    try {
+      await body();
+    } finally {
+      if (!page.isClosed()) {
+        // A file, not in-memory data, so the reporter can find it and the platform can keep it.
+        const info = test.info();
+        const file = info.outputPath(`step-${info.attachments.length + 1}.png`);
+        const saved = await page.screenshot({ path: file, animations: 'disabled' }).then(() => true, () => false);
+        if (saved) await info.attach(`step: ${title}`, { path: file, contentType: 'image/png' });
+      }
+    }
+  });
+}
 
 /** What the page shows now: the facts an "actual result" is built from. */
 async function readFacts(page: Page) {

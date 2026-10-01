@@ -8,6 +8,7 @@ import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { executionOrder } from '../parser/index.js';
+import { type Explanation, explain, plainError, sentence } from './explain.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
 import { flatten, nearbyText, parseSnapshot, type SnapshotNode } from './snapshot-parser.js';
 import { masker, resolveValue } from './values.js';
@@ -51,6 +52,8 @@ const DEFAULT_TIMEOUTS: Timeouts = { effect: 5000, settle: 10000, quiet: 500 };
 export interface ReviewRequest {
   item: string;
   raw: string;
+  /** The element name the step looked for, for the explanation. */
+  target?: string;
   code: string;
   text: string;
   candidates: Candidate[];
@@ -76,7 +79,7 @@ export interface Resolver {
   /** The URL (or path) of a page the tester named, e.g. "Open Profile page" (D19). */
   pageUrl(request: { item: string; page: string }): Promise<string | 'abort'>;
   /** Yes/no, e.g. "Explore on Production?" or "The click changed nothing. Continue?". */
-  confirm(request: { item: string; code: string; text: string }): Promise<boolean>;
+  confirm(request: { item: string; code: string; text: string; raw?: string; page?: string }): Promise<boolean>;
 }
 
 export interface ExploredItem {
@@ -106,6 +109,10 @@ export interface ExploredItem {
   screenshot?: string;
   warnings: string[];
   error?: string;
+  /** Browser pop-ups (alert, confirm) the step caused; each was accepted so the test could go on. */
+  dialogs?: string[];
+  /** Why the step was set aside or failed, in the tester's words (see explain.ts). */
+  review?: Explanation;
 }
 
 export interface ExplorationResult {
@@ -262,6 +269,23 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
   }
 
+  /** Pop-ups seen since the last look are attached to the step that caused them. */
+  function collectDialogs(item: ExploredItem): void {
+    const seen = mcp.takeDialogs();
+    if (!seen.length) return;
+    item.dialogs = [...(item.dialogs ?? []), ...seen];
+    item.warnings.push(`The page showed a pop-up (${seen.join('; ')}). It was accepted automatically so the test could go on.`);
+  }
+
+  const explained = (code: string, text: string, query: TargetQuery, r: { candidates: Candidate[] }, raw: string) =>
+    explain({
+      code,
+      raw,
+      label: query.target,
+      text,
+      candidates: r.candidates.map((c) => ({ role: c.node.role, name: c.matchedName || c.node.name, score: c.score })),
+    });
+
   /** LOCATE + VALIDATE, asking the tester when the rules cannot decide. */
   async function find(query: TargetQuery, item: ExploredItem, state: PageState): Promise<Extract<LocateResult, { status: 'resolved' }> | undefined> {
     const locateOptions = { config: options.config, testIdAttribute: session.testIdAttribute, pageHint: pathNames[pathOf(state.url)] };
@@ -273,15 +297,25 @@ export async function explore(model: TestModel, session: Session, options: Explo
       if (asked >= MAX_QUESTIONS) {
         // Every answer so far pointed to something this step cannot use; stop asking.
         item.status = 'failed';
-        item.error = `No usable element after ${asked} answers. ${r.text}`;
+        item.review = explained(r.code, r.text, query, r, item.raw);
+        item.error = `No usable element after ${asked} answers. ${sentence(item.review)}`;
         return undefined;
       }
       const view = await pageView(query, r.candidates, `${item.id}-q${++asked}`);
-      const answer = await options.resolver.choose({ item: item.id, raw: item.raw, code: r.code, text: r.text, candidates: r.candidates, view });
+      const answer = await options.resolver.choose({
+        item: item.id,
+        raw: item.raw,
+        target: query.target,
+        code: r.code,
+        text: r.text,
+        candidates: r.candidates,
+        view,
+      });
       if (answer === 'abort') throw new Aborted();
       if (answer === 'skip') {
         item.status = 'skipped';
-        item.warnings.push(`${r.code}: ${r.text} Skipped by the tester.`);
+        item.review = explained(r.code, r.text, query, r, item.raw);
+        item.warnings.push(`Skipped by the tester. ${sentence(item.review)}`);
         return undefined;
       }
       // A candidate from the list, or any element picked on the screenshot (FR-RV-02).
@@ -294,11 +328,12 @@ export async function explore(model: TestModel, session: Session, options: Explo
       const again = await locate(query, mcp, probe, locateOptions, { state, node });
       if (again.status === 'needs-review') {
         // The picked element cannot be used for this step (not unique, not actionable): ask again.
-        item.warnings.push(`${again.code}: ${again.text}`);
+        item.warnings.push(sentence(explained(again.code, again.text, query, again, item.raw)));
         r = { ...again, candidates: r.candidates.filter((c) => c.node.ref !== node.ref) };
         if (!r.candidates.length && typeof answer === 'number') {
           item.status = 'failed';
-          item.error = again.text;
+          item.review = explained(again.code, again.text, query, again, item.raw);
+          item.error = sentence(item.review);
           return undefined;
         }
         continue;
@@ -427,10 +462,13 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
 
     item.effect = await verifyEffect(action, live, value, before);
+    collectDialogs(item);
+    if (item.effect === undefined && item.dialogs?.length) item.effect = `pop-up ${item.dialogs[0]}`;
     if (item.effect === undefined) {
       const go = await options.resolver.confirm({
         item: item.id,
         code: 'NO_EFFECT',
+        raw: mask(step.raw),
         text: `"${mask(step.raw)}" changed nothing on the page. Continue anyway?`,
       });
       if (!go) throw new Aborted();
@@ -483,6 +521,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         const ok = await options.resolver.confirm({
           item: item.id,
           code: 'NOT_ON_PAGE',
+          page: assertion.expected,
           text: `The test expects the ${assertion.expected} page, but the browser is on ${current ?? path} (${path})${shown ? `, which shows ${shown}` : ''}. An earlier step may not have worked. Is this the ${assertion.expected} page?`,
         });
         if (!ok) {
@@ -582,7 +621,8 @@ export async function explore(model: TestModel, session: Session, options: Explo
       result.items.push(item);
       if (x.status === 'unparsed') {
         item.status = 'skipped';
-        item.warnings.push(`UNPARSED: ${x.reason?.text ?? ''}`);
+        item.review = explain({ code: x.reason?.code ?? 'NO_PATTERN', raw: x.raw, text: x.reason?.text });
+        item.warnings.push(`Not understood. ${sentence(item.review)}`);
         continue;
       }
       try {
@@ -597,8 +637,9 @@ export async function explore(model: TestModel, session: Session, options: Explo
       } catch (e) {
         if (e instanceof Aborted) throw e;
         item.status = 'failed';
-        item.error = mask((e as Error).message.split('\n')[0]);
+        item.error = mask(plainError((e as Error).message));
       }
+      collectDialogs(item);
       item.warnings = item.warnings.map(mask);
       if (item.error) item.error = mask(item.error);
       await screenshot(item);

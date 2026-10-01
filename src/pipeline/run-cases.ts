@@ -4,6 +4,7 @@ import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
+import { type Explanation, explain } from '../explorer/explain.js';
 import { loadPageUrls, savePageUrls } from '../explorer/page-store.js';
 import { type GenerateInput, generateProject, workspaceName, writeProject } from '../generator/index.js';
 import { automationId } from '../generator/names.js';
@@ -11,7 +12,7 @@ import { planProject } from '../generator/plan.js';
 import { openSession } from '../locators/session.js';
 import type { TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
-import type { TestVerdict } from '../results/verdict.js';
+import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 
 /**
  * The whole flow for a set of test cases (M6): parse → explore → generate → run → verdict.
@@ -85,14 +86,15 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     if (unparsed.length) {
       // Nothing to explore until the tester rewrites these; no browser needed to say so.
       const assist = options.assist ?? noAssist;
-      const why = await Promise.all(
-        unparsed.map(async (x) => {
+      const reasons = await Promise.all(
+        unparsed.map(async (x): Promise<ReviewReason> => {
           const reason = x.reason?.text ?? '';
           const suggestion = await assist.suggestRewrite({ raw: x.raw, kind: 'source' in x ? 'check' : 'step', reason });
-          return `${x.id} "${x.raw}": ${reason}${suggestion ? ` Suggested: "${suggestion}".` : ''}`;
+          const e = explain({ code: x.reason?.code ?? 'NO_PATTERN', raw: x.raw, text: reason });
+          return { id: x.id, raw: x.raw, ...e, todo: suggestion ? [`Try: "${suggestion}"`, ...e.todo] : e.todo };
         }),
       );
-      early.set(model.id, stopped(model, 'NEEDS REVIEW', why.join(' ')));
+      early.set(model.id, stopped(model, 'NEEDS REVIEW', reasonText(reasons), undefined, undefined, reasons));
       progress(`? ${at}: needs review before it can be automated`);
       continue;
     }
@@ -231,20 +233,40 @@ function sameSteps(saved: ExplorationResult, model: TestModel): boolean {
 function fromExploration(model: TestModel, result: ExplorationResult, questions: string[]): TestVerdict {
   const failed = result.items.find((i) => i.status === 'failed');
   const skipped = result.items.filter((i) => i.status === 'skipped');
+  const asReason = (i: ExplorationResult['items'][number]): ReviewReason => {
+    const e: Explanation = i.review ?? explain({ code: 'OTHER', raw: i.raw, text: i.error ?? i.warnings.at(-1) ?? 'It could not be done.' });
+    return { id: i.id, raw: i.raw, ...e };
+  };
   if (failed?.error && /^Set [A-Z_]+/.test(failed.error)) return stopped(model, 'BLOCKED', failed.error, `${failed.id} ${failed.raw}`, 'Test Data');
   if (failed?.error && /net::ERR_|ECONNREFUSED|ENOTFOUND/i.test(failed.error)) {
     return stopped(model, 'BLOCKED', 'The application could not be reached.', `${failed.id} ${failed.raw}`, 'Network');
   }
-  const why = [
-    ...(failed ? [`${failed.id} "${failed.raw}": ${failed.error ?? failed.warnings.at(-1) ?? 'could not be done'}`] : []),
-    ...skipped.map((s) => `${s.id} "${s.raw}": ${s.warnings.at(-1) ?? 'skipped'}`),
-    ...(result.status === 'aborted' ? ['Exploration was stopped.'] : []),
-  ];
-  const reason = why.length ? why.join(' ') : (questions[0] ?? 'Exploration did not finish.');
-  return stopped(model, 'NEEDS REVIEW', reason, failed ? `${failed.id} ${failed.raw}` : skipped[0] ? `${skipped[0].id} ${skipped[0].raw}` : undefined);
+  const reasons = [...(failed ? [asReason(failed)] : []), ...skipped.map(asReason)];
+  const stoppedNote = result.status === 'aborted' ? ' You stopped the exploration before it finished.' : '';
+  const reason = reasons.length ? reasonText(reasons) + stoppedNote : (questions[0] ?? `Exploration did not finish.${stoppedNote}`);
+  return stopped(
+    model,
+    'NEEDS REVIEW',
+    reason,
+    failed ? `${failed.id} ${failed.raw}` : skipped[0] ? `${skipped[0].id} ${skipped[0].raw}` : undefined,
+    undefined,
+    reasons,
+  );
 }
 
-function stopped(model: TestModel, status: 'NEEDS REVIEW' | 'BLOCKED', reason: string, failedStep?: string, category?: TestVerdict['category']): TestVerdict {
+/** The reasons as sentences for the results sheet: what happened and the first thing to do. */
+export function reasonText(reasons: ReviewReason[]): string {
+  return reasons.map((r) => `${r.id} "${r.raw}": ${r.headline} ${r.why}${r.todo[0] ? ` To fix: ${r.todo[0]}` : ''}`).join(' | ');
+}
+
+function stopped(
+  model: TestModel,
+  status: 'NEEDS REVIEW' | 'BLOCKED',
+  reason: string,
+  failedStep?: string,
+  category?: TestVerdict['category'],
+  review?: ReviewReason[],
+): TestVerdict {
   return {
     executionId: '',
     testId: model.id,
@@ -254,6 +276,7 @@ function stopped(model: TestModel, status: 'NEEDS REVIEW' | 'BLOCKED', reason: s
     category,
     failedStep,
     reason,
+    review,
     expected: model.assertions
       .map((a) => a.raw)
       .filter(Boolean)

@@ -1,11 +1,11 @@
 import type { BatchSummary } from '../../src/importer/results.js';
 import type { RawTestCase } from '../../src/model/test-model.js';
-import type { TestVerdict } from '../../src/results/verdict.js';
-import type { Job, Project, Question } from '../../src/server/store.js';
+import type { ReviewReason, TestVerdict } from '../../src/results/verdict.js';
+import type { Job, Project, Question, TestCaseRecord, TestCaseRun } from '../../src/server/store.js';
 
 /** Typed calls to the platform API (src/server/app.ts). */
 
-export type { BatchSummary, Job, Project, Question, RawTestCase, TestVerdict };
+export type { BatchSummary, Job, Project, Question, RawTestCase, ReviewReason, TestCaseRecord, TestCaseRun, TestVerdict };
 
 export interface ProjectView extends Project {
   env: { username?: string; hasPassword: boolean; variables: Array<{ name: string; secret: boolean; value?: string }> };
@@ -63,7 +63,7 @@ export interface Review {
   testId: string;
   title: string;
   warnings: Array<{ at?: string; code: string; text: string }>;
-  blocked?: { status: string; reason: string; category?: string };
+  blocked?: { status: string; reason: string; category?: string; review?: ReviewReason[] };
   items: ReviewItem[];
   changes: Array<{ path: string; added: boolean; patch: string }>;
 }
@@ -102,6 +102,15 @@ export const api = {
   edit: (id: string, c: Omit<RawTestCase, 'row'>) => call(`/api/jobs/${id}/edit`, json('POST', { case: c })),
   cancel: (id: string) => call(`/api/jobs/${id}/cancel`, json('POST', {})),
   reviewQueue: (id: string) => call<Job>(`/api/jobs/${id}/review-queue`, json('POST', {})),
+  testCases: (projectId: string) => call<TestCaseRecord[]>(`/api/projects/${projectId}/test-cases`),
+  testCase: (projectId: string, id: string) =>
+    call<TestCaseRecord & { versions: Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase }>; runs: TestCaseRun[] }>(
+      `/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`,
+    ),
+  updateTestCase: (projectId: string, id: string, c: Omit<RawTestCase, 'row'>) =>
+    call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, json('PUT', c)),
+  deleteTestCase: (projectId: string, id: string) => call(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
   answer: (questionId: number, answer: unknown) => call(`/api/questions/${questionId}/answer`, json('POST', { answer })),
 };
 

@@ -185,6 +185,40 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     j = await until(job.id, ['done', 'failed']);
     assert.equal(j.status, 'done', j.error);
     assert.equal(j.verdicts[0].status, 'PASS');
+    const caseId = j.input.case.id as string;
+
+    // Item 1: the test case is still there after the run, with its result.
+    const list = await get('/api/projects/demo/test-cases');
+    const saved = list.find((c: { extId: string }) => c.extId === caseId);
+    assert.ok(saved, 'the case is in the list');
+    assert.equal(saved.title, 'Security details open');
+    assert.equal(saved.lastStatus, 'PASS');
+    assert.equal(saved.lastJobId, job.id);
+
+    // Item 2 and 4: every step has its time and a screenshot, and the run has a video.
+    const v = j.verdicts[0].verdict;
+    assert.ok(
+      v.steps.every((x: { screenshot?: string; durationMs?: number }) => x.screenshot && x.durationMs !== undefined),
+      'a screenshot and a time for each step',
+    );
+    assert.ok(v.evidence.video?.endsWith('.webm'), 'a video');
+    for (const file of [v.steps[0].screenshot, v.evidence.video]) {
+      const served = await s.app.inject({ url: `/api/files?path=${encodeURIComponent(file)}` });
+      assert.equal(served.statusCode, 200, file);
+    }
+
+    // Item 3: run it again. It was approved before, so it runs straight away without asking.
+    const rerun = await post(`/api/projects/demo/test-cases/${caseId}/run`);
+    j = await until(rerun.id, ['review', 'done', 'failed', 'waiting']);
+    assert.equal(j.status, 'done', `a saved test runs again without review (${j.status} ${j.error ?? ''})`);
+    assert.equal(j.verdicts[0].status, 'PASS');
+    const detail = await get(`/api/projects/demo/test-cases/${caseId}`);
+    assert.equal(detail.runCount, 2);
+    assert.deepEqual(
+      detail.runs.map((r: { jobId: string }) => r.jobId),
+      [rerun.id, job.id],
+      'both runs are in its history, newest first',
+    );
   });
 
   it('runs a workbook and offers the results copy (FR-IN-08, FR-HI-06)', async () => {
@@ -196,6 +230,10 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     assert.equal(j.status, 'done', j.error);
     assert.deepEqual(j.output.summary.totals, { PASS: 8, FAIL: 2, BLOCKED: 0, 'NEEDS REVIEW': 3 });
     assert.equal(j.verdicts.length, 13);
+    // Item 1: every case of the sheet is kept.
+    const cases = await get('/api/projects/demo/test-cases');
+    assert.ok(cases.length >= 13, `${cases.length} cases kept`);
+    assert.ok(cases.some((c: { sourceKind: string }) => c.sourceKind === 'workbook'));
     const results = await s.app.inject({ url: `/api/jobs/${job.id}/results` });
     assert.equal(results.statusCode, 200);
     assert.match(String(results.headers['content-disposition']), /suite\.results\.xlsx/);
@@ -214,7 +252,9 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     });
     await until(waiting.id, ['waiting']);
     await post(`/api/jobs/${waiting.id}/cancel`);
-    assert.equal((await until(waiting.id, ['cancelled', 'failed', 'review'])).status, 'cancelled');
+    const stopped = await until(waiting.id, ['cancelled', 'failed', 'review']);
+    assert.equal(stopped.status, 'cancelled');
+    assert.equal(stopped.output.cancelledFrom, 'waiting', 'says where it was stopped (item 7)');
     assert.equal((await until(nextJob.id, ['review', 'failed'])).status, 'review', 'the queue moved on');
     await post(`/api/jobs/${nextJob.id}/cancel`);
     assert.equal((await until(nextJob.id, ['cancelled'])).status, 'cancelled');

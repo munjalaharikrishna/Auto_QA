@@ -1,4 +1,4 @@
-import { test, expect, expectPath } from '../fixtures/test.fixture';
+import { test, step, expect, expectPath } from '../fixtures/test.fixture';
 import { LoginPage } from '../pages/LoginPage';
 
 test(
@@ -7,16 +7,16 @@ test(
   async ({ page }) => {
     const loginPage = new LoginPage(page);
 
-    await test.step('S1: Open Login page', async () => {
+    await step('S1: Open Login page', page, async () => {
       await loginPage.goto();
     });
-    await test.step('S2, S3, S4: Enter valid username; Enter wrong password; Click Login', async () => {
+    await step('S2, S3, S4: Enter valid username; Enter wrong password; Click Login', page, async () => {
       await loginPage.login(process.env.TEST_USERNAME!, process.env.TEST_WRONG_PASSWORD!);
     });
-    await test.step('A1: Error "Invalid username or password" is shown.', async () => {
+    await step('A1: Error "Invalid username or password" is shown.', page, async () => {
       await expect(page.getByText('Invalid username or password').first()).toBeVisible();
     });
-    await test.step('A2: User stays on the Login page.', async () => {
+    await step('A2: User stays on the Login page.', page, async () => {
       await expectPath(page, LoginPage.path);
     });
   },

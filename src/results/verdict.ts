@@ -21,7 +21,10 @@ export interface ReportedTest {
   errors: string[];
   facts?: PageFacts;
   screenshots: string[];
+  /** The page after each step (FR-EV-01). Missing in results from older runs. */
+  stepScreenshots?: Array<{ step: string; file: string }>;
   trace?: string;
+  video?: string;
 }
 
 export interface PageFacts {
@@ -32,6 +35,8 @@ export interface PageFacts {
   messages: string[];
   invalid: string[];
   problems: string[];
+  /** Browser pop-ups the page showed, e.g. `alert "Saved!"`; each was accepted. */
+  dialogs?: string[];
 }
 
 export interface CheckVerdict {
@@ -40,6 +45,26 @@ export interface CheckVerdict {
   expected: string;
   actual: string;
   result: 'passed' | 'failed' | 'not run' | 'not checked';
+}
+
+export interface StepVerdict {
+  id: string;
+  raw: string;
+  result: 'passed' | 'failed' | 'not run';
+  durationMs?: number;
+  /** The page when the step ended (a kept file). */
+  screenshot?: string;
+  /** What went wrong, for a failed step. */
+  error?: string;
+}
+
+/** One thing that needs the tester, in plain words (see explorer/explain.ts). */
+export interface ReviewReason {
+  id: string;
+  raw: string;
+  headline: string;
+  why: string;
+  todo: string[];
 }
 
 export interface TestVerdict {
@@ -53,13 +78,15 @@ export interface TestVerdict {
   failedStep?: string;
   /** One line for the report and the results sheet. */
   reason: string;
+  /** For NEEDS REVIEW: each thing to fix, with what happened and what to do (FR-RV). */
+  review?: ReviewReason[];
   expected: string;
   actual: string;
-  steps: Array<{ id: string; raw: string; result: 'passed' | 'failed' | 'not run' }>;
+  steps: StepVerdict[];
   checks: CheckVerdict[];
   durationMs: number;
   startedAt?: string;
-  evidence: { screenshots: string[]; trace?: string; facts?: PageFacts };
+  evidence: { screenshots: string[]; trace?: string; video?: string; facts?: PageFacts };
   error?: string;
 }
 
@@ -108,11 +135,18 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
   const healthError = reported.errors.map((e) => /Health check failed: (.*)/.exec(e)?.[1]).find((x): x is string => !!x);
   const firstError = failedRecord?.error ?? reported.errors[0];
 
-  const steps = test.steps.map((s) => ({
-    id: s.id,
-    raw: s.raw,
-    result: passedIds.has(s.id) ? ('passed' as const) : failedIds.has(s.id) ? ('failed' as const) : ('not run' as const),
-  }));
+  const shotOf = (id: string) => reported.stepScreenshots?.find((x) => labelOf(x.step).ids.includes(id) && !x.step.startsWith('Precondition · '))?.file;
+  const steps: StepVerdict[] = test.steps.map((s) => {
+    const record = records.find((r) => !r.setup && r.ids.includes(s.id));
+    return {
+      id: s.id,
+      raw: s.raw,
+      result: passedIds.has(s.id) ? ('passed' as const) : failedIds.has(s.id) ? ('failed' as const) : ('not run' as const),
+      durationMs: record?.duration,
+      screenshot: shotOf(s.id),
+      error: failedIds.has(s.id) ? record?.error : undefined,
+    };
+  });
   const checks: CheckVerdict[] = test.checks.map((c) => {
     const expected = expectedOf(c);
     if (unparsed.has(c.id)) return { id: c.id, raw: c.raw, expected, actual: 'Not checked: the expected result could not be read.', result: 'not checked' };
@@ -137,7 +171,12 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
     checks,
     durationMs: reported.duration,
     startedAt: reported.startedAt,
-    evidence: { screenshots: reported.screenshots, trace: reported.trace, facts },
+    evidence: {
+      screenshots: reported.screenshots,
+      trace: reported.trace,
+      video: reported.video,
+      facts,
+    },
     error: firstError,
   };
   const failedLabel = failedRecord ? failedRecord.title.replace(/^Precondition · /, '') : undefined;

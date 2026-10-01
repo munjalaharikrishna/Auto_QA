@@ -186,7 +186,57 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const project = await projectOf((req.params as { id: string }).id);
     const raw = RawTestCaseSchema.omit({ row: true }).parse(req.body);
     const model = parseTestCase(raw);
+    await store.upsertTestCase(project.id, { ...raw, id: model.id }, { kind: 'form' }, 'written in the form');
     const job = await store.createJob({ projectId: project.id, kind: 'single', input: { case: { ...raw, id: model.id } } });
+    runner.enqueue(job);
+    return reply.status(202).send(job);
+  });
+
+  // The test case list: every case written or imported, kept with its versions and runs (item 1, item 3)
+
+  const caseOf = async (projectId: string, extId: string) =>
+    (await store.testCase(projectId, extId)) ??
+    (() => {
+      throw notFound('Test case');
+    })();
+
+  app.get('/api/projects/:id/test-cases', async (req) => store.testCases((await projectOf((req.params as { id: string }).id)).id));
+
+  app.get('/api/projects/:id/test-cases/:caseId', async (req) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    const record = await caseOf(project.id, params.caseId);
+    return { ...record, versions: await store.testCaseVersions(record.id), runs: await store.testCaseRuns(project.id, record.extId) };
+  });
+
+  /** Edit a saved test case: it becomes a new version; running it again explores the changed steps. */
+  app.put('/api/projects/:id/test-cases/:caseId', async (req) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    const current = await caseOf(project.id, params.caseId);
+    const raw = RawTestCaseSchema.omit({ row: true }).parse(req.body);
+    parseTestCase(raw); // refuses a case that cannot be read at all
+    return store.upsertTestCase(
+      project.id,
+      { ...raw, id: current.extId },
+      { kind: current.sourceKind, ref: current.sourceRef, row: current.sourceRow },
+      'edited',
+    );
+  });
+
+  app.delete('/api/projects/:id/test-cases/:caseId', async (req) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    if (!(await store.deleteTestCase(project.id, params.caseId))) throw notFound('Test case');
+    return { ok: true };
+  });
+
+  /** Run a saved test case again. If its steps are unchanged the earlier exploration is reused and it runs straight away. */
+  app.post('/api/projects/:id/test-cases/:caseId/run', async (req, reply) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    const record = await caseOf(project.id, params.caseId);
+    const job = await store.createJob({ projectId: project.id, kind: 'single', input: { case: { ...record.raw, id: record.extId }, rerun: true } });
     runner.enqueue(job);
     return reply.status(202).send(job);
   });

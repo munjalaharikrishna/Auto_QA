@@ -67,6 +67,8 @@ export function serverArgs(options: McpBrowserOptions = {}): string[] {
 }
 
 export class McpBrowser {
+  private readonly dialogs: string[] = [];
+
   private constructor(
     private readonly client: Client,
     /** Every tool this MCP server offers, including unsafe ones. */
@@ -125,7 +127,40 @@ export class McpBrowser {
     }
   }
 
+  /**
+   * Browser pop-ups (alert, confirm, prompt) seen since the last call to this method, e.g.
+   * `alert "Invalid credentials"`. They are accepted as they appear, as the generated test does too.
+   */
+  takeDialogs(): string[] {
+    return this.dialogs.splice(0);
+  }
+
   private async call(name: string, args: Record<string, unknown>): Promise<ToolReply> {
+    try {
+      const reply = await this.callOnce(name, args);
+      // An action that opens a pop-up succeeds, but nothing else works until it is closed.
+      if (name !== 'browser_handle_dialog' && opensDialog(reply)) await this.closeDialog(reply);
+      return reply;
+    } catch (e) {
+      if (name === 'browser_handle_dialog' || !(e instanceof McpToolError) || !/modal state/i.test(e.message)) throw e;
+      // The pop-up blocked this call: close it, then try the call again once.
+      if (!(await this.closeDialog(e.reply))) throw e;
+      return this.callOnce(name, args);
+    }
+  }
+
+  private async closeDialog(reply: ToolReply): Promise<boolean> {
+    const found = dialogOf(reply.raw);
+    try {
+      await this.callOnce('browser_handle_dialog', { accept: true });
+    } catch {
+      return false;
+    }
+    this.dialogs.push(found ?? 'a browser pop-up');
+    return true;
+  }
+
+  private async callOnce(name: string, args: Record<string, unknown>): Promise<ToolReply> {
     const result = await this.client.callTool({ name, arguments: args });
     const content = (result.content ?? []) as Array<{ type: string; text?: string }>;
     const reply = parseToolReply(
@@ -135,10 +170,37 @@ export class McpBrowser {
         .join('\n'),
     );
     if (result.isError || reply.sections['Error'] !== undefined) {
-      throw new Error(`MCP tool ${name} failed: ${(reply.sections['Error'] ?? reply.raw).trim()}`);
+      throw new McpToolError(`MCP tool ${name} failed: ${(reply.sections['Error'] ?? reply.raw).trim()}`, reply);
     }
     return reply;
   }
+}
+
+/** A tool call the MCP server answered with an error. The reply is kept: it says what is on the page. */
+export class McpToolError extends Error {
+  constructor(
+    message: string,
+    readonly reply: ToolReply,
+  ) {
+    super(message);
+  }
+}
+
+/** Does this reply say a pop-up is open? */
+export function opensDialog(reply: ToolReply): boolean {
+  return dialogOf(reply.raw) !== undefined;
+}
+
+/**
+ * The pop-up described in a reply, e.g. `alert "Invalid credentials"`, from MCP's modal-state line
+ * `- ["alert" dialog with message "Invalid credentials"]: can be handled by the "browser_handle_dialog" tool`.
+ */
+export function dialogOf(raw: string): string | undefined {
+  const line = raw.split(/\r?\n/).find((l) => /dialog/i.test(l) && /browser_handle_dialog|can be handled by/i.test(l));
+  if (!line) return undefined;
+  const kind = /"?(alert|confirm|prompt|beforeunload)"?\s+dialog/i.exec(line)?.[1]?.toLowerCase() ?? 'dialog';
+  const message = /dialog with message\s+"([^"]*)"/i.exec(line)?.[1];
+  return message === undefined ? kind : `${kind} "${message}"`;
 }
 
 /** Splits an MCP text reply into its "### Heading" sections and pulls out the code it ran. */

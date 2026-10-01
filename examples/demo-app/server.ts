@@ -71,6 +71,14 @@ document.getElementById('profile').addEventListener('submit', (e) => {
 });
 </script>`,
   ),
+  // A page that opens browser pop-ups (alert, confirm): they must not stop exploration or the test.
+  '/alerts': layout(
+    'Alerts',
+    `<h1>Alerts</h1>
+<p><button onclick="alert('Saved!'); result.textContent = 'alert closed'">Show alert</button>
+<button onclick="result.textContent = confirm('Delete item?') ? 'deleted' : 'kept'">Ask me</button></p>
+<p id="result" role="status"></p>`,
+  ),
 };
 
 export async function startDemoApp(port = 0): Promise<{ url: string; close(): Promise<void> }> {

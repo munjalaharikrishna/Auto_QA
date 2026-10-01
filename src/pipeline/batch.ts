@@ -29,6 +29,8 @@ export interface BatchOptions extends Omit<PipelineOptions, 'login'> {
   loginId?: string;
   /** Where batch progress is kept. Default: .auto-qa/batches. */
   batchesDir?: string;
+  /** Called with the test cases read from the sheet, before any runs, so they can be kept (item 1). */
+  onImported?: (cases: ImportResult['cases']) => void | Promise<void>;
 }
 
 export interface BatchResult {
@@ -52,6 +54,7 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
     `${imported.cases.length} test case(s) in "${imported.sheet}"${imported.problems.length ? `, ${imported.problems.length} row(s) that are not complete test cases` : ''}`,
   );
   for (const w of imported.warnings) progress(`! ${w}`);
+  await options.onImported?.(imported.cases);
 
   const models: TestModel[] = [];
   const rowOf = new Map<string, number>();
