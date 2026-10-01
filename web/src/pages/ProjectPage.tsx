@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Field, type Job, type Preview, type ProjectView, type TestCaseRecord } from '../api';
 import { CaseForm, ErrorNote, JobBadge, ProjectForm, StatusBadge, when } from '../components/common';
+import { RulesTab } from '../components/Rules';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
 
-type Tab = 'workbook' | 'single' | 'cases' | 'runs' | 'settings';
+type Tab = 'workbook' | 'single' | 'cases' | 'runs' | 'rules' | 'settings';
 const TABS: Array<[Tab, string]> = [
   ['workbook', 'Run a workbook'],
   ['single', 'Single test case'],
   ['cases', 'Test cases'],
   ['runs', 'Runs'],
+  ['rules', 'Rules'],
   ['settings', 'Settings'],
 ];
 
@@ -57,6 +59,7 @@ export function ProjectPage({ id }: { id: string }) {
       )}
       {tab === 'cases' && <TestCasesTab project={project} />}
       {tab === 'runs' && <RunsTab project={project} />}
+      {tab === 'rules' && <RulesTab projectId={project.id} />}
       {tab === 'settings' && (
         <section className="panel">
           <h2>Settings</h2>

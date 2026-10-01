@@ -17,11 +17,13 @@ export interface ViewElement {
 
 export function PickElement(props: {
   view: { screenshot: string; width: number; height: number; elements: ViewElement[] };
-  onPick: (ref: string) => void;
+  /** `remember`: the word the step used means this element's name, from now on in this project (FR-RULE-01). */
+  onPick: (ref: string, remember: boolean) => void;
   busy?: boolean;
 }) {
   const { view } = props;
   const [picked, setPicked] = useState<ViewElement>();
+  const [remember, setRemember] = useState(true);
   const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 
   const pickAt = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -63,7 +65,10 @@ export function PickElement(props: {
             <span>
               Picked: <strong>{picked.role}</strong> "{picked.name || '(no name)'}"
             </span>
-            <button type="button" className="primary" disabled={props.busy} onClick={() => props.onPick(picked.ref)}>
+            <label className="muted">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this for the project
+            </label>
+            <button type="button" className="primary" disabled={props.busy} onClick={() => props.onPick(picked.ref, remember)}>
               Use this element
             </button>
             <button type="button" onClick={() => setPicked(undefined)}>

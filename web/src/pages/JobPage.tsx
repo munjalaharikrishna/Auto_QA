@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type BatchSummary, fileUrl, type JobDetail, type Question, type RawTestCase, type Review, resultsUrl, type TestVerdict } from '../api';
 import { CaseForm, Diff, duration, ErrorNote, Explain, type Explanation, JobBadge, StatusBadge, when } from '../components/common';
 import { PickElement, type ViewElement } from '../components/PickElement';
+import { GroupedReview } from '../components/Rules';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
 
@@ -88,6 +89,16 @@ export function JobPage({ id }: { id: string }) {
       ))}
       {job.status === 'review' && job.output.review ? <ReviewPanel job={job} review={job.output.review as Review} /> : null}
       {job.status === 'done' && <ResultsPanel job={job} summary={summary} />}
+      {job.status === 'done' && job.kind === 'workbook' && (
+        <GroupedReview
+          jobId={job.id}
+          projectId={job.projectId}
+          onRunAgain={async () => {
+            const next = await api.reviewQueue(job.id);
+            navigate(`/jobs/${next.id}`);
+          }}
+        />
+      )}
 
       <section className="panel">
         <h2>Progress</h2>
@@ -138,7 +149,7 @@ function QuestionPanel({ question }: { question: Question }) {
       </div>
       {question.kind === 'choose' && (
         <>
-          {p.view && <PickElement view={p.view} busy={busy} onPick={(ref) => void send({ ref })} />}
+          {p.view && <PickElement view={p.view} busy={busy} onPick={(ref, remember) => void send({ ref, remember })} />}
           {!!p.candidates?.length && (
             <div>
               <h3>Or choose a match</h3>

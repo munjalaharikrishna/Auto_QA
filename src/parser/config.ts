@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
+import type { ParserRules } from './rules.js';
 
 /**
  * Loads the parser's vocabulary from lexicon.json and synonyms.json (NFR-10).
@@ -46,6 +47,8 @@ export type Lexicon = z.infer<typeof LexiconSchema>;
 const SynonymsSchema = z.object({ groups: z.array(words) });
 
 export interface ParserConfig {
+  /** The project's own rules: wording it already explained, and words it already named (FR-RULE). */
+  rules?: ParserRules;
   lexicon: Lexicon;
   /** Synonym groups, each word already normalised with `normKey`. */
   synonyms: string[][];
@@ -70,6 +73,11 @@ export function loadParserConfig(
   const lexicon = readJson(lexiconFile, LexiconSchema);
   const synonyms = readJson(synonymsFile, SynonymsSchema).groups.map((g) => g.map(normKey));
   return { lexicon, synonyms };
+}
+
+/** The same vocabulary with a project's rules added. */
+export function withRules(config: ParserConfig, rules: ParserRules): ParserConfig {
+  return { ...config, rules };
 }
 
 let cached: ParserConfig | undefined;

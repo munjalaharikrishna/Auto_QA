@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { DEMO_USER, startDemoApp } from '../../examples/demo-app/server.js';
 import type { Resolver } from '../explorer/controller.js';
 import type { RawTestCase } from '../model/test-model.js';
+import { withRules } from '../parser/config.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
+import { rulesFor } from '../parser/rules.js';
 import { runCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
 
@@ -144,6 +146,142 @@ describe('the Strict policy asks first (D30)', { skip: !!process.env.AUTO_QA_SKI
       assert.equal(by('TC_LOGIN_002').status, 'NEEDS REVIEW');
       assert.match(by('TC_LOGIN_002').reason, /needs a value|Strict/);
       assert.equal(by('TC_LOGIN_010').status, 'NEEDS REVIEW');
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('project rules make a wording run, and are used the next time (R4, FR-RULE-01)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER }, () => {
+  it('a step nobody could read runs once the project explained it; an element word is remembered', async () => {
+    const app = await startDemoApp();
+    const base = path.join(root, '.auto-qa', 'test-realworld-rules');
+    await rm(base, { recursive: true, force: true });
+    const raw = [
+      {
+        id: 'TC_RULE_STEP',
+        title: 'Sign in with a phrase nobody knows',
+        steps: ['Navigate to the login page', 'Enter valid username in the Login Name text box', 'Enter valid password in the Password text box', 'Sign me in']
+          .map((x, i) => `${i + 1}. ${x}`)
+          .join(String.fromCharCode(10)),
+        expected: 'User is successfully redirected to the home/dashboard page',
+      },
+      {
+        id: 'TC_RULE_ELEMENT',
+        title: 'Sign in with a word that is not on the screen',
+        steps: [
+          'Navigate to the login page',
+          'Enter valid username in the Account text box',
+          'Enter valid password in the Password text box',
+          'Click the Login button',
+        ]
+          .map((x, i) => `${i + 1}. ${x}`)
+          .join(String.fromCharCode(10)),
+        expected: 'User is successfully redirected to the home/dashboard page',
+      },
+    ];
+    const run = async (rules: Parameters<typeof rulesFor>[0], sub: string) => {
+      const withRules = withRulesConfig(rules);
+      return runCases(
+        raw.map((c) => parseTestCase(c, withRules)),
+        {
+          config: withRules,
+          baseUrl: `${app.url}/legacy`,
+          env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
+          resolver: unattended,
+          exploreDir: path.join(base, sub, 'explore'),
+          runsDir: path.join(base, sub, 'runs'),
+          workspace: path.join(base, sub, 'workspace'),
+        },
+      );
+    };
+    try {
+      const before = await run([], 'before');
+      assert.deepEqual(
+        before.verdicts.map((v) => v.status),
+        ['NEEDS REVIEW', 'NEEDS REVIEW'],
+        'nothing is guessed without the rules',
+      );
+      const reasons = before.verdicts.flatMap((v) => v.review ?? []);
+      assert.ok(
+        reasons.some((r) => r.raw === 'Sign me in'),
+        JSON.stringify(reasons.map((r) => r.raw)),
+      );
+
+      const after = await run(
+        [
+          { kind: 'step', pattern: 'Sign me in', meaning: 'Click the Login button', enabled: true },
+          { kind: 'element', pattern: 'Account', meaning: 'Login Name', enabled: true },
+        ],
+        'after',
+      );
+      assert.deepEqual(
+        after.verdicts.map((v) => v.status),
+        ['PASS', 'PASS'],
+        JSON.stringify(after.verdicts.map((v) => [v.reason, v.review?.map((r) => r.headline)])),
+      );
+      for (const v of after.verdicts)
+        assert.ok(
+          v.assumptions?.some((a) => /project rule/.test(a)),
+          JSON.stringify(v.assumptions),
+        );
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+function withRulesConfig(rules: Parameters<typeof rulesFor>[0]) {
+  return withRules(config, rulesFor(rules));
+}
+
+describe('picking an element can be remembered for the project (R4, FR-RULE-01)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER }, () => {
+  it('reports the word and the name on the screen when the tester says remember', async () => {
+    const app = await startDemoApp();
+    const base = path.join(root, '.auto-qa', 'test-realworld-remember');
+    await rm(base, { recursive: true, force: true });
+    const remembered: Array<{ kind: string; pattern: string; meaning: string }> = [];
+    const picking: Resolver = {
+      choose: async (r) => {
+        const field = r.view?.elements.find((e) => e.role === 'textbox' && /login name/i.test(e.name));
+        return field ? { ref: field.ref, remember: true } : 'skip';
+      },
+      pageUrl: async () => 'abort',
+      confirm: async () => false,
+    };
+    try {
+      const run = await runCases(
+        [
+          parseTestCase(
+            {
+              id: 'TC_PICK',
+              title: 'Pick the field',
+              steps: [
+                'Navigate to the login page',
+                'Enter valid username in the Account text box',
+                'Enter valid password in the Password text box',
+                'Click the Login button',
+              ]
+                .map((x, i) => `${i + 1}. ${x}`)
+                .join(String.fromCharCode(10)),
+              expected: 'User is successfully redirected to the home/dashboard page',
+            },
+            config,
+          ),
+        ],
+        {
+          config,
+          baseUrl: `${app.url}/legacy`,
+          env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
+          resolver: picking,
+          onRule: (r) => remembered.push(r),
+          exploreDir: path.join(base, 'explore'),
+          runsDir: path.join(base, 'runs'),
+          workspace: path.join(base, 'workspace'),
+        },
+      );
+      assert.equal(run.verdicts[0].status, 'PASS', JSON.stringify(run.verdicts[0].reason));
+      assert.deepEqual(remembered, [{ kind: 'element', pattern: 'Account', meaning: 'Login Name' }]);
     } finally {
       await app.close();
     }

@@ -13,6 +13,7 @@ import { defaultParserConfig, type ParserConfig } from './config.js';
 import { normalizeText } from './normalize.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
+import { applyWording } from './rules.js';
 import { parseStepLine } from './steps.js';
 import { parseTestData } from './test-data.js';
 import { hash, splitList, splitNumbered, splitSentences } from './text.js';
@@ -36,7 +37,11 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   const checks: Check[] = [];
   const ctx = { config, data: testData.bindings };
 
-  const lines = splitNumbered(raw.steps).map((line) => ({ ...line, parsed: parseStepLine(normalizeText(line.text), ctx) }));
+  // The project's rules come after the normaliser: a wording the tester explained once is read that way every time (FR-RULE-01).
+  const lines = splitNumbered(raw.steps).map((line) => {
+    const ruled = applyWording(normalizeText(line.text), config.rules?.step);
+    return { ...line, rule: ruled.rule, parsed: parseStepLine(ruled.text, ctx) };
+  });
   const secrets = [
     ...testData.secrets,
     ...lines.flatMap((l) =>
@@ -51,9 +56,10 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   ];
   const mask = (text: string) => maskSecrets(text, secrets);
 
-  for (const { n, text, parsed } of lines) {
+  for (const { n, text, parsed, rule } of lines) {
     const id = `S${n}`;
     const lineText = mask(text);
+    if (rule) warnings.push({ at: id, code: 'PROJECT_RULE', text: `"${rule.from}" is read as "${rule.to}" (a project rule).` });
     warnings.push(...parsed.warnings.map((w) => ({ at: id, ...w })));
 
     if (parsed.kind === 'checks') {
@@ -91,7 +97,14 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   }
 
   for (const line of splitList(raw.expected, { semicolons: true }).flatMap(splitSentences)) {
-    for (const c of parseAssertions(normalizeText(line), config, false)) checks.push(toAssertion(c, line, 'expected'));
+    const ruled = applyWording(normalizeText(line), config.rules?.check);
+    const parsed = parseAssertions(ruled.text, config, false);
+    for (const [k, c] of parsed.entries()) {
+      const check = toAssertion(c, line, 'expected');
+      if (ruled.rule && k === 0)
+        check.warnings = [...check.warnings, { code: 'PROJECT_RULE', text: `"${ruled.rule.from}" is read as "${ruled.rule.to}" (a project rule).` }];
+      checks.push(check);
+    }
   }
   // "No crash" runs in every test (FR-VAL-04).
   checks.push({

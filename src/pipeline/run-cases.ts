@@ -43,6 +43,8 @@ export interface PipelineOptions {
   reexplore?: boolean;
   /** How much may be decided without asking (D30). Default: balanced. */
   policy?: Policy;
+  /** A word the tester just named an element for, to keep as a project rule (FR-RULE-01). */
+  onRule?: (rule: { kind: 'element'; pattern: string; meaning: string }) => void;
   onProgress?: (message: string) => void;
   onRunEvent?: (event: RunEvent) => void;
   /** Optional helper for unreadable steps (FR-AI-01). Default: none. */
@@ -133,6 +135,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
             resolver: options.resolver,
             outDir: path.dirname(file),
             policy,
+            onRule: options.onRule,
             login: model.preconditions.some((p) => p.kind === 'logged-in') ? options.login : undefined,
           });
         } finally {

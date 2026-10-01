@@ -120,6 +120,82 @@ describe('API (M7a)', () => {
     );
   });
 
+  it('keeps project rules: add, switch off, export, import, remove (FR-RULE-01…03)', async () => {
+    const base = '/api/projects/demo-app/rules';
+    const made = await app.inject({
+      method: 'POST',
+      url: base,
+      payload: { kind: 'step', pattern: '  "Do the Needful". ', meaning: 'Click the Login button', source: 'grouped review' },
+    });
+    assert.equal(made.statusCode, 201);
+    assert.equal(made.json().pattern, 'do the needful', 'the wording is kept in the form that is compared');
+    // The same wording again changes the rule instead of adding another.
+    await app.inject({ method: 'POST', url: base, payload: { kind: 'step', pattern: 'do the needful', meaning: 'Click Login' } });
+    const rules = (await app.inject({ url: base })).json();
+    assert.deepEqual(
+      rules.map((r: { pattern: string; meaning: string }) => [r.pattern, r.meaning]),
+      [['do the needful', 'Click Login']],
+    );
+    assert.equal((await app.inject({ method: 'POST', url: base, payload: { kind: 'element', pattern: 'x' } })).statusCode, 400, 'a rule says what it means');
+
+    const off = await app.inject({ method: 'PATCH', url: `${base}/${rules[0].id}`, payload: { enabled: false } });
+    assert.equal(off.json().enabled, false);
+    const exported = (await app.inject({ url: `${base}/export` })).json();
+    assert.deepEqual(exported.rules, [{ kind: 'step', pattern: 'do the needful', meaning: 'Click Login', enabled: false }]);
+
+    // Importing into another project brings the rule and its switch.
+    await app.inject({ method: 'POST', url: '/api/projects', payload: { name: 'Other', baseUrl: 'http://127.0.0.1:4174' } });
+    const imported = await app.inject({ method: 'POST', url: '/api/projects/other/rules/import', payload: exported });
+    assert.equal(imported.json().imported, 1);
+    assert.equal((await app.inject({ url: '/api/projects/other/rules' })).json()[0].enabled, false);
+
+    assert.equal((await app.inject({ method: 'DELETE', url: `${base}/${rules[0].id}` })).statusCode, 200);
+    assert.deepEqual((await app.inject({ url: base })).json(), []);
+  });
+
+  it('groups the questions of a batch by wording and lets learned values be approved once (FR-RV-09, FR-RV-10)', async () => {
+    const job = await store.createJob({ projectId: 'demo-app', kind: 'workbook', input: {} });
+    const reason = (id: string, raw: string) => ({
+      id,
+      raw,
+      headline: `I cannot tell what to do in "${raw}".`,
+      why: 'No action word.',
+      todo: ['Start with an action word.'],
+    });
+    const learned = 'the error message "Invalid credentials" was learned from the application.';
+    await store.saveVerdicts(job.id, [
+      { testId: 'TC-1', row: 2, status: 'NEEDS REVIEW', verdict: { review: [reason('S3', 'Do the needful')] } },
+      { testId: 'TC-2', row: 3, status: 'NEEDS REVIEW', verdict: { review: [reason('S2', 'do the needful')] } },
+      { testId: 'TC-3', row: 4, status: 'PASS', verdict: { assumptions: [`A2: ${learned}`] } },
+      { testId: 'TC-4', row: 5, status: 'PASS', verdict: { assumptions: [`A2: ${learned}`] } },
+    ]);
+    const groups = (await app.inject({ url: `/api/jobs/${job.id}/review-groups` })).json();
+    assert.deepEqual(
+      groups.questions.map((q: { raw: string; cases: unknown[] }) => [q.raw, q.cases.length]),
+      [['Do the needful', 2]],
+    );
+    assert.deepEqual(
+      groups.assumptions.map((a: { text: string; testIds: string[] }) => [a.text, a.testIds]),
+      [[learned, ['TC-3', 'TC-4']]],
+    );
+
+    await app.inject({ method: 'POST', url: '/api/projects/demo-app/rules/approve', payload: { texts: [learned] } });
+    const after = (await app.inject({ url: `/api/jobs/${job.id}/review-groups` })).json();
+    assert.deepEqual(after.assumptions, [], 'approved once for every test case');
+
+    // Answering the question is a rule; the group then says it is answered.
+    await app.inject({
+      method: 'POST',
+      url: '/api/projects/demo-app/rules',
+      payload: { kind: 'step', pattern: 'Do the needful', meaning: 'Click the Login button' },
+    });
+    const answered = (await app.inject({ url: `/api/jobs/${job.id}/review-groups` })).json();
+    assert.equal(answered.questions[0].rule.meaning, 'Click the Login button');
+    // Approved values are not part of an export.
+    const names = (await app.inject({ url: '/api/projects/demo-app/rules/export' })).json().rules.map((r: { kind: string }) => r.kind);
+    assert.ok(!names.includes('approved'));
+  });
+
   it('refuses bad input with a reason', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/projects', payload: { name: 'x', baseUrl: 'not a url' } });
     assert.equal(res.statusCode, 400);

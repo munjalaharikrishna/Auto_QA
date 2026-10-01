@@ -7,8 +7,9 @@ import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
 import type { Policy } from '../model/policy.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
-import type { ParserConfig } from '../parser/config.js';
+import { type ParserConfig, withRules } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
+import { rulesFor } from '../parser/rules.js';
 import { runBatch } from '../pipeline/batch.js';
 import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
@@ -203,10 +204,18 @@ export class JobRunner extends EventEmitter {
     };
   }
 
-  private common(project: Project, policy: Policy) {
+  /** The parser's vocabulary with this project's rules added (FR-RULE-01). */
+  private async configFor(project: Project) {
+    return withRules(this.options.config, rulesFor(await this.options.store.rules(project.id)));
+  }
+
+  private common(project: Project, policy: Policy, config: ParserConfig) {
     return {
       policy,
-      config: this.options.config,
+      config,
+      // A word the tester names an element for in review is remembered for the project (FR-RULE-01).
+      onRule: (rule: { kind: 'element'; pattern: string; meaning: string }) =>
+        void this.options.store.upsertRule(project.id, { ...rule, source: 'picked on the screenshot' }).catch(() => undefined),
       baseUrl: project.baseUrl,
       env: { ...process.env, ...readEnvFile(project.workspace) },
       testIdAttribute: project.testIdAttribute,
@@ -218,12 +227,13 @@ export class JobRunner extends EventEmitter {
 
   private async runWorkbook(job: Job): Promise<void> {
     const project = (await this.options.store.project(job.projectId))!;
+    const config = await this.configFor(project);
     const upload = await this.options.store.upload(String(job.input.uploadId));
     if (!upload) throw new Error('The uploaded workbook is gone. Upload it again.');
     const onlyReview = job.input.onlyReview === true;
     const asked: string[] = [];
     const batch = await runBatch(upload.file, {
-      ...this.common(project, await this.options.store.projectPolicy(project.id)),
+      ...this.common(project, await this.options.store.projectPolicy(project.id), config),
       resolver: this.resolver(job, onlyReview, asked),
       questions: () => asked,
       workspace: project.workspace,
@@ -277,14 +287,15 @@ export class JobRunner extends EventEmitter {
   /** One test case from the form: explore and generate, wait in review, then run (FR-RV-01, FR-RV-03). */
   private async runSingle(job: Job): Promise<void> {
     const project = (await this.options.store.project(job.projectId))!;
+    const config = await this.configFor(project);
     let raw = job.input.case as RawTestCase;
     let reexplore = false;
     for (;;) {
-      const model = parseTestCase(raw, this.options.config);
+      const model = parseTestCase(raw, config);
       // A single test gets its own project, so it cannot disturb the workbook's suite (merging it in is V2, FR-GE-07).
       const workspace = this.projectDir(project, 'single', model.id, 'workspace');
       const options = {
-        ...this.common(project, await this.options.store.projectPolicy(project.id)),
+        ...this.common(project, await this.options.store.projectPolicy(project.id), config),
         resolver: this.resolver(job, true, []),
         workspace,
         reexplore,

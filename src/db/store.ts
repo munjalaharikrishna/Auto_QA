@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { DEFAULT_POLICY, isPolicy, type Policy } from '../model/policy.js';
 import type { RawTestCase } from '../model/test-model.js';
+import { type ProjectRule, type RuleKind, ruleKey } from '../parser/rules.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
 import { MIGRATIONS } from './migrations/index.js';
@@ -500,6 +501,43 @@ export class Store {
     return runs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
   }
 
+  // Project rules (FR-RULE): the answers testers gave in review, kept so the same wording is never asked about again
+
+  async rules(projectId: string): Promise<ProjectRule[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM project_rules WHERE project_id = ? ORDER BY kind, created_at', [projectId]);
+    return rows.map(toRule);
+  }
+
+  /** Adds a rule, or changes what an existing one for the same wording means (and switches it on). */
+  async upsertRule(projectId: string, rule: { kind: RuleKind; pattern: string; meaning?: string; source: string }): Promise<ProjectRule> {
+    const pattern = ruleKey(rule.pattern);
+    const at = now();
+    await this.db.run(
+      `INSERT INTO project_rules (id, project_id, kind, pattern, meaning, source, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+       ON CONFLICT (project_id, kind, pattern) DO UPDATE SET meaning = excluded.meaning, source = excluded.source, enabled = 1, updated_at = excluded.updated_at`,
+      [newId('RULE'), projectId, rule.kind, pattern, rule.meaning ?? '', rule.source, at, at],
+    );
+    await this.audit('rule.save', 'rule', `${rule.kind}:${pattern}`, projectId, { kind: rule.kind, source: rule.source });
+    const r = await this.db.get<Row>('SELECT * FROM project_rules WHERE project_id = ? AND kind = ? AND pattern = ?', [projectId, rule.kind, pattern]);
+    return toRule(r as Row);
+  }
+
+  async updateRule(projectId: string, id: string, changes: { meaning?: string; enabled?: boolean }): Promise<ProjectRule | undefined> {
+    const current = await this.db.get<Row>('SELECT * FROM project_rules WHERE id = ? AND project_id = ?', [id, projectId]);
+    if (!current) return undefined;
+    const meaning = changes.meaning ?? String(current.meaning);
+    const enabled = changes.enabled ?? Boolean(current.enabled);
+    await this.db.run('UPDATE project_rules SET meaning = ?, enabled = ?, updated_at = ? WHERE id = ?', [meaning, enabled ? 1 : 0, now(), id]);
+    await this.audit('rule.update', 'rule', id, projectId, { enabled });
+    return toRule((await this.db.get<Row>('SELECT * FROM project_rules WHERE id = ?', [id])) as Row);
+  }
+
+  async deleteRule(projectId: string, id: string): Promise<boolean> {
+    const r = await this.db.run('DELETE FROM project_rules WHERE id = ? AND project_id = ?', [id, projectId]);
+    if (r.changes) await this.audit('rule.delete', 'rule', id, projectId);
+    return r.changes > 0;
+  }
+
   // Settings (the small per-project choices)
 
   async setting(scope: 'global' | 'project' | 'user', scopeId: string, key: string): Promise<unknown> {
@@ -559,6 +597,19 @@ export class Store {
   async problems(): Promise<string[]> {
     return problems(this.db);
   }
+}
+
+function toRule(r: Row): ProjectRule {
+  return {
+    id: String(r.id),
+    projectId: String(r.project_id),
+    kind: r.kind as RuleKind,
+    pattern: String(r.pattern),
+    meaning: String(r.meaning),
+    source: String(r.source),
+    enabled: Boolean(r.enabled),
+    createdAt: String(r.created_at),
+  };
 }
 
 function toTestCase(r: Row): TestCaseRecord {

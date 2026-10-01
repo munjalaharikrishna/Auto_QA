@@ -8,6 +8,7 @@ import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { executionOrder } from '../parser/index.js';
+import { ruleKey } from '../parser/rules.js';
 import { errorMessagesInPage } from '../validations/observe.js';
 import { type Explanation, explain, plainError, sentence } from './explain.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
@@ -40,6 +41,8 @@ export interface ExploreOptions {
   timeouts?: Partial<Timeouts>;
   /** With `lenient`, of two equally good elements the first is used and marked as assumed (D30). */
   policy?: 'strict' | 'balanced' | 'lenient';
+  /** A word the tester just named an element for, to remember for the project (FR-RULE-01). */
+  onRule?: (rule: { kind: 'element'; pattern: string; meaning: string }) => void;
 }
 
 interface Timeouts {
@@ -72,8 +75,8 @@ export interface PageView {
   elements: Array<{ ref: string; role: string; name: string; box: { x: number; y: number; width: number; height: number }; candidate?: number }>;
 }
 
-/** A candidate by its index, an element picked on the screenshot by its ref, or skip / stop. */
-export type ReviewAnswer = number | { ref: string } | 'skip' | 'abort';
+/** A candidate from the list, an element picked on the screenshot by its ref (`remember`: for the project), or skip / stop. */
+export type ReviewAnswer = number | { ref: string; remember?: boolean } | 'skip' | 'abort';
 
 /** Answers the questions exploration cannot decide by rule. */
 export interface Resolver {
@@ -118,6 +121,8 @@ export interface ExploredItem {
   review?: Explanation;
   /** A choice made under the Lenient policy instead of asking: listed with the result (D30). */
   assumed?: string;
+  /** A project rule that applied here, e.g. `"username" means "Login Name"`: listed with the result. */
+  rule?: string;
   /**
    * A value the platform took from what the application showed, not from the tester (D31). It is written into the
    * generated test as a normal check, listed in the result, and can be changed in review.
@@ -354,7 +359,12 @@ export async function explore(model: TestModel, session: Session, options: Explo
   }
 
   /** LOCATE + VALIDATE, asking the tester when the rules cannot decide. */
-  async function find(query: TargetQuery, item: ExploredItem, state: PageState): Promise<Extract<LocateResult, { status: 'resolved' }> | undefined> {
+  async function find(requested: TargetQuery, item: ExploredItem, state: PageState): Promise<Extract<LocateResult, { status: 'resolved' }> | undefined> {
+    // A word the project already named an element for ("username" means "Login Name") is tried too (FR-RULE-01).
+    const named = requested.target ? options.config.rules?.element?.[ruleKey(requested.target)] : undefined;
+    const query: TargetQuery =
+      named && !requested.alternatives.includes(named) ? { ...requested, alternatives: [...requested.alternatives, named] } : requested;
+    if (named) item.rule = `"${requested.target}" means "${named}" (a project rule).`;
     const locateOptions = { config: options.config, testIdAttribute: session.testIdAttribute, pageHint: pathNames[pathOf(state.url)] };
     // A part of the page the tester already pointed out ("the login section") stays that part for the whole test.
     const partKey = query.container ? `${(query.target ?? '').toLowerCase()}|${pathOf(state.url)}` : undefined;
@@ -422,6 +432,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         continue;
       }
       item.resolvedBy = 'tester';
+      const remember = typeof answer === 'object' && answer.remember === true;
       const again = await locate(query, mcp, probe, locateOptions, { state, node });
       if (again.status === 'needs-review') {
         // The picked element cannot be used for this step (not unique, not actionable): ask again.
@@ -437,6 +448,11 @@ export async function explore(model: TestModel, session: Session, options: Explo
       }
       r = again;
       if (partKey && node.ref) partPicks.set(partKey, node.ref);
+      // "Remember this for the project": the word the tester used means the name the element has on the screen.
+      const shownName = (again.match.matchedName || node.name || nearbyText(node) || '').replace(/\s*:\s*$/, '').trim();
+      if (remember && requested.target && shownName && ruleKey(shownName) !== ruleKey(requested.target)) {
+        options.onRule?.({ kind: 'element', pattern: requested.target, meaning: shownName });
+      }
     }
     item.locator = { code: r.locator.code, strategy: r.locator.spec.strategy, source: r.locator.spec.source, validated: true };
     item.element = { role: r.match.node.role, name: r.match.matchedName || r.match.node.name };

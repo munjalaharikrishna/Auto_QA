@@ -9,6 +9,31 @@ export type { BatchSummary, Job, Project, Question, RawTestCase, ReviewReason, T
 
 export type Policy = 'strict' | 'balanced' | 'lenient';
 
+export interface ProjectRule {
+  id: string;
+  kind: 'step' | 'check' | 'element' | 'approved';
+  pattern: string;
+  meaning: string;
+  source: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
+/** The questions of a whole batch grouped by wording, and the learned values waiting for a yes (FR-RV-09, FR-RV-10). */
+export interface ReviewGroups {
+  questions: Array<{
+    key: string;
+    kind: 'step' | 'check';
+    raw: string;
+    headline: string;
+    why: string;
+    todo: string[];
+    cases: Array<{ testId: string; id: string }>;
+    rule?: ProjectRule;
+  }>;
+  assumptions: Array<{ text: string; testIds: string[] }>;
+}
+
 export interface ProjectView extends Project {
   /** How much may be decided without asking (D30). */
   policy: Policy;
@@ -118,6 +143,15 @@ export const api = {
   saveObservation: (projectId: string, id: string, body: { check: string; facts: unknown }) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/accept-observation`, json('POST', body)),
   runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
+  rules: (projectId: string) => call<ProjectRule[]>(`/api/projects/${projectId}/rules`),
+  saveRule: (projectId: string, r: { kind: string; pattern: string; meaning: string; source?: string }) =>
+    call<ProjectRule>(`/api/projects/${projectId}/rules`, json('POST', r)),
+  updateRule: (projectId: string, id: string, changes: { meaning?: string; enabled?: boolean }) =>
+    call<ProjectRule>(`/api/projects/${projectId}/rules/${id}`, json('PATCH', changes)),
+  deleteRule: (projectId: string, id: string) => call(`/api/projects/${projectId}/rules/${id}`, { method: 'DELETE' }),
+  importRules: (projectId: string, rules: unknown[]) => call<{ imported: number }>(`/api/projects/${projectId}/rules/import`, json('POST', { rules })),
+  approveValues: (projectId: string, texts: string[]) => call(`/api/projects/${projectId}/rules/approve`, json('POST', { texts })),
+  reviewGroups: (jobId: string) => call<ReviewGroups>(`/api/jobs/${jobId}/review-groups`),
   answer: (questionId: number, answer: unknown) => call(`/api/questions/${questionId}/answer`, json('POST', { answer })),
 };
 

@@ -11,8 +11,10 @@ import { readWorkbook } from '../importer/workbook.js';
 import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
+import { RULE_KINDS, ruleKey } from '../parser/rules.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
+import { reviewGroups } from './review-groups.js';
 import type { Project, Store } from './store.js';
 
 /**
@@ -237,6 +239,95 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const project = await projectOf(params.id);
     if (!(await store.deleteTestCase(project.id, params.caseId))) throw notFound('Test case');
     return { ok: true };
+  });
+
+  // Project rules: the answers given in review, kept for the project (FR-RULE-01…03)
+
+  const RuleBody = z.object({
+    kind: z.enum(RULE_KINDS),
+    pattern: z.string().trim().min(1),
+    meaning: z.string().trim().default(''),
+    source: z.string().default('written by hand'),
+  });
+
+  app.get('/api/projects/:id/rules', async (req) => store.rules((await projectOf((req.params as { id: string }).id)).id));
+
+  app.post('/api/projects/:id/rules', async (req, reply) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const body = RuleBody.parse(req.body);
+    if (body.kind !== 'approved' && !body.meaning) throw bad('Say what it means.');
+    return reply.status(201).send(await store.upsertRule(project.id, body));
+  });
+
+  app.patch('/api/projects/:id/rules/:ruleId', async (req) => {
+    const params = req.params as { id: string; ruleId: string };
+    const project = await projectOf(params.id);
+    const body = z.object({ meaning: z.string().trim().optional(), enabled: z.boolean().optional() }).parse(req.body);
+    return (
+      (await store.updateRule(project.id, params.ruleId, body)) ??
+      (() => {
+        throw notFound('Rule');
+      })()
+    );
+  });
+
+  app.delete('/api/projects/:id/rules/:ruleId', async (req) => {
+    const params = req.params as { id: string; ruleId: string };
+    const project = await projectOf(params.id);
+    if (!(await store.deleteRule(project.id, params.ruleId))) throw notFound('Rule');
+    return { ok: true };
+  });
+
+  /** Rules as a file, to move between projects (FR-RULE-03). Approvals are not exported: they belong to what one run showed. */
+  app.get('/api/projects/:id/rules/export', async (req, reply) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const rules = (await store.rules(project.id))
+      .filter((r) => r.kind !== 'approved')
+      .map(({ kind, pattern, meaning, enabled }) => ({ kind, pattern, meaning, enabled }));
+    return reply.header('content-disposition', `attachment; filename="${project.id}-rules.json"`).type('application/json').send({ version: 1, rules });
+  });
+
+  app.post('/api/projects/:id/rules/import', async (req) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const body = z
+      .object({
+        rules: z
+          .array(z.object({ kind: z.enum(RULE_KINDS), pattern: z.string().min(1), meaning: z.string().default(''), enabled: z.boolean().default(true) }))
+          .max(2000),
+      })
+      .parse(req.body);
+    let imported = 0;
+    for (const r of body.rules) {
+      if (r.kind === 'approved') continue;
+      const saved = await store.upsertRule(project.id, { ...r, source: 'imported' });
+      if (!r.enabled) await store.updateRule(project.id, saved.id, { enabled: false });
+      imported++;
+    }
+    return { imported };
+  });
+
+  /** The tester looked at learned or assumed values and accepted them (FR-RV-10: Approve all). */
+  app.post('/api/projects/:id/rules/approve', async (req) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const { texts } = z.object({ texts: z.array(z.string().min(1)).min(1) }).parse(req.body);
+    for (const text of texts) await store.upsertRule(project.id, { kind: 'approved', pattern: text, source: 'approved in review' });
+    return { approved: texts.length };
+  });
+
+  /** The questions of a whole batch, grouped by wording, with the learned values to approve (FR-RV-09, FR-RV-10). */
+  app.get('/api/jobs/:id/review-groups', async (req) => {
+    const job =
+      (await store.job((req.params as { id: string }).id)) ??
+      (() => {
+        throw notFound('Job');
+      })();
+    const rules = await store.rules(job.projectId);
+    const approved = new Set(rules.filter((r) => r.kind === 'approved').map((r) => r.pattern));
+    const rows = (await store.verdicts(job.id)).map((v) => ({ testId: v.testId, status: v.status, verdict: v.verdict as never }));
+    const groups = reviewGroups(rows, approved);
+    // A question already answered by a rule says so (the batch has to be run again to use it).
+    const answered = new Map(rules.filter((r) => r.kind === 'step' || r.kind === 'check').map((r) => [`${r.kind}|${r.pattern}`, r]));
+    return { ...groups, questions: groups.questions.map((q) => ({ ...q, rule: answered.get(q.key) })) };
   });
 
   /**
