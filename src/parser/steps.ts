@@ -3,7 +3,7 @@ import { type ParsedAssertion, parseAssertions } from './assertions.js';
 import { normKey, type ParserConfig, synonymsOf } from './config.js';
 import { extractTarget, type Target } from './target.js';
 import { type DataBinding, isSecret, lookupData, parseValue } from './test-data.js';
-import { clean, containsPhrase, findQuoted, looksLikeUrl, matchLeading, protectQuotes, removePhrases, unquote } from './text.js';
+import { clean, containsPhrase, findQuoted, looksLikeUrl, matchLeading, protectQuotes, removePhrases, splitOutsideQuotes, unquote } from './text.js';
 
 /**
  * One tester step → an action (FR-PA-02, FR-PA-09, FR-PA-10) or, for "Observe…"/"Verify…", checks (FR-PA-06).
@@ -29,7 +29,12 @@ export interface ParsedAction {
 }
 
 /** `note`: a line that needs no step, e.g. "Open Browser" (the browser opens by itself). */
-type LineResult = { kind: 'action'; action: ParsedAction } | { kind: 'checks'; checks: ParsedAssertion[] } | { kind: 'note'; text: string };
+type LineResult =
+  | { kind: 'action'; action: ParsedAction }
+  /** One line that holds several actions ("Enter username and password and click Login"): one step each (FR-PA-15). */
+  | { kind: 'actions'; actions: ParsedAction[] }
+  | { kind: 'checks'; checks: ParsedAssertion[] }
+  | { kind: 'note'; text: string };
 
 export type ParsedLine = LineResult & {
   /** Warnings about the whole line, e.g. filler words removed. */
@@ -78,7 +83,18 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
     t,
     lexicon.subjects.map((w) => [w, w] as [string, string]),
   );
-  const body = subject?.rest || t;
+  let body = subject?.rest || t;
+  // "User should click Login", "will click", "needs to enter": the modal word is not part of the step (RW-S12).
+  const modal = /^(?:should|must|will|shall|can|could|needs?\s+to|has\s+to|have\s+to)\s+(?:be\s+able\s+to\s+)?/i.exec(body);
+  if (modal && matchLeading(body.slice(modal[0].length), verbPhrases(ctx), true)) body = body.slice(modal[0].length);
+
+  // "Leave the Login Name text box blank", "Keep password empty", "Do not enter username" (RW-S02).
+  const blank = leaveBlank(body, ctx);
+  if (blank) return blank;
+
+  // "The Login button is clicked", "Username is entered" (RW-S11).
+  const active = passiveToActive(body);
+  if (active) return parseCleanLine(active, ctx);
 
   const browser = (['back', 'forward'] as const).find((a) => containsPhrase(body, lexicon.browserPhrases[a]));
   if (browser) return action({ action: browser });
@@ -93,6 +109,16 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
   }
 
   const second = secondAction(verb.rest, ctx);
+  if (second && !ctx.config.lexicon.assertionVerbs.some((v) => v.toLowerCase() === second.toLowerCase())) {
+    // "Enter username and click Login": two actions in one line are two steps (RW-S03).
+    const clauses = splitClauses(body, ctx);
+    if (clauses.length > 1) {
+      const parts = clauses.map((c) => parseCleanLine(c, ctx));
+      const actions = parts.flatMap((r) => (r.kind === 'action' ? [r.action] : r.kind === 'actions' ? r.actions : []));
+      if (actions.length === parts.length || parts.every((r) => r.kind === 'action' || r.kind === 'actions' || r.kind === 'note'))
+        return { kind: 'actions', actions };
+    }
+  }
   if (second) {
     const isCheck = ctx.config.lexicon.assertionVerbs.some((v) => v.toLowerCase() === second.toLowerCase());
     return action(
@@ -104,10 +130,73 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
       ),
     );
   }
-  return action(parseVerb(verb.value, verb.phrase, verb.rest, ctx));
+  const parsedVerb = parseVerb(verb.value, verb.phrase, verb.rest, ctx);
+  return Array.isArray(parsedVerb) ? { kind: 'actions', actions: parsedVerb } : action(parsedVerb);
 }
 
-function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): ParsedAction {
+const SPACES = /^(?:only\s+|just\s+)?(?:some\s+|a few\s+)?(?:blank\s+|white\s*)?spaces?$|^whitespace$/i;
+
+/** "Leave X blank", "Keep X empty", "Do not enter X", "Skip X": the field is cleared. "Both A and B" is two fields. */
+function leaveBlank(body: string, ctx: StepContext): LineResult | undefined {
+  const p = protectQuotes(body);
+  const m =
+    /^(?:leave|keep|let|make)\s+(?:both\s+|all\s+)?(?:the\s+)?(.+?)\s+(?:as\s+)?(?:blank|empty|unfilled)(?:\s+.*)?$/i.exec(p.text) ??
+    /^(?:do\s+not|don't|dont|without)\s+(?:enter|entering|type|typing|fill|filling|input|provide|providing)\s+(?:in\s+)?(?:any\s+)?(?:both\s+|all\s+)?(?:the\s+)?(.+)$/i.exec(
+      p.text,
+    ) ??
+    /^(?:skip|omit)\s+(?:both\s+|all\s+)?(?:the\s+)?(.+)$/i.exec(p.text);
+  if (!m) return undefined;
+  const actions = splitOutsideQuotes(p.restore(m[1]), /\s+(?:and|&)\s+|\s*,\s*/i).map((name): ParsedAction => {
+    const named = name.replace(/\s+(?:fields?|text\s*boxes?|boxes|inputs?)$/i, (w) => ` ${w.trim()}`);
+    const t = extractTarget(named, ctx.config);
+    if (!t.target) return unparsed('NO_TARGET', 'Say which field to leave blank.');
+    return { action: 'clear', target: t.target, alternatives: t.alternatives, exact: t.exact, roleHint: t.roleHint ?? 'textbox', warnings: t.warnings };
+  });
+  return actions.length ? { kind: 'actions', actions } : undefined;
+}
+
+const PASSIVE_VERBS: Record<string, string> = {
+  clicked: 'Click',
+  pressed: 'Click',
+  tapped: 'Click',
+  entered: 'Enter',
+  typed: 'Enter',
+  filled: 'Enter',
+  submitted: 'Submit',
+  hovered: 'Hover over',
+  cleared: 'Clear',
+  uploaded: 'Upload',
+};
+
+/** "The Login button is clicked" → "Click the Login button". Only for words that are clearly actions. */
+function passiveToActive(body: string): string | undefined {
+  const m =
+    /^(.+?)\s+(?:is|are|gets|got|has been|have been)\s+(?:then\s+)?(clicked|pressed|tapped|entered|typed|filled|submitted|hovered|cleared|uploaded)(?:\s+(?:in|on|into))?$/i.exec(
+      body,
+    );
+  return m ? `${PASSIVE_VERBS[m[2].toLowerCase()]} ${m[1]}` : undefined;
+}
+
+/** The clauses of "Enter username and click Login": each starts with an action word. */
+function splitClauses(body: string, ctx: StepContext): string[] {
+  const p = protectQuotes(body);
+  const verbs = verbPhrases(ctx).map(([w]) => [w, w] as [string, string]);
+  const cuts: number[] = [];
+  for (const m of p.text.matchAll(/(?:\s+(?:and|then)\s+|\s*,\s*(?:and\s+|then\s+)?)(?:then\s+)?/gi)) {
+    if (matchLeading(p.text.slice(m.index + m[0].length), verbs, true)) cuts.push(m.index, m.index + m[0].length);
+  }
+  if (!cuts.length) return [body];
+  const out: string[] = [];
+  let from = 0;
+  for (let i = 0; i < cuts.length; i += 2) {
+    out.push(p.restore(p.text.slice(from, cuts[i])));
+    from = cuts[i + 1];
+  }
+  out.push(p.restore(p.text.slice(from)));
+  return out.map((c) => c.trim()).filter(Boolean);
+}
+
+function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): ParsedAction | ParsedAction[] {
   switch (verb) {
     case 'navigate':
       return navigate(rest, ctx);
@@ -167,7 +256,7 @@ function navigate(rest: string, ctx: StepContext): ParsedAction {
  *   Enter Email                   → Test Data key "Email" (or a synonym)
  *   Enter valid username          → env TEST_USERNAME
  */
-function fill(rest: string, ctx: StepContext): ParsedAction {
+function fill(rest: string, ctx: StepContext): ParsedAction | ParsedAction[] {
   const p = protectQuotes(rest);
   let m: RegExpExecArray | null;
   let valueText: string | undefined;
@@ -184,9 +273,21 @@ function fill(rest: string, ctx: StepContext): ParsedAction {
     targetText = p.restore(m[2]);
   } else if ((m = /^(.+?)\s+(?:in|into|in to|inside)\s+(?:the\s+)?(.+)$/i.exec(p.text))) {
     // "Enter user name in Login Name text box": the value is named first, the field after "in".
+    const field = extractTarget(p.restore(m[2]), ctx.config);
+    // "Enter spaces in the Login Name text box": spaces are the value.
+    if (SPACES.test(unquote(p.restore(m[1])).trim()) && field.target) {
+      return {
+        action: 'fill',
+        target: field.target,
+        alternatives: field.alternatives,
+        exact: field.exact,
+        roleHint: field.roleHint,
+        value: { kind: 'literal', value: '   ' },
+        warnings: [...field.warnings, { code: 'ASSUMED_VALUE', text: 'Spaces were entered as three spaces.' }],
+      };
+    }
     const named = extractTarget(p.restore(m[1]), ctx.config, { qualifiers: true });
     const bound = named.target ? bindValue(named, ctx) : undefined;
-    const field = extractTarget(p.restore(m[2]), ctx.config);
     if (bound?.value && field.target) {
       return {
         action: 'fill',
@@ -203,6 +304,9 @@ function fill(rest: string, ctx: StepContext): ParsedAction {
   const t = extractTarget(targetText, ctx.config, { qualifiers: true });
   if (!t.target) return unparsed('NO_TARGET', 'Say which field to fill, using its label on the screen.');
   if (/\s(?:and|&)\s/.test(protectQuotes(t.target).text) && !valueText) {
+    // "Enter username and password": one field after the other, each with its own value.
+    const each = splitOutsideQuotes(t.target, /\s+(?:and|&)\s+|\s*,\s*/i).map((n) => fill(n, ctx));
+    if (each.length > 1 && each.every((a) => !Array.isArray(a) && a.action)) return each as ParsedAction[];
     return unparsed('MULTIPLE_FIELDS', `"${t.target}" names more than one field. Write one field per step.`);
   }
   const base = { action: 'fill' as const, target: t.target, alternatives: t.alternatives, exact: t.exact, roleHint: t.roleHint, warnings: t.warnings };
@@ -238,9 +342,15 @@ function bindValue(t: Target, ctx: StepContext): { value?: ValueRef; reason?: Pa
 
   const label = [t.qualifier?.word, t.target].filter(Boolean).join(' ');
   if (t.qualifier?.kind === 'negative') {
+    // "Enter invalid username": any value that is not valid will do, so one is made up and the report says so (RW-S05, P2).
     return {
-      reason: { code: 'NO_VALUE', text: `No value for "${label}". Add it to Test Data, e.g. ${titleCase(label)}=… , or write Enter "…" in ${t.target}.` },
-      warnings: [],
+      value: { kind: 'generator', name: 'invalid.text' },
+      warnings: [
+        {
+          code: 'ASSUMED_VALUE',
+          text: `"${label}" was entered as a made-up value that is not valid. Add ${titleCase(label)}=… to Test Data to use a particular one.`,
+        },
+      ],
     };
   }
   const isGroup = (word: string) => synonymsOf(ctx.config, word).includes(normKey(t.target!));

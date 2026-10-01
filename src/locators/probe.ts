@@ -31,6 +31,9 @@ export interface Validation {
 }
 
 export class LocatorProbe {
+  /** Browser pop-ups this connection saw, e.g. `alert "Password not given!"`. Each is accepted, as the generated test does. */
+  private readonly dialogs: string[] = [];
+
   private constructor(
     private readonly context: BrowserContext,
     private readonly userDataDir: string,
@@ -47,7 +50,21 @@ export class LocatorProbe {
       headless: options.headless ?? true,
       args: [`--remote-debugging-port=${port}`],
     });
-    return new LocatorProbe(context, userDataDir, `http://127.0.0.1:${port}`, options.timeout ?? 2000);
+    const probe = new LocatorProbe(context, userDataDir, `http://127.0.0.1:${port}`, options.timeout ?? 2000);
+    // Without a listener this connection would dismiss every pop-up itself, and nobody would learn what it said.
+    const watch = (page: Page) =>
+      page.on('dialog', (dialog) => {
+        probe.dialogs.push(`${dialog.type()} "${dialog.message()}"`);
+        void dialog.accept().catch(() => undefined);
+      });
+    for (const page of context.pages()) watch(page);
+    context.on('page', watch);
+    return probe;
+  }
+
+  /** Pop-ups seen since the last call. */
+  takeDialogs(): string[] {
+    return this.dialogs.splice(0);
   }
 
   /** The page MCP is on: the newest page with this URL, or the newest page. */

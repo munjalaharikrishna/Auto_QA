@@ -1,6 +1,7 @@
 import type { Assertion, AssertionOptions, AssertionType } from '../model/test-model.js';
 import { parseValidation } from '../validations/registry.js';
 import type { ParserConfig } from './config.js';
+import { parseIntent } from './intents.js';
 import { cleanName, extractContainer, extractTarget, stripArticles, type Target } from './target.js';
 import {
   clean,
@@ -11,6 +12,7 @@ import {
   matchLeading,
   phraseRegex,
   protectQuotes,
+  removePhrases,
   splitOutsideQuotes,
   unquote,
 } from './text.js';
@@ -34,6 +36,8 @@ export interface ParsedAssertion {
   exact?: boolean;
   roleHint?: string;
   expected?: string;
+  /** The general outcome this check makes concrete, e.g. LOGIN_REJECTED. */
+  intent?: string;
   options?: AssertionOptions;
   other?: Assertion['other'];
   /** The name is a part of the page: look for the form or region holding it. */
@@ -52,16 +56,38 @@ const PREDICATE = '(?:displayed|shown|visible|present|appears?|appeared|seen|ren
  * `bare` means the text came after "Verify"/"Observe", so a plain name is a visibility check.
  */
 export function parseAssertions(text: string, config: ParserConfig, bare: boolean): ParsedAssertion[] {
+  // "Both username and password fields are cleared": one check for each field.
+  const whole = intentsOf(text, config);
+  if (whole) return whole;
   const parts = splitOutsideQuotes(text, /\s+and\s+/i);
   if (parts.length > 1) {
-    const parsed = parts.map((p) => parseAssertion(p, config, false));
+    const parsed = parts.flatMap((p) => parseAssertions(p, config, false));
     if (parsed.every((p) => p.type)) return parsed;
+    // "Login is rejected and an appropriate error is displayed": when a part is an outcome the platform knows, the
+    // parts are separate checks, so one that cannot be read does not hide the ones that can (RW-E05).
+    if (parsed.some((p) => p.intent) && parsed.length === parts.length) return parsed;
   }
   return [parseAssertion(text, config, bare)];
 }
 
+/** The checks of an outcome intent, for a sentence that is one (FR-PA-18). */
+function intentsOf(text: string, config: ParserConfig): ParsedAssertion[] | undefined {
+  const p = protectQuotes(clean(text));
+  let s = p.text;
+  const verb = matchLeading(
+    s,
+    config.lexicon.assertionVerbs.map((v) => [v, v] as [string, string]),
+    true,
+  );
+  if (verb) s = verb.rest;
+  s = removePhrases(s.replace(/^that\s+/i, ''), config.lexicon.fillers).text;
+  return parseIntent(s, config, p.restore);
+}
+
 export function parseAssertion(text: string, config: ParserConfig, bare: boolean): ParsedAssertion {
   const { lexicon } = config;
+  const outcome = intentsOf(text, config);
+  if (outcome) return outcome[0];
   // Arrows are decoration in a name ("Apply →"), but separate the keys in "Tab goes Email → Password → Login".
   const p = protectQuotes(clean(/\btab\b/i.test(text) ? text.replace(/\s*(?:→|➜|➔|->|=>|»)\s*/g, ', ') : text));
   let s = p.text;
@@ -76,6 +102,8 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     bare = true;
   }
   s = s.replace(/^that\s+/i, '');
+  // "User is successfully redirected": the filler is not part of the check (RW-E01).
+  s = removePhrases(s, lexicon.fillers).text;
 
   // "Error message: Invalid credentials": the text after the colon is taken as written, like a quote,
   // so words such as "do not" inside the message are not read as negation.
@@ -137,7 +165,19 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     const r = p.restore(raw).trim();
     if (looksLikeUrl(r)) return result({ type, expected: r.replace(/[.,;]+$/, ''), match: 'url' });
     const name = cleanName(r, config);
-    return name.name ? result({ type, expected: name.name, match: 'page', exact: name.exact }) : result({ type });
+    if (!name.name) return result({ type });
+    // "home/dashboard page", "Dashboard or Home": either name is the page; the one the application goes to is learned (RW-E02).
+    const aliases = name.name.split(/\s*(?:\/|\bor\b)\s*/i).filter(Boolean);
+    if (aliases.length > 1 && !name.exact) {
+      return result({
+        type,
+        expected: aliases[0],
+        alternatives: aliases.slice(1),
+        match: 'page',
+        warnings: [{ code: 'PAGE_ALIAS', text: `"${name.name}" is either page: the one the application goes to is used.` }],
+      });
+    }
+    return result({ type, expected: name.name, match: 'page', exact: name.exact });
   };
   let m: RegExpExecArray | null;
 

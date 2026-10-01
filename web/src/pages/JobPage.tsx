@@ -460,6 +460,7 @@ function VerdictRow(props: {
         </td>
         <td>
           <StatusBadge status={props.status} />
+          {props.status === 'PASS' && !!v.assumptions?.length && <div className="muted">with assumptions</div>}
           {v.category && <div className="muted">{v.category}</div>}
         </td>
         <td>
@@ -561,6 +562,16 @@ function Details({ v, zoom }: { v: TestVerdict; zoom: (file: string) => void }) 
   const facts = ev?.facts;
   return (
     <div className="stack">
+      {!!v.assumptions?.length && (
+        <div className="notice warn">
+          <strong>Assumed or learned, not written by the tester:</strong>
+          <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.2rem' }}>
+            {v.assumptions.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {ev?.video && (
         // biome-ignore lint/a11y/useMediaCaption: a silent screen recording of the test
         <video

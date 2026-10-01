@@ -71,6 +71,8 @@ export interface ReviewReason {
 
 export interface TestVerdict {
   executionId: string;
+  /** Decisions the platform made that the tester did not state (made-up values, learned messages): PASS (with assumptions). */
+  assumptions?: string[];
   testId: string;
   title: string;
   automationId: string;
@@ -194,7 +196,14 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
         actual: summary(checks),
       };
     }
-    return { ...common, status: 'PASS', reason: 'Every check passed.', actual: summary(checks) };
+    const assumptions = test.assumptions?.length ? test.assumptions : undefined;
+    return {
+      ...common,
+      status: 'PASS',
+      assumptions,
+      reason: assumptions ? 'Every check passed, with assumptions (listed).' : 'Every check passed.',
+      actual: summary(checks) + (assumptions ? ` Assumed or learned: ${assumptions.join(' ')}` : ''),
+    };
   }
 
   const category = classify(firstError ?? '', failedRecord, healthError, reported.status);
@@ -297,7 +306,7 @@ function actualWhenPassed(c: Check): string {
         passedText({
           type: c.type as AssertionType,
           target: c.target,
-          expected: c.expected,
+          expected: c.expected ?? c.learned,
           negated: c.negated,
           options: c.options,
           other: c.other ? { target: c.other, alternatives: [] } : undefined,

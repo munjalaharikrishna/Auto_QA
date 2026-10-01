@@ -71,6 +71,27 @@ document.getElementById('profile').addEventListener('submit', (e) => {
 });
 </script>`,
   ),
+  // The login page of an older application, laid out like OrangeHRM 2.x: a table, label cells ("Login Name :") next to
+  // fields with no label of their own, Login and Clear buttons, an alert for a blank field, a red error otherwise.
+  '/legacy': `<!doctype html>
+<html><head><meta charset="utf-8"><title>Legacy HR - New Level of HR Management</title>
+<style>body{font:11px Arial;color:#666;margin:0} .wrap{width:717px;margin:40px auto} td{padding:3px} .e{color:red;font-weight:bold}</style></head>
+<body><div class="wrap"><img alt="" width="200" height="40" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+<form name="loginForm" id="loginForm" method="post" action="#" onsubmit="return go()">
+<table><tr><td align="right">Login Name :</td><td><input name="txtUserName" type="text" autocomplete="off"></td></tr>
+<tr><td align="right">Password :</td><td><input name="txtPassword" type="password"></td></tr>
+<tr><td><input type="submit" name="Submit" value="Login"></td><td><input type="reset" name="clear" value="Clear"></td></tr>
+<tr><td></td><td class="e" id="msg">&nbsp;</td></tr></table></form></div>
+<script>
+function go() {
+  const f = document.loginForm;
+  if (f.txtUserName.value === '') { alert('User Name not given!'); return false; }
+  if (f.txtPassword.value === '') { alert('Password not given!'); return false; }
+  if (f.txtUserName.value === '${DEMO_USER.username}' && f.txtPassword.value === '${DEMO_USER.password}') { document.cookie = 'session=1; path=/'; location.href = '/dashboard'; return false; }
+  document.getElementById('msg').textContent = 'Invalid credentials';
+  return false;
+}
+</script></body></html>`,
   // A page with something of everything the validation catalogue checks (VALIDATIONS.md): layout, tables, messages…
   '/lab': `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Lab · Demo</title>

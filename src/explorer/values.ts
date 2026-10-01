@@ -37,7 +37,7 @@ export function resolveValue(ref: ValueRef, ctx: ValueContext): Resolved {
   }
 }
 
-export const GENERATORS = ['unique.email', 'unique.number', 'unique.text', 'today'];
+export const GENERATORS = ['unique.email', 'unique.number', 'unique.text', 'invalid.text', 'today'];
 
 function generate(name: string, now: Date): string | undefined {
   const stamp = now.getTime().toString(36);
@@ -48,6 +48,8 @@ function generate(name: string, now: Date): string | undefined {
       return String(now.getTime() % 1_000_000_000);
     case 'unique.text':
       return `auto-qa-${stamp}`;
+    case 'invalid.text':
+      return `invalid-${stamp}`;
     case 'today':
       return now.toISOString().slice(0, 10);
     default:

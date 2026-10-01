@@ -148,6 +148,7 @@ export const EXTRA_ASSERTIONS = [
   'no-duplicates',
   // H. network and I. health
   'request',
+  'error-shown',
   'console-clean',
   'not-blank',
   'no-mixed-content',
@@ -216,6 +217,8 @@ export const AssertionSchema = z.object({
   type: z.enum(ASSERTION_TYPES).optional(),
   ...TargetFields,
   expected: z.string().optional(),
+  /** The outcome the tester described in general words ("login is rejected"), which this check makes concrete (FR-PA-18). */
+  intent: z.string().optional(),
   options: AssertionOptionsSchema.optional(),
   /** The second element of a check that compares two ("Cancel is to the left of Save"). */
   other: z.object({ ...TargetFields }).optional(),

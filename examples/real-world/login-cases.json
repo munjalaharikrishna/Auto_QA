@@ -1,0 +1,62 @@
+[
+  {
+    "id": "TC_LOGIN_001",
+    "title": "Verify login with valid credentials",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter valid username in the Login Name text box\n4. Enter valid password in the Password text box\n5. Click the Login button",
+    "expected": "User is successfully redirected to the home/dashboard page"
+  },
+  {
+    "id": "TC_LOGIN_002",
+    "title": "Verify login with invalid username",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter invalid username in the Login Name text box\n4. Enter valid password in the Password text box\n5. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_003",
+    "title": "Verify login with invalid password",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter valid username in the Login Name text box\n4. Enter invalid password in the Password text box\n5. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_004",
+    "title": "Verify login with invalid username and password",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter invalid username in the Login Name text box\n4. Enter invalid password in the Password text box\n5. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_005",
+    "title": "Verify login with blank username",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Leave the Login Name text box blank\n4. Enter valid password in the Password text box\n5. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_006",
+    "title": "Verify login with blank password",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter valid username in the Login Name text box\n4. Leave the Password text box blank\n5. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_007",
+    "title": "Verify login with both fields blank",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Leave both the Login Name and Password text boxes blank\n4. Click the Login button",
+    "expected": "Login is rejected and an appropriate error message is displayed"
+  },
+  {
+    "id": "TC_LOGIN_008",
+    "title": "Verify the password is masked",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter a password in the Password text box",
+    "expected": "The password is displayed as masked characters"
+  },
+  {
+    "id": "TC_LOGIN_009",
+    "title": "Verify the Clear button resets the form",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter valid username in the Login Name text box\n4. Enter valid password in the Password text box\n5. Click the Clear button",
+    "expected": "Both username and password fields are cleared"
+  },
+  {
+    "id": "TC_LOGIN_010",
+    "title": "Verify spaces in the fields",
+    "steps": "1. Open browser\n2. Navigate to the OrangeHRM login page\n3. Enter spaces in the Login Name text box\n4. Enter spaces in the Password text box\n5. Click the Login button",
+    "expected": "The system handles the whitespace according to the application's validation rules"
+  }
+]

@@ -61,6 +61,7 @@
     "$comment": "Role word → roleHint. An empty value means: remove the word but give no hint.",
     "radio button": "radio", "radio": "radio",
     "check box": "checkbox", "checkbox": "checkbox", "toggle": "switch", "switch": "switch",
+    "text fields": "textbox", "text boxes": "textbox", "textboxes": "textbox", "fields": "textbox", "boxes": "textbox", "inputs": "textbox", "buttons": "button", "links": "link", "checkboxes": "checkbox",
     "text field": "textbox", "text box": "textbox", "textbox": "textbox", "input field": "textbox", "input box": "textbox",
     "input": "textbox", "field": "textbox", "textarea": "textbox", "text area": "textbox", "search box": "searchbox", "box": "textbox",
     "drop-down list": "combobox", "dropdown list": "combobox", "drop down list": "combobox",

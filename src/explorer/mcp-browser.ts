@@ -143,8 +143,9 @@ export class McpBrowser {
       return reply;
     } catch (e) {
       if (name === 'browser_handle_dialog' || !(e instanceof McpToolError) || !/modal state/i.test(e.message)) throw e;
-      // The pop-up blocked this call: close it, then try the call again once.
-      if (!(await this.closeDialog(e.reply))) throw e;
+      // The pop-up blocked this call: close it, then try the call again once. If another connection to the same
+      // browser closed it first, there is nothing left to close and the call can simply be tried again.
+      await this.closeDialog(e.reply);
       return this.callOnce(name, args);
     }
   }

@@ -9,6 +9,7 @@
  *   are what the result page and the results sheet show
  */
 import { expect as baseExpect, type Locator, type Page } from '@playwright/test';
+import { errorMessagesInPage } from './observe.js';
 
 const DEFAULT_TIMEOUT = 5000;
 
@@ -30,10 +31,16 @@ export interface NetEntry {
 
 export interface PageLog {
   step: number;
+  /** The latest step that did something (not a check), which "the previous step" means for a check. */
+  action: number;
   requests: NetEntry[];
   console: string[];
   errors: string[];
   dialogs: string[];
+  /** The browser pop-ups with the step that was running, for "an error message appeared after the previous step". */
+  dialogLog: Array<{ step: number; kind: string; text: string }>;
+  /** The error-like messages on the page when each step started. */
+  baseline: Record<number, string[]>;
   popups: string[];
   downloads: Array<{ name: string; read: () => Promise<string | undefined> }>;
 }
@@ -44,8 +51,14 @@ const logs = new WeakMap<Page, PageLog>();
 export function startLog(page: Page): PageLog {
   const existing = logs.get(page);
   if (existing) return existing;
-  const log: PageLog = { step: 0, requests: [], console: [], errors: [], dialogs: [], popups: [], downloads: [] };
+  const log: PageLog = { step: 0, action: 0, requests: [], console: [], errors: [], dialogs: [], dialogLog: [], baseline: {}, popups: [], downloads: [] };
   logs.set(page, log);
+  // Browser pop-ups never block a test: they are accepted and written down, as when the test was explored.
+  page.on('dialog', async (dialog) => {
+    log.dialogs.push(`${dialog.type()} "${dialog.message()}"`);
+    log.dialogLog.push({ step: log.step, kind: dialog.type(), text: dialog.message() });
+    await dialog.accept().catch(() => undefined);
+  });
   const byRequest = new Map<unknown, NetEntry>();
   page.on('request', (r) => {
     const url = new URL(r.url());
@@ -86,8 +99,13 @@ export function startLog(page: Page): PageLog {
 }
 
 /** Each test step calls this when it starts, so "no request was sent in the previous step" knows which step is which. */
-export function markStep(page: Page): void {
-  startLog(page).step++;
+export async function markStep(page: Page, isCheck = false): Promise<void> {
+  const log = startLog(page);
+  log.step++;
+  if (isCheck) return;
+  log.action = log.step;
+  // What was already on the page, so a message that was there before the action is not mistaken for its result.
+  log.baseline[log.step] = await page.evaluate(errorMessagesInPage).catch(() => []);
 }
 
 export function logOf(page: Page): PageLog {
@@ -903,7 +921,7 @@ export async function expectRequest(
 /** The page sent nothing to the server matching this during the step before this check (e.g. an invalid form). */
 export async function expectNoRequest(page: Page, want: { method?: string; path?: string }): Promise<void> {
   const log = logOf(page);
-  const previous = log.step - 1;
+  const previous = log.action;
   const sent = log.requests.filter(
     (r) =>
       r.step === previous &&
@@ -918,6 +936,31 @@ export async function expectNoRequest(page: Page, want: { method?: string; path?
         ' ',
       ),
     );
+}
+
+/**
+ * An error message appeared as a result of the previous step: a browser alert, or a message on the page that was not there
+ * before (an alert role, an error class, red text, a field's validation message). With `text`, that message says it.
+ */
+export async function expectErrorShown(page: Page, want: { text?: string } = {}): Promise<void> {
+  const log = logOf(page);
+  const before = log.action;
+  const read = async () => {
+    const onPage = (await page.evaluate(errorMessagesInPage).catch(() => [])).filter((m) => !(log.baseline[before] ?? []).includes(m));
+    const alerts = log.dialogLog.filter((d) => d.step === before && d.kind !== 'confirm').map((d) => d.text);
+    return [...alerts, ...onPage];
+  };
+  const matches = (all: string[]) => all.filter((m) => !want.text || m.toLowerCase().includes(want.text.toLowerCase()));
+  const { value, ok } = await settle(read, (all) => matches(all).length > 0, 4000);
+  if (ok) return;
+  const shown = (await page.evaluate(errorMessagesInPage).catch(() => [])).slice(0, 3);
+  throw new Error(
+    `Error message check failed\n\nExpected: an error message${want.text ? ` "${want.text}"` : ''} appears after the previous step\nActual: ${
+      value.length
+        ? `messages appeared, but not that one: ${value.slice(0, 3).join(' | ')}`
+        : `no new error message appeared${shown.length ? ` (the page already showed: ${shown.join(' | ')})` : ''}`
+    }`,
+  );
 }
 
 /** No errors were written to the browser console. */

@@ -200,7 +200,10 @@ describe('data binding (FR-PA-10, FR-TD-01, FR-TD-02)', () => {
   });
   it('asks instead of guessing a value', () => {
     assert.equal(step('Enter Email').reason?.code, 'NO_VALUE');
-    assert.equal(step('Enter invalid password', 'Password=x').reason?.code, 'NO_VALUE');
+    // "Invalid" means any value that is not valid: one is made up, and the model says so (RW-S05, D30).
+    const invalid = tc({ steps: '1. Enter invalid password', testData: 'Password=x' });
+    assert.deepEqual(invalid.steps[0].value, { kind: 'generator', name: 'invalid.text' });
+    assert.ok(invalid.warnings.some((w) => w.code === 'ASSUMED_VALUE'));
     assert.equal(step('Fill the form with valid data').reason?.code, 'VAGUE_VALUE');
   });
   it('never stores a secret as a literal', () => {
@@ -293,7 +296,7 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
     assert.deepEqual(check('Terms and Conditions link is displayed').target, 'Terms and Conditions');
     assert.deepEqual(
       tc({ expected: 'Error is shown. User stays on Login page; Save is disabled' }).assertions.map((a) => a.type),
-      ['visible', 'url-unchanged', 'disabled', 'health'],
+      ['error-shown', 'url-unchanged', 'disabled', 'health'],
     );
   });
   it('adds the health check to every test (FR-VAL-04)', () => {
@@ -303,20 +306,63 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
 
 describe('unparsed steps (FR-PA-11)', () => {
   it('marks steps no rule matches, with a reason and a warning', () => {
-    const m = tc({
-      steps: '1. Login with valid credentials\n2. Enter email and click Continue\n3. Enter username and password',
-      expected: 'User is logged in successfully',
-    });
+    const m = tc({ steps: '1. Login with valid credentials\n2. Do the needful', expected: 'It works correctly' });
     assert.deepEqual(
       m.steps.map((s) => [s.status, s.reason?.code]),
       [
         ['unparsed', 'NO_ACTION'],
-        ['unparsed', 'MULTIPLE_ACTIONS'],
-        ['unparsed', 'MULTIPLE_FIELDS'],
+        ['unparsed', 'NO_ACTION'],
       ],
     );
     assert.equal(m.assertions[0].reason?.code, 'VAGUE_CHECK');
-    assert.equal(m.warnings.filter((w) => w.code === 'UNPARSED').length, 4);
+    assert.equal(m.warnings.filter((w) => w.code === 'UNPARSED').length, 3);
+  });
+
+  it('splits several actions in one line into steps S2.1, S2.2… (RW-S03)', () => {
+    const m = tc({ steps: '1. Open Login page\n2. Enter username and password and click Login\n3. Leave both the Email and Name boxes blank' });
+    assert.deepEqual(
+      m.steps.map((s) => [s.id, s.action, s.target]),
+      [
+        ['S1', 'navigate', undefined],
+        ['S2.1', 'fill', 'username'],
+        ['S2.2', 'fill', 'password'],
+        ['S2.3', 'click', 'Login'],
+        ['S3.1', 'clear', 'Email'],
+        ['S3.2', 'clear', 'Name'],
+      ],
+    );
+    assert.ok(m.steps.every((s) => s.status === 'parsed'));
+  });
+
+  it('reads the tester wording of the real OrangeHRM cases (RW-S01…S12, RW-E01…E07)', () => {
+    const outcome = (text: string) =>
+      tc({ expected: text })
+        .assertions.filter((a) => a.type !== 'health')
+        .map((a) => [a.type, a.intent, a.negated]);
+    assert.deepEqual(outcome('Login is rejected and an appropriate error message is displayed'), [
+      ['url-unchanged', 'LOGIN_REJECTED', false],
+      ['error-shown', 'ERROR_SHOWN', false],
+    ]);
+    assert.equal(tc({ expected: 'User is successfully redirected to the home/dashboard page' }).assertions[0].expected, 'home');
+    assert.deepEqual(outcome('Both username and password fields are cleared'), [
+      ['value', 'FIELD_CLEARED', false],
+      ['value', 'FIELD_CLEARED', false],
+    ]);
+    assert.deepEqual(outcome('The password is displayed as masked characters'), [['attribute', 'MASKED', false]]);
+    assert.deepEqual(outcome('User should not be able to log in'), [['url-unchanged', 'LOGIN_REJECTED', false]]);
+    // Passive voice, "user should", abbreviations and placeholders in steps.
+    const steps = tc({
+      steps: '1. The Login btn is clicked\n2. User should enter <username> in the Login Name txt box\n3. Enter spaces in the Password text box',
+    }).steps;
+    assert.deepEqual(
+      steps.map((s) => [s.action, s.target]),
+      [
+        ['click', 'Login'],
+        ['fill', 'Login Name'],
+        ['fill', 'Password'],
+      ],
+    );
+    assert.deepEqual(steps[2].value, { kind: 'literal', value: '   ' });
   });
 });
 

@@ -19,10 +19,6 @@ export const test = base.extend<{ autoQa: void }>({
       const problems: string[] = [];
       const log = startLog(page);
       const dialogs = log.dialogs;
-      page.on('dialog', async (dialog) => {
-        dialogs.push(`${dialog.type()} "${dialog.message()}"`);
-        await dialog.accept().catch(() => undefined);
-      });
       page.on('pageerror', (error) => problems.push(`uncaught error: ${error.message}`));
       page.on('response', (response) => {
         if (response.status() >= 500)
@@ -58,7 +54,8 @@ export * from '../utils/matchers';
 
 /** A test step that keeps a screenshot of the page when it ends, passed or failed (FR-EV-01). */
 export async function step(title: string, page: Page, body: () => Promise<void>): Promise<void> {
-  markStep(page);
+  // A check ("A2: …") looks back at the last step that did something, not at the checks between.
+  await markStep(page, /^(?:Precondition · )?A\d+\b/.test(title));
   await test.step(title, async () => {
     try {
       await body();
@@ -118,6 +115,8 @@ export function generate(name: string): string {
       return String(Date.now() % 1_000_000_000);
     case 'unique.text':
       return `auto-qa-${stamp}`;
+    case 'invalid.text':
+      return `invalid-${stamp}`;
     case 'today':
       return new Date().toISOString().slice(0, 10);
     default:

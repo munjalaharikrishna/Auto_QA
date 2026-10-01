@@ -74,7 +74,19 @@ export interface ManifestTest {
   automationId: string;
   file: string;
   steps: Array<{ id: string; raw: string; action?: string }>;
-  checks: Array<{ id: string; raw: string; type?: string; expected?: string; target?: string; negated: boolean; options?: AssertionOptions; other?: string }>;
+  checks: Array<{
+    id: string;
+    raw: string;
+    type?: string;
+    expected?: string;
+    target?: string;
+    negated: boolean;
+    options?: AssertionOptions;
+    other?: string;
+    learned?: string;
+  }>;
+  /** What was assumed or learned rather than said by the tester: shown in the result next to PASS (D30, D31). */
+  assumptions?: string[];
   /** Items the parser could not read: the test's result is NEEDS REVIEW until they are fixed (FR-VAL-05). */
   unparsed: string[];
 }
@@ -339,6 +351,8 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
         case 'url-unchanged': {
           helpers.add('expectPath');
           const name = a.expected ? pageNameFor(a.expected, exploration) : undefined;
+          // "User is logged in" without a page: the page is no longer the one the last action started on.
+          if (a.negated && !name) return [`await expectPath(page, ${quote(pathOf(item.observed?.previousUrl ?? item.observed?.url ?? '/'))}, { not: true });`];
           const path = name ? `${pageClass(pageFor(name, exploration).className)}.path` : quote(pathOf(item.observed?.url ?? '/'));
           return [`await expectPath(page, ${path});`];
         }
@@ -361,7 +375,8 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
           return [];
         default: {
           // The checks of the validation catalogue: each type writes its own code (src/validations).
-          const lines = codeFor(a, {
+          // A message the tester left open ("an appropriate error message") is written as the one learned in exploration.
+          const lines = codeFor(item.learned && !a.expected ? { ...a, expected: item.learned.text } : a, {
             target,
             other: () => {
               if (!item.other) throw new Error(`${model.id} ${item.id}: the second element of this check was not found.`);
@@ -403,7 +418,9 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
         negated: a.negated,
         options: a.options,
         other: a.other?.target,
+        learned: exploration.items.find((i) => i.id === a.id && i.phase === 'test')?.learned?.text,
       })),
+      assumptions: assumptionsOf(model, exploration),
       unparsed: [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed').map((x) => x.id),
     });
     if (usesData) data.push({ file, values: Object.fromEntries([...dataKeys].map(([k, v]) => [v, allData[k]])) });
@@ -477,4 +494,15 @@ function pathOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/** Decisions the platform made that the tester did not state: made-up values, page aliases, spelling fixes, learned messages. */
+function assumptionsOf(model: TestModel, exploration: ExplorationResult): string[] {
+  const codes = new Set(['ASSUMED_VALUE', 'PAGE_ALIAS', 'SPELLING_FIXED']);
+  return [
+    ...model.warnings.filter((w) => codes.has(w.code)).map((w) => `${w.at ? `${w.at}: ` : ''}${w.text}`),
+    ...exploration.items
+      .filter((i) => i.learned && i.phase === 'test')
+      .map((i) => `${i.id}: the error message "${i.learned?.text}" was learned from the application.`),
+  ];
 }

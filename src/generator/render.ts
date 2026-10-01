@@ -33,7 +33,8 @@ const T = {
 };
 
 /** The runtime library of the validation catalogue, copied as it is (src/validations/matchers.ts). */
-const MATCHERS = readFileSync(new URL('../validations/matchers.ts', import.meta.url), 'utf8');
+const MATCHERS = readFileSync(new URL('../validations/matchers.ts', import.meta.url), 'utf8').replace(`from './observe.js'`, `from './observe'`);
+const OBSERVE = readFileSync(new URL('../validations/observe.ts', import.meta.url), 'utf8');
 
 const require = createRequire(import.meta.url);
 /** The generated project uses the same Playwright as the platform, so what was validated is what runs. */
@@ -69,6 +70,7 @@ export async function renderProject(plan: ProjectPlan, name: string): Promise<Re
   await ts('fixtures/test.fixture.ts', T.fixture({}));
   // The checks Playwright does not have built in (layout, tables, requests…): one file, the same in every project.
   files['utils/matchers.ts'] = MATCHERS;
+  files['utils/observe.ts'] = OBSERVE;
   await ts('reporters/auto-qa-reporter.ts', T.reporter({}));
   await ts('playwright.config.ts', T.config(plan));
   files['package.json'] = T.pkg({ name, playwrightVersion: PLAYWRIGHT_VERSION, typesNodeVersion: TYPES_NODE_VERSION });

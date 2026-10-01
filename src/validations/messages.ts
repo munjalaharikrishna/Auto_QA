@@ -8,6 +8,20 @@ const DIALOG = '(?:dialog|modal|pop-?up|popup|dialog box|overlay)';
 
 export const messageSpecs: ValidationSpec[] = [
   {
+    id: 'VAL-E01b',
+    type: 'error-shown',
+    title: 'An error message appears',
+    targets: 'none',
+    // Found by the outcome intents (parser/intents.ts), not by words of its own.
+    parse: () => undefined,
+    code: (a, c) => {
+      c.helpers.add('expectErrorShown');
+      return [`await expectErrorShown(page${a.expected ? `, { text: ${c.quote(a.expected)} }` : ''});`];
+    },
+    passed: (a) => (a.expected ? `The error message "${a.expected}" appeared` : 'An error message appeared'),
+    examples: [],
+  },
+  {
     id: 'VAL-E01',
     type: 'alert',
     title: 'Alert or error banner',

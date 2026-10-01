@@ -10,6 +10,7 @@ import {
 } from '../model/test-model.js';
 import { type ParsedAssertion, parseAssertions } from './assertions.js';
 import { defaultParserConfig, type ParserConfig } from './config.js';
+import { normalizeText } from './normalize.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
 import { parseStepLine } from './steps.js';
@@ -35,8 +36,19 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   const checks: Check[] = [];
   const ctx = { config, data: testData.bindings };
 
-  const lines = splitNumbered(raw.steps).map((line) => ({ ...line, parsed: parseStepLine(line.text, ctx) }));
-  const secrets = [...testData.secrets, ...lines.flatMap((l) => (l.parsed.kind === 'action' && l.parsed.action.secret ? [l.parsed.action.secret] : []))];
+  const lines = splitNumbered(raw.steps).map((line) => ({ ...line, parsed: parseStepLine(normalizeText(line.text), ctx) }));
+  const secrets = [
+    ...testData.secrets,
+    ...lines.flatMap((l) =>
+      l.parsed.kind === 'action'
+        ? l.parsed.action.secret
+          ? [l.parsed.action.secret]
+          : []
+        : l.parsed.kind === 'actions'
+          ? l.parsed.actions.flatMap((a) => (a.secret ? [a.secret] : []))
+          : [],
+    ),
+  ];
   const mask = (text: string) => maskSecrets(text, secrets);
 
   for (const { n, text, parsed } of lines) {
@@ -52,30 +64,34 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
       warnings.push({ at: id, code: 'NO_STEP_NEEDED', text: parsed.text });
       continue;
     }
-    const a = parsed.action;
-    warnings.push(...a.warnings.map((w) => ({ at: id, ...w })));
-    steps.push(
-      compact({
-        id,
-        action: a.action,
-        target: a.target,
-        alternatives: a.alternatives,
-        exact: a.exact,
-        roleHint: a.roleHint,
-        value: a.value,
-        url: a.url,
-        baseUrl: a.baseUrl,
-        page: a.page,
-        key: a.key,
-        raw: lineText,
-        status: a.action && !a.reason ? 'parsed' : 'unparsed',
-        reason: a.reason,
-      }),
-    );
+    // One line can hold several actions: they are S3.1, S3.2… so the tester's own number stays the start of the id (FR-GE-03).
+    const list = parsed.kind === 'actions' ? parsed.actions : [parsed.action];
+    for (const [k, a] of list.entries()) {
+      const stepId = list.length > 1 ? `${id}.${k + 1}` : id;
+      warnings.push(...a.warnings.map((w) => ({ at: stepId, ...w })));
+      steps.push(
+        compact({
+          id: stepId,
+          action: a.action,
+          target: a.target,
+          alternatives: a.alternatives,
+          exact: a.exact,
+          roleHint: a.roleHint,
+          value: a.value,
+          url: a.url,
+          baseUrl: a.baseUrl,
+          page: a.page,
+          key: a.key,
+          raw: lineText,
+          status: a.action && !a.reason ? 'parsed' : 'unparsed',
+          reason: a.reason,
+        }),
+      );
+    }
   }
 
   for (const line of splitList(raw.expected, { semicolons: true }).flatMap(splitSentences)) {
-    for (const c of parseAssertions(line, config, false)) checks.push(toAssertion(c, line, 'expected'));
+    for (const c of parseAssertions(normalizeText(line), config, false)) checks.push(toAssertion(c, line, 'expected'));
   }
   // "No crash" runs in every test (FR-VAL-04).
   checks.push({
@@ -151,6 +167,7 @@ function toAssertion(c: ParsedAssertion, raw: string, source: 'step' | 'expected
     exact: c.exact,
     roleHint: c.roleHint,
     expected: c.expected,
+    intent: c.intent,
     options: c.options,
     other: c.other,
     container: c.container,

@@ -8,6 +8,7 @@ import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { executionOrder } from '../parser/index.js';
+import { errorMessagesInPage } from '../validations/observe.js';
 import { type Explanation, explain, plainError, sentence } from './explain.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
 import { flatten, nearbyText, parseSnapshot, type SnapshotNode } from './snapshot-parser.js';
@@ -104,7 +105,7 @@ export interface ExploredItem {
   /** What the step changed, e.g. `url /dashboard`, `value set`, `snapshot changed`. */
   effect?: string;
   /** For checks: the page when the check would run. */
-  observed?: { url: string; title: string; textFound?: boolean };
+  observed?: { url: string; title: string; textFound?: boolean; previousUrl?: string };
   url?: string;
   screenshot?: string;
   warnings: string[];
@@ -113,6 +114,11 @@ export interface ExploredItem {
   dialogs?: string[];
   /** Why the step was set aside or failed, in the tester's words (see explain.ts). */
   review?: Explanation;
+  /**
+   * A value the platform took from what the application showed, not from the tester (D31). It is written into the
+   * generated test as a normal check, listed in the result, and can be changed in review.
+   */
+  learned?: { kind: 'error-message'; text: string; others: string[] };
   /** For a check that compares two elements: the second one. */
   other?: { locator: NonNullable<ExploredItem['locator']>; element: { role: string; name: string } };
 }
@@ -271,13 +277,28 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
   }
 
+  /** Where the browser was when the last action started, so "is logged in" can mean "is no longer on the login page". */
+  let urlBeforeAction: string | undefined;
+
   /** The part of the page the tester picked for a name ("login" → this table), so it is asked once. */
   const partPicks = new Map<string, string>();
 
+  /** Error-like messages on the page now (the same rules the generated test uses to check for one). */
+  const messagesNow = async (): Promise<string[]> => {
+    const page = browserPage();
+    // The platform runs through a TypeScript runner that wraps named functions in __name(); the page has no such helper.
+    await page.evaluate('globalThis.__name ??= (f) => f').catch(() => undefined);
+    return page.evaluate(errorMessagesInPage).catch((): string[] => []);
+  };
+  /** The messages that were on the page when the last action started, and the pop-ups that action caused. */
+  let messagesBefore: string[] = [];
+  let lastDialogs: string[] = [];
+
   /** Pop-ups seen since the last look are attached to the step that caused them. */
   function collectDialogs(item: ExploredItem): void {
-    const seen = mcp.takeDialogs();
+    const seen = [...new Set([...mcp.takeDialogs(), ...probe.takeDialogs()])];
     if (!seen.length) return;
+    lastDialogs = [...lastDialogs, ...seen];
     item.dialogs = [...(item.dialogs ?? []), ...seen];
     item.warnings.push(`The page showed a pop-up (${seen.join('; ')}). It was accepted automatically so the test could go on.`);
   }
@@ -439,6 +460,8 @@ export async function explore(model: TestModel, session: Session, options: Explo
 
   async function act(step: Step, item: ExploredItem): Promise<void> {
     const action = step.action!;
+    messagesBefore = await messagesNow();
+    lastDialogs = [];
     if (action === 'back') {
       await mcp.callTool('browser_navigate_back');
       item.effect = `url ${pathOf((await settle(item)).url)}`;
@@ -477,6 +500,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
 
     const before = await mcp.snapshot();
+    urlBeforeAction = before.url;
     const query: TargetQuery = { kind: action, target: step.target, alternatives: step.alternatives, exact: step.exact, roleHint: step.roleHint };
     const found = await find(query, item, before);
     if (!found) return;
@@ -566,8 +590,22 @@ export async function explore(model: TestModel, session: Session, options: Explo
 
   async function check(assertion: Assertion, item: ExploredItem): Promise<void> {
     const state = await mcp.snapshot();
-    item.observed = { url: state.url, title: state.title };
+    item.observed = { url: state.url, title: state.title, previousUrl: urlBeforeAction };
     const type = assertion.type!;
+    if (type === 'error-shown') {
+      // "An appropriate error message is displayed": what the application showed after the last action is the message
+      // (REAL-WORLD-TEST-CASES.md M5). Only a message that really appeared counts, so a defect is never learned (D31).
+      const alerts = lastDialogs.filter((d) => d.startsWith('alert')).map((d) => /"([\s\S]*)"/.exec(d)?.[1] ?? d);
+      const fresh = (await messagesNow()).filter((m) => !messagesBefore.includes(m));
+      const found = [...alerts, ...fresh];
+      if (found.length) {
+        item.learned = { kind: 'error-message', text: found[0], others: found.slice(1) };
+        item.warnings.push(`Learned from the application: the error message is "${found[0]}". It is checked as written from now on.`);
+      } else {
+        item.warnings.push('No error message appeared after the last action, so this check will FAIL. If an error is not expected here, rewrite the check.');
+      }
+      return;
+    }
     if (type === 'url' && assertion.match === 'page' && assertion.expected && !assertion.negated) {
       // The page a check expects, e.g. "redirected to Dashboard", names the current page (D19)
       // — but not a page that already has another name: then the expected page was not reached,
