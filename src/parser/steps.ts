@@ -96,6 +96,10 @@ function parseCleanLine(text: string, ctx: StepContext): LineResult {
   const active = passiveToActive(body);
   if (active) return parseCleanLine(active, ctx);
 
+  // "User is on the Login page": where the test case starts, so the page is opened (RW-S08).
+  const onPage = /^(?:is|are|stays?|remains?)\s+(?:currently\s+|already\s+)?(?:on|at|in)\s+(?:the\s+)?(.+?\s+(?:page|screen))$/i.exec(body);
+  if (onPage) return parseCleanLine(`Open ${onPage[1]}`, ctx);
+
   const browser = (['back', 'forward'] as const).find((a) => containsPhrase(body, lexicon.browserPhrases[a]));
   if (browser) return action({ action: browser });
 

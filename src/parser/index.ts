@@ -38,7 +38,7 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   const ctx = { config, data: testData.bindings };
 
   // The project's rules come after the normaliser: a wording the tester explained once is read that way every time (FR-RULE-01).
-  const lines = splitNumbered(raw.steps).map((line) => {
+  const lines = expandRepeats(splitNumbered(raw.steps)).map((line) => {
     const ruled = applyWording(normalizeText(line.text), config.rules?.step);
     return { ...line, rule: ruled.rule, parsed: parseStepLine(ruled.text, ctx) };
   });
@@ -208,4 +208,25 @@ function generatedId(raw: RawTestCase): string {
 /** Drops undefined fields so the JSON stays short and diffs stay clean. */
 function compact<T extends object>(value: T): T {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+}
+
+/**
+ * "Repeat steps 1-3" is the steps it points to, written out again (RW-S09). When something is repeated the steps after it
+ * are numbered afresh, so every step still has its own number.
+ */
+function expandRepeats(lines: ReturnType<typeof splitNumbered>): ReturnType<typeof splitNumbered> {
+  const REPEAT = /^(?:repeat|redo|perform|do)\s+(?:the\s+)?steps?\s+(\d+)(?:\s*(?:-|–|to|through)\s*(\d+))?\.?$/i;
+  if (!lines.some((l) => REPEAT.test(l.text.trim()))) return lines;
+  const out: string[] = [];
+  const byNumber = new Map<number, string>();
+  for (const line of lines) {
+    const m = REPEAT.exec(line.text.trim());
+    const from = m ? Number(m[1]) : 0;
+    const to = m ? Number(m[2] ?? m[1]) : 0;
+    const wanted = m ? Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => byNumber.get(from + i)) : [];
+    if (m && wanted.length && wanted.every((w) => w !== undefined)) out.push(...(wanted as string[]));
+    else out.push(line.text);
+    byNumber.set(line.n, line.text);
+  }
+  return out.map((text, i) => ({ n: i + 1, text }));
 }

@@ -313,8 +313,8 @@ To be added to [SPEC.md](SPEC.md) after review. IDs are provisional.
 | **R1** Parser and element fixes ✅ | M1, M2 (RW-S01…S15, RW-E01…E07, E10…E12), M4 (RW-L01, L02, L05; L10 position words moved to R5) | built: the wording of 9 of 10 is understood |
 | **R2** Intents and learning ✅ | §5 intents (the ones the benchmark needs), M5 learning of error texts, PASS (with assumptions) | built: 9 of 10 run |
 | **R3** Non-blocking ✅ | M7 NOT VERIFIED, M6 policy setting (strict, balanced, lenient) | built: **10 of 10 run (9 PASS, 1 NOT VERIFIED), 0 questions**. This is the acceptance test, `src/realworld/realworld.test.ts` |
-| **R4** Review and rules | M8 grouped review, M3 project rules, rules page | Remaining questions asked once |
-| **R5** Import and runtime | M9 import repair, RW-R01…R07, M10 suggested wording | Messy spreadsheets and long batches |
+| **R4** Review and rules ✅ | M8 grouped review, M3 project rules, rules page | built: remaining questions asked once, answers kept as project rules |
+| **R5** Import and runtime (partly built) | M9 import repair ✅ (one step per row, merged cells, headings, other sheets), "User is on the X page" ✅, "Repeat steps N-M" ✅. **Not built yet:** known-overlay handler, lock-out guard, dependency order, "Same as TC_x", position words, conditional steps, M10 suggested wording | Messy spreadsheets and long batches |
 
 Each phase ships with tests built from real test cases. The OrangeHRM batch is the first fixture, and every new real-world case that fails gets added.
 

@@ -9,6 +9,11 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 - A redirect check could record a page the test never reached (e.g. after a failed login) as the expected page, giving a false PASS; it now stops and asks.
 
 ### Added
+- Real-world cases R4 and part of R5:
+  - **Project rules, grouped review, approve all** (R4): answers in review are kept per project and never asked again.
+  - **Import repair**: a test case spread over several rows (one step per row, merged id/title cells), a step's own expected result becomes a "Verify …" step, heading rows are skipped with a note, and other sheets that hold test cases are reported.
+  - "User is on the Login page" opens that page; "Repeat steps 1-3" writes those steps out again.
+  - Not built yet: overlay handler, lock-out guard, dependency order, "Same as TC_x", position words, suggested-wording column.
 - Fixes from real use (M9):
   - **Reasons in plain words.** Every question and every NEEDS REVIEW says what happened, why, and what to do ("I could not find "username" on the page. The closest is the textbox "Login Name", but only 42% … Click it on the screenshot, or write Enter username in "Login Name" field"). `src/explorer/explain.ts`.
   - **Browser pop-ups no longer stop a run.** Alerts and confirms are accepted as they appear, written down on the step, and accepted in the generated test too. (This was the "modal state" error on OrangeHRM's empty-login alert.)

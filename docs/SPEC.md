@@ -407,7 +407,7 @@ Goal: run test cases **as testers really write them**; ask only when the meaning
 | FR-PA-16 | "Leave / keep X blank / empty", "Do not enter X" mean clearing the field | R1 | RW-S02 |
 | FR-PA-17 | Passive voice and "user should" in steps ("Login button is clicked", "User should click Login"); filler adverbs | R1 | RW-S01, S11, S12 |
 | FR-PA-18 | **Outcome intents library** (LOGIN_SUCCESS, LOGIN_REJECTED, ERROR_SHOWN, FIELD_ERROR, SUCCESS_SHOWN, FIELD_CLEARED, MASKED, STAYS, NAVIGATED, ACCESS_DENIED, LOGGED_OUT, DISABLED_UNTIL, LIST_CONTAINS, NO_CHANGE): vague outcome phrases become concrete checks | R1–R2 | RW-E03, E04, E06, E07, E10 |
-| FR-PA-19 | Step references: "Repeat steps 1–3", "Same as TC_x" | R5 | RW-S10 |
+| FR-PA-19 | Step references: "Repeat steps 1–3" (built), "Same as TC_x" (not built) | R5 | RW-S10 |
 | FR-PA-20 | Conditional / optional steps ("If a cookie banner appears, accept it") | R5 | RW-S13 |
 | FR-PA-21 | Position words: first, last, second → `.first()`, `.last()`, `.nth()` | R5 | RW-L10 (moved from R1: it needs a change in how the locator is chosen) |
 | FR-LO-14 | A label in a separate cell or text right before a field is merged with the field ("Password :" + textbox) | R1 | RW-L01 |
@@ -480,7 +480,8 @@ Goal: run test cases **as testers really write them**; ask only when the meaning
 | R2 | Phase 2: outcome intents with learning, PASS (with assumptions) (FR-LRN-01, 03, FR-VAL-12; page-name learning FR-LRN-02 only as the alias rule) | ✅ Done |
 | R3 | Phase 3: NOT VERIFIED and the policy setting (FR-VAL-11, 13, 14) | ✅ Done |
 | R4 | Phase 4: grouped review and project rules (FR-RULE, FR-RV-09…11) | Planned |
-| R5 | Phase 5: import repair, run-time guards, suggested wording (FR-IN-10, FR-EX-11, FR-RUN-11, 12, FR-PA-19, 20, FR-LO-16, 17, FR-HI-08) | Planned |
+| R4 | Phase 4: project rules, grouped review, approve all | ✅ Built |
+| R5 | Phase 5: import repair (FR-IN-10) and "Repeat steps" built; run-time guards, overlay handler, dependency order, suggested wording (FR-EX-11, FR-RUN-11, 12, FR-PA-20, 21, FR-HI-08) | Partly built |
 | M9 | Fixes from real use and the validation catalogue: plain-language review reasons, browser pop-ups handled, a test case list with Run again, a screenshot after every step and a video, clearer run status, and the validation registry (FR-VAL-06) | ✅ Done |
 | M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | In progress: driver, migrations, store, environments, `db` commands done; executions/results, evidence, test case versions to do |
 
@@ -585,3 +586,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tabl
 | 1.16 | 2026-10-01 | M9: fixes from real use. Review reasons in plain words (headline, why, what to do); browser alerts and confirms accepted automatically and reported; a test case list with versions and **Run again**; a screenshot after every step, a video and a trace per run, shown with step times; runs show where a cancelled run was stopped and refresh by themselves; the validation catalogue built as a registry (D29, FR-VAL-06), about 70 check types, tested on a real page and on a real OrangeHRM server. |
 | 1.17 | 2026-10-01 | Real-world test cases adopted ([REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md), §6.23, D6 revised, D30 confidence policy, D31 learned values agree with intent) and planned as phases R1–R5. R0 done: every row of the results and the review queue has an **Edit** button that opens that test case, saves it as a new version, and the next run of the review queue uses the edited version (FR-RV-12). |
 | 1.18 | 2026-10-01 | Real-world test cases R1–R3 built. The 10 OrangeHRM login cases (`examples/real-world/login-cases.json`, run against a login page laid out like OrangeHRM) now run unattended with no question: 9 PASS and 1 NOT VERIFIED. New: text normaliser, outcome intents (login rejected/success, error shown, fields cleared, masked), "leave blank", "both A and B", invalid values made up and marked assumed, one line with several actions becomes steps S3.1/S3.2, error text learned from the application (DOM message or browser alert) and listed as assumed/learned, PASS (with assumptions), the NOT VERIFIED status with "save what was seen as the expected result", and the project policy strict / balanced / lenient. |
+| 1.19 | 2026-10-01 | R4 built (project rules, grouped review, approve all). R5 started: import repair (FR-IN-10), "User is on the X page", "Repeat steps N-M" (FR-PA-19). Overlay handler, lock-out guard, dependency order, position words, suggested wording remain planned. |
