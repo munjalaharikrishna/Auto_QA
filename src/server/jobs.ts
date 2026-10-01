@@ -228,6 +228,7 @@ export class JobRunner extends EventEmitter {
       batchesDir: this.projectDir(project, 'batches'),
       mapping: (job.input.mapping ?? {}) as Partial<Record<Field, string>>,
       onlyReview,
+      overrides: await this.options.store.editedTestCases(project.id),
       onImported: async (cases) => {
         // Every case of the sheet is kept, so it can be seen in the test case list and run again.
         for (const c of cases) {

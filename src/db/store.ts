@@ -419,6 +419,19 @@ export class Store {
     return (await this.testCase(projectId, raw.id))!;
   }
 
+  /**
+   * Test cases the tester edited in the app. They win over the workbook when it is run again, because the workbook
+   * is never changed (D23) and would otherwise undo the edit.
+   */
+  async editedTestCases(projectId: string): Promise<Record<string, RawTestCase>> {
+    const rows = await this.db.all<Row>(
+      `SELECT c.ext_id, v.raw FROM test_cases c JOIN test_case_versions v ON v.test_case_id = c.id AND v.version = c.current_version
+       WHERE c.project_id = ? AND c.deleted_at IS NULL AND v.reason LIKE 'edited%'`,
+      [projectId],
+    );
+    return Object.fromEntries(rows.map((r) => [String(r.ext_id), { ...(JSON.parse(String(r.raw)) as RawTestCase), id: String(r.ext_id) }]));
+  }
+
   async testCases(projectId: string): Promise<TestCaseRecord[]> {
     const rows = await this.db.all<Row>('SELECT * FROM test_cases WHERE project_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC', [projectId]);
     return rows.map(toTestCase);

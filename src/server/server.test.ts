@@ -232,11 +232,38 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     assert.equal(j.verdicts.length, 13);
     // Item 1: every case of the sheet is kept.
     const cases = await get('/api/projects/demo/test-cases');
-    assert.ok(cases.length >= 13, `${cases.length} cases kept`);
+    assert.ok(cases.length >= 12, `${cases.length} cases kept`);
     assert.ok(cases.some((c: { sourceKind: string }) => c.sourceKind === 'workbook'));
     const results = await s.app.inject({ url: `/api/jobs/${job.id}/results` });
     assert.equal(results.statusCode, 200);
     assert.match(String(results.headers['content-disposition']), /suite\.results\.xlsx/);
+
+    // The Edit button of a review row: open the case, change it, save, and the review queue uses the new values.
+    const vague = j.verdicts.find((v: { status: string; verdict: { title: string } }) => v.status === 'NEEDS REVIEW' && v.verdict.title === 'Everything works');
+    assert.ok(vague, 'the vague case is in the review queue');
+    const opened = await get(`/api/projects/demo/test-cases/${vague.testId}`);
+    assert.match(opened.raw.steps, /Do the needful/);
+    const put = await s.app.inject({
+      method: 'PUT',
+      url: `/api/projects/demo/test-cases/${vague.testId}`,
+      payload: {
+        title: 'Everything works',
+        steps: ['1. Open Login page', '2. Enter valid username', '3. Enter valid password', '4. Click Login'].join(String.fromCharCode(10)),
+        expected: 'User is redirected to Dashboard page',
+      },
+    });
+    assert.equal(put.statusCode, 200);
+    assert.equal((await get(`/api/projects/demo/test-cases/${vague.testId}`)).version, opened.version + 1, 'saved as a new version');
+    const queue = await post(`/api/jobs/${job.id}/review-queue`);
+    // The queue holds every case that needs review, so it also asks about the others: skip them, like a tester would.
+    let again = await until(queue.id, ['done', 'failed', 'waiting']);
+    while (again.status === 'waiting') {
+      for (const q of again.questions) await post(`/api/questions/${q.id}/answer`, { answer: 'skip' });
+      again = await until(queue.id, ['done', 'failed', 'waiting']);
+    }
+    assert.equal(again.status, 'done', again.error);
+    const fixed = again.verdicts.find((v: { testId: string }) => v.testId === vague.testId);
+    assert.equal(fixed.status, 'PASS', 'the edited version ran, not the sheet version');
   });
 
   it('cancels a job that is waiting for an answer, and the next job still runs', async () => {

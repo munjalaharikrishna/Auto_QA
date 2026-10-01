@@ -56,7 +56,7 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D3** | Normal runs use **Playwright Test** on the generated code, never MCP. | What the tester approved is exactly what runs. |
 | **D4** | Playwright **Codegen is not used** to write scripts. It is only a manual "pick locator" backup. | Codegen records a human, hard-codes passwords, and creates no POM or locator repository. |
 | **D5** | The **platform** and the **generated project** are separate codebases. The generated project runs on its own with `npx playwright test`. | Any engineer or CI server can run it without the platform. |
-| **D6** | **Ask, don't guess.** If a step is vague or matches more than one element, the platform stops and asks the tester. | Wrong guesses create false PASS/FAIL results. |
+| **D6** | **Ask only when the meaning is truly unclear.** Resolve the rest with known rules, learn safely from what the application shows, mark every assumption, and never block a run for wording alone. A wrong guess still never becomes a PASS (D31). *(Revised 2026-10-01; before: "if a step is vague or matches more than one element, stop and ask".)* | Wrong guesses create false PASS/FAIL results, but asking about every wording stopped 10 of 10 real test cases. |
 | **D7** | Locators are validated with the **Playwright library (Locator Probe)** connected to the **same browser** as MCP (CDP). | MCP refs (`e15`) are temporary, not locators. Validation must use the same engine as the tests. |
 | **D8** | Exploration runs in **Chromium/Chrome only**. Other browsers are used only for execution. | The locators work in every browser, and CDP sharing needs Chromium. |
 | **D9** | Exploration is allowed only on **non-production** environments by default. | Exploration really clicks buttons and can create data. |
@@ -78,6 +78,8 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D25** | **Portable SQL**: one schema, two dialects (SQLite now, PostgreSQL in V3), only the common SQL subset, all SQL behind repositories in `src/db/`. | Moving to the team server (SPEC §3) is a driver change and a data copy, not a rewrite. |
 | **D26** | **Forward-only, checksummed migrations**, applied automatically, additive first (expand, then contract), with a backup first and a refusal to run on a newer database. | Old and new versions must never corrupt each other's data. |
 | **D27** | **Storage references**: files are saved as `scheme:key` relative to a root (`local:…`, later `s3:…`), never an absolute path. | SPEC §3: no hard-coded paths. |
+| **D30** | **Confidence policy** for real-world test cases: every decision has a confidence (certain, high, medium, low); a project setting (strict, balanced, lenient; default **balanced**) decides what runs, what runs marked *assumed* or *learned*, and what is asked. An unclear **step** blocks only its own test case; an unclear **check** never blocks: it runs and is reported NOT VERIFIED. Details: [REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md). | Testers do not rewrite their test cases; 10 of 10 real OrangeHRM cases stopped under strict asking. |
+| **D31** | **A learned value must agree with what the tester asked for.** If the tester expects an error and the application logs the user in, that is a FAIL, never "learned". Anything assumed or learned is marked in the report and the review screen, and can be undone. | Learning must never turn a defect into a passing test (P1, P4). |
 | **D29** | **Validation registry.** Every kind of check is one module (`src/validations/<family>.ts`) holding its tester wording, its Playwright code and its reported sentence; the runtime part is one file copied into the generated project (`utils/matchers.ts`). A part of the page named by a tester ("the login section") is found as the form, table or panel that holds it; if candidate parts would give different results, the tester is asked once (D6). | Adding a check never touches the rest of the platform, and a check never guesses which element it measures. |
 | **D28** | **Secrets in the database** only from V2, as AES-256-GCM ciphertext with the key outside the database; never in V1 (FR-ENV-05). | NFR-03. |
 
@@ -394,6 +396,46 @@ The full catalogue of checks (layout, tables, messages, requests, storage…) is
 
 Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, storage references, PostgreSQL, traceability tables) are in [DATABASE.md §11](DATABASE.md#11-requirements-fr-db). V1 part (FR-DB-01…18) is milestone **M8**; FR-DB-19…22 are V2, FR-DB-23/24 are V3, FR-DB-25/26 are V4. It also closes FR-LR-04 (V2), FR-ENV-04 (V2), FR-HI-02/03 (V2) and FR-TM-04 (V3).
 
+### 6.23 Real-world test cases (FR-RW) · [REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md)
+
+Goal: run test cases **as testers really write them**; ask only when the meaning is truly unclear, and once per wording. Target: 90% of real test cases run with no question. The catalogue of issues (RW-S, RW-E, RW-L, RW-R, RW-I), the outcome intents, the confidence policy and the walk-through of the 10 OrangeHRM cases are in the linked document, which is part of this specification. Built in phases R1–R5 (milestones in §8).
+
+| ID | Requirement | Phase | Acceptance |
+|---|---|---|---|
+| FR-PA-14 | **Text normaliser**: quotes, bullets, numbering, spaces; abbreviations (pwd, btn, txt box, DDL); spelling fixes against the page's own words (5+ letters, at most 2 different), marked *assumed* | R1 | RW-S06, S07, S08 |
+| FR-PA-15 | Split compound steps and checks ("Enter username and password and click Login"; "Login is rejected and an error is displayed") when each part is a full action or check | R1 | RW-S03, E05 |
+| FR-PA-16 | "Leave / keep X blank / empty", "Do not enter X" mean clearing the field | R1 | RW-S02 |
+| FR-PA-17 | Passive voice and "user should" in steps ("Login button is clicked", "User should click Login"); filler adverbs | R1 | RW-S01, S11, S12 |
+| FR-PA-18 | **Outcome intents library** (LOGIN_SUCCESS, LOGIN_REJECTED, ERROR_SHOWN, FIELD_ERROR, SUCCESS_SHOWN, FIELD_CLEARED, MASKED, STAYS, NAVIGATED, ACCESS_DENIED, LOGGED_OUT, DISABLED_UNTIL, LIST_CONTAINS, NO_CHANGE): vague outcome phrases become concrete checks | R1–R2 | RW-E03, E04, E06, E07, E10 |
+| FR-PA-19 | Step references: "Repeat steps 1–3", "Same as TC_x" | R5 | RW-S10 |
+| FR-PA-20 | Conditional / optional steps ("If a cookie banner appears, accept it") | R5 | RW-S13 |
+| FR-PA-21 | Position words: first, last, second → `.first()`, `.last()`, `.nth()` | R1 | RW-L10 |
+| FR-LO-14 | A label in a separate cell or text right before a field is merged with the field ("Password :" + textbox) | R1 | RW-L01 |
+| FR-LO-15 | The element type follows the check type (masked, cleared, empty → fields; selected → dropdown/radio; clicked → button/link) | R1 | RW-L02 |
+| FR-LO-16 | Icon dictionary for unnamed icon buttons (title, aria-label, class names) | R5 | RW-L07 |
+| FR-LO-17 | Elements inside iframes, behind hover menus, in lazy lists | R5 | RW-L08, L09 |
+| FR-LRN-01 | **Learn message texts**: for "an appropriate error message is displayed", exploration records the new error-like message and turns it into a concrete text check, marked *learned*, only if it fits the intent (D31) | R2 | RW-E04 |
+| FR-LRN-02 | Learn page names and fingerprints for outcomes such as "home/dashboard page" | R2 | RW-E02 |
+| FR-LRN-03 | Learned values are marked in the report and review, and approvable in one click | R2 | §5, §8 |
+| FR-RULE-01 | Every review answer is saved as a **project rule** (phrase → meaning, word → element, page alias) and never asked again | R4 | M3 |
+| FR-RULE-02 | A rules page lists, edits and switches off rules | R4 | M3 |
+| FR-RULE-03 | Rules export / import between projects | R4 | M3 |
+| FR-RV-09 | **Grouped review** for a batch: questions grouped by reason, one answer for all test cases it affects | R4 | M8 |
+| FR-RV-10 | **Approve all** per group (learned values, assumptions) | R4 | §8 |
+| FR-RV-11 | The batch keeps running while questions wait; only affected test cases wait | R4 | §8 |
+| FR-RV-12 | **Edit a test case from the review list**: each row of the results (and of the review queue) has an Edit button that opens that test case's details, saves the changes as a new version, and the next run of the queue uses the edited version, not the sheet's | R0 | ✅ Done |
+| FR-VAL-11 | **NOT VERIFIED** status: steps ran without failure but a check could not be verified; shows what was observed | R3 | RW-E08, E09, E13, E14 |
+| FR-VAL-12 | **PASS (with assumptions)**: passed, with assumed or learned decisions listed | R2 | §7 |
+| FR-VAL-13 | "Observed → save as check": turn an observation into a real check for future runs | R3 | §7 |
+| FR-VAL-14 | **Policy setting** per project: strict, balanced (default), lenient (D30) | R3 | §6 |
+| FR-IN-10 | Import repair: one step per row, merged cells, per-step expected results, section rows, several sheets, duplicate ids | R5 | RW-I01…I07 |
+| FR-EX-11 | Known-overlay handler (cookie banners, pop-ups, tours) dismissed when they block the target, and recorded | R5 | RW-R01 |
+| FR-RUN-11 | Account lock-out guard: warn when a batch has more than N wrong-password tests for one user (default 3) | R5 | RW-R04 |
+| FR-RUN-12 | Dependency order between test cases ("uses the user created in TC_005") | R5 | RW-R05 |
+| FR-HI-08 | "Suggested wording" column in the results workbook | R5 | M10 |
+
+**Acceptance for the whole feature:** the 10 real OrangeHRM login test cases (the batch in the linked document, §9) run with 9 test cases running and 1 NOT VERIFIED, and 0–1 questions. They are kept as a fixture in the test suite, and every real test case that fails later is added.
+
 ## 7. Non-functional requirements
 
 | ID | Requirement |
@@ -433,6 +475,12 @@ Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, stora
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
+| R0 | **Edit a test case from the review list** (FR-RV-12) | ✅ Done |
+| R1 | Real-world test cases, phase 1: parser and element fixes (FR-PA-14…17, 21, FR-LO-14, 15, intents that need no learning) | In progress |
+| R2 | Phase 2: outcome intents with learning, PASS (with assumptions) (FR-LRN, FR-VAL-12) | Planned |
+| R3 | Phase 3: NOT VERIFIED and the policy setting (FR-VAL-11, 13, 14) | Planned |
+| R4 | Phase 4: grouped review and project rules (FR-RULE, FR-RV-09…11) | Planned |
+| R5 | Phase 5: import repair, run-time guards, suggested wording (FR-IN-10, FR-EX-11, FR-RUN-11, 12, FR-PA-19, 20, FR-LO-16, 17, FR-HI-08) | Planned |
 | M9 | Fixes from real use and the validation catalogue: plain-language review reasons, browser pop-ups handled, a test case list with Run again, a screenshot after every step and a video, clearer run status, and the validation registry (FR-VAL-06) | ✅ Done |
 | M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | In progress: driver, migrations, store, environments, `db` commands done; executions/results, evidence, test case versions to do |
 
@@ -535,3 +583,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tabl
 | 1.15 | 2026-10-01 | M8 started: driver, versioned migrations (checksums, backup, downgrade guard), store moved to `src/db/`, environments, page routes, counters, audit log, `npm run db`. The real database was upgraded on a copy with no data lost. |
 | 1.16 | 2026-10-01 | Validation catalogue ([VALIDATIONS.md](VALIDATIONS.md)): 164 check types in 18 groups with wording, Playwright check, failure text and version; three layers (explicit, guard rails, quality gates); page identity check (FR-VAL-07); FR-VAL-06…10. |
 | 1.16 | 2026-10-01 | M9: fixes from real use. Review reasons in plain words (headline, why, what to do); browser alerts and confirms accepted automatically and reported; a test case list with versions and **Run again**; a screenshot after every step, a video and a trace per run, shown with step times; runs show where a cancelled run was stopped and refresh by themselves; the validation catalogue built as a registry (D29, FR-VAL-06), about 70 check types, tested on a real page and on a real OrangeHRM server. |
+| 1.17 | 2026-10-01 | Real-world test cases adopted ([REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md), §6.23, D6 revised, D30 confidence policy, D31 learned values agree with intent) and planned as phases R1–R5. R0 done: every row of the results and the review queue has an **Edit** button that opens that test case, saves it as a new version, and the next run of the review queue uses the edited version (FR-RV-12). |

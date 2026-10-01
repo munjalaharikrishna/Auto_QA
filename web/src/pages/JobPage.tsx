@@ -351,6 +351,7 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
   // A single test case shows its details straight away; a workbook opens one case at a time.
   const [expanded, setExpanded] = useState<string | undefined>(job.verdicts.length === 1 ? job.verdicts[0].testId : undefined);
   const [zoom, setZoom] = useState<string>();
+  const [editing, setEditing] = useState<string>();
   const review = summary?.review ?? [];
   return (
     <section className="panel stack">
@@ -409,6 +410,9 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
                 open={expanded === testId}
                 toggle={() => setExpanded(expanded === testId ? undefined : testId)}
                 zoom={setZoom}
+                editing={editing === testId}
+                edit={() => setEditing(editing === testId ? undefined : testId)}
+                editor={<EditCase job={job} testId={testId} onClose={() => setEditing(undefined)} />}
               />
             ))}
           </tbody>
@@ -427,6 +431,10 @@ function VerdictRow(props: {
   open: boolean;
   toggle: () => void;
   zoom: (file: string) => void;
+  /** Edit this test case in place (the Edit button of each row). */
+  editing: boolean;
+  edit: () => void;
+  editor: React.ReactNode;
 }) {
   const { v } = props;
   const shot = v.evidence?.screenshots?.[0];
@@ -440,6 +448,15 @@ function VerdictRow(props: {
           </button>
           <strong>{props.testId}</strong>
           <span className="case-title">{v.title}</span>
+          <button
+            type="button"
+            className={props.status === 'NEEDS REVIEW' ? 'primary' : undefined}
+            onClick={props.edit}
+            aria-expanded={props.editing}
+            style={{ marginLeft: '0.5rem' }}
+          >
+            {props.editing ? 'Close' : 'Edit'}
+          </button>
         </td>
         <td>
           <StatusBadge status={props.status} />
@@ -468,6 +485,11 @@ function VerdictRow(props: {
           <div className="muted">{duration(v.durationMs)}</div>
         </td>
       </tr>
+      {props.editing && (
+        <tr>
+          <td colSpan={5}>{props.editor}</td>
+        </tr>
+      )}
       {props.open && (
         <tr>
           <td colSpan={5}>
@@ -476,6 +498,60 @@ function VerdictRow(props: {
         </tr>
       )}
     </>
+  );
+}
+
+/**
+ * Edit one test case where it is listed (the Edit button of a row). Opens that test case's details, saves them as a new
+ * version, and then offers to run it again. The workbook itself is never changed (D23); the edit wins when the workbook is run again.
+ */
+function EditCase({ job, testId, onClose }: { job: JobDetail; testId: string; onClose: () => void }) {
+  const [saved, setSaved] = useState<RawTestCase>();
+  const [initial, setInitial] = useState<RawTestCase>();
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    api.testCase(job.projectId, testId).then(
+      (c) => setInitial(c.raw),
+      (e: Error) => setError(e.message),
+    );
+  }, [job.projectId, testId]);
+
+  if (error) return <ErrorNote error={`This row has no test case to edit: ${error}`} />;
+  if (!initial) return <p className="muted">Loading…</p>;
+  return (
+    <div className="stack">
+      <h3 style={{ margin: 0 }}>Edit {testId}</h3>
+      {saved ? (
+        <div className="notice stack">
+          <div>Saved. {testId} has the new values.</div>
+          <div className="row">
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                const next = job.kind === 'workbook' ? await api.reviewQueue(job.id) : await api.runTestCase(job.projectId, testId);
+                navigate(`/jobs/${next.id}`);
+              }}
+            >
+              {job.kind === 'workbook' ? 'Run the review queue again' : 'Run it again'}
+            </button>
+            <button type="button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : (
+        <CaseForm
+          initial={initial}
+          submitLabel="Save"
+          onSubmit={async (c) => {
+            await api.updateTestCase(job.projectId, testId, c);
+            setSaved({ ...c });
+          }}
+          onCancel={onClose}
+        />
+      )}
+    </div>
   );
 }
 

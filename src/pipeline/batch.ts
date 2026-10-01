@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { Field } from '../importer/columns.js';
 import { type BatchSummary, defaultResultsFile, type RowResult, writeResults } from '../importer/results.js';
 import { type ImportResult, readWorkbook } from '../importer/workbook.js';
-import type { TestModel } from '../model/test-model.js';
+import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
 import type { Status, TestVerdict } from '../results/verdict.js';
 import { type PipelineOptions, runCases } from './run-cases.js';
@@ -29,6 +29,8 @@ export interface BatchOptions extends Omit<PipelineOptions, 'login'> {
   loginId?: string;
   /** Where batch progress is kept. Default: .auto-qa/batches. */
   batchesDir?: string;
+  /** Test cases the tester edited in the app, by id. They replace the sheet's version of the same case. */
+  overrides?: Record<string, RawTestCase>;
   /** Called with the test cases read from the sheet, before any runs, so they can be kept (item 1). */
   onImported?: (cases: ImportResult['cases']) => void | Promise<void>;
 }
@@ -54,6 +56,15 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
     `${imported.cases.length} test case(s) in "${imported.sheet}"${imported.problems.length ? `, ${imported.problems.length} row(s) that are not complete test cases` : ''}`,
   );
   for (const w of imported.warnings) progress(`! ${w}`);
+  // An edit made in the app wins over the sheet, which is never changed (D23).
+  for (const c of imported.cases) {
+    const edited = c.raw.id ? options.overrides?.[c.raw.id] : undefined;
+    if (edited) {
+      c.raw = { ...edited, id: c.raw.id, row: c.raw.row };
+      progress(`${c.raw.id}: using the version edited in Auto QA`);
+    }
+  }
+  imported.problems = imported.problems.filter((p) => !(p.id && options.overrides?.[p.id]));
   await options.onImported?.(imported.cases);
 
   const models: TestModel[] = [];
