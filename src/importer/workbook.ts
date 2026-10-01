@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import ExcelJS from 'exceljs';
 import type { RawTestCase } from '../model/test-model.js';
+import { splitNumbered } from '../parser/text.js';
 import { type ColumnMap, type Field, findHeaderRow, matchColumns } from './columns.js';
 
 /**
@@ -66,7 +67,7 @@ export async function readWorkbook(file: string, options: ImportOptions = {}): P
   if (options.sheet && !sheets.length) throw new Error(`${file} has no sheet "${options.sheet}". Sheets: ${workbook.worksheets.map((s) => s.name).join(', ')}`);
 
   for (const sheet of sheets) {
-    const rows = rowsOf(sheet);
+    const { rows, slaves } = rowsOf(sheet);
     const header = findHeaderRow(rows, options.mapping);
     if (header === undefined) continue;
     const headers = rows[header].map((h) => h ?? '');
@@ -86,59 +87,147 @@ export async function readWorkbook(file: string, options: ImportOptions = {}): P
     const problems: RowProblem[] = [];
     const warnings: string[] = [];
     const seen = new Map<string, number>();
-    for (let i = header + 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row.some((c) => c?.trim())) continue;
-      const sheetRow = i + 1;
-      let id = cell(row, 'id');
-      const title = cell(row, 'title');
-      const empty = (['title', 'steps', 'expected'] as Field[]).filter((f) => !cell(row, f));
-      if (empty.length) {
-        problems.push({ row: sheetRow, id, title, text: `Row ${sheetRow} has no ${empty.map(label).join(', ')}.` });
-        continue;
+    // A test case can be spread over several rows (one step per row, the title merged over them): the rows are gathered here.
+    let pending: Pending | undefined;
+    const flush = () => {
+      if (!pending) return;
+      const built = buildCase(pending);
+      pending = undefined;
+      if ('problem' in built) {
+        problems.push(built.problem);
+        return;
       }
+      let id = built.raw.id;
       if (id && seen.has(id)) {
-        const renamed = `${id}-R${sheetRow}`;
-        warnings.push(`${id} is on rows ${seen.get(id)} and ${sheetRow}; the second is ${renamed}.`);
+        const renamed = `${id}-R${built.row}`;
+        warnings.push(`${id} is on rows ${seen.get(id)} and ${built.row}; the second is ${renamed}.`);
         id = renamed;
       }
-      if (id) seen.set(id, sheetRow);
-      cases.push({
+      if (id) seen.set(id, built.row);
+      cases.push({ row: built.row, raw: { ...built.raw, id } });
+    };
+    for (let i = header + 1; i < rows.length; i++) {
+      const row = rows[i];
+      const filled = row.filter((c) => c?.trim()).length;
+      if (!filled) continue;
+      const sheetRow = i + 1;
+      const id = cell(row, 'id');
+      const title = cell(row, 'title');
+      const steps = cell(row, 'steps');
+      const expected = cell(row, 'expected');
+
+      // "LOGIN MODULE": a heading row between groups of test cases (RW-I07). It ends the case above and starts nothing.
+      if (filled === 1 && !steps && !expected) {
+        flush();
+        warnings.push(`Row ${sheetRow} ("${row.find((c) => c?.trim())?.trim()}") is a heading, not a test case, and was skipped.`);
+        continue;
+      }
+      // The rest of a test case above: no id of its own, or the id/title cell is merged down from it (RW-I01, RW-I02).
+      const mergedDown = (field: Field) => !!match.map[field] && slaves[i]?.[(match.map[field] as number) - 1] === true;
+      const continues = !!pending && !!steps && ((!id && !title) || mergedDown('id') || mergedDown('title'));
+      if (continues && pending) {
+        pending.parts.push({ row: sheetRow, steps: steps as string, expected, testData: cell(row, 'testData') });
+        continue;
+      }
+      flush();
+      pending = {
         row: sheetRow,
-        raw: {
-          id,
-          title: title!,
-          type: cell(row, 'type')?.toLowerCase(),
-          preconditions: cell(row, 'preconditions'),
-          steps: cell(row, 'steps')!,
-          testData: cell(row, 'testData'),
-          expected: cell(row, 'expected')!,
-          requirementId: cell(row, 'requirementId'),
-          row: sheetRow,
-        },
-      });
+        id,
+        title,
+        type: cell(row, 'type'),
+        preconditions: cell(row, 'preconditions'),
+        requirementId: cell(row, 'requirementId'),
+        parts: [{ row: sheetRow, steps, expected, testData: cell(row, 'testData') }],
+      };
     }
+    flush();
+
+    // Other sheets that also hold test cases are not imported; say so instead of leaving it unnoticed.
+    const others = sheets.filter((other) => other !== sheet && findHeaderRow(rowsOf(other).rows, options.mapping) !== undefined).map((other) => other.name);
+    if (others.length && !options.sheet) warnings.push(`Other sheets with test cases were not imported: ${others.join(', ')}. Choose the sheet to import.`);
     return { file, format, sheet: sheet.name, headerRow: header + 1, headers, columns: match.map, unmatched: match.unmatched, cases, problems, warnings };
   }
   throw new Error(`${file}: no sheet has a header row with Title, Steps and Expected Result columns (or similar names).`);
 }
 
-const label = (f: Field) => ({ title: 'Title', steps: 'Steps', expected: 'Expected Result' })[f as 'title' | 'steps' | 'expected'] ?? f;
-
-/** Every row as text, as the sheet shows it (formulas as their result, rich text as plain text). */
-function rowsOf(sheet: ExcelJS.Worksheet): Array<Array<string | undefined>> {
+/**
+ * Every row as text, as the sheet shows it (formulas as their result, rich text as plain text). `slaves` marks the cells
+ * that are part of a merged range but not its first cell: they hold the same text as the first one.
+ */
+function rowsOf(sheet: ExcelJS.Worksheet): { rows: Array<Array<string | undefined>>; slaves: boolean[][] } {
   const rows: Array<Array<string | undefined>> = [];
+  const slaves: boolean[][] = [];
   const width = sheet.columnCount;
   for (let r = 1; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     const values: Array<string | undefined> = [];
+    const merged: boolean[] = [];
     for (let c = 1; c <= width; c++) {
-      const text = row.getCell(c).text;
+      const cellAt = row.getCell(c);
+      const text = cellAt.text;
       values.push(text === '' ? undefined : text.replace(/\r\n?/g, '\n'));
+      merged.push(cellAt.isMerged && cellAt.master.address !== cellAt.address);
     }
     rows.push(values);
+    slaves.push(merged);
   }
-  return rows;
+  return { rows, slaves };
+}
+
+interface Part {
+  row: number;
+  steps?: string;
+  expected?: string;
+  testData?: string;
+}
+
+interface Pending {
+  row: number;
+  id?: string;
+  title?: string;
+  type?: string;
+  preconditions?: string;
+  requirementId?: string;
+  parts: Part[];
+}
+
+/** One test case from the rows that belong to it: steps numbered in order, a step's own expected result as a check after it (RW-E12). */
+function buildCase(p: Pending): { row: number; raw: RawTestCase } | { problem: RowProblem } {
+  const first = p.parts[0];
+  const withSteps = p.parts.filter((x) => x.steps);
+  const lines: string[] = [];
+  const stepLine = (text: string) => lines.push(`${lines.length + 1}. ${text}`);
+  let finalExpected: string | undefined;
+  for (const [k, part] of withSteps.entries()) {
+    // A row may hold several numbered steps already: keep them in order under the new numbering.
+    for (const line of splitNumbered(part.steps as string)) stepLine(line.text);
+    const last = k === withSteps.length - 1;
+    if (part.expected) {
+      if (last || withSteps.length === 1) finalExpected = part.expected;
+      else stepLine(`Verify ${part.expected}`);
+    }
+  }
+  finalExpected ??= [...p.parts].reverse().find((x) => x.expected)?.expected;
+  const empty = [!p.title && 'Title', !withSteps.length && 'Steps', !finalExpected && 'Expected Result'].filter(Boolean) as string[];
+  if (empty.length) return { problem: { row: p.row, id: p.id, title: p.title, text: `Row ${p.row} has no ${empty.join(', ')}.` } };
+  const testData = p.parts
+    .map((x) => x.testData)
+    .filter(Boolean)
+    .join('; ');
+  return {
+    row: p.row,
+    raw: {
+      id: p.id,
+      title: p.title as string,
+      type: p.type?.toLowerCase(),
+      preconditions: p.preconditions,
+      steps: p.parts.length > 1 || withSteps.length > 1 ? lines.join('\n') : (first.steps as string),
+      testData: testData || undefined,
+      expected: finalExpected as string,
+      requirementId: p.requirementId,
+      row: p.row,
+    },
+  };
 }
 
 /** Comma, semicolon (common in Europe and India) or tab, whichever the first line uses most. */

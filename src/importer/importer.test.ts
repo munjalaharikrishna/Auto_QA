@@ -82,6 +82,38 @@ describe('workbook import (FR-IN-01)', () => {
     assert.match(first.raw.steps, /^1\. Open Login page\n2\. /);
   });
 
+  it('repairs a sheet written one step per row, with merged cells, headings and other sheets (FR-IN-10)', async () => {
+    const file = path.join(dir, 'repair.xlsx');
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Login');
+    ws.addRow(['Test Case ID', 'Title', 'Steps', 'Expected Result']);
+    ws.addRow(['LOGIN MODULE']);
+    ws.addRow(['TC-1', 'Valid login', 'Open Login page', 'Login page is displayed']);
+    ws.addRow([undefined, undefined, 'Enter username Admin', undefined]);
+    ws.addRow([undefined, undefined, 'Click Login', 'User is redirected to Dashboard page']);
+    ws.addRow(['TC-2', 'Merged', 'Open Login page', 'Page shown']);
+    ws.addRow(['TC-2', 'Merged', 'Click Login', 'Dashboard is displayed']);
+    ws.mergeCells('A6:A7');
+    ws.mergeCells('B6:B7');
+    wb.addWorksheet('Other').addRows([
+      ['Test Case ID', 'Title', 'Steps', 'Expected Result'],
+      ['X', 'Y', 'Open Login page', 'Z'],
+    ]);
+    await wb.xlsx.writeFile(file);
+    const r = await readWorkbook(file);
+    assert.deepEqual(r.problems, []);
+    assert.deepEqual(
+      r.cases.map((c) => c.raw.id),
+      ['TC-1', 'TC-2'],
+    );
+    assert.equal(r.cases[0].raw.steps, '1. Open Login page\n2. Verify Login page is displayed\n3. Enter username Admin\n4. Click Login');
+    assert.equal(r.cases[0].raw.expected, 'User is redirected to Dashboard page');
+    assert.equal(r.cases[1].raw.steps, '1. Open Login page\n2. Verify Page shown\n3. Click Login');
+    assert.equal(r.cases[1].raw.expected, 'Dashboard is displayed');
+    assert.ok(r.warnings.some((w) => /LOGIN MODULE.*heading/.test(w)));
+    assert.ok(r.warnings.some((w) => /Other sheets.*Other/.test(w)));
+  });
+
   it('reads a CSV with semicolons and multi-line cells', async () => {
     const file = path.join(dir, 'suite.csv');
     await writeFile(file, '﻿Test Case;Test Steps;Expected Result\r\nLogin;"1. Open Login page\n2. Click Login";User is redirected to Dashboard page\r\n');
