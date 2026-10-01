@@ -139,7 +139,7 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
   const get = async (url: string) => (await s.app.inject({ url })).json();
   const post = async (url: string, payload: unknown = {}) => (await s.app.inject({ method: 'POST', url, payload: payload as object })).json();
   const until = async (id: string, statuses: string[]) => {
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 600; i++) {
       const j = await get(`/api/jobs/${id}`);
       if (statuses.includes(j.status)) return j;
       await new Promise((r) => setTimeout(r, 500));

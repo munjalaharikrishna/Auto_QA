@@ -23,7 +23,12 @@ process.emitWarning = ((warning: string | Error, ...rest: unknown[]) => {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const dataDir = path.resolve(process.env.AUTO_QA_DATA ?? path.join(root, '.auto-qa'));
 const workspacesDir = path.resolve(process.env.AUTO_QA_WORKSPACES ?? path.join(root, 'workspaces'));
-const store = await Store.open(path.join(dataDir, 'auto-qa.db'));
+const store = await Store.open(path.join(dataDir, 'auto-qa.db')).catch((e: Error) => {
+  // A database from a newer version, or a failed upgrade: say what happened and stop, changing nothing.
+  console.error(`Auto QA cannot open its database.
+${e.message}`);
+  process.exit(1);
+});
 const runner = new JobRunner({ store, config: defaultParserConfig(), dataDir, headless: process.env.AUTO_QA_HEADED !== '1' });
 const app = await buildApp({ store, runner, dataDir, workspacesDir, webDir: path.join(root, 'web', 'dist') });
 

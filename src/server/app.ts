@@ -73,8 +73,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   const notFound = (what: string) => Object.assign(new Error(`${what} not found`), { statusCode: 404 });
   const bad = (message: string) => Object.assign(new Error(message), { statusCode: 400 });
-  const projectOf = (id: string): Project =>
-    store.project(id) ??
+  const projectOf = async (id: string): Promise<Project> =>
+    (await store.project(id)) ??
     (() => {
       throw notFound('Project');
     })();
@@ -96,7 +96,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   // Projects and their run settings (FR-IN-04, FR-ENV-01, FR-ENV-05)
 
-  app.get('/api/projects', async () => store.projects().map(withEnv));
+  app.get('/api/projects', async () => (await store.projects()).map(withEnv));
 
   app.post('/api/projects', async (req, reply) => {
     const body = ProjectBody.parse(req.body);
@@ -106,19 +106,26 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '') || 'project';
     let id = base;
-    for (let n = 2; store.project(id); n++) id = `${base}-${n}`;
+    for (let n = 2; await store.project(id); n++) id = `${base}-${n}`;
     const workspace = path.resolve(options.workspacesDir, id);
-    const project = store.createProject({ id, name: body.name, baseUrl: body.baseUrl, testIdAttribute: body.testIdAttribute, browser: 'chromium', workspace });
+    const project = await store.createProject({
+      id,
+      name: body.name,
+      baseUrl: body.baseUrl,
+      testIdAttribute: body.testIdAttribute,
+      browser: 'chromium',
+      workspace,
+    });
     await writeEnvFile(workspace, { BASE_URL: body.baseUrl, TEST_USERNAME: body.username, TEST_PASSWORD: body.password, ...body.variables });
     return reply.status(201).send(withEnv(project));
   });
 
-  app.get('/api/projects/:id', async (req) => withEnv(projectOf((req.params as { id: string }).id)));
+  app.get('/api/projects/:id', async (req) => withEnv(await projectOf((req.params as { id: string }).id)));
 
   app.patch('/api/projects/:id', async (req) => {
-    const project = projectOf((req.params as { id: string }).id);
+    const project = await projectOf((req.params as { id: string }).id);
     const body = ProjectPatch.parse(req.body);
-    const updated = store.updateProject(project.id, { name: body.name, baseUrl: body.baseUrl, testIdAttribute: body.testIdAttribute })!;
+    const updated = (await store.updateProject(project.id, { name: body.name, baseUrl: body.baseUrl, testIdAttribute: body.testIdAttribute }))!;
     await writeEnvFile(project.workspace, { BASE_URL: body.baseUrl, TEST_USERNAME: body.username, TEST_PASSWORD: body.password, ...body.variables });
     return withEnv(updated);
   });
@@ -126,7 +133,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // Workbook upload, column mapping, batch run (FR-IN-01, FR-IN-02, FR-IN-08)
 
   app.post('/api/projects/:id/uploads', async (req, reply) => {
-    const project = projectOf((req.params as { id: string }).id);
+    const project = await projectOf((req.params as { id: string }).id);
     const part = await req.file();
     if (!part) throw bad('Attach a .xlsx or .csv file.');
     const name = path.basename(part.filename).replace(/[^\w. -]+/g, '_');
@@ -135,7 +142,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     await mkdir(dir, { recursive: true });
     const file = path.join(dir, name);
     await writeFile(file, await part.toBuffer());
-    const upload = store.createUpload({ projectId: project.id, file, originalName: part.filename });
+    const upload = await store.createUpload({ projectId: project.id, file, originalName: part.filename });
     // FR-IN-02: the mapping used last time is reused when this sheet has its headers; otherwise the automatic match.
     const saved = await savedMapping(project);
     const withSaved = Object.keys(saved).length ? await preview(file, saved) : undefined;
@@ -145,7 +152,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.post('/api/uploads/:id/preview', async (req) => {
     const upload =
-      store.upload((req.params as { id: string }).id) ??
+      (await store.upload((req.params as { id: string }).id)) ??
       (() => {
         throw notFound('Upload');
       })();
@@ -155,16 +162,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.post('/api/uploads/:id/run', async (req, reply) => {
     const upload =
-      store.upload((req.params as { id: string }).id) ??
+      (await store.upload((req.params as { id: string }).id)) ??
       (() => {
         throw notFound('Upload');
       })();
     const { mapping } = MappingBody.parse(req.body ?? {});
     const checked = await preview(upload.file, mapping); // Refuse a mapping that does not work before queueing.
     if (!checked.ok) throw bad(checked.error ?? 'The columns do not work.');
-    const project = projectOf(upload.projectId);
+    const project = await projectOf(upload.projectId);
     await writeFile(mappingFile(project), `${JSON.stringify(mapping, null, 2)}\n`);
-    const job = store.createJob({ projectId: upload.projectId, kind: 'workbook', input: { uploadId: upload.id, mapping, originalName: upload.originalName } });
+    const job = await store.createJob({
+      projectId: upload.projectId,
+      kind: 'workbook',
+      input: { uploadId: upload.id, mapping, originalName: upload.originalName },
+    });
     runner.enqueue(job);
     return reply.status(202).send(job);
   });
@@ -172,25 +183,25 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // One test case from the form (FR-IN-04), reviewed before it runs (FR-RV-01, FR-RV-03)
 
   app.post('/api/projects/:id/cases', async (req, reply) => {
-    const project = projectOf((req.params as { id: string }).id);
+    const project = await projectOf((req.params as { id: string }).id);
     const raw = RawTestCaseSchema.omit({ row: true }).parse(req.body);
     const model = parseTestCase(raw);
-    const job = store.createJob({ projectId: project.id, kind: 'single', input: { case: { ...raw, id: model.id } } });
+    const job = await store.createJob({ projectId: project.id, kind: 'single', input: { case: { ...raw, id: model.id } } });
     runner.enqueue(job);
     return reply.status(202).send(job);
   });
 
   // Jobs, questions, results (FR-RV-02, FR-HI-01, FR-HI-06)
 
-  app.get('/api/projects/:id/jobs', async (req) => store.jobs(projectOf((req.params as { id: string }).id).id));
+  app.get('/api/projects/:id/jobs', async (req) => store.jobs((await projectOf((req.params as { id: string }).id)).id));
 
   app.get('/api/jobs/:id', async (req) => {
     const job =
-      store.job((req.params as { id: string }).id) ??
+      (await store.job((req.params as { id: string }).id)) ??
       (() => {
         throw notFound('Job');
       })();
-    return { ...job, logs: store.logs(job.id), questions: store.openQuestions(job.id), verdicts: store.verdicts(job.id) };
+    return { ...job, logs: await store.logs(job.id), questions: await store.openQuestions(job.id), verdicts: await store.verdicts(job.id) };
   });
 
   const decide = (action: Decision['action']) => async (req: { params: unknown; body: unknown }) => {
@@ -204,32 +215,32 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.post('/api/jobs/:id/edit', decide('edit'));
 
   app.post('/api/jobs/:id/cancel', async (req) => {
-    runner.cancel((req.params as { id: string }).id);
+    await runner.cancel((req.params as { id: string }).id);
     return { ok: true };
   });
 
   /** A workbook's review queue, answered interactively in the UI. */
   app.post('/api/jobs/:id/review-queue', async (req, reply) => {
     const job =
-      store.job((req.params as { id: string }).id) ??
+      (await store.job((req.params as { id: string }).id)) ??
       (() => {
         throw notFound('Job');
       })();
     if (job.kind !== 'workbook') throw bad('Only a workbook job has a review queue.');
-    const next = store.createJob({ projectId: job.projectId, kind: 'workbook', input: { ...job.input, onlyReview: true } });
+    const next = await store.createJob({ projectId: job.projectId, kind: 'workbook', input: { ...job.input, onlyReview: true } });
     runner.enqueue(next);
     return reply.status(202).send(next);
   });
 
   app.post('/api/questions/:id/answer', async (req) => {
     const { answer } = AnswerBody.parse(req.body);
-    if (!runner.answer(Number((req.params as { id: string }).id), answer)) throw bad('This question is not waiting for an answer.');
+    if (!(await runner.answer(Number((req.params as { id: string }).id), answer))) throw bad('This question is not waiting for an answer.');
     return { ok: true };
   });
 
   app.get('/api/jobs/:id/results', async (req, reply) => {
     const job =
-      store.job((req.params as { id: string }).id) ??
+      (await store.job((req.params as { id: string }).id)) ??
       (() => {
         throw notFound('Job');
       })();

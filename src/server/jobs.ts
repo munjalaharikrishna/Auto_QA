@@ -43,12 +43,18 @@ export class JobRunner extends EventEmitter {
   private readonly answers = new Map<number, (answer: unknown) => void>();
   private readonly decisions = new Map<string, (d: Decision) => void>();
   private readonly cancelled = new Set<string>();
+  /** Resolves once jobs a restart interrupted are marked failed; nothing starts before then. */
+  private readonly ready: Promise<void>;
 
   constructor(private readonly options: RunnerOptions) {
     super();
-    // A restart loses the browser a job was using: say so instead of pretending it continues.
-    for (const job of options.store.interruptedJobs()) {
-      options.store.updateJob(job.id, {
+    this.ready = this.recover();
+  }
+
+  /** A restart loses the browser a job was using: say so instead of pretending it continues. */
+  private async recover(): Promise<void> {
+    for (const job of await this.options.store.interruptedJobs()) {
+      await this.options.store.updateJob(job.id, {
         status: 'failed',
         error: 'The server stopped while this job was running. Start it again.',
         finishedAt: new Date().toISOString(),
@@ -67,11 +73,11 @@ export class JobRunner extends EventEmitter {
   }
 
   /** The tester's answer to an open question. Returns false if nothing is waiting for it. */
-  answer(questionId: number, answer: unknown): boolean {
+  async answer(questionId: number, answer: unknown): Promise<boolean> {
     const resolve = this.answers.get(questionId);
     if (!resolve) return false;
-    const q = this.options.store.answer(questionId, answer);
     this.answers.delete(questionId);
+    const q = await this.options.store.answer(questionId, answer);
     if (q) this.emit('event', { type: 'answered', jobId: q.jobId, questionId } satisfies ServerEvent);
     resolve(answer);
     return true;
@@ -86,45 +92,54 @@ export class JobRunner extends EventEmitter {
     return true;
   }
 
-  cancel(jobId: string): void {
-    const job = this.options.store.job(jobId);
+  async cancel(jobId: string): Promise<void> {
+    const job = await this.options.store.job(jobId);
     if (!job || ['done', 'failed', 'cancelled'].includes(job.status)) return;
     this.cancelled.add(jobId);
     const queued = this.queue.indexOf(jobId);
     if (queued >= 0) {
       this.queue.splice(queued, 1);
-      this.update(jobId, { status: 'cancelled', finishedAt: new Date().toISOString() });
+      await this.update(jobId, { status: 'cancelled', finishedAt: new Date().toISOString() });
       return;
     }
     this.decide(jobId, { action: 'cancel' });
-    for (const q of this.options.store.openQuestions(jobId)) this.answer(q.id, q.kind === 'confirm' ? false : 'abort');
+    for (const q of await this.options.store.openQuestions(jobId)) await this.answer(q.id, q.kind === 'confirm' ? false : 'abort');
   }
 
-  private update(jobId: string, changes: Parameters<Store['updateJob']>[1]): Job {
-    const job = this.options.store.updateJob(jobId, changes);
+  private async update(jobId: string, changes: Parameters<Store['updateJob']>[1]): Promise<Job> {
+    const job = await this.options.store.updateJob(jobId, changes);
     this.emit('event', { type: 'job', job } satisfies ServerEvent);
     return job;
   }
 
-  private log(jobId: string, message: string): void {
-    this.options.store.log(jobId, message);
+  /** Progress lines are written in the order given; a write that fails must not stop the job. */
+  private async log(jobId: string, message: string): Promise<void> {
+    try {
+      await this.options.store.log(jobId, message);
+    } catch (e) {
+      console.error(`Could not save a log line for ${jobId}: ${(e as Error).message}`);
+    }
     this.emit('event', { type: 'log', jobId, at: new Date().toISOString(), message } satisfies ServerEvent);
   }
 
   private async next(): Promise<void> {
     if (this.busy) return;
-    const id = this.queue.shift();
-    if (!id) return;
     this.busy = true;
+    await this.ready;
+    const id = this.queue.shift();
+    if (!id) {
+      this.busy = false;
+      return;
+    }
     try {
-      const job = this.options.store.job(id);
+      const job = await this.options.store.job(id);
       if (!job) return;
-      this.update(id, { status: 'running', startedAt: new Date().toISOString() });
+      await this.update(id, { status: 'running', startedAt: new Date().toISOString() });
       if (job.kind === 'workbook') await this.runWorkbook(job);
       else await this.runSingle(job);
     } catch (e) {
-      if (e instanceof Cancelled || this.cancelled.has(id)) this.update(id, { status: 'cancelled', finishedAt: new Date().toISOString() });
-      else this.update(id, { status: 'failed', error: (e as Error).message, finishedAt: new Date().toISOString() });
+      if (e instanceof Cancelled || this.cancelled.has(id)) await this.update(id, { status: 'cancelled', finishedAt: new Date().toISOString() });
+      else await this.update(id, { status: 'failed', error: (e as Error).message, finishedAt: new Date().toISOString() });
     } finally {
       this.cancelled.delete(id);
       this.busy = false;
@@ -142,12 +157,12 @@ export class JobRunner extends EventEmitter {
   private resolver(job: Job, interactive: boolean, asked: string[]): Resolver {
     const ask = async (kind: Question['kind'], payload: Record<string, unknown>): Promise<unknown> => {
       if (this.cancelled.has(job.id)) throw new Cancelled();
-      const q = this.options.store.ask(job.id, kind, payload);
-      this.update(job.id, { status: 'waiting' });
+      const q = await this.options.store.ask(job.id, kind, payload);
+      await this.update(job.id, { status: 'waiting' });
       this.emit('event', { type: 'question', question: q } satisfies ServerEvent);
       const answer = await new Promise<unknown>((resolve) => this.answers.set(q.id, resolve));
       if (this.cancelled.has(job.id)) throw new Cancelled();
-      this.update(job.id, { status: 'running' });
+      await this.update(job.id, { status: 'running' });
       return answer;
     };
     return {
@@ -187,8 +202,8 @@ export class JobRunner extends EventEmitter {
   }
 
   private async runWorkbook(job: Job): Promise<void> {
-    const project = this.options.store.project(job.projectId)!;
-    const upload = this.options.store.upload(String(job.input.uploadId));
+    const project = (await this.options.store.project(job.projectId))!;
+    const upload = await this.options.store.upload(String(job.input.uploadId));
     if (!upload) throw new Error('The uploaded workbook is gone. Upload it again.');
     const onlyReview = job.input.onlyReview === true;
     const asked: string[] = [];
@@ -201,9 +216,9 @@ export class JobRunner extends EventEmitter {
       mapping: (job.input.mapping ?? {}) as Partial<Record<Field, string>>,
       onlyReview,
       out: defaultResultsFile(upload.file),
-      onProgress: (m) => this.log(job.id, m),
+      onProgress: (m) => void this.log(job.id, m),
     });
-    this.options.store.saveVerdicts(
+    await this.options.store.saveVerdicts(
       job.id,
       batch.results.map((r) => ({
         testId: r.verdict?.testId ?? r.id ?? `row ${r.row}`,
@@ -212,7 +227,7 @@ export class JobRunner extends EventEmitter {
         verdict: r.verdict ?? { problem: r.problem, title: r.title },
       })),
     );
-    this.update(job.id, {
+    await this.update(job.id, {
       status: 'done',
       executionId: batch.summary.executionId,
       output: { summary: batch.summary, resultsFile: batch.out, originalName: upload.originalName, loginCase: batch.loginCase, workspace: batch.workspace },
@@ -222,52 +237,58 @@ export class JobRunner extends EventEmitter {
 
   /** One test case from the form: explore and generate, wait in review, then run (FR-RV-01, FR-RV-03). */
   private async runSingle(job: Job): Promise<void> {
-    const project = this.options.store.project(job.projectId)!;
+    const project = (await this.options.store.project(job.projectId))!;
     let raw = job.input.case as RawTestCase;
     let reexplore = false;
     for (;;) {
       const model = parseTestCase(raw, this.options.config);
       // A single test gets its own project, so it cannot disturb the workbook's suite (merging it in is V2, FR-GE-07).
       const workspace = this.projectDir(project, 'single', model.id, 'workspace');
-      const options = { ...this.common(project), resolver: this.resolver(job, true, []), workspace, reexplore, onProgress: (m: string) => this.log(job.id, m) };
+      const options = {
+        ...this.common(project),
+        resolver: this.resolver(job, true, []),
+        workspace,
+        reexplore,
+        onProgress: (m: string) => void this.log(job.id, m),
+      };
       const prepared = await prepareCases([model], options);
       // A cancel while exploring ends the exploration early; it must not then wait in review.
       if (this.cancelled.has(job.id)) throw new Cancelled();
-      this.update(job.id, { status: 'review', output: { review: reviewOf(model, prepared), workspace } });
+      await this.update(job.id, { status: 'review', output: { review: reviewOf(model, prepared), workspace } });
       let decision = await this.decision(job.id);
       // Approving a test that could not be generated changes nothing: it stays in review, with the reason.
       while (decision.action === 'approve' && !prepared.explored.length) {
-        this.log(job.id, 'Nothing to run yet: the test case could not be generated. Edit it or regenerate.');
+        await this.log(job.id, 'Nothing to run yet: the test case could not be generated. Edit it or regenerate.');
         decision = await this.decision(job.id);
       }
       if (decision.action === 'cancel' || this.cancelled.has(job.id)) throw new Cancelled();
       if (decision.action === 'regenerate') {
         reexplore = true;
-        this.log(job.id, 'Regenerating: exploring again');
+        await this.log(job.id, 'Regenerating: exploring again');
         continue;
       }
       if (decision.action === 'edit') {
         // FR-RV-05: the edit goes into the test case, which is parsed and explored again.
         raw = { ...decision.case, id: model.id };
         reexplore = false;
-        this.update(job.id, { status: 'running', input: { ...job.input, case: raw } });
-        this.log(job.id, 'Edited: exploring the changed test case');
+        await this.update(job.id, { status: 'running', input: { ...job.input, case: raw } });
+        await this.log(job.id, 'Edited: exploring the changed test case');
         continue;
       }
-      this.update(job.id, { status: 'running' });
-      this.log(job.id, 'Approved: running');
+      await this.update(job.id, { status: 'running' });
+      await this.log(job.id, 'Approved: running');
       const result = await executeCases([model], prepared, {
         ...options,
-        onRunEvent: (e) => e.event === 'step-end' && this.log(job.id, `${e.status === 'passed' ? '✔' : '✖'} ${e.step}`),
+        onRunEvent: (e) => e.event === 'step-end' && void this.log(job.id, `${e.status === 'passed' ? '✔' : '✖'} ${e.step}`),
       });
-      this.options.store.saveVerdicts(
+      await this.options.store.saveVerdicts(
         job.id,
         result.verdicts.map((v) => ({ testId: v.testId, status: v.status, verdict: v })),
       );
-      this.update(job.id, {
+      await this.update(job.id, {
         status: 'done',
         executionId: result.executionId,
-        output: { ...this.options.store.job(job.id)?.output, verdicts: result.verdicts },
+        output: { ...(await this.options.store.job(job.id))?.output, verdicts: result.verdicts },
         finishedAt: new Date().toISOString(),
       });
       return;

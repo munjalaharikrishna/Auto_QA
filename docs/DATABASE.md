@@ -1,7 +1,7 @@
 # Auto QA: Database Specification and Architecture
 
 Part of [SPEC.md](SPEC.md) (requirements FR-DB-…, decisions D24–D28) and [ARCHITECTURE.md](ARCHITECTURE.md) §9. Diagrams are Mermaid.
-This document is a **plan**: nothing here is built yet except what §2 calls "today".
+**Status (2026-10-01):** M8 is in progress. Built: the driver and dialect layer, the migration runner (checksums, backup, downgrade guard), migrations 0001–0003 (baseline, environments + page routes + settings + counters + audit log, job log ids), the store moved to `src/db/` with a transaction API, and `npm run db -- status | backup | verify`. Everything else below is still the plan; §10 shows which steps are done.
 
 **Contents**
 1. [Goals](#1-goals)
@@ -498,15 +498,17 @@ M8 sits between V1 and V2 and unblocks the V2 items that need rows. No screen ch
 
 | # | Work | Requirements |
 |---|---|---|
-| 1 | `src/db/`: `Driver`, `SqliteDriver`, dialect, migration runner, `schema_migrations`, backup, downgrade guard; adopt the current database as `0001_baseline` | FR-DB-01…05 |
-| 2 | Split `Store` into repositories with the same methods; unit of work; contract tests | FR-DB-06, FR-DB-07 |
-| 3 | `0002` environments + `page_routes`; `loadPageUrls`/`savePageUrls` use the table; import `pages.json` | FR-DB-08, FR-ENV-01, D19 |
+| 1 ✅ | `src/db/`: `Driver`, `SqliteDriver`, dialect, migration runner, `schema_migrations`, backup, downgrade guard; adopt the current database as `0001_baseline` | FR-DB-01…05 |
+| 2 ✅ | Move `Store` to `src/db/` with the same methods (now async) and a transaction API; tests. *Deviation:* one `Store` class, not one class per aggregate, until it grows; the SQL is already only in `src/db/` | FR-DB-06, FR-DB-07 |
+| 3 ◐ | `0002` environments + `page_routes` ✅ (created, `Store.pageRoutes`/`savePageRoute`, a Default environment per project). **Still to do:** `loadPageUrls`/`savePageUrls` use the table instead of `pages.json`, and import `pages.json` | FR-DB-08, FR-ENV-01, D19 |
 | 4 | `0003` `test_cases` + `test_model_versions`; the importer and the form write them | FR-DB-09 |
 | 5 | `0004` explorations + items; keep `exploration.json` as the artifact | FR-DB-10 |
 | 6 | `0005` executions, test results, step and check results; `counters` replaces the folder scan for `EXEC-…`; the batch and job code write them in one transaction; `verdicts` becomes a view | FR-DB-11, FR-DB-12 |
 | 7 | `0006` evidence + `ArtifactStore` with storage references; `0008` convert absolute paths | FR-DB-13, FR-DB-14 |
 | 8 | Result and history reads come from the database (the result screen, the workbook write-back, review queue); batch progress files are retired in favour of `test_results` | FR-HI-01, FR-HI-06, FR-IN-08 |
-| 9 | `auto-qa db status|backup|restore|verify|export|import`; upgrade fixtures; no-secret scan | FR-DB-15…18 |
+| 9 ◐ | `db status`, `db backup`, `db verify` ✅ (`npm run db`). **Still to do:** `restore`, `export`, `import`, a committed upgrade fixture per release, the PostgreSQL schema comparison in CI | FR-DB-15…18 |
+
+Also done in 0003 (not in the original list): job log lines get a real `id` so they order the same way on both databases.
 
 **Done when** a fresh install and the current `.auto-qa/auto-qa.db` both reach the same schema; a demo-app workbook run leaves no state only in JSON files other than the artifacts; deleting `pages.json`, `batches/` and `runs/` metadata changes nothing the UI shows; and a database from the previous release upgrades in CI.
 

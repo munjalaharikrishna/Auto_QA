@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.14 |
+| **Spec version** | 1.15 |
 | **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
-| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html), [PLAN.md](PLAN.md), [DATABASE.md](DATABASE.md) |
+| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html), [PLAN.md](PLAN.md), [DATABASE.md](DATABASE.md), [VALIDATIONS.md](VALIDATIONS.md) |
 
 ---
 
@@ -283,6 +283,11 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 | FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | ✅ Done (M6) |
 | FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test · ✅ Done (M6): uncaught page errors, 5xx responses, error pages; annotation `health: off` switches it off |
 | FR-VAL-05 | **Result statuses**: `PASS` every check passed; `FAIL` a check failed, or a step failed because of the application; `BLOCKED` the run could not be done (environment, network, missing credentials or test data); `NEEDS REVIEW` a step or check the rules cannot decide (UNPARSED, vague, ambiguous). A vague expected result is never judged. | V1 | "Works correctly" gives NEEDS REVIEW, never PASS · ✅ Done (M6). A script error in the generated test is BLOCKED, never blamed on the application |
+| FR-VAL-06 | **Validation catalogue**: every check type (page, element state, text, forms, messages, layout, tables, network, health, session, storage, accessibility, performance, files, calculations, timing, devices, API) with its tester wording, Playwright check and version, in [VALIDATIONS.md](VALIDATIONS.md) (VAL-A01…R08) | V1–V4 | Each VAL row is built in the version it lists |
+| FR-VAL-07 | **Page identity check** after every page-changing step: path pattern, title and key elements from a page fingerprint learned during exploration (VAL-A05) | V1 | Opening an error or maintenance page fails the step with "Expected Home page, actually on …" |
+| FR-VAL-08 | **Guard-rail levels**: each automatic check can be `fail`, `warn` or `off` per project and test, and is reported separately from the tester's expected result (VALIDATIONS §4) | V2 | |
+| FR-VAL-09 | **Quality gates** per suite: accessibility, broken links and images, page speed, visual comparison, cookie flags (VALIDATIONS §5) | V3 | |
+| FR-VAL-10 | **Validation registry**: one module per check type (phrases, probe, code template, actual text) and custom matchers in the generated project (`toBeCentered`, `toBeBelow`, `toBeSortedBy`…) | V2 | A new check type needs no change outside its module |
 
 ### 6.13 Failure classification and retry (FR-FC) · §15
 
@@ -424,7 +429,7 @@ Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, stora
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
-| M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | Planned |
+| M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | In progress: driver, migrations, store, environments, `db` commands done; executions/results, evidence, test case versions to do |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
 
@@ -522,3 +527,5 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tabl
 | 1.12 | 2026-09-30 | M7 done: server (Fastify, node:sqlite, job runner, WebSocket) and web UI (React, Vite): projects with run settings, workbook upload with column mapping, batch runs with results download and the review queue, single test cases with questions, pick element on the screenshot, review with code diff, Approve & Execute / Edit / Regenerate, results, writing guide. AssistProvider no-op (FR-AI-01). D17 clarified for workbook runs; single tests use their own project until FR-GE-07. |
 | 1.13 | 2026-09-30 | From a real OrangeHRM test case: "Enter url…"/"Open the application" open BASE_URL with its path (it opened the site root before), "Enter user name in Login Name text box", "Open Browser" as no step, steps in quotes, "Checking X", "able to navigate to X", positions ignored, table-cell labels. D19: a check no longer teaches a page that was not reached, which could have given a false PASS. |
 | 1.14 | 2026-10-01 | Database specification and architecture ([DATABASE.md](DATABASE.md)): decisions D24–D28, requirements FR-DB-01…26, milestone M8. Plan to adopt the existing SQLite store as a baseline, add versioned migrations, repositories, environments, test case versions, executions/results/evidence, storage references, and the PostgreSQL path for V3. |
+| 1.15 | 2026-10-01 | M8 started: driver, versioned migrations (checksums, backup, downgrade guard), store moved to `src/db/`, environments, page routes, counters, audit log, `npm run db`. The real database was upgraded on a copy with no data lost. |
+| 1.16 | 2026-10-01 | Validation catalogue ([VALIDATIONS.md](VALIDATIONS.md)): 164 check types in 18 groups with wording, Playwright check, failure text and version; three layers (explicit, guard rails, quality gates); page identity check (FR-VAL-07); FR-VAL-06…10. |

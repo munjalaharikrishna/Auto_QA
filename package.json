@@ -17,6 +17,7 @@
     "auto-qa": "tsx src/cli/auto-qa.ts",
     "demo:workbook": "tsx examples/demo-app/make-workbook.ts",
     "serve": "tsx src/server/index.ts",
+    "db": "tsx src/cli/db.ts",
     "web:build": "vite build --config web/vite.config.ts",
     "web:dev": "vite --config web/vite.config.ts"
   },
