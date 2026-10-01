@@ -71,6 +71,65 @@ document.getElementById('profile').addEventListener('submit', (e) => {
 });
 </script>`,
   ),
+  // A page with something of everything the validation catalogue checks (VALIDATIONS.md): layout, tables, messages…
+  '/lab': `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lab · Demo</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;font:15px system-ui;min-height:100vh}
+  header{display:flex;align-items:center;gap:24px;padding:12px 24px;background:#f3f4f6;position:sticky;top:0}
+  header img{width:40px;height:40px}
+  .stage{display:flex;justify-content:center;padding:24px}
+  form.card{width:360px;padding:20px;border:1px solid #ccc;border-radius:8px}
+  .card label{display:block;margin:10px 0 4px}
+  .actions{display:flex;justify-content:space-between;margin-top:16px}
+  #save{background:#0066cc;color:#fff;border:0;padding:10px 16px;border-radius:4px;min-height:44px}
+  #cancel{padding:10px 16px;min-height:44px}
+  .err{color:#cc0000}
+  .products{display:flex;gap:12px;padding:0 24px} .product{width:160px;height:90px;border:1px solid #ddd;padding:8px}
+  table{border-collapse:collapse;margin:16px 24px} th,td{border:1px solid #ddd;padding:6px 12px;text-align:left}
+  .spinner{margin:8px 24px} .tabs{display:flex;gap:8px;padding:0 24px}
+  .toast{position:fixed;bottom:16px;right:16px;background:#222;color:#fff;padding:8px 12px;border-radius:4px}
+  #top{height:900px}
+</style></head><body>
+<header>
+  <img alt="Lab logo" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%230066cc'/%3E%3C/svg%3E">
+  <nav aria-label="Main"><a href="/lab?tab=home">Home</a> <a href="/lab?tab=help" target="_blank" rel="noopener noreferrer">Help</a> <a href="/terms">Terms</a></nav>
+</header>
+<div class="stage">
+  <form class="card" id="labform" aria-label="Lab login" name="labform">
+    <h1 style="margin-top:0">Lab sign in</h1>
+    <label for="email">Email</label><input id="email" name="email" placeholder="Enter email" maxlength="20" required>
+    <label for="pw">Password</label><input id="pw" name="pw" type="password">
+    <label for="country">Country</label>
+    <select id="country" name="country"><option>India</option><option>USA</option><option>UK</option></select>
+    <div class="actions"><button type="button" id="cancel">Cancel</button><button type="button" id="save">Save</button></div>
+    <p class="err" id="err" role="alert" hidden>Invalid credentials</p>
+  </form>
+</div>
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true">Overview</button><button role="tab" aria-selected="false">Settings</button></div>
+<h2 style="margin:16px 24px 0">Users</h2>
+<table id="users"><thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+<tbody><tr><td>Asha</td><td>asha@example.com</td><td>Active</td></tr><tr><td>Mia</td><td>mia@example.com</td><td>Active</td></tr><tr><td>Ravi</td><td>ravi@example.com</td><td>Pending</td></tr></tbody></table>
+<h2 style="margin:16px 24px 0">Prices</h2>
+<table id="prices"><thead><tr><th>Item</th><th>Price</th></tr></thead>
+<tbody><tr><td>Pen</td><td>$2.00</td></tr><tr><td>Book</td><td>$10.00</td></tr><tr><td>Bag</td><td>$25.50</td></tr></tbody></table>
+<div class="products"><div class="product">Product A</div><div class="product">Product B</div><div class="product">Product C</div></div>
+<p id="spinner" class="spinner" role="progressbar" aria-busy="true">Loading…</p>
+<p style="margin:16px 24px"><button id="ping">Ping server</button> <a id="export" href="/report.csv" download>Export</a> <button id="toastbtn">Show toast</button> <button id="dlg">Open dialog</button> <button id="alertbtn">Show alert</button></p>
+<p style="margin:16px 24px"><span role="img" aria-label="Info icon" title="Your data is safe" id="info">i</span> <output id="today" aria-label="Order date"></output> <output id="order" aria-label="Order number">ORD-123456</output> <output id="due" aria-label="Total due">$29.99</output></p>
+<dialog id="d" aria-label="Confirm"><p>Delete item?</p><button id="yes">Yes</button> <button id="no">No</button></dialog>
+<div id="top"></div>
+<script>
+  document.cookie = 'session=abc123; path=/; SameSite=Lax';
+  localStorage.setItem('theme', 'dark');
+  today.textContent = new Date().toISOString().slice(0, 10);
+  setTimeout(() => spinner.remove(), 700);
+  ping.onclick = () => fetch('/api/ping', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'a@b.com' }) });
+  toastbtn.onclick = () => { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = 'Saved'; document.body.append(t); setTimeout(() => t.remove(), 1500); };
+  dlg.onclick = () => d.showModal(); no.onclick = () => d.close(); yes.onclick = () => d.close();
+  alertbtn.onclick = () => alert('Hello from lab');
+  save.onclick = () => { if (!email.value) err.hidden = false; };
+</script></body></html>`,
   // A page that opens browser pop-ups (alert, confirm): they must not stop exploration or the test.
   '/alerts': layout(
     'Alerts',
@@ -85,6 +144,12 @@ export async function startDemoApp(port = 0): Promise<{ url: string; close(): Pr
   const server = http.createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
     if (path === '/api/reports') return res.writeHead(500, { 'content-type': 'application/json' }).end('{"error":"boom"}');
+    if (path === '/api/ping') return res.writeHead(201, { 'content-type': 'application/json' }).end('{"ok":true}');
+    if (path === '/report.csv') {
+      return res
+        .writeHead(200, { 'content-type': 'text/csv', 'content-disposition': 'attachment; filename="report.csv"' })
+        .end(['Name,Email', 'Asha,asha@example.com', 'Mia,mia@example.com', ''].join(String.fromCharCode(10)));
+    }
     const page = PAGES[path];
     if (!page) return res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(page);

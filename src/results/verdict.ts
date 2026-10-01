@@ -1,4 +1,6 @@
 import type { ManifestTest } from '../generator/plan.js';
+import type { AssertionType } from '../model/test-model.js';
+import { passedText } from '../validations/registry.js';
 
 /**
  * Result validator (FR-VAL-01…05, FR-FC-01 basic labels): what the reporter recorded + what the
@@ -290,12 +292,25 @@ function actualWhenPassed(c: Check): string {
     case 'value':
       return `"${what}" had${c.negated ? ' not' : ''} the value "${c.expected}"`;
     default:
-      return 'As expected';
+      // The checks of the validation catalogue say it themselves (src/validations).
+      return (
+        passedText({
+          type: c.type as AssertionType,
+          target: c.target,
+          expected: c.expected,
+          negated: c.negated,
+          options: c.options,
+          other: c.other ? { target: c.other, alternatives: [] } : undefined,
+        }) ?? 'As expected'
+      );
   }
 }
 
 /** Turns Playwright's assertion error into what the page actually showed (FR-VAL-02). */
 function actualFromError(c: Check, error: string, facts?: PageFacts): string {
+  // The checks of the validation catalogue write "Actual: …" themselves, with what they measured.
+  const told = /^\s*Actual:\s*(.+)$/m.exec(error)?.[1]?.trim();
+  if (told) return `${told.replace(/\.$/, '')}.`;
   const received = /Received(?: string| value)?:\s*"?([^"\n]*)"?/.exec(error)?.[1]?.trim();
   const what = c.target ?? c.expected ?? '';
   let specific: string;

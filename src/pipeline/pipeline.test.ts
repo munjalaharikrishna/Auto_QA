@@ -81,7 +81,10 @@ describe('whole flow: test case → verdict (M6)', { skip: !!process.env.AUTO_QA
     assert.match(vague.reason, /S2 "Do the needful"/);
     const missing = byId(first.verdicts, 'TC-X-MISSING');
     assert.equal(missing.status, 'NEEDS REVIEW');
-    assert.match(missing.reason, /S2 "Click Forgot password": NO_MATCH/);
+    assert.match(missing.reason, /S2 "Click Forgot password": I could not find "Forgot password" on the page/);
+    assert.doesNotMatch(missing.reason, /NO_MATCH/, 'no internal code in what the tester reads');
+    assert.equal(missing.review?.[0]?.id, 'S2');
+    assert.ok(missing.review?.[0]?.todo.length, 'it says what to do');
   });
 
   it("gives every verdict the run's execution ID (FR-EN-06)", () => {
@@ -123,7 +126,7 @@ describe('assist extension point (FR-AI-01)', () => {
   it("works with no helper: the reason is the parser's", async () => {
     const r = await runCases([vague()], options());
     assert.equal(r.verdicts[0].status, 'NEEDS REVIEW');
-    assert.doesNotMatch(r.verdicts[0].reason, /Suggested/);
+    assert.doesNotMatch(r.verdicts[0].reason, /Try: "/);
   });
 
   it("shows a helper's rewrite as a suggestion only; the case still needs review", async () => {
@@ -139,6 +142,6 @@ describe('assist extension point (FR-AI-01)', () => {
     );
     assert.deepEqual(asked, ['step: Do the needful']);
     assert.equal(r.verdicts[0].status, 'NEEDS REVIEW');
-    assert.match(r.verdicts[0].reason, /S2 "Do the needful": .* Suggested: "Click Login"\./);
+    assert.match(r.verdicts[0].reason, /S2 "Do the needful": I cannot tell what to do .*Try: "Click Login"/);
   });
 });

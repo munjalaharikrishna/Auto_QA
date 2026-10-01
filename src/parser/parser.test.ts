@@ -135,8 +135,9 @@ describe("testers' own wording (real test cases)", () => {
   it('reads a step written inside quotes', () => {
     const m = tc({ steps: '1. Open Home page\n2. "Checking the login section at middle of the page"' });
     const a = m.assertions.find((x) => x.step === 'S2')!;
-    assert.deepEqual(pick(a, ['type', 'target', 'status']), { type: 'visible', target: 'login section', status: 'parsed' });
-    assert.ok(m.warnings.some((w) => w.code === 'POSITION_IGNORED'));
+    // Where something is on the page is a check of its own now (VAL-F01): the login section must be in the middle.
+    assert.deepEqual(pick(a, ['type', 'target', 'status', 'container']), { type: 'centered', target: 'login', status: 'parsed', container: true });
+    assert.ok(!m.warnings.some((w) => w.code === 'POSITION_IGNORED'));
   });
 
   it('reads "able to navigate to X" as a redirect check', () => {
@@ -252,7 +253,8 @@ describe('checks (FR-PA-06, FR-PA-07, FR-PA-08)', () => {
       negated: false,
     });
     assert.deepEqual(shape(check('"Required" is displayed under Email field')), {
-      type: 'text',
+      // An error under a field belongs to that field (VAL-D04).
+      type: 'field-error',
       target: 'Email',
       roleHint: 'textbox',
       expected: 'Required',

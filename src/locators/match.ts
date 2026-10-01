@@ -1,5 +1,5 @@
 import { contextOf, flatten, nearbyText, type SnapshotNode } from '../explorer/snapshot-parser.js';
-import type { Action, AssertionType } from '../model/test-model.js';
+import type { Action, AssertionOptions, AssertionType } from '../model/test-model.js';
 import { normKey, type ParserConfig, synonymsOf } from '../parser/config.js';
 
 /**
@@ -16,6 +16,10 @@ export interface TargetQuery {
   alternatives: string[];
   exact?: boolean;
   roleHint?: string;
+  /** The name is a part of the page ("login form", "login section"): look for the form or region that holds it. */
+  container?: boolean;
+  /** What the check asks for (axis, tolerance, region…), for checks whose answer depends on which element is meant. */
+  options?: AssertionOptions;
 }
 
 export type NameSource = 'name' | 'text' | 'nearby' | 'heading';
@@ -70,6 +74,17 @@ const ROLES: Partial<Record<TargetQuery['kind'], string[]>> = {
   value: ['textbox', 'searchbox', 'combobox', 'spinbutton', 'listbox', 'slider'],
   enabled: ['button', 'link', 'textbox', 'searchbox', 'combobox', 'spinbutton', 'checkbox', 'radio', 'switch', 'listbox', 'slider', 'tab', 'menuitem'],
   disabled: ['button', 'link', 'textbox', 'searchbox', 'combobox', 'spinbutton', 'checkbox', 'radio', 'switch', 'listbox', 'slider', 'tab', 'menuitem'],
+  // Checks that only make sense on a field or a dropdown (VALIDATIONS.md): a table column called "Email" is not the Email field.
+  placeholder: ['textbox', 'searchbox', 'combobox', 'spinbutton'],
+  'max-length': ['textbox', 'searchbox', 'spinbutton'],
+  invalid: ['textbox', 'searchbox', 'combobox', 'spinbutton', 'checkbox', 'radio', 'switch', 'listbox'],
+  'field-error': ['textbox', 'searchbox', 'combobox', 'spinbutton', 'checkbox', 'radio', 'switch', 'listbox'],
+  'validation-message': ['textbox', 'searchbox', 'combobox', 'spinbutton', 'checkbox', 'radio', 'switch', 'listbox'],
+  editable: ['textbox', 'searchbox', 'combobox', 'spinbutton'],
+  focused: ['textbox', 'searchbox', 'combobox', 'spinbutton', 'button', 'link', 'checkbox', 'radio', 'switch', 'listbox', 'tab', 'menuitem'],
+  'selected-option': ['combobox', 'listbox'],
+  options: ['combobox', 'listbox'],
+  clickable: ['button', 'link', 'menuitem', 'tab', 'checkbox', 'radio', 'switch', 'option', 'treeitem'],
 };
 
 /** Roles that are page structure, never a step's target. */
@@ -102,6 +117,11 @@ export function findCandidates(query: TargetQuery, nodes: SnapshotNode[], config
   );
   const wanted = [query.target, ...query.alternatives].filter((w): w is string => !!w?.trim());
 
+  if (query.container) {
+    const holders = containerCandidates(query, nodes, wanted, config);
+    if (holders) return holders;
+    // Nothing holds it as a part of the page: it is an ordinary element after all.
+  }
   if (!wanted.length) return onlyOfRole(query, pool);
 
   const candidates = pool
@@ -111,6 +131,94 @@ export function findCandidates(query: TargetQuery, nodes: SnapshotNode[], config
   // Stable sort keeps document order for equal scores.
 
   return decide(candidates, wanted[0]);
+}
+
+/** Parts of the page a tester names: a form, a section, a table, a dialog (not a single control). */
+const HOLDER_ROLES = new Set([
+  'form',
+  'region',
+  'group',
+  'main',
+  'navigation',
+  'banner',
+  'contentinfo',
+  'complementary',
+  'list',
+  'table',
+  'grid',
+  'dialog',
+  'alertdialog',
+  'article',
+  'search',
+  'tabpanel',
+  'toolbar',
+  'menu',
+]);
+const STOP_WORDS = new Set(['the', 'a', 'an', 'of', 'and', 'on', 'in', 'to']);
+
+/**
+ * "The login form": the form (or region, table, dialog…) that holds the login controls. A part of the page
+ * has no name of its own most of the time, so it is found by what is inside it: every word the tester used must
+ * appear in the names of the controls and texts it holds. A form wins over the tables inside it, because that
+ * is what a tester points at; two equally good candidates are still left to the tester (D6).
+ */
+function containerCandidates(query: TargetQuery, nodes: SnapshotNode[], wanted: string[], config: ParserConfig): MatchResult | undefined {
+  const holders = flatten(nodes).filter((n) => n.ref && HOLDER_ROLES.has(n.role));
+  if (!wanted.length) {
+    const same = query.roleHint ? holders.filter((n) => n.role === query.roleHint) : [];
+    if (same.length !== 1) return undefined;
+    const best: Candidate = {
+      node: same[0],
+      score: SCORE.onlyOne,
+      matchedName: '',
+      source: 'name',
+      how: 'only-one',
+      notes: [`the only ${query.roleHint} on the page`],
+    };
+    return { status: 'matched', best, candidates: [best] };
+  }
+  const found: Candidate[] = [];
+  for (const node of holders) {
+    const inside = flatten(node.children).flatMap((n) => [n.name, n.text].filter((x): x is string => !!x));
+    const named = inside.filter((n) => n.trim()).length;
+    let hit: { score: number; how: Candidate['how']; matched: string; notes: string[] } | undefined;
+    // Its own name, e.g. form "Login" or a dialog titled "Confirm".
+    for (const w of wanted) {
+      const m = node.name ? compare(w, node.name, !!query.exact, config) : undefined;
+      if (m && (!hit || m.score > hit.score)) hit = { score: m.score, how: m.how, matched: node.name, notes: [] };
+    }
+    // What is inside it: every wanted word appears in a control or text it holds.
+    if (!hit && named >= 3) {
+      const text = new Set(inside.flatMap((n) => words(n)));
+      const need = wanted.flatMap((w) => words(w)).filter((w) => !STOP_WORDS.has(w));
+      if (need.length && need.every((w) => text.has(w))) {
+        const base = node.role === 'form' ? 0.95 : 0.8;
+        hit = {
+          score: base,
+          how: 'contains',
+          matched: wanted[0],
+          notes: [
+            `holds ${inside
+              .slice(0, 3)
+              .map((x) => `"${x}"`)
+              .join(', ')}${named > 3 ? ' and more' : ''}`,
+          ],
+        };
+      }
+    }
+    if (hit)
+      found.push({
+        node,
+        score: round(Math.min(1, hit.score + (query.roleHint === node.role ? SCORE.roleHintMatch : 0))),
+        matchedName: hit.matched,
+        source: 'name',
+        how: hit.how,
+        notes: hit.notes,
+      });
+  }
+  // The better ones first; of equal ones the inner part (a table inside a table) comes first.
+  const candidates = found.sort((a, b) => b.score - a.score || b.node.depth - a.node.depth);
+  return candidates.length ? decide(candidates, wanted[0]) : undefined;
 }
 
 function decide(candidates: Candidate[], label: string): MatchResult {

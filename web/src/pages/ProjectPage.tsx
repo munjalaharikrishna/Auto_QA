@@ -385,7 +385,7 @@ function RunsTab({ project }: { project: ProjectView }) {
                   {totals ? (
                     `${totals.PASS} pass · ${totals.FAIL} fail · ${totals.BLOCKED} blocked · ${totals['NEEDS REVIEW']} review`
                   ) : verdicts?.length ? (
-                    verdicts.map((v, i) => <StatusBadge key={`${i}-${v.status}`} status={v.status} />)
+                    [...new Set(verdicts.map((v) => v.status))].map((status) => <StatusBadge key={status} status={status} />)
                   ) : j.status === 'review' || j.status === 'waiting' ? (
                     <span className="muted">{blocked ? 'Cannot run yet: open it to see why' : `Open it: ${STAGE[j.status]}`}</span>
                   ) : j.status === 'failed' ? (

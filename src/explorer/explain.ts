@@ -64,6 +64,18 @@ export function explain(input: ExplainInput): Explanation {
           .join(', ')}), and guessing could test the wrong one.`,
         todo: ['Click the right one on the screenshot.', 'Or make the step more exact, for example by adding the section or the button text.'],
       };
+    case 'AMBIGUOUS_PART':
+      return {
+        headline: `"${name || 'it'}" could mean different parts of the page.`,
+        why: `${candidates.length > 1 ? `${Math.min(candidates.length, 5)} parts of the page` : 'Several parts of the page'} hold it (${candidates
+          .slice(0, 3)
+          .map((c) => `${c.role ?? 'part'}${c.name ? ` "${c.name}"` : ''}`)
+          .join(', ')}) and they are in different places, so the check would pass for one and fail for another.`,
+        todo: [
+          'Click the part you mean on the screenshot, for example the whole panel, not just the fields inside it.',
+          'Or name it more exactly in the check.',
+        ],
+      };
     case 'CANNOT_PIN':
     case 'NO_VALID_LOCATOR':
       return {
@@ -156,7 +168,9 @@ export function explain(input: ExplainInput): Explanation {
         why: text ?? 'It does not match any check I know.',
         todo: [
           'Examples: Dashboard heading is displayed. Error "…" is shown. User is redirected to Dashboard. Login button is disabled.',
-          'For layout: Login form is in the middle of the page. Logo is at the top left.',
+          'Layout and look: Login form is in the middle of the page. Logo is at the top left. Cancel is to the left of Save. Save button is blue.',
+          'Counts, tables and messages: 6 products are shown. Table columns are Name, Email. A toast "Saved" appears. Clicking Save calls POST /api/users.',
+          'The Writing guide (top of the page) lists every check with examples.',
         ],
       };
     case 'MODAL':

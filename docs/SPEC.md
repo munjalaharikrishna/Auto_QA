@@ -78,6 +78,7 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D25** | **Portable SQL**: one schema, two dialects (SQLite now, PostgreSQL in V3), only the common SQL subset, all SQL behind repositories in `src/db/`. | Moving to the team server (SPEC §3) is a driver change and a data copy, not a rewrite. |
 | **D26** | **Forward-only, checksummed migrations**, applied automatically, additive first (expand, then contract), with a backup first and a refusal to run on a newer database. | Old and new versions must never corrupt each other's data. |
 | **D27** | **Storage references**: files are saved as `scheme:key` relative to a root (`local:…`, later `s3:…`), never an absolute path. | SPEC §3: no hard-coded paths. |
+| **D29** | **Validation registry.** Every kind of check is one module (`src/validations/<family>.ts`) holding its tester wording, its Playwright code and its reported sentence; the runtime part is one file copied into the generated project (`utils/matchers.ts`). A part of the page named by a tester ("the login section") is found as the form, table or panel that holds it; if candidate parts would give different results, the tester is asked once (D6). | Adding a check never touches the rest of the platform, and a check never guesses which element it measures. |
 | **D28** | **Secrets in the database** only from V2, as AES-256-GCM ciphertext with the key outside the database; never in V1 (FR-ENV-05). | NFR-03. |
 
 ## 5. Test case input format
@@ -276,8 +277,11 @@ The base URL comes from the environment (FR-ENV), so steps use paths, not full U
 
 ### 6.12 Expected vs actual validation (FR-VAL) · §13
 
+The full catalogue of checks (layout, tables, messages, requests, storage…) is in [VALIDATIONS.md](VALIDATIONS.md); the ones marked built there are FR-VAL-06.
+
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
+| FR-VAL-06 | **The validation catalogue** (VALIDATIONS.md): a tester can write the checks of the catalogue in plain words ("Login form is in the middle of the screen", "6 products are shown", "Table columns are Name, Email", "Clicking Save calls POST /api/users"). Each is parsed, found on the page, generated as Playwright code with the matchers in `utils/matchers.ts`, run, and reported with Expected and Actual. A sentence that is not understood says why and gives examples | V1 (M9) | ✅ Built: about 70 check types in `src/validations/`; every example sentence is tested; `e2e.test.ts` runs them on a real page, passing and failing. Not built: see VALIDATIONS.md §9 |
 | FR-VAL-01 | For each assertion: expected, actual, result | V1 | ✅ Done (M6) |
 | FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" · ✅ Done (M6): from the assertion error and the page facts the fixture attaches |
 | FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | ✅ Done (M6) |
@@ -429,6 +433,7 @@ Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, stora
 | M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
 | M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
 | M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
+| M9 | Fixes from real use and the validation catalogue: plain-language review reasons, browser pop-ups handled, a test case list with Run again, a screenshot after every step and a video, clearer run status, and the validation registry (FR-VAL-06) | ✅ Done |
 | M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | In progress: driver, migrations, store, environments, `db` commands done; executions/results, evidence, test case versions to do |
 
 The step-by-step plan is in [PLAN.md](PLAN.md).
@@ -529,3 +534,4 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tabl
 | 1.14 | 2026-10-01 | Database specification and architecture ([DATABASE.md](DATABASE.md)): decisions D24–D28, requirements FR-DB-01…26, milestone M8. Plan to adopt the existing SQLite store as a baseline, add versioned migrations, repositories, environments, test case versions, executions/results/evidence, storage references, and the PostgreSQL path for V3. |
 | 1.15 | 2026-10-01 | M8 started: driver, versioned migrations (checksums, backup, downgrade guard), store moved to `src/db/`, environments, page routes, counters, audit log, `npm run db`. The real database was upgraded on a copy with no data lost. |
 | 1.16 | 2026-10-01 | Validation catalogue ([VALIDATIONS.md](VALIDATIONS.md)): 164 check types in 18 groups with wording, Playwright check, failure text and version; three layers (explicit, guard rails, quality gates); page identity check (FR-VAL-07); FR-VAL-06…10. |
+| 1.16 | 2026-10-01 | M9: fixes from real use. Review reasons in plain words (headline, why, what to do); browser alerts and confirms accepted automatically and reported; a test case list with versions and **Run again**; a screenshot after every step, a video and a trace per run, shown with step times; runs show where a cancelled run was stopped and refresh by themselves; the validation catalogue built as a registry (D29, FR-VAL-06), about 70 check types, tested on a real page and on a real OrangeHRM server. |

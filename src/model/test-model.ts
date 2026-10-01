@@ -48,6 +48,8 @@ const TargetFields = {
   exact: z.boolean().optional(),
   /** Role word the tester used, as an ARIA role (`button`, `textbox`…) or `page` (FR-PA-03). */
   roleHint: z.string().optional(),
+  /** The name is a part of the page ("login form", "login section"): look for the form, region or table holding it. */
+  container: z.boolean().optional(),
 };
 
 export const StepSchema = z.object({
@@ -72,8 +74,141 @@ export const StepSchema = z.object({
 });
 export type Step = z.infer<typeof StepSchema>;
 
-export const ASSERTION_TYPES = ['url', 'url-unchanged', 'visible', 'text', 'enabled', 'disabled', 'checked', 'value', 'health'] as const;
+/** The checks written in the first versions: see VALIDATIONS.md for the whole catalogue. */
+const CORE_ASSERTIONS = ['url', 'url-unchanged', 'visible', 'text', 'enabled', 'disabled', 'checked', 'value', 'health'] as const;
+
+/**
+ * Every other check type (VALIDATIONS.md §7). Each is one module in src/validations/, with the words a
+ * tester writes it in, the Playwright code it becomes and the sentence it reports.
+ */
+export const EXTRA_ASSERTIONS = [
+  // A. page and navigation
+  'title',
+  'query-param',
+  'new-tab',
+  'href',
+  'link-safe',
+  'selected',
+  // B. element presence and state
+  'attached',
+  'editable',
+  'focused',
+  'count',
+  'empty',
+  'in-viewport',
+  'clickable',
+  'expanded',
+  'attribute',
+  // C. text and content
+  'exact-text',
+  'contains-text',
+  'text-pattern',
+  'text-list',
+  'selected-option',
+  'options',
+  'placeholder',
+  'tooltip',
+  'accessible-name',
+  'today',
+  'truncated',
+  // D. forms
+  'invalid',
+  'field-error',
+  'validation-message',
+  'max-length',
+  'suggestions',
+  // E. messages, dialogs, loading
+  'alert',
+  'toast',
+  'dialog',
+  'dialog-content',
+  'focus-in-dialog',
+  'browser-dialog',
+  'loading-done',
+  // F. layout and visual
+  'centered',
+  'region',
+  'relative-position',
+  'aligned',
+  'overlap',
+  'size',
+  'same-size',
+  'css',
+  'sticky',
+  'images-loaded',
+  'structure',
+  'layout-shift',
+  // G. tables and lists
+  'table-headers',
+  'row-count',
+  'row-cell',
+  'sorted',
+  'every-row',
+  'pagination',
+  'no-duplicates',
+  // H. network and I. health
+  'request',
+  'console-clean',
+  'not-blank',
+  'no-mixed-content',
+  // J, K. session and storage
+  'cookie',
+  'cookie-flags',
+  'storage',
+  // L. accessibility
+  'fields-labelled',
+  'images-alt',
+  'tab-order',
+  // M, N, O, P. performance, files, data, timing
+  'load-time',
+  'web-vitals',
+  'download',
+  'sum',
+  'matches-count',
+  'value-changes',
+] as const;
+
+export const ASSERTION_TYPES = [...CORE_ASSERTIONS, ...EXTRA_ASSERTIONS] as const;
 export type AssertionType = (typeof ASSERTION_TYPES)[number];
+
+/** Settings a check can carry (VALIDATIONS.md §2.3, §7). Only the ones a type uses are set. */
+export const AssertionOptionsSchema = z.object({
+  /** Layout and colours: how far off is still right (a fraction of the screen for centring, pixels for alignment). */
+  tolerance: z.number().optional(),
+  axis: z.enum(['x', 'y', 'both']).optional(),
+  relation: z.enum(['above', 'below', 'left-of', 'right-of', 'aligned-left', 'aligned-right', 'aligned-top', 'aligned-bottom']).optional(),
+  region: z.enum(['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right']).optional(),
+  /** Counts, sizes, durations: how the number is compared with `expected`. */
+  compare: z.enum(['eq', 'gte', 'lte', 'gt', 'lt']).optional(),
+  /** Attribute, CSS property, cookie or storage key, query parameter. */
+  name: z.string().optional(),
+  /** What the check reads: a size side, a table column, a request field. */
+  side: z.string().optional(),
+  column: z.string().optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+  /** Waits longer (or shorter) than the usual 5 seconds. */
+  timeoutMs: z.number().optional(),
+  /** Report all failures at the end instead of stopping at the first. */
+  soft: z.boolean().optional(),
+  /** `warn` records the problem without failing the test. */
+  severity: z.enum(['fail', 'warn']).optional(),
+  /** Network: method and status. */
+  method: z.string().optional(),
+  status: z.number().optional(),
+  /** List checks: the whole list in order. */
+  list: z.array(z.string()).optional(),
+  /** `local` or `session` storage. */
+  area: z.enum(['local', 'session']).optional(),
+  /** Text checks: the whole text, a part of it, or a format. */
+  mode: z.enum(['exact', 'contains', 'pattern']).optional(),
+  /** Tables: the row, found by a word in it. */
+  row: z.string().optional(),
+  /** Cookies: which of secure / httpOnly / sameSite must be set. */
+  flags: z.array(z.string()).optional(),
+  /** Several-part checks: a column, a part of the page, a pop-up button… */
+  note: z.string().optional(),
+});
+export type AssertionOptions = z.infer<typeof AssertionOptionsSchema>;
 
 export const AssertionSchema = z.object({
   id: z.string(),
@@ -81,6 +216,9 @@ export const AssertionSchema = z.object({
   type: z.enum(ASSERTION_TYPES).optional(),
   ...TargetFields,
   expected: z.string().optional(),
+  options: AssertionOptionsSchema.optional(),
+  /** The second element of a check that compares two ("Cancel is to the left of Save"). */
+  other: z.object({ ...TargetFields }).optional(),
   /** url / url-unchanged: whether `expected` is a page name or a URL/path. */
   match: z.enum(['page', 'url']).optional(),
   negated: z.boolean(),

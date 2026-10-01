@@ -1,7 +1,19 @@
-import type { AssertionType } from '../model/test-model.js';
+import type { Assertion, AssertionOptions, AssertionType } from '../model/test-model.js';
+import { parseValidation } from '../validations/registry.js';
 import type { ParserConfig } from './config.js';
-import { cleanName, extractTarget, stripArticles, type Target } from './target.js';
-import { clean, containsPhrase, findQuoted, hasProtectedQuote, looksLikeUrl, matchLeading, phraseRegex, protectQuotes, splitOutsideQuotes } from './text.js';
+import { cleanName, extractContainer, extractTarget, stripArticles, type Target } from './target.js';
+import {
+  clean,
+  containsPhrase,
+  findQuoted,
+  hasProtectedQuote,
+  looksLikeUrl,
+  matchLeading,
+  phraseRegex,
+  protectQuotes,
+  splitOutsideQuotes,
+  unquote,
+} from './text.js';
 
 /**
  * Turns a check into an assertion (FR-PA-06, FR-PA-07, FR-PA-08).
@@ -22,6 +34,10 @@ export interface ParsedAssertion {
   exact?: boolean;
   roleHint?: string;
   expected?: string;
+  options?: AssertionOptions;
+  other?: Assertion['other'];
+  /** The name is a part of the page: look for the form or region holding it. */
+  container?: boolean;
   match?: 'page' | 'url';
   negated: boolean;
   reason?: { code: string; text: string };
@@ -46,7 +62,8 @@ export function parseAssertions(text: string, config: ParserConfig, bare: boolea
 
 export function parseAssertion(text: string, config: ParserConfig, bare: boolean): ParsedAssertion {
   const { lexicon } = config;
-  const p = protectQuotes(clean(text));
+  // Arrows are decoration in a name ("Apply →"), but separate the keys in "Tab goes Email → Password → Login".
+  const p = protectQuotes(clean(/\btab\b/i.test(text) ? text.replace(/\s*(?:→|➜|➔|->|=>|»)\s*/g, ', ') : text));
   let s = p.text;
 
   const verb = matchLeading(
@@ -94,6 +111,7 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   if (subject?.rest) s = subject.rest;
   // "User able to navigate to PIM page", "User is able to open Reports": what the user can reach.
   s = s.replace(/^(?:is\s+|are\s+|be\s+)?(?:able|allowed)\s+to\s+/i, '');
+  const checkText = s;
   // Where on the page something is cannot be checked; the check keeps the element.
   const positionWarnings: ParsedAssertion['warnings'] = [];
   s = s.replace(POSITION, (found) => {
@@ -122,6 +140,38 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     return name.name ? result({ type, expected: name.name, match: 'page', exact: name.exact }) : result({ type });
   };
   let m: RegExpExecArray | null;
+
+  // 0. The checks of the validation catalogue (VALIDATIONS.md): layout, counts, tables, messages, network…
+  // They read the sentence as the tester wrote it, before the position words are taken off.
+  const known = parseValidation({
+    text: checkText,
+    negated,
+    config,
+    value: (t) => unquote(p.restore(t).trim()),
+    quoted: (t) => hasProtectedQuote(t),
+    name: (raw) => extractTarget(p.restore(raw), config),
+    container: (raw) => extractContainer(p.restore(raw), config),
+  });
+  if (known) {
+    const t = known.target;
+    const needsTarget = known.spec.targets !== 'none';
+    if (needsTarget && !t?.target && !t?.roleHint) return unparsed('NO_TARGET', 'Say which element to check.');
+    if (known.spec.targets === 'two' && !known.other?.target) return unparsed('NO_TARGET', 'Say which second element to compare with.');
+    // The words about where it is on the page are part of this check, so they are not "ignored".
+    return {
+      type: known.type,
+      target: t?.target,
+      alternatives: t?.alternatives ?? [],
+      exact: t?.exact,
+      roleHint: t?.roleHint,
+      container: t?.container,
+      expected: known.expected,
+      options: known.options,
+      other: known.other && { target: known.other.target, alternatives: known.other.alternatives, exact: known.other.exact, roleHint: known.other.roleHint },
+      negated: known.negated ?? negated,
+      warnings: t?.warnings ?? [],
+    };
+  }
 
   // 1. Stays on a page.
   if ((m = /^(?:is\s+|are\s+)?(?:still\s+)?(?:remains?|remained|stays?|stayed|is kept|kept)\s+(?:still\s+)?(?:on|at|in)\s+(.+)$/i.exec(s))) {
@@ -233,7 +283,7 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   }
   return unparsed(
     'NO_PATTERN',
-    'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled.',
+    'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled; Login form is in the middle of the page; 6 products are shown; Table columns are Name, Email. The Writing guide lists every check.',
   );
 }
 

@@ -113,6 +113,8 @@ export interface ExploredItem {
   dialogs?: string[];
   /** Why the step was set aside or failed, in the tester's words (see explain.ts). */
   review?: Explanation;
+  /** For a check that compares two elements: the second one. */
+  other?: { locator: NonNullable<ExploredItem['locator']>; element: { role: string; name: string } };
 }
 
 export interface ExplorationResult {
@@ -219,11 +221,11 @@ export async function explore(model: TestModel, session: Session, options: Explo
         const box = typeof n.attributes.box === 'string' ? n.attributes.box.split(',').map(Number) : [];
         if (!n.ref || box.length !== 4 || box[2] <= 0 || box[3] <= 0) return [];
         if (roles && !roles.includes(n.role)) return [];
-        if (
-          !roles &&
-          ['generic', 'text', 'paragraph', 'main', 'document', 'region', 'form', 'list', 'group', 'navigation', 'banner', 'contentinfo'].includes(n.role)
-        )
-          return [];
+        // A part of the page is exactly what a container question is about.
+        const skip = query.container
+          ? ['generic', 'text', 'paragraph', 'document', 'row', 'cell']
+          : ['generic', 'text', 'paragraph', 'main', 'document', 'region', 'form', 'list', 'group', 'navigation', 'banner', 'contentinfo'];
+        if (!roles && skip.includes(n.role)) return [];
         const candidate = candidates.findIndex((c) => c.node.ref === n.ref);
         return [
           {
@@ -269,6 +271,9 @@ export async function explore(model: TestModel, session: Session, options: Explo
     }
   }
 
+  /** The part of the page the tester picked for a name ("login" → this table), so it is asked once. */
+  const partPicks = new Map<string, string>();
+
   /** Pop-ups seen since the last look are attached to the step that caused them. */
   function collectDialogs(item: ExploredItem): void {
     const seen = mcp.takeDialogs();
@@ -286,11 +291,67 @@ export async function explore(model: TestModel, session: Session, options: Explo
       candidates: r.candidates.map((c) => ({ role: c.node.role, name: c.matchedName || c.node.name, score: c.score })),
     });
 
+  /**
+   * For a position check on a part of the page: do the candidate parts disagree about the result? Measured on the
+   * page as it is now. Returns the candidates to choose from, or nothing when they all give the same answer.
+   */
+  async function holdersDisagree(query: TargetQuery, candidates: Candidate[]): Promise<Candidate[] | undefined> {
+    if (query.kind !== 'centered' && query.kind !== 'region') return undefined;
+    try {
+      const page = browserPage();
+      const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }));
+      const boxes = new Map<string, { x: number; y: number; width: number; height: number }>();
+      for (const n of flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true })))) {
+        const box = typeof n.attributes.box === 'string' ? n.attributes.box.split(',').map(Number) : [];
+        if (n.ref && box.length === 4 && box[2] > 0 && box[3] > 0) boxes.set(n.ref, { x: box[0], y: box[1], width: box[2], height: box[3] });
+      }
+      const top = candidates.slice(0, 6).filter((c) => c.node.ref && boxes.has(c.node.ref));
+      if (top.length < 2) return undefined;
+      const tolerance = query.options?.tolerance ?? 0.05;
+      const axis = query.options?.axis ?? 'x';
+      const answer = (b: { x: number; y: number; width: number; height: number }) => {
+        const cx = b.x + b.width / 2;
+        const cy = b.y + b.height / 2;
+        if (query.kind === 'region') {
+          const col = cx < size.width / 3 ? 'left' : cx > (size.width * 2) / 3 ? 'right' : 'center';
+          const row = cy < size.height / 3 ? 'top' : cy > (size.height * 2) / 3 ? 'bottom' : 'center';
+          return row === 'center' ? col : col === 'center' ? row : `${row}-${col}`;
+        }
+        const okX = Math.abs(cx - size.width / 2) <= size.width * tolerance;
+        const okY = Math.abs(cy - size.height / 2) <= size.height * tolerance;
+        return axis === 'x' ? okX : axis === 'y' ? okY : okX && okY;
+      };
+      const answers = new Set(top.map((c) => answer(boxes.get(c.node.ref as string)!)));
+      return answers.size > 1 ? top : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** LOCATE + VALIDATE, asking the tester when the rules cannot decide. */
   async function find(query: TargetQuery, item: ExploredItem, state: PageState): Promise<Extract<LocateResult, { status: 'resolved' }> | undefined> {
     const locateOptions = { config: options.config, testIdAttribute: session.testIdAttribute, pageHint: pathNames[pathOf(state.url)] };
-    let r = await locate(query, mcp, probe, locateOptions, { state });
-    item.resolvedBy = 'rules';
+    // A part of the page the tester already pointed out ("the login section") stays that part for the whole test.
+    const partKey = query.container ? `${(query.target ?? '').toLowerCase()}|${pathOf(state.url)}` : undefined;
+    const remembered = partKey ? partPicks.get(partKey) : undefined;
+    const rememberedNode = remembered ? nodeByRef(state, remembered) : undefined;
+    let r = await locate(query, mcp, probe, locateOptions, rememberedNode ? { state, node: rememberedNode } : { state });
+    item.resolvedBy = rememberedNode ? 'tester' : 'rules';
+    // "The login section" can be the form, or the whole panel around it. If the answer to the check depends on which,
+    // the tester says which: guessing would pass or fail the test for the wrong reason (D6).
+    if (r.status === 'resolved' && query.container && !rememberedNode) {
+      const differ = await holdersDisagree(query, r.candidates);
+      if (differ) {
+        r = {
+          status: 'needs-review',
+          page: r.page,
+          code: 'AMBIGUOUS_PART',
+          text: `Several parts of the page could be "${query.target ?? 'it'}", and they are in different places.`,
+          candidates: differ,
+          tried: r.tried,
+        };
+      }
+    }
     let asked = 0;
     while (r.status === 'needs-review') {
       item.candidates = r.candidates.slice(0, 5).map(summary);
@@ -339,6 +400,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         continue;
       }
       r = again;
+      if (partKey && node.ref) partPicks.set(partKey, node.ref);
     }
     item.locator = { code: r.locator.code, strategy: r.locator.spec.strategy, source: r.locator.spec.source, validated: true };
     item.element = { role: r.match.node.role, name: r.match.matchedName || r.match.node.name };
@@ -546,8 +608,10 @@ export async function explore(model: TestModel, session: Session, options: Explo
       alternatives: assertion.alternatives,
       exact: assertion.exact,
       roleHint: assertion.roleHint,
+      container: assertion.container,
+      options: assertion.options,
     };
-    if (assertion.negated && type === 'visible') {
+    if (assertion.negated && (type === 'visible' || type === 'attached')) {
       // An element that must not be visible is usually not on the page, so it cannot be validated.
       const r = await locate(query, mcp, probe, { config: options.config, testIdAttribute: session.testIdAttribute }, { state });
       item.page = pageOf(state.url, state.title, pathNames[pathOf(state.url)]);
@@ -562,7 +626,27 @@ export async function explore(model: TestModel, session: Session, options: Explo
       }
       return;
     }
-    await find(query, item, state);
+    const found = await find(query, item, state);
+    // A check that compares two elements ("Cancel is to the left of Save") needs both found, the second the same way.
+    if (found && assertion.other?.target) {
+      const second: ExploredItem = { id: item.id, kind: 'check', raw: assertion.other.target, phase: item.phase, status: 'done', warnings: [] };
+      const otherQuery: TargetQuery = {
+        kind: type,
+        target: assertion.other.target,
+        alternatives: assertion.other.alternatives,
+        exact: assertion.other.exact,
+        roleHint: assertion.other.roleHint,
+      };
+      await find(otherQuery, second, state);
+      if (second.status !== 'done' || !second.locator || !second.element) {
+        item.status = second.status === 'done' ? 'failed' : second.status;
+        item.review = second.review;
+        item.warnings.push(...second.warnings);
+        item.error = second.error;
+        return;
+      }
+      item.other = { locator: second.locator, element: second.element };
+    }
   }
 
   try {

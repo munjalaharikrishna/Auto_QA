@@ -14,6 +14,8 @@ export interface Target {
   alternatives: string[];
   exact?: boolean;
   roleHint?: string;
+  /** The name is a part of the page ("login form", "login section"), found as the form or region holding it. */
+  container?: boolean;
   /** fill only: "valid" or "invalid" in front of the name, used to pick the value (FR-PA-10). */
   qualifier?: { kind: 'positive' | 'negative'; word: string };
   warnings: Array<{ code: string; text: string }>;
@@ -74,6 +76,48 @@ interface Name {
   exact?: boolean;
   roleHint?: string;
   warnings: Target['warnings'];
+}
+
+/** Words for a part of the page, and the ARIA role each stands for. */
+const CONTAINER_WORDS: Record<string, string> = {
+  form: 'form',
+  section: 'region',
+  panel: 'region',
+  box: 'region',
+  area: 'region',
+  block: 'region',
+  card: 'region',
+  container: 'region',
+  widget: 'region',
+  dialog: 'dialog',
+  modal: 'dialog',
+  popup: 'dialog',
+  'pop-up': 'dialog',
+  menu: 'navigation',
+  navigation: 'navigation',
+  navbar: 'navigation',
+  header: 'banner',
+  footer: 'contentinfo',
+  sidebar: 'complementary',
+  table: 'table',
+  list: 'list',
+  grid: 'table',
+};
+
+/**
+ * Names a part of the page: "the login form" → target "login", container. A name that has no
+ * container word ("Logo", "Cancel button") is an ordinary element name.
+ */
+export function extractContainer(text: string, config: ParserConfig): Target {
+  const t = stripArticles(clean(text));
+  const words = t.split(/\s+/);
+  const last = words.at(-1)?.toLowerCase() ?? '';
+  const role = CONTAINER_WORDS[last];
+  if (!role || /^["“‘'`]/.test(t) || words.length === 0) return extractTarget(text, config);
+  const name = words.slice(0, -1).join(' ');
+  if (!name) return { alternatives: [], roleHint: role, container: true, warnings: [] };
+  const base = extractTarget(name, config);
+  return { ...base, roleHint: role, container: true };
 }
 
 /** Cleans one name: quotes, articles and role words. */

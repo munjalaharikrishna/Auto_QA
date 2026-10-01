@@ -83,6 +83,10 @@ How the rest of [SPEC.md](SPEC.md) gets built. V1 is planned in detail by milest
 
 **Done when** a tester imports a sheet, reviews a test, picks an ambiguous element, approves and sees PASS/FAIL, all in the browser.
 
+## M9: fixes from real use and the validation catalogue
+
+Seven problems found while a tester used the product on OrangeHRM, and the validation registry (D29, FR-VAL-06). Done; see CHANGELOG and [VALIDATIONS.md](VALIDATIONS.md) (§9 lists what is not built).
+
 ## M8: database foundation (D24–D28, [DATABASE.md](DATABASE.md))
 
 Moves every piece of state that is only in a JSON file into the database, adds versioned migrations, and leaves room for V2–V4. Nine steps are in [DATABASE.md §10](DATABASE.md#10-build-plan-m8) (driver and migrations, repositories, environments and page routes, test case versions, explorations, executions and results, evidence and storage references, reads from the database, `db` commands).

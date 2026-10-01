@@ -111,8 +111,12 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.getByText('tests/', { exact: false }).first().waitFor();
     await page.getByRole('button', { name: 'Approve & Execute' }).click();
     await page.getByRole('heading', { name: /^Results/ }).waitFor({ timeout: 180_000 });
-    await page.getByText('PASS', { exact: true }).waitFor();
-    await page.getByText('"Security details" was shown', { exact: false }).waitFor();
+    await page.getByText('PASS', { exact: true }).first().waitFor();
+    // The result shows the actual in its summary and again in the details that now open straight away.
+    await page.getByText('"Security details" was shown', { exact: false }).first().waitFor();
+    // Item 2 and 4: each step with its time and screenshot, and the video.
+    await page.getByRole('button', { name: /Page after S1, full size/ }).waitFor();
+    await page.locator('video').first().waitFor({ state: 'attached' });
   });
 
   it('had no errors in the page', () => {

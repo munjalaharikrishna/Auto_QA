@@ -1,8 +1,9 @@
 import type { ExplorationResult, ExploredItem } from '../explorer/controller.js';
 import type { Fingerprint } from '../locators/ladder.js';
-import type { Assertion, Step, TestModel, ValueRef } from '../model/test-model.js';
+import type { Assertion, AssertionOptions, Step, TestModel, ValueRef } from '../model/test-model.js';
 import { defaultParserConfig } from '../parser/config.js';
 import { isSecret } from '../parser/test-data.js';
+import { codeFor } from '../validations/registry.js';
 import { automationId, camel, escapeRegex, kebabId, kebabPage, pageVariable, pascal, propertyName, quote, singleMethodName, unique } from './names.js';
 
 /**
@@ -73,7 +74,7 @@ export interface ManifestTest {
   automationId: string;
   file: string;
   steps: Array<{ id: string; raw: string; action?: string }>;
-  checks: Array<{ id: string; raw: string; type?: string; expected?: string; target?: string; negated: boolean }>;
+  checks: Array<{ id: string; raw: string; type?: string; expected?: string; target?: string; negated: boolean; options?: AssertionOptions; other?: string }>;
   /** Items the parser could not read: the test's result is NEEDS REVIEW until they are fixed (FR-VAL-05). */
   unparsed: string[];
 }
@@ -346,7 +347,7 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
             ? [`await expect(page.getByText(${quote(a.expected ?? '')})).toHaveCount(0);`]
             : [`await expect(page.getByText(${quote(a.expected ?? '')}).first()).toBeVisible();`];
         case 'visible':
-          return [`await expect(${target()}).${not}toBeVisible();`];
+          return [`await expect(${target()}).${not}toBeVisible(${a.options?.timeoutMs ? `{ timeout: ${a.options.timeoutMs} }` : ''});`];
         case 'enabled':
           return [`await expect(${target()}).${not}toBeEnabled();`];
         case 'disabled':
@@ -358,8 +359,21 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
         case 'health':
           // Checked by the test fixture after every test (FR-VAL-04, M6).
           return [];
-        default:
-          return [];
+        default: {
+          // The checks of the validation catalogue: each type writes its own code (src/validations).
+          const lines = codeFor(a, {
+            target,
+            other: () => {
+              if (!item.other) throw new Error(`${model.id} ${item.id}: the second element of this check was not found.`);
+              return `page.${item.other.locator.code}`;
+            },
+            quote,
+            escapeRegex,
+            helpers,
+          });
+          if (!lines) throw new Error(`${model.id} ${item.id}: no code for the check type "${a.type}".`);
+          return lines;
+        }
       }
     }
 
@@ -380,7 +394,16 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
       automationId: automationId(model.id),
       file: `tests/${file}.spec.ts`,
       steps: model.steps.map((s) => ({ id: s.id, raw: s.raw, action: s.action })),
-      checks: model.assertions.map((a) => ({ id: a.id, raw: a.raw, type: a.type, expected: a.expected, target: a.target, negated: a.negated })),
+      checks: model.assertions.map((a) => ({
+        id: a.id,
+        raw: a.raw,
+        type: a.type,
+        expected: a.expected,
+        target: a.target,
+        negated: a.negated,
+        options: a.options,
+        other: a.other?.target,
+      })),
       unparsed: [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed').map((x) => x.id),
     });
     if (usesData) data.push({ file, values: Object.fromEntries([...dataKeys].map(([k, v]) => [v, allData[k]])) });
