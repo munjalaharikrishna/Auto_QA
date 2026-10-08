@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Plan version** | 1.1 (draft for review): adds the build-practice review of 8 Oct (§0) |
+| **Plan version** | 1.2 (draft for review): 1.1 added the build practices (§0); 1.2 adds E0.0, a clean starting point (§4), and the current status (§1.5) |
 | **Date** | 2026-10-08 |
 | **Builds** | [ENGINE-SPEC.md](ENGINE-SPEC.md) v1.1: 185 requirements in 8 modules |
-| **Approach** | 11 engine versions (E0.1 → E1.1). Each version is small, testable on its own, and ends with a fixed set of tests. |
+| **Approach** | A clean starting point (E0.0), then 11 engine versions (E0.1 → E1.1). Each version is small, testable on its own, and ends with a fixed set of tests. |
 | **Code changes** | None made with this plan. Building starts only when the owner approves it. |
 
 **Contents**
@@ -95,7 +95,7 @@ src/engine/
 
 ```mermaid
 flowchart LR
-  E01["E0.1 Foundation"] --> E02["E0.2 Input"] --> E03["E0.3 Text + patterns"] --> E04["E0.4 Language → QA-IR"]
+  E00["E0.0 Clean start"] --> E01["E0.1 Foundation"] --> E02["E0.2 Input"] --> E03["E0.3 Text + patterns"] --> E04["E0.4 Language → QA-IR"]
   E04 --> E05["E0.5 Context + data"] --> E06["E0.6 Knowledge + locators"] --> E07["E0.7 MCP execution + UI"]
   E07 --> E08["E0.8 Verdicts + review"] --> E09["E0.9 Login types + OTP"] --> E10["E0.10 Learning + governance"]
   E10 --> E100["E1.0 Switch over + full check"] --> E11["E1.1 Jira / TestRail"]
@@ -105,10 +105,23 @@ flowchart LR
 
 ---
 
+### 1.5 Current status (8 Oct 2026)
+
+| Item | Status |
+|---|---|
+| Work since 1 Oct (database M8, exports, frame support, UI) | Committed and pushed: `3ac886f` on `feat/m8-database` |
+| ENGINE-SPEC.md v1.1 and this plan | Committed and pushed: `d6d48b2` |
+| Uncommitted changes | None |
+| Type check | Passes |
+| Tests | 444 of 445 pass. **1 outdated test fails**: `src/locators/locators.test.ts`, "skips anything it cannot represent instead of misreading it". It was written before iframe support and still expects `frameLocator('iframe').getByText('x')` to be skipped; the new iframe support now reads it correctly. (The test runner reports 2 failures because the test's group is counted as failed too.) |
+| `feat/m8-database` merged to the main branch | Not yet |
+| Decisions PD-1…PD-8 (§8) | Open |
+
 ## 2. Version overview
 
 | Version | Name | Spec IDs | Count | Main outcome | Size |
 |---|---|---|---|---|---|
+| **E0.0** | Clean start | none (housekeeping) | 0 | All tests green, work merged, baseline tagged, old documents marked | S |
 | **E0.1** | Foundation | IR-01, GV-03, GV-04, GV-05, GV-12, GV-15 | 6 | QA-IR, pipeline, decision log, determinism | M |
 | **E0.2** | Input | IN-01…IN-23 | 23 | Any workbook layout imports correctly | M |
 | **E0.3** | Text and patterns | NM-01…NM-20, TK-01…TK-15, RX-01…RX-24 | 59 | Clean, protected text; all regex in one layer | L |
@@ -151,6 +164,28 @@ A version is **done** when:
 ---
 
 ## 4. Versions in detail
+
+### E0.0 Clean start
+
+The engine must start from a known, fully working base, so that any test that breaks later is clearly caused by engine work.
+
+**Does:**
+1. **Fix the outdated test** in `src/locators/locators.test.ts`: expect iframe locators to be read (as the new frame support does), and use a different example of something that truly cannot be represented.
+2. Run type check, lint and all tests: everything green.
+3. Merge `feat/m8-database` into the main branch, after the owner's review.
+4. Tag the result `baseline-before-engine`, so the legacy engine's behaviour can always be compared with it.
+5. Run the Login and Add Employee workbooks once with the legacy engine and keep the results as the **review baseline** for GV-08 (review reduction is measured against this).
+6. Add a note at the top of the documents based on Auto_QA.docx: "Replaced by ENGINE-SPEC.md / ENGINE-PLAN.md" (PD-7, once approved).
+7. Make sure CI runs type check, lint and tests on every push (BP-6).
+
+**Exit tests:**
+| Test | Pass when |
+|---|---|
+| Full test suite | 445 of 445 pass |
+| Type check and lint | No errors |
+| Git | Main branch contains all work; tag `baseline-before-engine` exists on GitHub; no uncommitted changes |
+| Review baseline | Legacy results for both workbooks saved in `test/baseline/`, with the number of reviews per workbook |
+| CI | A push runs and passes the checks |
 
 ### E0.1 Foundation
 
@@ -371,6 +406,7 @@ Only when all 8 steps pass does the new engine become the default.
 
 | # | Decision | Proposal |
 |---|---|---|
+| PD-0 | Start with E0.0 (fix the outdated test, merge, tag the baseline, save the legacy review baseline) | Yes |
 | PD-1 | Build the new engine **next to** the current product with a switch (§1.1), rather than changing the current parser in place | Yes |
 | PD-2 | Keep **T5 wrong-PASS traps** from E0.4, even though the full benchmark comes at the end | Yes: it's a few cases and catches the most dangerous mistake early |
 | PD-3 | OP-2: one fixed ontology, or a base ontology plus words per application | Base + per application |
