@@ -1,5 +1,7 @@
 # Auto QA: Architecture
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 Diagrams are written in Mermaid. They render on GitHub and in VS Code (with a Mermaid extension). To view them in any browser, open [architecture.html](architecture.html).
 Requirement IDs (FR-…, D…) refer to [SPEC.md](SPEC.md).
 

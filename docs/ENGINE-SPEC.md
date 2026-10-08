@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Spec version** | 1.1 (draft for review) |
+| **Spec version** | 1.2: records the owner's build decisions of 8 Oct (PD-3, PD-5, PD-6, PD-8) |
 | **Date** | 2026-10-08 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Deterministic_QA_Engine_Complete_BRD.docx` (every feature, mapped line by line in §15) |
@@ -67,7 +67,7 @@ Decided on 7 Oct 2026. Where the BRD is silent or open, these decide.
 |---|---|---|
 | **DEC-01** | Tests are **executed through Playwright MCP**, and the engine can also **export** a Playwright Test + Page Object Model project. | EX-02 executes via MCP. EXP-01 adds code export. The exported code must give the same verdict as the MCP run. |
 | **DEC-02** | **Learning from user inputs** is required. | GV-01 is a Must. Learning only from explicit user review, never from guesses, and never stores a mapping that would create a vacuous check (§11, GV-01 rules). |
-| **DEC-03** | **MFA/OTP is in scope.** The user selects the login type per application; for email OTP the system asks for the mailbox details and reads the OTP automatically (8 Oct). | VD-01 and AU-01…AU-08 (§10). |
+| **DEC-03** | **MFA/OTP is in scope.** The user selects the login type per application; for email OTP the system asks for the mailbox details and reads the OTP automatically (8 Oct). | VD-01 and AU-01…AU-09 (§10). |
 | **DEC-04** | **Keep** the existing web UI, POM code export, database, API testing and CI. **Jira/TestRail import moves to the last phase.** | KP-01…05 in §14; Phase 7 = Jira/TestRail. |
 | **DEC-05** | **No "PASS (with assumptions)".** When the engine cannot prove a result, it shows **expected vs actual** and the **user clicks PASS or FAIL**. | §13: user verdict flow; the status records that a person decided. Combined with DEC-02, the user's decision is learned for the next run. |
 
@@ -111,9 +111,9 @@ The BRD's "90 features" are counted **per module and layer** (OP-1, decided 8 Oc
 | | L25 | DOM semantic inspection | DM-01 | 1 |
 | **M5 UI orchestration** | L26–L35 | Frames, tabs, modals, forms, controls, tables, lists, keyboard/mouse, waits | UI-01…UI-09 | 9 |
 | **M6 Execution and assertions** | L36–L50 | Planner, MCP execution, observation, evidence, assertions, code export | EX-01…EX-09, EXP-01 | 10 |
-| **M7 Authentication, verdicts and diagnostics** | L51–L70 | Login profiles and MFA/OTP, conditions, isolation, verdicts, PASS gate, review | VD-01…VD-11, AU-01…AU-08 | 19 |
+| **M7 Authentication, verdicts and diagnostics** | L51–L70 | Login profiles and MFA/OTP, conditions, isolation, verdicts, PASS gate, review | VD-01…VD-11, AU-01…AU-09 | 20 |
 | **M8 Learning and governance** | L71–L90 | Learning, audit, benchmark, KPIs, security, caching, versioning, pre-flight | GV-01…GV-16 | 16 |
-| **Total** | | | | **185** |
+| **Total** | | | | **186** |
 
 Progress, test results and the review-reduction KPI (GV-08) are reported per module and per layer.
 
@@ -227,7 +227,7 @@ Progress, test results and the review-reduction KPI (GV-08) are reported per mod
 
 | ID | Requirement | Acceptance |
 |---|---|---|
-| VO-01 | **Controlled action vocabulary**, exactly: click, enter, type, fill, select, choose, upload, download, submit, login, logout, search, open, navigate, scroll, hover, drag, drop, press, check, uncheck, clear, remove, delete, edit, save, cancel, close, expand, collapse, refresh | Each of the 31 verbs has a definition, an action type and tests. A verb outside the list → VD-05 UNSUPPORTED unless mapped by SY-02. |
+| VO-01 | **Controlled action vocabulary** (word forms such as entered/entering/enters map to the canonical action through own deterministic word lists, PD-6), exactly: click, enter, type, fill, select, choose, upload, download, submit, login, logout, search, open, navigate, scroll, hover, drag, drop, press, check, uncheck, clear, remove, delete, edit, save, cancel, close, expand, collapse, refresh | Each of the 31 verbs has a definition, an action type and tests. A verb outside the list → VD-05 UNSUPPORTED unless mapped by SY-02. |
 | VO-02 | **Controlled assertion vocabulary**, exactly: verify, validate, confirm, ensure, check, expect, should, must, displays, shows, contains, equals, remains, redirects, rejects, accepts | Each of the 16 words marks an expectation; "check" is resolved by grammar (action "check the box" vs assertion "check that…") |
 
 ### L6. Synonym engine
@@ -280,7 +280,7 @@ A sentence that fits no model is never guessed: it goes to the pre-flight check 
 
 | ID | Requirement | Acceptance |
 |---|---|---|
-| ON-01 | **Controlled semantic model** with exactly these classes: User, Applicant, Expert, Admin, Username, Password, Field, Button, Link, Dropdown, Checkbox, Radio button, Table, Row, Column, Modal, Page, Section, Message, Error, Validation, Dashboard, URL, File, Record, API Response Status | Every target in QA-IR has an ontology class; classes have allowed actions (e.g. Button: click; Field: enter/clear) and allowed assertions; an action not allowed for the class → VD-04 paradox |
+| ON-01 | **Controlled semantic model** (PD-3: a **core** ontology for all applications plus each application's own classes in AK-01; Applicant, Expert and similar domain classes are application classes, not core) with these classes: User, Applicant, Expert, Admin, Username, Password, Field, Button, Link, Dropdown, Checkbox, Radio button, Table, Row, Column, Modal, Page, Section, Message, Error, Validation, Dashboard, URL, File, Record, API Response Status | Every target in QA-IR has an ontology class; classes have allowed actions (e.g. Button: click; Field: enter/clear) and allowed assertions; an action not allowed for the class → VD-04 paradox |
 
 ### L12. Semantic QA intermediate representation (QA-IR)
 
@@ -434,6 +434,7 @@ A sentence that fits no model is never guessed: it goes to the pre-flight check 
 | AU-05 | **Automatic TOTP**: the engine computes the current code from the secret key (RFC 6238), deterministically from the clock | Code accepted on the first try; clock difference handled by using the next 30-second window once |
 | AU-06 | **OTP wait and failure rules**: wait up to a configured time (default 60 s) for the mail; no code → **ENVIRONMENT_ERROR** "OTP mail not received"; code rejected by the app → **TEST_DATA_ERROR**; never FAIL | Each case reported with its reason; never counted as an application FAIL |
 | AU-07 | **OTP secrecy**: mailbox password, TOTP secret and every OTP value are stored encrypted (DS-04) and masked in logs, screenshots and reports (DS-02) | Output scan after a run finds no mailbox password, secret or OTP |
+| AU-09 | **Email adapter** (PD-5): all mail access goes through one adapter interface (connect, wait for a message after a time, read it); each provider is a separate adapter. The first real provider is chosen once the owner confirms which one the target application uses. | The engine has no provider-specific code outside the adapters; a local test mail server adapter passes AU-04 |
 | AU-08 | **Expected OTP failures are testable**: a test case such as "Enter a wrong OTP → error shown" uses the OTP step without reading the mailbox (data class INVALID, TD-01) | Negative OTP test cases run as normal tests |
 | VD-02 | **Preconditions and postconditions**: check the application is ready before; verify end states after ("Create user → user should exist") | A failed precondition → BLOCKED, not FAIL |
 | VD-03 | **Dependency and isolation guards**: cross-test dependencies declared; full session reset between tests (cache, cookies, storage, data) | Two tests run in any order give the same verdicts |
@@ -586,7 +587,7 @@ No fixed dates (owner decision). Each phase ends when the benchmark (GV-06) show
 | **2. Context and data** | CX-01…10, RF-01, ST-01…02, TD-01, DR-01, DG-01, DS-01…04 | Fixes wrong data and "added data"-type references |
 | **3. Knowledge and locators** | AK-01, PK-01, LU-01, LC-01, LA-01, DM-01 | Removes target ambiguity |
 | **4. UI orchestration** | UI-01…09 | Covers real-application controls |
-| **5. Execution and verdicts** | EX-01…09, EXP-01, VD-01…11, AU-01…08 (login types, email OTP, TOTP), §13 user review | MCP execution, PASS gate, 9 verdicts, MFA/OTP |
+| **5. Execution and verdicts** | EX-01…09, EXP-01, VD-01…11, AU-01…09 (login types, email OTP via adapter, TOTP), §13 user review | MCP execution, PASS gate, 9 verdicts, MFA/OTP |
 | **6. Learning and governance** | GV-01…04, GV-07, GV-10…12, GV-14…16 | Learning with safety rules; full explainability |
 | **7. Integrations (last, DEC-04)** | Jira import, TestRail import | Owner decision: last phase |
 
@@ -666,7 +667,7 @@ Line numbers refer to the BRD text extracted on 2026-10-08 (174 lines). Every co
 | 143 | Evidence freshness | EX-07 |
 | 144 | Vacuous assertion guard | EX-08 |
 | 145 | Business rules and boundaries | EX-09 |
-| 147 | Authentication and authorization | VD-01, AU-01…AU-08 (DEC-03) |
+| 147 | Authentication and authorization | VD-01, AU-01…AU-09 (DEC-03, PD-5) |
 | 148 | Preconditions and postconditions | VD-02 |
 | 149 | Dependency and isolation | VD-03 |
 | 150 | Ambiguity and paradox interceptors | VD-04 |
@@ -694,7 +695,7 @@ Line numbers refer to the BRD text extracted on 2026-10-08 (174 lines). Every co
 | 173 | Intent compilation sequence | GV-15 |
 | 174 | Terminal verification protocol | GV-16, §13.2 |
 
-**Count (checked by script on 2026-10-08):** all 139 content lines of the BRD map to the IDs above; the only unmapped lines are section and layer headings. The spec has **185 unique requirement IDs** (176 from the BRD, EXP-01 from DEC-01, AU-01…AU-08 from DEC-03), plus 6 principles (PR), 5 owner decisions (DEC) and 5 kept capabilities (KP). Controlled lists stay complete inside their ID: VO-01 holds all 31 action verbs, VO-02 all 16 assertion words, NG-01 all 17 negation terms, CD-01 all 10 conditional keywords, CL-01 all 13 connectors, ON-01 all 26 ontology classes, TD-01 all 17 data classes, DR-01 all 8 sources, AK-01 all 13 fields, LC-01 all 11 locator levels, RF-01 all 13 reference phrases.
+**Count (checked by script on 2026-10-08):** all 139 content lines of the BRD map to the IDs above; the only unmapped lines are section and layer headings. The spec has **186 unique requirement IDs** (176 from the BRD, EXP-01 from DEC-01, AU-01…AU-09 from DEC-03 and PD-5), plus 6 principles (PR), 5 owner decisions (DEC) and 5 kept capabilities (KP). Controlled lists stay complete inside their ID: VO-01 holds all 31 action verbs, VO-02 all 16 assertion words, NG-01 all 17 negation terms, CD-01 all 10 conditional keywords, CL-01 all 13 connectors, ON-01 all 26 ontology classes, TD-01 all 17 data classes, DR-01 all 8 sources, AK-01 all 13 fields, LC-01 all 11 locator levels, RF-01 all 13 reference phrases.
 
 ## 16. Open points found while writing this spec
 
@@ -703,10 +704,10 @@ The BRD is complete but leaves these open. They do not block the spec; they need
 | # | Point | Needed by |
 |---|---|---|
 | OP-1 | ~~"All 90 Features" vs the items listed~~ **Decided 8 Oct:** requirements are organised and counted per module and layer (§4.1). | Done |
-| OP-2 | L11 ontology lists **Applicant** and **Expert** (domain classes from another application). Keep them as defaults or make the ontology per application (AK-01)? | Phase 1 |
+| OP-2 | ~~Applicant and Expert in the ontology~~ **Decided 8 Oct (PD-3):** core ontology plus per-application classes. | Done |
 | OP-3 | ~~Which OTP source?~~ **Decided 8 Oct:** the user selects the login type per application; for email OTP the system asks for the mailbox details and reads the OTP automatically (AU-01…AU-08). Still to confirm in Phase 5: which mail providers must be supported first (e.g. Gmail, Outlook/Microsoft 365, company mail server). | Phase 5 |
 | OP-4 | NM-01 "lowercase where appropriate" vs NM-14 "preserve case-sensitive data": the spec lowercases only for matching, never for values. Confirm. | Phase 1 |
 | OP-5 | NM-15 "preserve passwords: clear text integrity" vs DS-02/03 masking: the spec keeps exact values in memory and in the encrypted store, and masks them in all output. Confirm. | Phase 2 |
-| OP-6 | RX-01 isolation: the current code has about 90 regex patterns in 7 folders. Moving them into L4 is a refactor; confirm it is wanted in Phase 1. | Phase 1 |
+| OP-6 | ~~Regex refactor of the current code~~ **Decided 8 Oct (PD-1):** the new engine is built separately, so RX-01 applies to `src/engine/` from the start; the legacy code is not refactored. | Done |
 | OP-7 | EX-02 vs EXP-01: when the MCP run and the exported code disagree on a verdict, which one is reported? Proposal: the MCP run, and the disagreement is an AUTOMATION_ERROR on the export. | Phase 5 |
-| OP-8 | GV-06 benchmark: who marks the correct verdict for each of the 29 real cases? | Phase 0 |
+| OP-8 | ~~Who marks the benchmark verdicts?~~ **Decided 8 Oct:** Claude drafts the answer key; the owner or a tester confirms each row by running it by hand. Done at E1.0 (release check). | E1.0 |

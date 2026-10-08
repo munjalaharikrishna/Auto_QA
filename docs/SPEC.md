@@ -1,5 +1,7 @@
 # Auto QA: Product Specification
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |

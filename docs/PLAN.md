@@ -1,5 +1,7 @@
 # Auto QA: Implementation Plan
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 How the rest of [SPEC.md](SPEC.md) gets built. V1 is planned in detail by milestone; V2–V4 in order only. Decisions referenced as D… are in SPEC §4.
 
 **Approach:** M4–M6b build the whole flow as command line tools first (parse → explore → generate → run → report, then a whole workbook at once). M7 then puts a web UI on parts that already work.

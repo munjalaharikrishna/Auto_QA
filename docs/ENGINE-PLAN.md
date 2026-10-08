@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Plan version** | 1.2 (draft for review): 1.1 added the build practices (§0); 1.2 adds E0.0, a clean starting point (§4), and the current status (§1.5) |
+| **Plan version** | 1.3: 1.1 added the build practices (§0); 1.2 added E0.0 and the current status (§1.5); 1.3 records the owner's decisions PD-0…PD-8 (§8) |
 | **Date** | 2026-10-08 |
-| **Builds** | [ENGINE-SPEC.md](ENGINE-SPEC.md) v1.1: 185 requirements in 8 modules |
+| **Builds** | [ENGINE-SPEC.md](ENGINE-SPEC.md) v1.2: 186 requirements in 8 modules |
 | **Approach** | A clean starting point (E0.0), then 11 engine versions (E0.1 → E1.1). Each version is small, testable on its own, and ends with a fixed set of tests. |
 | **Code changes** | None made with this plan. Building starts only when the owner approves it. |
 
@@ -17,7 +17,7 @@
 5. [Test infrastructure to set up](#5-test-infrastructure-to-set-up)
 6. [Release check after the full engine](#6-release-check-after-the-full-engine)
 7. [Risks and how the plan handles them](#7-risks-and-how-the-plan-handles-them)
-8. [Decisions needed before E0.1](#8-decisions-needed-before-e01)
+8. [Owner decisions](#8-owner-decisions-8-oct-2026)
 9. [Minimum engine target](#9-minimum-engine-target)
 
 ---
@@ -115,7 +115,9 @@ flowchart LR
 | Type check | Passes |
 | Tests | 444 of 445 pass. **1 outdated test fails**: `src/locators/locators.test.ts`, "skips anything it cannot represent instead of misreading it". It was written before iframe support and still expects `frameLocator('iframe').getByText('x')` to be skipped; the new iframe support now reads it correctly. (The test runner reports 2 failures because the test's group is counted as failed too.) |
 | `feat/m8-database` merged to the main branch | Not yet |
-| Decisions PD-1…PD-8 (§8) | Open |
+| Decisions PD-0…PD-8 (§8) | Decided 8 Oct |
+| Old documents marked as replaced (PD-7) | Done 8 Oct |
+| Employee list test case file (PD-4) | **Missing:** owner to provide before E0.6 |
 
 ## 2. Version overview
 
@@ -130,11 +132,11 @@ flowchart LR
 | **E0.6** | Knowledge and locators | AK-01, PK-01, LU-01, LC-01, LA-01, DM-01 | 6 | The right element, or an honest "ambiguous" | M |
 | **E0.7** | MCP execution and UI | EX-01…05, UI-01…09 | 14 | Test cases run through MCP on real UIs | L |
 | **E0.8** | Verdicts and review | EX-06…09, VD-02…11 | 14 | 9 verdicts, PASS gate, user PASS/FAIL review | L |
-| **E0.9** | Login types and OTP | VD-01, AU-01…08 | 9 | Email OTP and TOTP fully automatic | M |
+| **E0.9** | Login types and OTP | VD-01, AU-01…09 | 10 | Email OTP and TOTP fully automatic | M |
 | **E0.10** | Learning and governance | GV-01, GV-02, GV-06…11, GV-13, GV-16 | 10 | Safe learning, audit, KPIs, caching | M |
 | **E1.0** | Switch-over | EXP-01, KP-01…05 | 6 | New engine is the default; full release check | M |
 | **E1.1** | Jira / TestRail | (DEC-04) | 2 | Import from Jira and TestRail | S |
-| | | **Total** | **185 + KP + Jira/TestRail** | | |
+| | | **Total** | **186 + KP + Jira/TestRail** | | |
 
 Size: **S** small, **M** medium, **L** large, relative to each other. There are no fixed dates (owner decision).
 
@@ -175,7 +177,7 @@ The engine must start from a known, fully working base, so that any test that br
 3. Merge `feat/m8-database` into the main branch, after the owner's review.
 4. Tag the result `baseline-before-engine`, so the legacy engine's behaviour can always be compared with it.
 5. Run the Login and Add Employee workbooks once with the legacy engine and keep the results as the **review baseline** for GV-08 (review reduction is measured against this).
-6. Add a note at the top of the documents based on Auto_QA.docx: "Replaced by ENGINE-SPEC.md / ENGINE-PLAN.md" (PD-7, once approved).
+6. Mark the documents based on Auto_QA.docx as replaced (PD-7, done 8 Oct).
 7. Make sure CI runs type check, lint and tests on every push (BP-6).
 
 **Exit tests:**
@@ -277,6 +279,7 @@ The engine must start from a known, fully working base, so that any test that br
 | Hidden / disabled / covered / duplicate elements | Never chosen silently; reported with reason |
 | Candidate order | Test ID chosen over role, role over label, … in the BRD's order |
 | Label consolidation: "username", "login name", "user name textbox", "Username input" | Same component every time |
+| Per-application vocabulary (PD-3) | OrangeHRM words (Employee, Supervisor) resolve only in OrangeHRM; the core list has no application words |
 
 ### E0.7 MCP execution and UI orchestration (M5 + M6 part)
 
@@ -293,6 +296,7 @@ The engine must start from a known, fully working base, so that any test that br
 | MCP tool missing (simulated) | Fallback used, or BLOCKED with the tool's name |
 | No-sleep scan (UI-09) | No fixed waits in `src/engine/` |
 | OrangeHRM login cases on the real site | All 10 run end to end (verdicts are E0.8's job) |
+| Employee list cases (PD-4) | Search, row identification, edit and delete run end to end on the real site |
 
 ### E0.8 Verdicts and user review (M6 + M7)
 
@@ -318,6 +322,7 @@ The engine must start from a known, fully working base, so that any test that br
 **Exit tests:**
 | Test | Pass when |
 |---|---|
+| **Email adapter** (PD-5, AU-09) | The engine talks to mail only through the adapter interface; the local test server is the first adapter; the real provider is added once the owner confirms it |
 | **Local mail server** + demo app with email OTP (§5) | Login with OTP completes with no user action, 20 times in a row |
 | Old OTP mail in the inbox | Ignored; only the mail received after the step is used |
 | No mail within the wait time | ENVIRONMENT_ERROR "OTP mail not received" |
@@ -368,6 +373,7 @@ Built once, mostly in E0.1–E0.3, and extended per version.
 |---|---|---|
 | **Sentence corpus** (`test/corpus/`) | Real step and expected-result sentences from all workbooks in the project, plus the parser's existing test sentences, each with its approved QA-IR | E0.3 |
 | **Workbook fixtures** (`test/workbooks/`) | One small workbook per layout: row per case, row per step, merged cells, multi-sheet, CSV quirks, continuation rows, duplicates, broken schema | E0.2 |
+| **Employee list workbook** (PD-4) | Real test cases for the Employee list/table: search, identify a row, edit, delete. Provided by the owner. | E0.6 |
 | **DOM fixture pages** (`test/dom/`) | Static HTML pages with known correct targets: label cells, duplicates, hidden/disabled/covered, iframes, shadow DOM, tables | E0.6 |
 | **Extended demo app** (`examples/demo-app/`, exists) | New pages: tabs, modals, sortable/paginated table, date picker, rich text, slider, toggle, file upload, email-OTP login | E0.7 |
 | **Local mail server** | A local test mail server (e.g. Mailpit) the demo app sends OTP mails to | E0.9 |
@@ -402,19 +408,21 @@ Only when all 8 steps pass does the new engine become the default.
 | OTP mail providers differ | E0.9 starts with a local mail server; real providers (Gmail, Microsoft 365, company mail) are added one at a time once confirmed |
 | One person builds and owns the engine | Spec, plan, decision log and golden tests keep the knowledge in the project |
 
-## 8. Decisions needed before E0.1
+## 8. Owner decisions (8 Oct 2026)
 
-| # | Decision | Proposal |
+All decisions were answered by the owner on 8 Oct 2026.
+
+| # | Question | Decision |
 |---|---|---|
-| PD-0 | Start with E0.0 (fix the outdated test, merge, tag the baseline, save the legacy review baseline) | Yes |
-| PD-1 | Build the new engine **next to** the current product with a switch (§1.1), rather than changing the current parser in place | Yes |
-| PD-2 | Keep **T5 wrong-PASS traps** from E0.4, even though the full benchmark comes at the end | Yes: it's a few cases and catches the most dangerous mistake early |
-| PD-3 | OP-2: one fixed ontology, or a base ontology plus words per application | Base + per application |
-| PD-4 | Which real workbooks besides Login and Add Employee should be used for testing during the build? | Any module with tables (search, edit, delete in a list) |
-| PD-5 | Which email provider to support first for OTP | To be confirmed by the owner |
-| PD-6 | Word forms ("entered", "entering" → enter): own word lists, or a small rule-based English library (not AI)? | **Own word lists**: fully deterministic, full control, and the QA vocabulary is small |
-| PD-7 | Documents based on Auto_QA.docx (SPEC.md, ARCHITECTURE.md, REAL-WORLD-TEST-CASES.md, PLAN.md, architecture page) | Keep them, with a note at the top: "replaced by ENGINE-SPEC.md / ENGINE-PLAN.md" |
-| PD-8 | Minimum engine target (§9) | Approve the scope in §9 as the first goal |
+| PD-0 | Start with a clean base (E0.0)? | **Yes.** Fix the outdated test, merge the current work into the main branch, tag the baseline, and record the review/benchmark numbers as the starting point. |
+| PD-1 | Build the new engine next to the current one? | **Yes.** Build the new engine separately while the current engine keeps working, with a configuration/feature flag that selects which engine runs. |
+| PD-2 | Keep the small wrong-PASS traps during the build? | **Yes.** The known wrong-PASS cases are permanent regression tests and run after every meaningful engine change. |
+| PD-3 | Word list for "things in an application" | **b) Base + per application.** Generic QA vocabulary belongs to the core engine; application terms such as Employee, Supervisor, Applicant and Expert belong to that application's vocabulary/ontology. |
+| PD-4 | Other real test case files for the build | **The Employee list/table module next**, with search, identifying a row, and edit/delete where available. *Action for the owner:* no Employee list test case file exists in the project yet (`Managing Employee Data.xlsx` holds the same 19 cases as `Add_Employee.xlsx`). Provide one before E0.6. |
+| PD-5 | First email provider for OTP | **Not decided yet.** First confirm which provider the target application/environment uses, then implement it through an **email adapter**, never hard-coded in the engine (AU-09). |
+| PD-6 | Word forms ("entered", "entering" → enter) | **a) Own deterministic word lists and normalization rules.** Variations normalize to one canonical QA action (e.g. ENTER), with no AI/LLM. |
+| PD-7 | Old documents based on Auto_QA.docx | **Yes.** Kept for history and clearly marked as replaced by ENGINE-SPEC.md / ENGINE-PLAN.md (done 8 Oct). |
+| PD-8 | Build the minimum engine first? | **Yes.** Build the smallest deterministic engine that shows substantial review reduction on Login and Add Employee first; OTP, shadow DOM, sliders and other advanced capabilities follow once the core is proven. |
 
 ---
 

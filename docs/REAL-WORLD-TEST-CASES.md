@@ -1,5 +1,7 @@
 # Auto QA: Handling Real-World Test Cases
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 | | |
 |---|---|
 | **Status** | **ADOPTED into [SPEC.md](SPEC.md) (§6.23, D6 revised, D30–D31) on 2026-10-01 and built in phases R1–R5.** Phase status is in §11. The decision numbers in §10 are D30 and D31 in the spec, because D29 was already taken. |
