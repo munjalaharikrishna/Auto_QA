@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import type { JobStatus } from '../../../src/server/store.js';
-import type { Policy, ProjectInput, ProjectView, RawTestCase } from '../api';
+import { fileUrl, type Policy, type ProjectInput, type ProjectView, type RawTestCase, type ReviewItem } from '../api';
 import { Link } from '../router';
 
 export function StatusBadge({ status }: { status: string }) {
@@ -168,6 +168,9 @@ export function CaseForm(props: {
   submitLabel: string;
   onSubmit: (c: Omit<RawTestCase, 'row'>) => Promise<void>;
   onCancel?: () => void;
+  /** From a review: every step and check with the page as it looked, so each can be corrected next to its picture. */
+  items?: ReviewItem[];
+  onZoom?: (file: string) => void;
 }) {
   const [c, setC] = useState<Omit<RawTestCase, 'row'>>({
     id: props.initial?.id,
@@ -183,6 +186,17 @@ export function CaseForm(props: {
   const hintId = useId();
   const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setC({ ...c, [k]: e.target.value || undefined });
+
+  /** What each listed step or check currently says, so the right words are replaced in the text boxes below. */
+  const [lines, setLines] = useState<Record<string, string>>({});
+  const editLine = (item: ReviewItem, value: string) => {
+    const key = `${item.kind}-${item.id}`;
+    const current = lines[key] ?? item.raw;
+    const field = item.kind === 'step' ? 'steps' : 'expected';
+    setC((prev) => (prev[field].includes(current) ? { ...prev, [field]: prev[field].replace(current, () => value) } : prev));
+    setLines((prev) => ({ ...prev, [key]: value }));
+  };
+  const listed = (props.items ?? []).filter((i) => i.phase === 'test' && i.raw);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,6 +229,44 @@ export function CaseForm(props: {
           </select>
         </label>
       </div>
+      {!!listed.length && (
+        <fieldset className="stack">
+          <legend>Fix a step from its picture</legend>
+          <p className="muted" style={{ margin: 0 }}>
+            Each line shows the page as it looked at that step. Change the words here and the Steps / Expected result below change with it. Steps with a problem
+            are marked.
+          </p>
+          {listed.map((i) => {
+            const key = `${i.kind}-${i.id}`;
+            const value = lines[key] ?? i.raw;
+            const field = i.kind === 'step' ? c.steps : c.expected;
+            return (
+              <div key={key} className="row" style={{ alignItems: 'flex-start' }}>
+                {i.screenshot ? (
+                  <button type="button" className="thumb-button" onClick={() => props.onZoom?.(i.screenshot!)} aria-label={`Picture for ${i.id}, full size`}>
+                    <img className="thumb" src={fileUrl(i.screenshot)} alt="" />
+                  </button>
+                ) : (
+                  <span className="muted" style={{ width: '7rem' }}>
+                    {i.noScreenshot ?? 'No picture'}
+                  </span>
+                )}
+                <div className="grow stack">
+                  <label className="field">
+                    <span>
+                      {i.id} {i.kind === 'check' ? '(check)' : '(step)'}
+                      {i.status !== 'done' ? ' — needs your attention' : ''}
+                    </span>
+                    <input value={value} onChange={(e) => editLine(i, e.target.value)} />
+                  </label>
+                  {i.review && <small>{i.review.headline}</small>}
+                  {!field.includes(value) && <small className="muted">This line was changed in the text box below; edit it there.</small>}
+                </div>
+              </div>
+            );
+          })}
+        </fieldset>
+      )}
       <label className="field">
         <span>Preconditions</span>
         <input value={c.preconditions ?? ''} onChange={set('preconditions')} placeholder="Unauthenticated visitor" />

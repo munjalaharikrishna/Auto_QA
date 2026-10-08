@@ -30,7 +30,7 @@ export interface BatchSummary {
   review: Array<{ row: number; testId: string; title: string; step?: string; question: string }>;
 }
 
-const COLORS: Record<Status, { fill: string; font: string }> = {
+export const COLORS: Record<Status, { fill: string; font: string }> = {
   PASS: { fill: 'FFC6EFCE', font: 'FF006100' },
   FAIL: { fill: 'FFFFC7CE', font: 'FF9C0006' },
   BLOCKED: { fill: 'FFD9D9D9', font: 'FF3F3F3F' },
@@ -132,7 +132,7 @@ function addSummarySheet(workbook: ExcelJS.Workbook, summary: BatchSummary): voi
 }
 
 /** 2026-09-30T10:32:54Z → "2026-09-30 16:02" in the machine's time zone. */
-function localTime(iso: string): string {
+export function localTime(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;

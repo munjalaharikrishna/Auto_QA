@@ -11,6 +11,7 @@ import { executionOrder } from '../parser/index.js';
 import { ruleKey } from '../parser/rules.js';
 import { errorMessagesInPage } from '../validations/observe.js';
 import { type Explanation, explain, plainError, sentence } from './explain.js';
+import { pageBoxes } from './frame-boxes.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
 import { flatten, nearbyText, parseSnapshot, type SnapshotNode } from './snapshot-parser.js';
 import { masker, resolveValue } from './values.js';
@@ -232,9 +233,11 @@ export async function explore(model: TestModel, session: Session, options: Explo
       const size = page.viewportSize() ?? { width: 1280, height: 720 };
       const roles = rolesFor(query.kind);
       const nodes = flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true })));
+      // Elements inside an iframe are measured from the iframe, so they are moved to where the screenshot shows them.
+      const boxes = await pageBoxes(page, nodes);
       const elements = nodes.flatMap((n) => {
-        const box = typeof n.attributes.box === 'string' ? n.attributes.box.split(',').map(Number) : [];
-        if (!n.ref || box.length !== 4 || box[2] <= 0 || box[3] <= 0) return [];
+        const box = n.ref ? boxes.get(n.ref) : undefined;
+        if (!n.ref || !box) return [];
         if (roles && !roles.includes(n.role)) return [];
         // A part of the page is exactly what a container question is about.
         const skip = query.container
@@ -247,7 +250,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
             ref: n.ref,
             role: n.role,
             name: n.name || nearbyText(n) || n.text || '',
-            box: { x: box[0], y: box[1], width: box[2], height: box[3] },
+            box,
             ...(candidate >= 0 ? { candidate } : {}),
           },
         ];
@@ -330,11 +333,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
     try {
       const page = browserPage();
       const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }));
-      const boxes = new Map<string, { x: number; y: number; width: number; height: number }>();
-      for (const n of flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true })))) {
-        const box = typeof n.attributes.box === 'string' ? n.attributes.box.split(',').map(Number) : [];
-        if (n.ref && box.length === 4 && box[2] > 0 && box[3] > 0) boxes.set(n.ref, { x: box[0], y: box[1], width: box[2], height: box[3] });
-      }
+      const boxes = await pageBoxes(page, flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true }))));
       const top = candidates.slice(0, 6).filter((c) => c.node.ref && boxes.has(c.node.ref));
       if (top.length < 2) return undefined;
       const tolerance = query.options?.tolerance ?? 0.05;
@@ -776,6 +775,8 @@ export async function explore(model: TestModel, session: Session, options: Explo
         item.status = 'skipped';
         item.review = explain({ code: x.reason?.code ?? 'NO_PATTERN', raw: x.raw, text: x.reason?.text });
         item.warnings.push(`Not understood. ${sentence(item.review)}`);
+        // Show the page as it is, so the tester sees where the step would have worked (nothing is open before the first step).
+        if (result.items.some((i) => i.screenshot)) await screenshot(item);
         continue;
       }
       try {
@@ -795,6 +796,10 @@ export async function explore(model: TestModel, session: Session, options: Explo
       collectDialogs(item);
       item.warnings = item.warnings.map(mask);
       if (item.error) item.error = mask(item.error);
+      // A failure always says what happened and what to do, even when the cause had no wording of its own.
+      if (item.status === 'failed' && !item.review) {
+        item.review = explain({ code: isStep ? 'STEP_FAILED' : 'CHECK_FAILED', raw: mask(item.raw), text: item.error });
+      }
       await screenshot(item);
       if (item.status === 'failed' && item.kind === 'step') {
         // Later steps depend on this one; stop rather than explore a wrong state.

@@ -79,7 +79,7 @@ export interface ReviewItem {
   raw: string;
   action?: string;
   type?: string;
-  status: 'done' | 'skipped' | 'failed';
+  status: 'done' | 'skipped' | 'failed' | 'not-run';
   locator?: { code: string; strategy: string; source: string; validated: boolean };
   score?: number;
   resolvedBy?: 'rules' | 'tester';
@@ -87,6 +87,11 @@ export interface ReviewItem {
   effect?: string;
   screenshot?: string;
   warnings: string[];
+  error?: string;
+  /** Why it was set aside or failed, and what the tester can do. */
+  review?: { headline: string; why: string; todo: string[] };
+  /** Why there is no screenshot, when there is none. */
+  noScreenshot?: string;
 }
 
 export interface Review {
@@ -123,6 +128,8 @@ export const api = {
     return call<Preview>(`/api/projects/${projectId}/uploads`, { method: 'POST', body: form });
   },
   preview: (uploadId: string, mapping: Partial<Record<Field, string>>) => call<Preview>(`/api/uploads/${uploadId}/preview`, json('POST', { mapping })),
+  importUpload: (uploadId: string, mapping: Partial<Record<Field, string>>) =>
+    call<{ added: number; updated: number; kept: number; total: number; problems: string[] }>(`/api/uploads/${uploadId}/import`, json('POST', { mapping })),
   runUpload: (uploadId: string, mapping: Partial<Record<Field, string>>) => call<Job>(`/api/uploads/${uploadId}/run`, json('POST', { mapping })),
   submitCase: (projectId: string, c: Omit<RawTestCase, 'row'>) => call<Job>(`/api/projects/${projectId}/cases`, json('POST', c)),
   jobs: (projectId: string) => call<Job[]>(`/api/projects/${projectId}/jobs`),

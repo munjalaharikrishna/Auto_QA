@@ -2,8 +2,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { type BrowserContext, chromium, type ElementHandle, type Page, selectors } from 'playwright';
-import type { ElementFacts } from './ladder.js';
+import { type BrowserContext, chromium, type ElementHandle, type Frame, type Page, selectors } from 'playwright';
+import { type ElementFacts, isStableId } from './ladder.js';
 import { type LocatorSpec, spec, toCode, toLocator } from './locator.js';
 import type { TargetQuery } from './match.js';
 
@@ -92,6 +92,48 @@ export class LocatorProbe {
     if (own?.trimEnd() !== snapshotYaml.trimEnd()) return undefined;
     const { handle } = await this.resolve(page, spec('locator', `aria-ref=${ref}`));
     return handle;
+  }
+
+  /**
+   * The iframes an element is inside, outermost first, each as a selector that finds just that iframe (empty for the top page).
+   * Page locators never look inside a frame, so the locators for such an element are built from these.
+   */
+  async frameChain(page: Page, handle: ElementHandle): Promise<string[]> {
+    const chain: string[] = [];
+    let frame = await handle.ownerFrame();
+    while (frame && frame !== page.mainFrame()) {
+      const parent = frame.parentFrame();
+      const owner = await frame.frameElement().catch(() => undefined);
+      if (!parent || !owner) break;
+      try {
+        chain.unshift(await this.frameSelector(parent, owner));
+      } finally {
+        await owner.dispose();
+      }
+      frame = parent;
+    }
+    return chain;
+  }
+
+  /** A selector for the iframe element `owner` inside `parent`: its name, a stable id, title or address when that finds only it, else its position. */
+  private async frameSelector(parent: Frame, owner: ElementHandle): Promise<string> {
+    const a = await (owner as ElementHandle<Element>).evaluate((e) => ({
+      tag: e.tagName.toLowerCase(),
+      id: e.getAttribute('id') ?? '',
+      name: e.getAttribute('name') ?? '',
+      title: e.getAttribute('title') ?? '',
+      src: e.getAttribute('src') ?? '',
+      index: Array.from(document.querySelectorAll(e.tagName)).indexOf(e),
+    }));
+    const quoted = (v: string) => v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const candidates = [
+      a.name && `${a.tag}[name="${quoted(a.name)}"]`,
+      a.id && isStableId(a.id) && `${a.tag}#${a.id}`,
+      a.title && `${a.tag}[title="${quoted(a.title)}"]`,
+      a.src && `${a.tag}[src="${quoted(a.src)}"]`,
+    ].filter((c): c is string => !!c);
+    for (const c of candidates) if ((await parent.locator(c).count()) === 1) return c;
+    return `${a.tag} >> nth=${a.index}`;
   }
 
   async facts(handle: ElementHandle, testIdAttribute: string): Promise<ElementFacts> {

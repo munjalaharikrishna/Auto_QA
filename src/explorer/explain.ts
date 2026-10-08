@@ -113,6 +113,26 @@ export function explain(input: ExplainInput): Explanation {
         why: text ?? 'An earlier step probably did not work, for example the login failed or a button was not clicked.',
         todo: ['Answer Yes only if this really is the expected page.', 'Answer No to stop and look at the earlier steps and their screenshots.'],
       };
+    case 'STEP_FAILED':
+      return {
+        headline: `${quoted(raw)} could not be done.`,
+        why: `${text ?? 'The browser could not carry it out.'} The steps after it were not tried, because they depend on it.`,
+        todo: [
+          'Look at the screenshot of this step: is the page what you expected at this point?',
+          'Press Edit and correct this step (the name must match what the screen shows), or an earlier step that should have got the page here.',
+          'If the application changed or was not ready, press Regenerate to try again.',
+        ],
+      };
+    case 'CHECK_FAILED':
+      return {
+        headline: `${quoted(raw)} could not be confirmed on the page.`,
+        why: text ?? 'What the check looks for was not on the page when it was tried.',
+        todo: [
+          'Look at the screenshot: is what the check expects visible there?',
+          'Press Edit and write the check with the exact text or name shown on the screen.',
+          'If an earlier step did not work, fix that one first.',
+        ],
+      };
     case 'PRODUCTION':
       return {
         headline: 'This looks like a live (Production) site.',

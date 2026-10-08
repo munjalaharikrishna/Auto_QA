@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import type { FastifyInstance } from 'fastify';
 import { buildDemoWorkbook } from '../../examples/demo-app/make-workbook.js';
 import { DEMO_USER, startDemoApp } from '../../examples/demo-app/server.js';
+import { LocalArtifactStore } from '../db/artifacts.js';
 import { defaultParserConfig } from '../parser/index.js';
 import { buildApp } from './app.js';
 import { readEnvFile } from './credentials.js';
@@ -28,7 +29,8 @@ function multipart(file: string, name = path.basename(file)) {
 }
 
 async function server(dir: string, headless = true) {
-  const store = await Store.open(':memory:');
+  const artifacts = new LocalArtifactStore({ local: path.join(dir, 'data'), workspace: path.join(dir, 'workspaces') });
+  const store = await Store.open(':memory:', { artifacts });
   const runner = new JobRunner({ store, config: defaultParserConfig(), dataDir: path.join(dir, 'data'), headless });
   const app = await buildApp({ store, runner, dataDir: path.join(dir, 'data'), workspacesDir: path.join(dir, 'workspaces') });
   return { store, runner, app };
@@ -239,6 +241,28 @@ describe('API (M7a)', () => {
     assert.equal((await app.inject({ method: 'POST', url: '/api/projects/demo-app/uploads', ...multipart(txt) })).statusCode, 400);
   });
 
+  it('imports a workbook into the test case list without running it, and exports the list', async () => {
+    const file = path.join(dir, 'Bulk import.xlsx');
+    await buildDemoWorkbook(file, 5);
+    const up = (await app.inject({ method: 'POST', url: '/api/projects/demo-app/uploads', ...multipart(file) })).json();
+    const before = (await app.inject({ url: '/api/projects/demo-app/test-cases' })).json().length;
+    const res = await app.inject({ method: 'POST', url: `/api/uploads/${up.uploadId}/import`, payload: { mapping: {} } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().total, 5);
+    assert.equal(res.json().added + res.json().updated + res.json().kept, 5);
+    const list = (await app.inject({ url: '/api/projects/demo-app/test-cases' })).json();
+    assert.equal(list.length - before, res.json().added);
+    assert.ok(list.every((c: { lastStatus?: string }) => c.lastStatus === undefined || typeof c.lastStatus === 'string'));
+    assert.equal((await app.inject({ method: 'POST', url: '/api/uploads/nope/import', payload: {} })).statusCode, 404);
+    // Importing again changes nothing (same wording, no new versions).
+    const again = (await app.inject({ method: 'POST', url: `/api/uploads/${up.uploadId}/import`, payload: { mapping: {} } })).json();
+    assert.equal(again.added, 0);
+    const exported = await app.inject({ url: '/api/projects/demo-app/export' });
+    assert.equal(exported.statusCode, 200);
+    assert.match(String(exported.headers['content-disposition']), /results\.xlsx/);
+    assert.ok(exported.rawPayload.length > 1000);
+  });
+
   it('serves files only from its own folders', async () => {
     const outside = await app.inject({ url: `/api/files?path=${encodeURIComponent(path.join(root, 'package.json'))}` });
     assert.equal(outside.statusCode, 403);
@@ -322,6 +346,21 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
       assert.equal(served.statusCode, 200, file);
     }
 
+    // M8: the run is in the database, not only in files: the execution, each step and check, and the evidence by reference.
+    const x = await get(`/api/projects/demo/executions/${j.executionId}`);
+    assert.equal(x.status, 'done');
+    assert.match(x.execId, /^EXEC-\d{4}-\d{5}$/);
+    assert.equal(x.results[0].testId, caseId);
+    assert.equal(x.results[0].steps.length, v.steps.length);
+    assert.ok(x.results[0].checks.length > 0, 'the checks are rows');
+    assert.ok(x.results[0].evidence.some((e: { kind: string; ref: string }) => e.kind === 'video' && e.ref.startsWith('local:projects/demo/runs/')));
+    assert.ok(x.results[0].evidence.every((e: { sha256: string; masked: boolean }) => /^[0-9a-f]{64}$/.test(e.sha256) && e.masked));
+    assert.ok(
+      (await s.store.explorationStats('demo')).some((e) => e.status === 'done'),
+      'the exploration steps are rows',
+    );
+    assert.deepEqual(await s.store.problems(), []);
+
     // Item 3: run it again. It was approved before, so it runs straight away without asking.
     const rerun = await post(`/api/projects/demo/test-cases/${caseId}/run`);
     j = await until(rerun.id, ['review', 'done', 'failed', 'waiting']);
@@ -329,6 +368,9 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     assert.equal(j.verdicts[0].status, 'PASS');
     const detail = await get(`/api/projects/demo/test-cases/${caseId}`);
     assert.equal(detail.runCount, 2);
+    const runs = await get('/api/projects/demo/executions');
+    assert.equal(new Set(runs.map((r: { execId: string }) => r.execId)).size, runs.length, 'every run has its own number');
+    assert.ok(runs.length >= 2);
     assert.deepEqual(
       detail.runs.map((r: { jobId: string }) => r.jobId),
       [rerun.id, job.id],

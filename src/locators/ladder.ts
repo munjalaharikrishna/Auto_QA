@@ -35,7 +35,8 @@ export function isStableId(id: string): boolean {
   return /^[A-Za-z][\w-]*$/.test(id) && !/\d{3,}/.test(id) && !/^(ember|react|ng-|mui-|radix-|headlessui-|:r)/i.test(id);
 }
 
-export function buildLadder(node: SnapshotNode, facts: ElementFacts, suggestions: LocatorSpec[] = []): LocatorSpec[] {
+/** `frame`: the iframes the element is inside (see `LocatorSpec.frame`); every rung is then looked for in that frame. */
+export function buildLadder(node: SnapshotNode, facts: ElementFacts, suggestions: LocatorSpec[] = [], frame: string[] = []): LocatorSpec[] {
   const out: LocatorSpec[] = [];
   const isField = FIELD_ROLES.has(node.role);
 
@@ -50,15 +51,19 @@ export function buildLadder(node: SnapshotNode, facts: ElementFacts, suggestions
   else if (facts.nameAttr) out.push(spec('locator', `${facts.tag}[name="${facts.nameAttr.replace(/"/g, '\\"')}"]`));
   if (facts.xpath) out.push(spec('locator', `xpath=${facts.xpath}`));
 
+  const rungs = frame.length ? out.map((s) => ({ ...s, frame })) : out;
   // MCP's suggestion (FR-LO-07) joins at its strategy's place unless it is already there.
-  for (const s of suggestions) if (!out.some((o) => sameSpec(o, s))) out.push(s);
+  for (const suggested of suggestions) {
+    const s = frame.length ? { ...suggested, frame } : suggested;
+    if (!rungs.some((o) => sameSpec(o, s))) rungs.push(s);
+  }
   // A role without a name only works while the page has one such element, so it ranks after CSS
   // (a stable id) but before XPath. Position-based locators break when the order changes, so they come last.
   const rank = (s: LocatorSpec) => {
     const base = s.strategy === 'role' && !s.options?.name ? STRATEGIES.indexOf('css') + 0.5 : STRATEGIES.indexOf(s.strategy);
     return (s.nth === undefined ? 0 : STRATEGIES.length) + base;
   };
-  return out.sort((a, b) => rank(a) - rank(b));
+  return rungs.sort((a, b) => rank(a) - rank(b));
 }
 
 /** Stored facts for finding the element again after the UI changes (FR-LO-11). */

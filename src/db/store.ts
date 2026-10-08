@@ -2,9 +2,11 @@ import { createHash, randomBytes } from 'node:crypto';
 import { DEFAULT_POLICY, isPolicy, type Policy } from '../model/policy.js';
 import type { RawTestCase } from '../model/test-model.js';
 import { type ProjectRule, type RuleKind, ruleKey } from '../parser/rules.js';
+import { type ArtifactStore, type FileFacts, isRef } from './artifacts.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
 import { MIGRATIONS } from './migrations/index.js';
+import { EXEC_ID, execIdOf, resultColumns, runId } from './results.js';
 import { SqliteDriver } from './sqlite-driver.js';
 import { problems } from './verify.js';
 
@@ -103,6 +105,34 @@ export interface Environment {
   isDefault: boolean;
 }
 
+export interface ExecutionRecord {
+  /** `EXEC-YYYY-NNNNN`, as shown to testers. */
+  execId: string;
+  projectId: string;
+  jobId?: string;
+  status: string;
+  /** Tests by result, e.g. `{ PASS: 3, FAIL: 1 }`. */
+  totals: Record<string, number>;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
+}
+
+export interface ResultRecord {
+  testId: string;
+  status: string;
+  modelVersion?: number;
+  category?: string;
+  failedStep?: string;
+  reason?: string;
+  expected?: string;
+  actual?: string;
+  durationMs?: number;
+  steps: Array<{ id: string; raw: string; result: string; error?: string; screenshotRef?: string }>;
+  checks: Array<{ id: string; raw: string; expected?: string; actual?: string; result: string }>;
+  evidence: Array<{ kind: string; ref: string; mime: string; sizeBytes: number; sha256: string; stepId?: string; masked: boolean }>;
+}
+
 type Row = Record<string, string | number | null>;
 
 const now = () => new Date().toISOString();
@@ -119,18 +149,22 @@ export class Store {
   constructor(
     private readonly db: Queryable,
     private readonly driver?: Driver,
+    /** Turns files into storage references and back (D27). Without it, paths are stored as given. */
+    readonly artifacts?: ArtifactStore,
   ) {}
 
   /** `file` is the database path, or `:memory:` for tests. Pending migrations are applied first (D26). */
-  static async open(file: string, options: { backupDir?: string; appVersion?: string } = {}): Promise<Store> {
+  static async open(file: string, options: { backupDir?: string; appVersion?: string; artifacts?: ArtifactStore } = {}): Promise<Store> {
     const driver = await SqliteDriver.open(file);
     try {
       await migrate(driver, MIGRATIONS, options);
+      const store = new Store(driver, driver, options.artifacts);
+      await store.adoptPaths();
+      return store;
     } catch (e) {
       await driver.close();
       throw e;
     }
-    return new Store(driver, driver);
   }
 
   async close(): Promise<void> {
@@ -145,7 +179,37 @@ export class Store {
   /** Everything the function writes through the store it is given is committed together, or not at all (FR-DB-07). */
   transaction<T>(fn: (store: Store) => Promise<T>): Promise<T> {
     if (!this.driver) return fn(this);
-    return this.driver.transaction((tx) => fn(new Store(tx)));
+    return this.driver.transaction((tx) => fn(new Store(tx, undefined, this.artifacts)));
+  }
+
+  /** A path as it is kept in a row: a storage reference when the file is inside a root (D27, FR-DB-13). */
+  private keep(file: string): string {
+    return this.artifacts?.toRef(file) ?? file;
+  }
+
+  /** A stored value as a path on this machine. Values that are not references (older rows, files outside every root) are paths already. */
+  private open(stored: string): string {
+    return isRef(stored) && this.artifacts ? this.artifacts.resolve(stored) : stored;
+  }
+
+  /** Rows written before references existed hold absolute paths: convert those inside a root, once and safely to repeat. */
+  async adoptPaths(): Promise<number> {
+    if (!this.artifacts) return 0;
+    let changed = 0;
+    for (const [table, column] of [
+      ['projects', 'workspace'],
+      ['uploads', 'file'],
+    ] as const) {
+      const rows = await this.db.all<{ id: string; v: string }>(`SELECT id, ${column} AS v FROM ${table}`);
+      for (const r of rows) {
+        if (isRef(r.v)) continue;
+        const ref = this.artifacts.toRef(r.v);
+        if (!ref) continue;
+        await this.db.run(`UPDATE ${table} SET ${column} = ? WHERE id = ?`, [ref, r.id]);
+        changed++;
+      }
+    }
+    return changed;
   }
 
   // Projects
@@ -155,7 +219,16 @@ export class Store {
     await this.transaction(async (s) => {
       await s.db.run(
         'INSERT INTO projects (id, name, base_url, test_id_attribute, browser, workspace, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [project.id, project.name, project.baseUrl, project.testIdAttribute, project.browser, project.workspace, project.createdAt, project.createdAt],
+        [
+          project.id,
+          project.name,
+          project.baseUrl,
+          project.testIdAttribute,
+          project.browser,
+          this.keep(project.workspace),
+          project.createdAt,
+          project.createdAt,
+        ],
       );
       await s.db.run(
         `INSERT INTO environments (id, project_id, name, base_url, is_production, is_default, created_at, updated_at) VALUES (?, ?, 'Default', ?, 0, 1, ?, ?)`,
@@ -189,11 +262,11 @@ export class Store {
 
   async project(id: string): Promise<Project | undefined> {
     const r = await this.db.get<Row>(`${PROJECT_SELECT} WHERE p.id = ?`, [id]);
-    return r && toProject(r);
+    return r && this.toProject(r);
   }
 
   async projects(): Promise<Project[]> {
-    return (await this.db.all<Row>(`${PROJECT_SELECT} WHERE p.archived_at IS NULL ORDER BY p.created_at`)).map(toProject);
+    return (await this.db.all<Row>(`${PROJECT_SELECT} WHERE p.archived_at IS NULL ORDER BY p.created_at`)).map((r) => this.toProject(r));
   }
 
   // Environments (V1 has one per project; V2 adds more rows, FR-ENV-02)
@@ -225,6 +298,34 @@ export class Store {
     );
   }
 
+  /** The environment a project's runs use until V2 lets the tester pick one (FR-ENV-01). */
+  async defaultEnvironmentId(projectId: string): Promise<string | undefined> {
+    return (await this.db.get<{ id: string }>('SELECT id FROM environments WHERE project_id = ? AND is_default = 1', [projectId]))?.id;
+  }
+
+  /**
+   * Moves the page URLs older versions kept in `.auto-qa/pages.json` (by origin) into the page routes of every project whose
+   * environment is on that origin. Routes already there win. Returns how many were added; safe to repeat.
+   */
+  async importPageUrls(all: Record<string, Record<string, string>>): Promise<number> {
+    let added = 0;
+    for (const env of await this.db.all<{ id: string; base_url: string }>('SELECT id, base_url FROM environments')) {
+      let origin: string;
+      try {
+        origin = new URL(env.base_url).origin;
+      } catch {
+        continue;
+      }
+      const have = await this.pageRoutes(env.id);
+      for (const [name, route] of Object.entries(all[origin] ?? {})) {
+        if (name in have) continue;
+        await this.savePageRoute(env.id, name, route, 'learned');
+        added++;
+      }
+    }
+    return added;
+  }
+
   // Uploads
 
   async createUpload(u: Omit<Upload, 'id' | 'createdAt'>): Promise<Upload> {
@@ -232,7 +333,7 @@ export class Store {
     await this.db.run('INSERT INTO uploads (id, project_id, file, original_name, created_at) VALUES (?, ?, ?, ?, ?)', [
       upload.id,
       upload.projectId,
-      upload.file,
+      this.keep(upload.file),
       upload.originalName,
       upload.createdAt,
     ]);
@@ -242,7 +343,13 @@ export class Store {
   async upload(id: string): Promise<Upload | undefined> {
     const r = await this.db.get<Row>('SELECT * FROM uploads WHERE id = ?', [id]);
     return (
-      r && { id: String(r.id), projectId: String(r.project_id), file: String(r.file), originalName: String(r.original_name), createdAt: String(r.created_at) }
+      r && {
+        id: String(r.id),
+        projectId: String(r.project_id),
+        file: this.open(String(r.file)),
+        originalName: String(r.original_name),
+        createdAt: String(r.created_at),
+      }
     );
   }
 
@@ -331,28 +438,348 @@ export class Store {
     return (await this.db.all<Row>('SELECT * FROM questions WHERE job_id = ? AND answered_at IS NULL ORDER BY id', [jobId])).map(toQuestion);
   }
 
-  // Verdicts
+  // Results (DATABASE.md §5.7). `verdicts` is a read-only view of `test_results` for one release.
 
+  /**
+   * One row per test of a job, the whole verdict kept as JSON and its queryable parts as columns. Saving again replaces
+   * the row (and what hangs off it). A run's executions, steps, checks and evidence are added by `saveRun`.
+   */
   async saveVerdicts(jobId: string, rows: Array<{ testId: string; row?: number; status: string; verdict: unknown }>): Promise<void> {
     await this.transaction(async (s) => {
+      const job = await s.db.get<{ project_id: string }>('SELECT project_id FROM jobs WHERE id = ?', [jobId]);
+      if (!job) throw new Error(`No job ${jobId}`);
       for (const r of rows) {
+        const c = resultColumns(r.verdict);
+        const execution = c.executionId ? runId(job.project_id, c.executionId) : undefined;
+        const linked = execution && (await s.db.get('SELECT 1 AS x FROM executions WHERE id = ?', [execution])) ? execution : null;
+        const testCase = await s.db.get<{ id: string; current_version: number }>(
+          'SELECT id, current_version FROM test_cases WHERE project_id = ? AND ext_id = ?',
+          [job.project_id, r.testId],
+        );
+        const existing = await s.db.get<{ id: string }>('SELECT id FROM test_results WHERE job_id = ? AND ext_id = ?', [jobId, r.testId]);
+        if (existing) await s.clearResult(existing.id);
         await s.db.run(
-          `INSERT INTO verdicts (job_id, test_id, row, status, verdict) VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT (job_id, test_id) DO UPDATE SET row = excluded.row, status = excluded.status, verdict = excluded.verdict`,
-          [jobId, r.testId, r.row ?? null, r.status, JSON.stringify(r.verdict)],
+          `INSERT INTO test_results (id, job_id, project_id, execution_id, test_case_id, model_version, ext_id, row, automation_id, status, category,
+             failed_step, reason, expected, actual, duration_ms, started_at, verdict)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (job_id, ext_id) DO UPDATE SET execution_id = excluded.execution_id, test_case_id = excluded.test_case_id,
+             model_version = excluded.model_version, row = excluded.row, automation_id = excluded.automation_id, status = excluded.status,
+             category = excluded.category, failed_step = excluded.failed_step, reason = excluded.reason, expected = excluded.expected,
+             actual = excluded.actual, duration_ms = excluded.duration_ms, started_at = excluded.started_at, verdict = excluded.verdict`,
+          [
+            existing?.id ?? newId('TR'),
+            jobId,
+            job.project_id,
+            linked,
+            testCase?.id ?? null,
+            testCase?.current_version ?? null,
+            r.testId,
+            r.row ?? null,
+            c.automationId,
+            r.status,
+            c.category,
+            c.failedStep,
+            c.reason,
+            c.expected,
+            c.actual,
+            c.durationMs,
+            c.startedAt,
+            JSON.stringify(r.verdict),
+          ],
         );
       }
     });
   }
 
+  private async clearResult(testResultId: string): Promise<void> {
+    for (const table of ['step_results', 'check_results', 'evidence']) await this.db.run(`DELETE FROM ${table} WHERE test_result_id = ?`, [testResultId]);
+  }
+
   async verdicts(jobId: string): Promise<Array<{ testId: string; row?: number; status: string; verdict: unknown }>> {
-    const rows = await this.db.all<Row>('SELECT * FROM verdicts WHERE job_id = ? ORDER BY row, test_id', [jobId]);
+    const rows = await this.db.all<Row>('SELECT * FROM test_results WHERE job_id = ? ORDER BY row, ext_id', [jobId]);
     return rows.map((r) => ({
-      testId: String(r.test_id),
+      testId: String(r.ext_id),
       row: r.row === null ? undefined : Number(r.row),
       status: String(r.status),
       verdict: JSON.parse(String(r.verdict)),
     }));
+  }
+
+  /**
+   * A finished run, written together (FR-DB-07): the execution, every test's result with its steps, checks and evidence,
+   * and the case's last result for the list. Either all of it is saved or none.
+   */
+  async saveRun(
+    job: { id: string; projectId: string },
+    run: {
+      /** The run Playwright made, if one was made. Cases that stopped earlier have results but no execution. */
+      execution?: { execId: string; startedAt?: string; finishedAt?: string; durationMs?: number; trigger?: string; browser?: string };
+      rows: Array<{ testId: string; row?: number; status: string; verdict: unknown }>;
+      /** Files each test left behind, already described (reference, type, size, hash). Keyed by test id. */
+      evidence?: Record<string, Array<FileFacts & { kind: string; stepId?: string }>>;
+      /** The generated project as it was when the run started: path → sha256 of each file (FR-HI-03, G6). */
+      snapshot?: Record<string, string>;
+      /** When the results were recorded; also the time of the last result shown on each test case. */
+      recordedAt: string;
+    },
+  ): Promise<void> {
+    await this.transaction(async (s) => {
+      const env = await s.db.get<{ id: string }>('SELECT id FROM environments WHERE project_id = ? AND is_default = 1', [job.projectId]);
+      if (run.execution) {
+        const x = run.execution;
+        const mine = run.rows.filter((r) => resultColumns(r.verdict).executionId === x.execId);
+        const totals: Record<string, number> = {};
+        for (const r of mine) totals[r.status] = (totals[r.status] ?? 0) + 1;
+        const project = await s.project(job.projectId);
+        await s.db.run(
+          `INSERT INTO executions (id, exec_id, project_id, environment_id, job_id, trigger, browser, status, totals, started_at, finished_at, duration_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'done', ?, ?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET status = excluded.status, totals = excluded.totals, finished_at = excluded.finished_at, duration_ms = excluded.duration_ms`,
+          [
+            runId(job.projectId, x.execId),
+            x.execId,
+            job.projectId,
+            env?.id ?? null,
+            job.id,
+            x.trigger ?? 'job',
+            x.browser ?? project?.browser ?? null,
+            JSON.stringify(totals),
+            x.startedAt ?? run.recordedAt,
+            x.finishedAt ?? run.recordedAt,
+            x.durationMs ?? null,
+          ],
+        );
+      }
+      await s.saveVerdicts(job.id, run.rows);
+      for (const r of run.rows) {
+        const v = (r.verdict ?? {}) as { executionId?: string; steps?: Array<Record<string, unknown>>; checks?: Array<Record<string, unknown>> };
+        // Only what this run produced has steps and evidence of its own; a cached result from an earlier run keeps its own rows.
+        if (!run.execution || v.executionId !== run.execution.execId) continue;
+        const result = await s.db.get<{ id: string }>('SELECT id FROM test_results WHERE job_id = ? AND ext_id = ?', [job.id, r.testId]);
+        if (!result) continue;
+        const files = run.evidence?.[r.testId] ?? [];
+        const screenshotOf = new Map(files.filter((f) => f.stepId).map((f) => [f.stepId as string, f.ref]));
+        for (const [i, st] of (v.steps ?? []).entries()) {
+          await s.db.run(
+            'INSERT INTO step_results (test_result_id, step_id, seq, raw, result, duration_ms, error, screenshot_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              result.id,
+              String(st.id),
+              i,
+              String(st.raw ?? ''),
+              String(st.result ?? ''),
+              typeof st.durationMs === 'number' ? Math.round(st.durationMs) : null,
+              typeof st.error === 'string' ? st.error : null,
+              screenshotOf.get(String(st.id)) ?? null,
+            ],
+          );
+        }
+        for (const [i, ck] of (v.checks ?? []).entries()) {
+          await s.db.run('INSERT INTO check_results (test_result_id, check_id, seq, raw, expected, actual, result) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+            result.id,
+            String(ck.id),
+            i,
+            String(ck.raw ?? ''),
+            typeof ck.expected === 'string' ? ck.expected : null,
+            typeof ck.actual === 'string' ? ck.actual : null,
+            String(ck.result ?? ''),
+          ]);
+        }
+        for (const f of files) {
+          // Verdicts are masked before they reach here (FR-EV-03), so what the files were made from is too.
+          await s.db.run(
+            `INSERT INTO evidence (id, test_result_id, step_id, kind, storage_ref, mime, size_bytes, sha256, masked, restricted, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)`,
+            [newId('EV'), result.id, f.stepId ?? null, f.kind, f.ref, f.mime, f.sizeBytes, f.sha256, run.recordedAt],
+          );
+        }
+      }
+      if (run.execution && run.snapshot && Object.keys(run.snapshot).length) {
+        await s.db.run('INSERT INTO generation_snapshots (id, project_id, execution_id, manifest, created_at) VALUES (?, ?, ?, ?, ?)', [
+          newId('GEN'),
+          job.projectId,
+          runId(job.projectId, run.execution.execId),
+          JSON.stringify(run.snapshot),
+          run.recordedAt,
+        ]);
+      }
+      for (const r of run.rows) {
+        await s.recordResult(job.projectId, r.testId, {
+          jobId: job.id,
+          executionId: resultColumns(r.verdict).executionId ?? run.execution?.execId,
+          status: r.status,
+          at: run.recordedAt,
+        });
+      }
+    });
+  }
+
+  /** The generated code a run used, as file hashes: with the test case version, the run can be explained as it was (G6). */
+  async generationSnapshot(projectId: string, execId: string): Promise<Record<string, string> | undefined> {
+    const r = await this.db.get<{ manifest: string }>('SELECT manifest FROM generation_snapshots WHERE execution_id = ?', [runId(projectId, execId)]);
+    return r && JSON.parse(String(r.manifest));
+  }
+
+  /** The newest result of every test in the project, whichever job produced it: what a batch resumes from. */
+  async latestVerdicts(projectId: string): Promise<Record<string, { status: string; verdict: unknown }>> {
+    const rows = await this.db.all<Row>(
+      `SELECT t.ext_id, t.status, t.verdict FROM test_results t JOIN jobs j ON j.id = t.job_id
+       WHERE t.project_id = ? AND j.created_at = (
+         SELECT MAX(j2.created_at) FROM test_results t2 JOIN jobs j2 ON j2.id = t2.job_id WHERE t2.project_id = t.project_id AND t2.ext_id = t.ext_id)`,
+      [projectId],
+    );
+    return Object.fromEntries(rows.map((r) => [String(r.ext_id), { status: String(r.status), verdict: JSON.parse(String(r.verdict)) }]));
+  }
+
+  /** A project's runs, newest first (FR-HI-02). */
+  async executions(projectId: string, limit = 50): Promise<ExecutionRecord[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM executions WHERE project_id = ? ORDER BY started_at DESC, id DESC LIMIT ?', [projectId, limit]);
+    return rows.map(toExecution);
+  }
+
+  /** One run with each test's result, steps, checks and evidence: a past result exactly as it was (FR-DB-11). */
+  async execution(projectId: string, execId: string): Promise<(ExecutionRecord & { results: ResultRecord[] }) | undefined> {
+    const x = await this.db.get<Row>('SELECT * FROM executions WHERE project_id = ? AND exec_id = ?', [projectId, execId]);
+    if (!x) return undefined;
+    const results = await this.db.all<Row>('SELECT * FROM test_results WHERE execution_id = ? ORDER BY row, ext_id', [String(x.id)]);
+    const out: ResultRecord[] = [];
+    for (const r of results) {
+      const id = String(r.id);
+      out.push({
+        testId: String(r.ext_id),
+        status: String(r.status),
+        modelVersion: r.model_version === null ? undefined : Number(r.model_version),
+        category: r.category === null ? undefined : String(r.category),
+        failedStep: r.failed_step === null ? undefined : String(r.failed_step),
+        reason: r.reason === null ? undefined : String(r.reason),
+        expected: r.expected === null ? undefined : String(r.expected),
+        actual: r.actual === null ? undefined : String(r.actual),
+        durationMs: r.duration_ms === null ? undefined : Number(r.duration_ms),
+        steps: (await this.db.all<Row>('SELECT * FROM step_results WHERE test_result_id = ? ORDER BY seq', [id])).map((st) => ({
+          id: String(st.step_id),
+          raw: String(st.raw),
+          result: String(st.result),
+          error: st.error === null ? undefined : String(st.error),
+          screenshotRef: st.screenshot_ref === null ? undefined : String(st.screenshot_ref),
+        })),
+        checks: (await this.db.all<Row>('SELECT * FROM check_results WHERE test_result_id = ? ORDER BY seq', [id])).map((ck) => ({
+          id: String(ck.check_id),
+          raw: String(ck.raw),
+          expected: ck.expected === null ? undefined : String(ck.expected),
+          actual: ck.actual === null ? undefined : String(ck.actual),
+          result: String(ck.result),
+        })),
+        evidence: (await this.db.all<Row>('SELECT * FROM evidence WHERE test_result_id = ? ORDER BY created_at, id', [id])).map((e) => ({
+          kind: String(e.kind),
+          ref: String(e.storage_ref),
+          mime: String(e.mime),
+          sizeBytes: Number(e.size_bytes),
+          sha256: String(e.sha256),
+          stepId: e.step_id === null ? undefined : String(e.step_id),
+          masked: Boolean(e.masked),
+        })),
+      });
+    }
+    return { ...toExecution(x), results: out };
+  }
+
+  /** The next `EXEC-YYYY-NNNNN`: from a counter, so two runs at once never share a number (FR-DB-12). */
+  async nextExecutionId(date = new Date()): Promise<string> {
+    const year = date.getFullYear();
+    return execIdOf(year, await this.nextCounter('execution', String(year)));
+  }
+
+  // Explorations (DATABASE.md §5.5): the full result stays a file; the steps are rows that can be searched
+
+  async saveExploration(
+    projectId: string,
+    exploration: {
+      extId: string;
+      jobId?: string;
+      status: string;
+      startedAt?: string;
+      finishedAt?: string;
+      resultFile?: string;
+      items: Array<{
+        id: string;
+        kind: string;
+        phase: string;
+        raw: string;
+        action?: string;
+        status: string;
+        resolvedBy?: string;
+        strategy?: string;
+        locatorCode?: string;
+        score?: number;
+        pageName?: string;
+        effect?: string;
+        screenshot?: string;
+        warnings: string[];
+      }>;
+    },
+  ): Promise<string> {
+    const id = newId('EXP');
+    await this.transaction(async (s) => {
+      const testCase = await s.db.get<{ id: string; current_version: number }>(
+        'SELECT id, current_version FROM test_cases WHERE project_id = ? AND ext_id = ?',
+        [projectId, exploration.extId],
+      );
+      const env = await s.db.get<{ id: string }>('SELECT id FROM environments WHERE project_id = ? AND is_default = 1', [projectId]);
+      const counts = { steps: exploration.items.length, review: exploration.items.filter((i) => i.status !== 'done').length };
+      await s.db.run(
+        `INSERT INTO explorations (id, project_id, test_case_id, ext_id, model_version, environment_id, job_id, status, started_at, finished_at, result_ref, counts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          projectId,
+          testCase?.id ?? null,
+          exploration.extId,
+          testCase?.current_version ?? null,
+          env?.id ?? null,
+          exploration.jobId ?? null,
+          exploration.status,
+          exploration.startedAt ?? null,
+          exploration.finishedAt ?? null,
+          exploration.resultFile ? this.keep(exploration.resultFile) : null,
+          JSON.stringify(counts),
+        ],
+      );
+      for (const [seq, i] of exploration.items.entries()) {
+        await s.db.run(
+          `INSERT INTO exploration_items (exploration_id, item_id, seq, kind, phase, raw, action, status, resolved_by, strategy, locator_code, score, page_name, effect, screenshot_ref, warnings)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (exploration_id, item_id) DO NOTHING`,
+          [
+            id,
+            `${i.phase}:${i.id}`,
+            seq,
+            i.kind,
+            i.phase,
+            i.raw,
+            i.action ?? null,
+            i.status,
+            i.resolvedBy ?? null,
+            i.strategy ?? null,
+            i.locatorCode ?? null,
+            i.score ?? null,
+            i.pageName ?? null,
+            i.effect ?? null,
+            i.screenshot ? this.keep(i.screenshot) : null,
+            JSON.stringify(i.warnings),
+          ],
+        );
+      }
+    });
+    return id;
+  }
+
+  /** How many steps ended in each status, e.g. how often steps need review. */
+  async explorationStats(projectId: string): Promise<Array<{ status: string; count: number }>> {
+    const rows = await this.db.all<{ status: string; n: number }>(
+      `SELECT i.status, COUNT(*) AS n FROM exploration_items i JOIN explorations e ON e.id = i.exploration_id WHERE e.project_id = ? GROUP BY i.status ORDER BY i.status`,
+      [projectId],
+    );
+    return rows.map((r) => ({ status: r.status, count: Number(r.n) }));
   }
 
   // Test cases (DATABASE.md §5.4): kept after the run, with their versions, so they can be seen and run again
@@ -466,8 +893,8 @@ export class Store {
   /** Every run of a case, newest first: runs with a result, and single runs that never got one (cancelled, failed). */
   async testCaseRuns(projectId: string, extId: string, limit = 50): Promise<TestCaseRun[]> {
     const withResult = await this.db.all<Row>(
-      `SELECT v.job_id, v.status, v.verdict, j.created_at, j.finished_at, j.execution_id, j.status AS job_status, j.kind
-       FROM verdicts v JOIN jobs j ON j.id = v.job_id WHERE j.project_id = ? AND v.test_id = ? ORDER BY j.created_at DESC LIMIT ?`,
+      `SELECT v.job_id, v.status, v.verdict, j.created_at, j.finished_at, COALESCE(x.exec_id, j.execution_id) AS execution_id, j.status AS job_status, j.kind
+       FROM test_results v JOIN jobs j ON j.id = v.job_id LEFT JOIN executions x ON x.id = v.execution_id WHERE j.project_id = ? AND v.ext_id = ? ORDER BY j.created_at DESC LIMIT ?`,
       [projectId, extId, limit],
     );
     const runs: TestCaseRun[] = withResult.map((r) => {
@@ -593,10 +1020,74 @@ export class Store {
       detail: JSON.parse(String(r.detail)),
     }));
   }
+  private toProject(r: Row): Project {
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      baseUrl: String(r.base_url),
+      testIdAttribute: String(r.test_id_attribute),
+      browser: 'chromium',
+      workspace: this.open(String(r.workspace)),
+      createdAt: String(r.created_at),
+    };
+  }
+
   /** For `db verify`: empty means healthy. */
   async problems(): Promise<string[]> {
-    return problems(this.db);
+    const found = await problems(this.db);
+    // A counter below a number already handed out would repeat it (FR-DB-12).
+    const counters = await this.db.all<{ scope: string; value: number }>("SELECT scope, value FROM counters WHERE name = 'execution'");
+    const have = new Map(counters.map((c) => [c.scope, Number(c.value)]));
+    const used = new Map<string, number>();
+    for (const x of await this.db.all<{ exec_id: string }>('SELECT exec_id FROM executions')) {
+      const m = EXEC_ID.exec(x.exec_id);
+      if (m) used.set(m[1], Math.max(used.get(m[1]) ?? 0, Number(m[2])));
+    }
+    for (const [year, n] of used) {
+      if ((have.get(year) ?? 0) < n)
+        found.push(`the execution counter for ${year} is ${have.get(year) ?? 0}, but EXEC-${year}-${String(n).padStart(5, '0')} exists`);
+    }
+    return found;
   }
+
+  /** The files recorded as evidence of one run: what `db verify` compares the run's folder with. */
+  async executionEvidenceRefs(projectId: string, execId: string): Promise<Set<string>> {
+    const rows = await this.db.all<{ storage_ref: string }>(
+      `SELECT e.storage_ref FROM evidence e JOIN test_results t ON t.id = e.test_result_id JOIN executions x ON x.id = t.execution_id
+       WHERE x.project_id = ? AND x.exec_id = ?`,
+      [projectId, execId],
+    );
+    return new Set(rows.map((r) => r.storage_ref));
+  }
+
+  /** Every storage reference in the database, for `db verify` to check against the files (DATABASE.md §7.6). */
+  async storageRefs(): Promise<Array<{ table: string; id: string; ref: string }>> {
+    const out: Array<{ table: string; id: string; ref: string }> = [];
+    const collect = async (table: string, id: string, column: string) => {
+      for (const r of await this.db.all<{ id: string; ref: string }>(`SELECT ${id} AS id, ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`)) {
+        if (isRef(String(r.ref))) out.push({ table, id: String(r.id), ref: String(r.ref) });
+      }
+    };
+    await collect('uploads', 'id', 'file');
+    await collect('evidence', 'id', 'storage_ref');
+    await collect('step_results', "test_result_id || '/' || step_id", 'screenshot_ref');
+    await collect('explorations', 'id', 'result_ref');
+    await collect('exploration_items', "exploration_id || '/' || item_id", 'screenshot_ref');
+    return out;
+  }
+}
+
+function toExecution(r: Row): ExecutionRecord {
+  return {
+    execId: String(r.exec_id),
+    projectId: String(r.project_id),
+    jobId: r.job_id === null ? undefined : String(r.job_id),
+    status: String(r.status),
+    totals: JSON.parse(String(r.totals)),
+    startedAt: r.started_at === null ? undefined : String(r.started_at),
+    finishedAt: r.finished_at === null ? undefined : String(r.finished_at),
+    durationMs: r.duration_ms === null ? undefined : Number(r.duration_ms),
+  };
 }
 
 function toRule(r: Row): ProjectRule {
@@ -630,18 +1121,6 @@ function toTestCase(r: Row): TestCaseRecord {
     lastExecutionId: r.last_execution_id === null ? undefined : String(r.last_execution_id),
     lastRunAt: r.last_run_at === null ? undefined : String(r.last_run_at),
     runCount: Number(r.run_count),
-  };
-}
-
-function toProject(r: Row): Project {
-  return {
-    id: String(r.id),
-    name: String(r.name),
-    baseUrl: String(r.base_url),
-    testIdAttribute: String(r.test_id_attribute),
-    browser: 'chromium',
-    workspace: String(r.workspace),
-    createdAt: String(r.created_at),
   };
 }
 

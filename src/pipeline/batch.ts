@@ -29,6 +29,8 @@ export interface BatchOptions extends Omit<PipelineOptions, 'login'> {
   loginId?: string;
   /** Where batch progress is kept. Default: .auto-qa/batches. */
   batchesDir?: string;
+  /** The last result of each case, when it is kept somewhere better than a file (the server's database). Replaces `batchesDir`. */
+  progress?: { latest(): Promise<Record<string, TestVerdict>> };
   /** Test cases the tester edited in the app, by id. They replace the sheet's version of the same case. */
   overrides?: Record<string, RawTestCase>;
   /** Called with the test cases read from the sheet, before any runs, so they can be kept (item 1). */
@@ -81,7 +83,11 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   }
 
   const progressFile = path.join(options.batchesDir ?? path.join('.auto-qa', 'batches'), `${batchKey(file)}.json`);
-  const saved: Progress = existsSync(progressFile) ? (JSON.parse(await readFile(progressFile, 'utf8')) as Progress) : { file, verdicts: {} };
+  const saved: Progress = options.progress
+    ? { file, verdicts: await options.progress.latest() }
+    : existsSync(progressFile)
+      ? (JSON.parse(await readFile(progressFile, 'utf8')) as Progress)
+      : { file, verdicts: {} };
   const selected = options.onlyReview ? models.filter((m) => saved.verdicts[m.id]?.status === 'NEEDS REVIEW') : models;
   if (options.onlyReview) progress(`${selected.length} case(s) from the review queue`);
 
@@ -92,8 +98,10 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   for (const v of run.verdicts) saved.verdicts[v.testId] = v;
   // Cases no longer in the sheet are dropped from the progress.
   saved.verdicts = Object.fromEntries(models.filter((m) => saved.verdicts[m.id]).map((m) => [m.id, saved.verdicts[m.id]]));
-  await mkdir(path.dirname(progressFile), { recursive: true });
-  await writeFile(progressFile, `${JSON.stringify(saved, null, 2)}\n`);
+  if (!options.progress) {
+    await mkdir(path.dirname(progressFile), { recursive: true });
+    await writeFile(progressFile, `${JSON.stringify(saved, null, 2)}\n`);
+  }
 
   const results: RowResult[] = [
     ...models.flatMap((m) => (saved.verdicts[m.id] ? [{ row: rowOf.get(m.id)!, verdict: saved.verdicts[m.id] }] : [])),

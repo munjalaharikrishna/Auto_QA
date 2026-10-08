@@ -7,11 +7,13 @@ import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FIELDS, type Field } from '../importer/columns.js';
+import { buildProjectExport, type ExportCase } from '../importer/project-export.js';
 import { readWorkbook } from '../importer/workbook.js';
 import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
 import { RULE_KINDS, ruleKey } from '../parser/rules.js';
+import type { TestVerdict } from '../results/verdict.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
 import { reviewGroups } from './review-groups.js';
@@ -188,6 +190,38 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
     runner.enqueue(job);
     return reply.status(202).send(job);
+  });
+
+  /** Keep the sheet's test cases in the project's list without running them; they can be run, edited and exported from there. */
+  app.post('/api/uploads/:id/import', async (req) => {
+    const upload =
+      (await store.upload((req.params as { id: string }).id)) ??
+      (() => {
+        throw notFound('Upload');
+      })();
+    const { mapping } = MappingBody.parse(req.body ?? {});
+    const project = await projectOf(upload.projectId);
+    const sheet = await readWorkbook(upload.file, { mapping }).catch((e: Error) => {
+      throw bad(e.message);
+    });
+    await writeFile(mappingFile(project), `${JSON.stringify(mapping, null, 2)}\n`);
+    // An edit made in the app wins over the sheet, which is never changed (D23).
+    const edited = await store.editedTestCases(project.id);
+    let added = 0;
+    let updated = 0;
+    let kept = 0;
+    for (const c of sheet.cases) {
+      const id = c.raw.id ?? `ROW-${c.row}`;
+      if (edited[id]) {
+        kept++;
+        continue;
+      }
+      const before = await store.testCase(project.id, id);
+      await store.upsertTestCase(project.id, { ...c.raw, id }, { kind: 'workbook', ref: upload.id, row: c.row }, `imported from ${upload.originalName}`);
+      if (before) updated++;
+      else added++;
+    }
+    return { added, updated, kept, total: sheet.cases.length, problems: sheet.problems.map((p) => p.text) };
   });
 
   // One test case from the form (FR-IN-04), reviewed before it runs (FR-RV-01, FR-RV-03)
@@ -380,6 +414,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.get('/api/projects/:id/jobs', async (req) => store.jobs((await projectOf((req.params as { id: string }).id)).id));
 
+  /** Runs and their results as they were saved: each test with its steps, checks and evidence (FR-HI-01, FR-DB-11). */
+  app.get('/api/projects/:id/executions', async (req) => store.executions((await projectOf((req.params as { id: string }).id)).id));
+
+  app.get('/api/projects/:id/executions/:execId', async (req) => {
+    const params = req.params as { id: string; execId: string };
+    const project = await projectOf(params.id);
+    return (
+      (await store.execution(project.id, params.execId)) ??
+      (() => {
+        throw notFound('Execution');
+      })()
+    );
+  });
+
   app.get('/api/jobs/:id', async (req) => {
     const job =
       (await store.job((req.params as { id: string }).id)) ??
@@ -435,6 +483,28 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       .header('content-disposition', `attachment; filename="${path.basename(file)}"`)
       .type(file.endsWith('.csv') ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       .send(createReadStream(file));
+  });
+
+  /** Every test case of the project with its last result, the actual result and the screenshot in the cell. */
+  app.get('/api/projects/:id/export', async (req, reply) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const byJob = new Map<string, Awaited<ReturnType<typeof store.verdicts>>>();
+    const cases: ExportCase[] = [];
+    for (const c of await store.testCases(project.id)) {
+      let verdict: TestVerdict | undefined;
+      if (c.lastJobId) {
+        if (!byJob.has(c.lastJobId)) byJob.set(c.lastJobId, await store.verdicts(c.lastJobId));
+        verdict = byJob.get(c.lastJobId)?.find((v) => v.testId === c.extId)?.verdict as TestVerdict | undefined;
+      }
+      cases.push({ ...c.raw, extId: c.extId, title: c.title, verdict, lastStatus: c.lastStatus, lastRunAt: c.lastRunAt });
+    }
+    if (!cases.length) throw bad('There are no test cases in this project yet.');
+    cases.sort((a, b) => a.extId.localeCompare(b.extId, undefined, { numeric: true }));
+    const name = project.name.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+    return reply
+      .header('content-disposition', `attachment; filename="${name}-results.xlsx"`)
+      .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .send(await buildProjectExport(project.name, cases));
   });
 
   /** Screenshots and traces, only from the platform's own folders. */

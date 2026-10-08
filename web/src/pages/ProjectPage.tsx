@@ -89,7 +89,7 @@ const FIELD_LABEL: Record<Field, string> = {
 const REQUIRED: Field[] = ['title', 'steps', 'expected'];
 
 /** Upload → column mapping with a preview (FR-IN-02) → run the whole workbook (FR-IN-08). */
-function WorkbookTab({ project }: { project: ProjectView }) {
+function WorkbookTab({ project, mode = 'run', onImported }: { project: ProjectView; mode?: 'run' | 'import'; onImported?: (message: string) => void }) {
   const [preview, setPreview] = useState<Preview>();
   const [mapping, setMapping] = useState<Partial<Record<Field, string>>>({});
   const [busy, setBusy] = useState(false);
@@ -127,7 +127,7 @@ function WorkbookTab({ project }: { project: ProjectView }) {
   return (
     <div className="stack">
       <section className="panel">
-        <h2>1. Upload the workbook</h2>
+        <h2>{mode === 'import' ? 'Import test cases from a workbook' : '1. Upload the workbook'}</h2>
         <label
           className={`dropzone ${over ? 'over' : ''}`}
           style={{ display: 'block', cursor: 'pointer' }}
@@ -144,7 +144,11 @@ function WorkbookTab({ project }: { project: ProjectView }) {
         >
           <strong>{busy ? 'Reading…' : 'Drop an .xlsx or .csv file here, or choose one'}</strong>
           <br />
-          <span className="muted">Your file is never changed: results go into a copy.</span>
+          <span className="muted">
+            {mode === 'import'
+              ? 'Your file is never changed. Nothing is run: the test cases are only added to the list.'
+              : 'Your file is never changed: results go into a copy.'}
+          </span>
           <input
             type="file"
             accept=".xlsx,.xlsm,.csv"
@@ -157,7 +161,7 @@ function WorkbookTab({ project }: { project: ProjectView }) {
 
       {preview && (
         <section className="panel stack">
-          <h2>2. Check the columns</h2>
+          <h2>{mode === 'import' ? 'Check the columns' : '2. Check the columns'}</h2>
           {preview.ok ? (
             <p>
               <strong>{preview.fileName}</strong>, sheet "{preview.sheet}", headers on row {preview.headerRow}: <strong>{preview.total}</strong> test case(s).
@@ -231,24 +235,52 @@ function WorkbookTab({ project }: { project: ProjectView }) {
             </div>
           )}
           <div className="row">
-            <button
-              type="button"
-              className="primary"
-              disabled={!preview.ok || busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  const job = await api.runUpload(preview.uploadId, mapping);
-                  navigate(`/jobs/${job.id}`);
-                } catch (e) {
-                  setError((e as Error).message);
-                  setBusy(false);
-                }
-              }}
-            >
-              Run all {preview.total ?? ''} test cases
-            </button>
-            <span className="muted">Runs unattended: cases that need you are set aside for the review queue.</span>
+            {mode === 'import' ? (
+              <button
+                type="button"
+                className="primary"
+                disabled={!preview.ok || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const r = await api.importUpload(preview.uploadId, mapping);
+                    onImported?.(
+                      `Imported ${r.total} test case(s): ${r.added} new, ${r.updated} updated${r.kept ? `, ${r.kept} kept as you edited them` : ''}.${
+                        r.problems.length ? ` ${r.problems.length} row(s) were not complete test cases and were skipped.` : ''
+                      }`,
+                    );
+                  } catch (e) {
+                    setError((e as Error).message);
+                    setBusy(false);
+                  }
+                }}
+              >
+                Import {preview.total ?? ''} test cases
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary"
+                disabled={!preview.ok || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const job = await api.runUpload(preview.uploadId, mapping);
+                    navigate(`/jobs/${job.id}`);
+                  } catch (e) {
+                    setError((e as Error).message);
+                    setBusy(false);
+                  }
+                }}
+              >
+                Run all {preview.total ?? ''} test cases
+              </button>
+            )}
+            <span className="muted">
+              {mode === 'import'
+                ? 'You can run them later, one by one or as a batch.'
+                : 'Runs unattended: cases that need you are set aside for the review queue.'}
+            </span>
           </div>
         </section>
       )}
@@ -260,6 +292,8 @@ function WorkbookTab({ project }: { project: ProjectView }) {
 function TestCasesTab({ project }: { project: ProjectView }) {
   const [cases, setCases] = useState<TestCaseRecord[]>();
   const [error, setError] = useState<string>();
+  const [importing, setImporting] = useState(false);
+  const [notice, setNotice] = useState<string>();
   const load = useCallback(() => {
     api.testCases(project.id).then(setCases, (e: Error) => setError(e.message));
   }, [project.id]);
@@ -274,9 +308,51 @@ function TestCasesTab({ project }: { project: ProjectView }) {
 
   if (error) return <ErrorNote error={error} />;
   if (!cases) return <p className="muted">Loading…</p>;
-  if (!cases.length) return <p className="muted">No test cases yet. Write one in "Single test case" or upload a workbook.</p>;
+  const notRun = cases.filter((c) => !c.lastStatus).length;
+  const toolbar = (
+    <div className="row" style={{ marginBottom: '0.75rem' }}>
+      <button type="button" className="primary" onClick={() => setImporting(!importing)}>
+        {importing ? 'Close import' : 'Import test cases'}
+      </button>
+      <a href={`/api/projects/${project.id}/export`} download aria-disabled={!cases.length}>
+        <button type="button" disabled={!cases.length}>
+          Export results (.xlsx)
+        </button>
+      </a>
+      <span className="muted">
+        {cases.length
+          ? `${cases.length} test case(s). Export gives one sheet with every case, its status, the actual result and the screenshot${notRun ? `; ${notRun} not run yet are listed as NOT RUN` : ''}.`
+          : 'No test cases yet. Import a workbook, or write one in "Single test case".'}
+      </span>
+    </div>
+  );
+  const importPanel = importing && (
+    <div style={{ marginBottom: '1rem' }}>
+      <WorkbookTab
+        project={project}
+        mode="import"
+        onImported={(message) => {
+          setImporting(false);
+          setNotice(message);
+          load();
+        }}
+      />
+    </div>
+  );
+  if (!cases.length) {
+    return (
+      <>
+        {toolbar}
+        {notice && <p className="notice">{notice}</p>}
+        {importPanel}
+      </>
+    );
+  }
   return (
     <section className="panel table-wrap">
+      {toolbar}
+      {notice && <p className="notice">{notice}</p>}
+      {importPanel}
       <table>
         <thead>
           <tr>

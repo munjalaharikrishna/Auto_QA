@@ -14,6 +14,13 @@ describe('plain-language reasons (item 5)', () => {
     assert.doesNotMatch(sentence(e), /NO_MATCH|MCP|ref=/);
   });
 
+  it('says a failed step could not be done, that later steps were not tried, and what to do', () => {
+    const e = explain({ code: 'STEP_FAILED', raw: 'click Save', text: 'The page or element did not appear in time.' });
+    assert.match(e.headline, /"click Save" could not be done/);
+    assert.match(e.why, /did not appear in time.*not tried/);
+    assert.ok(e.todo.some((t) => /press Edit/i.test(t)));
+  });
+
   it('explains an ambiguous match with the choices', () => {
     const e = explain({
       code: 'AMBIGUOUS',

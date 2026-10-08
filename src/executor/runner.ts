@@ -30,6 +30,8 @@ export interface RunOptions {
   env?: Record<string, string | undefined>;
   /** Where run records and evidence are kept. Default `.auto-qa/runs`. */
   runsDir?: string;
+  /** The next `EXEC-…` id. Default: a counter file in `runsDir`; the server passes one from the database (FR-DB-12). */
+  nextExecutionId?: () => Promise<string>;
   /** Called for every reporter event (test-begin, step-end, test-end), for live progress (FR-RUN-02). */
   onEvent?: (event: RunEvent) => void;
 }
@@ -66,7 +68,7 @@ export async function runWorkspace(workspace: string, options: RunOptions = {}):
   if (unknown.length) throw new Error(`${workspace} has no test ${unknown.join(', ')}. It has: ${manifest.tests.map((t) => t.testId).join(', ')}`);
 
   const runsDir = options.runsDir ?? path.join('.auto-qa', 'runs');
-  const executionId = await nextExecutionId(runsDir);
+  const executionId = await (options.nextExecutionId ?? (() => nextExecutionId(runsDir)))();
   const dir = path.join(runsDir, executionId);
   await mkdir(dir, { recursive: true });
 

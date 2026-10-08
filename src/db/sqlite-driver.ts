@@ -25,7 +25,12 @@ export class SqliteDriver implements Driver {
     if (!memory) mkdirSync(path.dirname(file), { recursive: true });
     const { DatabaseSync } = await import('node:sqlite');
     const db = new DatabaseSync(file);
-    db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+    try {
+      db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+    } catch (e) {
+      db.close(); // a file that is not a database must not stay locked (it cannot be deleted on Windows otherwise)
+      throw e;
+    }
     return new SqliteDriver(db, memory ? undefined : file);
   }
 

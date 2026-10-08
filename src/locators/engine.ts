@@ -98,8 +98,10 @@ export async function locate(
 
   try {
     const facts = await probe.facts(anchor, options.testIdAttribute);
+    // An element inside an iframe is only found through its frame, so every rung is built for that frame.
+    const frame = await probe.frameChain(browserPage, anchor);
     const tried: Validation[] = [];
-    for (const s of buildLadder(node, facts, suggestion ? [suggestion] : [])) {
+    for (const s of buildLadder(node, facts, suggestion ? [suggestion] : [], frame)) {
       tried.push(await probe.validate(browserPage, s, query.kind, anchor));
       if (tried.at(-1)?.ok && !options.allRungs) break;
     }

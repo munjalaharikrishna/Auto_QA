@@ -1,7 +1,7 @@
 # Auto QA: Database Specification and Architecture
 
 Part of [SPEC.md](SPEC.md) (requirements FR-DB-…, decisions D24–D28) and [ARCHITECTURE.md](ARCHITECTURE.md) §9. Diagrams are Mermaid.
-**Status (2026-10-01):** M8 is in progress. Built: the driver and dialect layer, the migration runner (checksums, backup, downgrade guard), migrations 0001–0003 (baseline, environments + page routes + settings + counters + audit log, job log ids), the store moved to `src/db/` with a transaction API, and `npm run db -- status | backup | verify`. Everything else below is still the plan; §10 shows which steps are done.
+**Status (2026-10-05):** M8 is built for SQLite. The driver and migration runner, migrations 0001–0006, the store in `src/db/`, page routes, test cases with versions, explorations, executions, results, evidence and storage references are in use, and `npm run db -- status | backup | verify | restore | export | import` work. What is **not** done: the PostgreSQL driver and the SQLite-vs-PostgreSQL schema comparison in CI (no PostgreSQL here to compare against); see §10 and §10.1 for each deviation from the plan below.
 
 **Contents**
 1. [Goals](#1-goals)
@@ -500,13 +500,28 @@ M8 sits between V1 and V2 and unblocks the V2 items that need rows. No screen ch
 |---|---|---|
 | 1 ✅ | `src/db/`: `Driver`, `SqliteDriver`, dialect, migration runner, `schema_migrations`, backup, downgrade guard; adopt the current database as `0001_baseline` | FR-DB-01…05 |
 | 2 ✅ | Move `Store` to `src/db/` with the same methods (now async) and a transaction API; tests. *Deviation:* one `Store` class, not one class per aggregate, until it grows; the SQL is already only in `src/db/` | FR-DB-06, FR-DB-07 |
-| 3 ◐ | `0002` environments + `page_routes` ✅ (created, `Store.pageRoutes`/`savePageRoute`, a Default environment per project). **Still to do:** `loadPageUrls`/`savePageUrls` use the table instead of `pages.json`, and import `pages.json` | FR-DB-08, FR-ENV-01, D19 |
-| 4 | `0003` `test_cases` + `test_model_versions`; the importer and the form write them | FR-DB-09 |
-| 5 | `0004` explorations + items; keep `exploration.json` as the artifact | FR-DB-10 |
-| 6 | `0005` executions, test results, step and check results; `counters` replaces the folder scan for `EXEC-…`; the batch and job code write them in one transaction; `verdicts` becomes a view | FR-DB-11, FR-DB-12 |
-| 7 | `0006` evidence + `ArtifactStore` with storage references; `0008` convert absolute paths | FR-DB-13, FR-DB-14 |
-| 8 | Result and history reads come from the database (the result screen, the workbook write-back, review queue); batch progress files are retired in favour of `test_results` | FR-HI-01, FR-HI-06, FR-IN-08 |
-| 9 ◐ | `db status`, `db backup`, `db verify` ✅ (`npm run db`). **Still to do:** `restore`, `export`, `import`, a committed upgrade fixture per release, the PostgreSQL schema comparison in CI | FR-DB-15…18 |
+| 3 ✅ | `0002` environments + `page_routes`; the server keeps learned page URLs as page routes of the project's Default environment (`PageStore`), and imports `.auto-qa/pages.json` once at start (the file is renamed `pages.imported.json`). The command line, which has no database, still uses the file | FR-DB-08, FR-ENV-01, D19 |
+| 4 ✅ | `0004` `test_cases` + `test_case_versions` (immutable versions with a content hash); the importer and the form write them | FR-DB-09 |
+| 5 ✅ | `0006` `explorations` + `exploration_items`: each new exploration is recorded as rows (status, locator, strategy, score, page, screenshot reference); `exploration.json` stays the artifact, referenced from the row | FR-DB-10 |
+| 6 ✅ | `0006` `executions`, `test_results`, `step_results`, `check_results`, `generation_snapshots`; `EXEC-YYYY-NNNNN` comes from the `counters` table (seeded above every number already used); `Store.saveRun` writes a finished run (execution, results, steps, checks, evidence, snapshot, last result per case) in **one transaction**; `verdicts` is a view | FR-DB-11, FR-DB-12, FR-DB-07 |
+| 7 ✅ | `0006` `evidence` with kind, size, SHA-256, `masked`; `LocalArtifactStore` (`src/db/artifacts.ts`) with `local:` (data directory) and `workspace:` (generated projects) references; project workspaces and uploads are stored as references and converted on open | FR-DB-13, FR-DB-14 |
+| 8 ✅ | The result screen, run history, test case runs and the resumable batch read from `test_results` (`latestVerdicts` replaces `batches/*.json` on the server); `GET /api/projects/:id/executions[/:execId]` returns a past run with steps, checks and evidence | FR-HI-01, FR-IN-08 |
+| 9 ◐ | `db status`, `backup`, `verify` (integrity, foreign keys, **missing files, orphan evidence files, counters**), `restore`, `export` / `import` (NDJSON bundle with a manifest and per-file hashes) ✅; a committed upgrade fixture (`fixtures/db/v0.1.0.db`) migrated in a test ✅. **Still to do:** the PostgreSQL schema comparison in CI (needs the V3 driver) | FR-DB-15…18 |
+
+### 10.1 Where M8 differs from the plan above
+
+| Plan | What was built | Why |
+|---|---|---|
+| `test_model_versions.model` (the zod model) | `test_case_versions.raw` (the tester's own text) | The model is derived from the text by the parser, which changes; the text is what the tester wrote and can be re-parsed. |
+| `executions.id` is `EXEC-…` | `executions.id` is internal (`RUN-<project>-<EXEC id>`), `exec_id` is the `EXEC-…` number, unique per project | Old runs were numbered per project, so two projects can both hold `EXEC-2026-00003`; the migration keeps both. New numbers come from one global counter. |
+| `test_results.execution_id` required | `test_results.job_id` required, `execution_id` optional | A case that stops before running (NEEDS REVIEW, BLOCKED) has a result but no run. |
+| `verdicts` dropped after one release | Renamed `verdicts_legacy` (original rows) and replaced by a read-only view `verdicts` | Expand, then contract (§6.3): a later migration drops the legacy table. |
+| `0008` converts absolute paths | Done when the store opens (`adoptPaths`), not as a migration | A migration cannot know the data directory. It is idempotent and leaves paths outside every root alone. |
+| One class per aggregate | Still one `Store` | The SQL is already only in `src/db/`; split when it grows. |
+| JSON payloads without paths | `test_results.verdict`, `jobs.output` and `exploration.json` still contain absolute file paths | The UI serves files by path (`/api/files`). The **rows that name files** (`uploads`, `projects`, `evidence`, `step_results`, `explorations`, `exploration_items`) use references. Converting the payloads needs a UI change and is left for V2. |
+| Evidence for old runs | Runs before 0006 have result rows but no step, check or evidence rows | Those files were never described when they were made. `db verify` does not check their folders. |
+| `export` also carries the artifact folder | `--with-files` copies `projects/`; `import` tells you where to put it | Large files are not worth a second copy by default. |
+| CI compares SQLite and PostgreSQL | A test checks the PostgreSQL rendering has no SQLite-only syntax | There is no PostgreSQL driver or server yet. |
 
 Also done in 0003 (not in the original list): job log lines get a real `id` so they order the same way on both databases.
 

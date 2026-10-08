@@ -220,6 +220,7 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
     setBusy(true);
     await fn().catch(() => setBusy(false));
   };
+  const problems = review.items.filter((i) => i.status !== 'done' && i.phase === 'test');
 
   if (editing) {
     return (
@@ -228,10 +229,13 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
         <p className="muted">Your changes go into the test case itself; it is explored again (FR-RV-05).</p>
         <CaseForm
           initial={job.input.case as RawTestCase}
+          items={review.items}
+          onZoom={setZoom}
           submitLabel="Save and explore again"
           onSubmit={(c) => api.edit(job.id, c).then(() => setEditing(false))}
           onCancel={() => setEditing(false)}
         />
+        {zoom && <ZoomDialog file={zoom} onClose={() => setZoom(undefined)} />}
       </section>
     );
   }
@@ -264,6 +268,12 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
           )}
         </div>
       )}
+      {problems.length > 0 && !review.blocked && (
+        <div className="notice warn">
+          {problems.length} {problems.length === 1 ? 'step needs' : 'steps need'} your attention ({problems.map((p) => p.id).join(', ')}). Each is explained in
+          the table below with what you can do. Press <strong>Edit</strong> to fix the wording next to the screenshot of that step.
+        </div>
+      )}
       {!!review.warnings.length && <p className="notice warn">{review.warnings.map((w) => `${w.at ? `${w.at} ` : ''}${w.text}`).join(' ')}</p>}
       <div className="table-wrap">
         <table>
@@ -282,11 +292,22 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
               <tr key={`${i.phase}-${i.id}`}>
                 <td>
                   {i.phase === 'setup' ? 'login ' : ''}
-                  {i.id} {i.status !== 'done' && <StatusBadge status={i.status === 'skipped' ? 'NEEDS REVIEW' : 'FAIL'} />}
+                  {i.id}{' '}
+                  {i.status === 'not-run' ? (
+                    <span className="muted">not reached</span>
+                  ) : (
+                    i.status !== 'done' && <StatusBadge status={i.status === 'skipped' ? 'NEEDS REVIEW' : 'FAIL'} />
+                  )}
                 </td>
                 <td>
                   {i.raw || <span className="muted">No crash (health check)</span>}
                   {i.effect && <div className="muted">→ {i.effect}</div>}
+                  {i.status !== 'done' && i.review && (
+                    <div className="notice warn" style={{ margin: '0.4rem 0 0' }}>
+                      <Explain e={i.review} />
+                    </div>
+                  )}
+                  {i.status !== 'done' && !i.review && i.error && <div className="notice warn">{i.error}</div>}
                   {i.warnings.map((w) => (
                     <div key={w} className="muted">
                       ! {w}
@@ -310,10 +331,12 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
                 <td>{i.score !== undefined ? i.score.toFixed(2) : ''}</td>
                 <td>{i.page ?? ''}</td>
                 <td>
-                  {i.screenshot && (
+                  {i.screenshot ? (
                     <button type="button" className="thumb-button" onClick={() => setZoom(i.screenshot)} aria-label={`Screenshot after ${i.id}, full size`}>
                       <img className="thumb" src={fileUrl(i.screenshot)} alt="" />
                     </button>
+                  ) : (
+                    <span className="muted">{i.noScreenshot}</span>
                   )}
                 </td>
               </tr>

@@ -5,7 +5,7 @@ import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
-import { loadPageUrls, savePageUrls } from '../explorer/page-store.js';
+import { filePageStore, type PageStore } from '../explorer/page-store.js';
 import { type GenerateInput, generateProject, workspaceName, writeProject } from '../generator/index.js';
 import { automationId } from '../generator/names.js';
 import { planProject } from '../generator/plan.js';
@@ -43,6 +43,12 @@ export interface PipelineOptions {
   reexplore?: boolean;
   /** How much may be decided without asking (D30). Default: balanced. */
   policy?: Policy;
+  /** Where learned page URLs are kept. Default: `.auto-qa/pages.json`; the server uses the database. */
+  pages?: PageStore;
+  /** Called with each new exploration after its file is written, so it can be recorded (DATABASE.md §5.5). */
+  onExplored?: (model: TestModel, result: ExplorationResult, file: string) => void | Promise<void>;
+  /** The next `EXEC-…` id. Default: a counter file in the runs folder; the server uses the database. */
+  nextExecutionId?: () => Promise<string>;
   /** A word the tester just named an element for, to keep as a project rule (FR-RULE-01). */
   onRule?: (rule: { kind: 'element'; pattern: string; meaning: string }) => void;
   onProgress?: (message: string) => void;
@@ -80,7 +86,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const exploreDir = options.exploreDir ?? path.join('.auto-qa', 'explore');
   const early = new Map<string, TestVerdict>();
   const explored: GenerateInput[] = [];
-  let pageUrls = await loadPageUrls(options.baseUrl);
+  const pages = options.pages ?? filePageStore(options.baseUrl);
+  let pageUrls = await pages.load();
 
   /** Complete explorations from this run by case signature: an identical case is not explored twice. */
   const bySignature = new Map<string, ExplorationResult>();
@@ -159,7 +166,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
       }
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, JSON.stringify(result, null, 2));
-      await savePageUrls(options.baseUrl, result.learnedPageUrls);
+      await pages.save(result.learnedPageUrls);
+      await options.onExplored?.(model, result, file);
       pageUrls = { ...pageUrls, ...result.learnedPageUrls };
       if (result.status !== 'complete') {
         const asked = options.questions?.().slice(before) ?? [];
@@ -217,7 +225,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
 export async function executeCases(
   models: TestModel[],
   prepared: Prepared,
-  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent'>,
+  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent' | 'nextExecutionId'>,
 ): Promise<PipelineResult> {
   const { explored, early, workspace } = prepared;
   let executionId: string | undefined;
@@ -228,6 +236,7 @@ export async function executeCases(
       testIds: explored.map((e) => e.model.id),
       env: options.env,
       runsDir: options.runsDir,
+      nextExecutionId: options.nextExecutionId,
       onEvent: options.onRunEvent,
     });
     executionId = run.executionId;

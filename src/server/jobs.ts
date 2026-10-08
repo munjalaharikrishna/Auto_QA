@@ -1,8 +1,12 @@
+import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createTwoFilesPatch } from 'diff';
+import { describeFile, type FileFacts } from '../db/artifacts.js';
 import type { ExplorationResult, Resolver } from '../explorer/controller.js';
 import { explain, sentence } from '../explorer/explain.js';
+import type { PageStore } from '../explorer/page-store.js';
 import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
 import type { Policy } from '../model/policy.js';
@@ -109,6 +113,26 @@ export class JobRunner extends EventEmitter {
     for (const q of await this.options.store.openQuestions(jobId)) await this.answer(q.id, q.kind === 'confirm' ? false : 'abort');
   }
 
+  private async evidenceFor(verdicts: TestVerdict[], executionId?: string): Promise<Evidence> {
+    const artifacts = this.options.store.artifacts;
+    const out: Evidence = {};
+    if (!artifacts || !executionId) return out;
+    for (const v of verdicts) {
+      if (v.executionId !== executionId) continue;
+      const wanted: Array<{ kind: string; file: string; stepId?: string }> = [
+        ...v.evidence.screenshots.map((file) => ({ kind: 'screenshot', file })),
+        ...(v.evidence.trace ? [{ kind: 'trace', file: v.evidence.trace }] : []),
+        ...(v.evidence.video ? [{ kind: 'video', file: v.evidence.video }] : []),
+        ...v.steps.flatMap((s) => (s.screenshot ? [{ kind: 'screenshot', file: s.screenshot, stepId: s.id }] : [])),
+      ];
+      for (const w of wanted) {
+        const facts = await describeFile(artifacts, w.file);
+        if (facts) (out[v.testId] ??= []).push({ ...facts, kind: w.kind, stepId: w.stepId });
+      }
+    }
+    return out;
+  }
+
   private async update(jobId: string, changes: Parameters<Store['updateJob']>[1]): Promise<Job> {
     const job = await this.options.store.updateJob(jobId, changes);
     this.emit('event', { type: 'job', job } satisfies ServerEvent);
@@ -209,10 +233,56 @@ export class JobRunner extends EventEmitter {
     return withRules(this.options.config, rulesFor(await this.options.store.rules(project.id)));
   }
 
-  private common(project: Project, policy: Policy, config: ParserConfig) {
+  /** Learned page URLs are the default environment's page routes (D19, FR-DB-08). */
+  private async pagesFor(project: Project): Promise<PageStore> {
+    const { store } = this.options;
+    const env = await store.defaultEnvironmentId(project.id);
+    return {
+      load: async () => (env ? store.pageRoutes(env) : {}),
+      save: async (learned) => {
+        if (env) for (const [name, route] of Object.entries(learned)) await store.savePageRoute(env, name, route, 'learned');
+      },
+    };
+  }
+
+  private async common(project: Project, job: Job, policy: Policy, config: ParserConfig) {
+    const { store } = this.options;
     return {
       policy,
       config,
+      pages: await this.pagesFor(project),
+      nextExecutionId: () => store.nextExecutionId(),
+      // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
+      onExplored: async (model: TestModel, result: ExplorationResult, file: string) => {
+        try {
+          await store.saveExploration(project.id, {
+            extId: model.id,
+            jobId: job.id,
+            status: result.status,
+            startedAt: result.startedAt,
+            finishedAt: result.finishedAt || undefined,
+            resultFile: file,
+            items: result.items.map((i) => ({
+              id: i.id,
+              kind: i.kind,
+              phase: i.phase,
+              raw: i.raw,
+              action: i.action,
+              status: i.status,
+              resolvedBy: i.resolvedBy,
+              strategy: i.locator?.strategy,
+              locatorCode: i.locator?.code,
+              score: i.score,
+              pageName: i.page?.name,
+              effect: i.effect,
+              screenshot: i.screenshot,
+              warnings: i.warnings,
+            })),
+          });
+        } catch (e) {
+          console.error(`Could not record the exploration of ${model.id}: ${(e as Error).message}`);
+        }
+      },
       // A word the tester names an element for in review is remembered for the project (FR-RULE-01).
       onRule: (rule: { kind: 'element'; pattern: string; meaning: string }) =>
         void this.options.store.upsertRule(project.id, { ...rule, source: 'picked on the screenshot' }).catch(() => undefined),
@@ -233,11 +303,14 @@ export class JobRunner extends EventEmitter {
     const onlyReview = job.input.onlyReview === true;
     const asked: string[] = [];
     const batch = await runBatch(upload.file, {
-      ...this.common(project, await this.options.store.projectPolicy(project.id), config),
+      ...(await this.common(project, job, await this.options.store.projectPolicy(project.id), config)),
       resolver: this.resolver(job, onlyReview, asked),
       questions: () => asked,
       workspace: project.workspace,
-      batchesDir: this.projectDir(project, 'batches'),
+      progress: {
+        latest: async () =>
+          Object.fromEntries(Object.entries(await this.options.store.latestVerdicts(project.id)).map(([id, r]) => [id, r.verdict as TestVerdict])),
+      },
       mapping: (job.input.mapping ?? {}) as Partial<Record<Field, string>>,
       onlyReview,
       overrides: await this.options.store.editedTestCases(project.id),
@@ -256,26 +329,28 @@ export class JobRunner extends EventEmitter {
       out: defaultResultsFile(upload.file),
       onProgress: (m) => void this.log(job.id, m),
     });
-    await this.options.store.saveVerdicts(
-      job.id,
-      batch.results.map((r) => ({
-        testId: r.verdict?.testId ?? r.id ?? `row ${r.row}`,
-        row: r.row,
-        status: r.verdict?.status ?? 'NEEDS REVIEW',
-        verdict: r.verdict ?? { problem: r.problem, title: r.title },
-      })),
-    );
+    const rows = batch.results.map((r) => ({
+      testId: r.verdict?.testId ?? r.id ?? `row ${r.row}`,
+      row: r.row,
+      status: r.verdict?.status ?? 'NEEDS REVIEW',
+      verdict: r.verdict ?? { problem: r.problem, title: r.title },
+    }));
     const doneAt = new Date().toISOString();
-    for (const r of batch.results) {
-      const id = r.verdict?.testId ?? r.id;
-      if (!id) continue;
-      await this.options.store.recordResult(project.id, id, {
-        jobId: job.id,
-        executionId: r.verdict?.executionId || batch.summary.executionId,
-        status: r.verdict?.status ?? 'NEEDS REVIEW',
-        at: doneAt,
-      });
-    }
+    await this.options.store.saveRun(
+      { id: job.id, projectId: project.id },
+      {
+        execution: batch.summary.executionId
+          ? { execId: batch.summary.executionId, startedAt: job.startedAt, finishedAt: doneAt, durationMs: Date.now() - Date.parse(job.startedAt ?? doneAt) }
+          : undefined,
+        rows,
+        evidence: await this.evidenceFor(
+          batch.results.flatMap((r) => (r.verdict ? [r.verdict] : [])),
+          batch.summary.executionId,
+        ),
+        snapshot: batch.workspace ? await manifestOf(batch.workspace) : undefined,
+        recordedAt: doneAt,
+      },
+    );
     await this.update(job.id, {
       status: 'done',
       executionId: batch.summary.executionId,
@@ -295,7 +370,7 @@ export class JobRunner extends EventEmitter {
       // A single test gets its own project, so it cannot disturb the workbook's suite (merging it in is V2, FR-GE-07).
       const workspace = this.projectDir(project, 'single', model.id, 'workspace');
       const options = {
-        ...this.common(project, await this.options.store.projectPolicy(project.id), config),
+        ...(await this.common(project, job, await this.options.store.projectPolicy(project.id), config)),
         resolver: this.resolver(job, true, []),
         workspace,
         reexplore,
@@ -337,18 +412,19 @@ export class JobRunner extends EventEmitter {
         ...options,
         onRunEvent: (e) => e.event === 'step-end' && void this.log(job.id, `${e.status === 'passed' ? '✔' : '✖'} ${e.step}`),
       });
-      await this.options.store.saveVerdicts(
-        job.id,
-        result.verdicts.map((v) => ({ testId: v.testId, status: v.status, verdict: v })),
+      const recordedAt = new Date().toISOString();
+      await this.options.store.saveRun(
+        { id: job.id, projectId: project.id },
+        {
+          execution: result.executionId
+            ? { execId: result.executionId, startedAt: job.startedAt, finishedAt: recordedAt, durationMs: Date.now() - Date.parse(job.startedAt ?? recordedAt) }
+            : undefined,
+          rows: result.verdicts.map((v) => ({ testId: v.testId, status: v.status, verdict: v })),
+          evidence: await this.evidenceFor(result.verdicts, result.executionId),
+          snapshot: result.workspace ? await manifestOf(result.workspace) : undefined,
+          recordedAt,
+        },
       );
-      for (const v of result.verdicts) {
-        await this.options.store.recordResult(project.id, v.testId, {
-          jobId: job.id,
-          executionId: result.executionId,
-          status: v.status,
-          at: new Date().toISOString(),
-        });
-      }
       await this.update(job.id, {
         status: 'done',
         executionId: result.executionId,
@@ -360,23 +436,45 @@ export class JobRunner extends EventEmitter {
   }
 }
 
+/** The generated project's files by hash: the code a run used, without keeping a copy of it (DATABASE.md §5.5). */
+async function manifestOf(workspace: string): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const walk = async (dir: string): Promise<void> => {
+    for (const e of await readdir(path.join(workspace, dir), { withFileTypes: true }).catch(() => [])) {
+      const rel = dir ? `${dir}/${e.name}` : e.name;
+      if (e.isDirectory()) await walk(rel);
+      else
+        out[rel] = createHash('sha256')
+          .update(await readFile(path.join(workspace, rel)))
+          .digest('hex');
+    }
+  };
+  for (const dir of ['tests', 'pages', 'locators', 'data']) await walk(dir);
+  for (const file of ['auto-qa.json', 'playwright.config.ts']) {
+    const content = await readFile(path.join(workspace, file)).catch(() => undefined);
+    if (content) out[file] = createHash('sha256').update(content).digest('hex');
+  }
+  return out;
+}
+
+/** The kinds of file a run leaves, with a reference, size and hash for each (FR-DB-14). Only this run's own files: cached results keep theirs. */
+type Evidence = Record<string, Array<FileFacts & { kind: string; stepId?: string }>>;
+
 /** The plan the tester reviews: each step with its locator, score and screenshot, and the code diff (FR-RV-01, FR-RV-04). */
 function reviewOf(model: TestModel, prepared: Prepared) {
   const exploration: ExplorationResult | undefined = prepared.explored[0]?.exploration;
   const early: TestVerdict | undefined = prepared.early.get(model.id);
-  return {
-    testId: model.id,
-    title: model.title,
-    warnings: model.warnings,
-    blocked: early && { status: early.status, reason: early.reason, category: early.category, review: early.review },
-    items: (exploration?.items ?? []).map((i) => ({
+  const reasonOf = (id: string) => early?.review?.find((r) => r.id === id);
+  const explored = (exploration?.items ?? []).map((i) => {
+    const r = reasonOf(i.id);
+    return {
       id: i.id,
       phase: i.phase,
       kind: i.kind,
       raw: i.raw,
       action: i.action,
       type: i.type,
-      status: i.status,
+      status: i.status as 'done' | 'skipped' | 'failed' | 'not-run',
       locator: i.locator,
       score: i.score,
       resolvedBy: i.resolvedBy,
@@ -385,7 +483,37 @@ function reviewOf(model: TestModel, prepared: Prepared) {
       screenshot: i.screenshot,
       warnings: i.warnings,
       candidates: i.candidates,
-    })),
+      error: i.error,
+      review: i.review ?? (r && { headline: r.headline, why: r.why, todo: r.todo }),
+      noScreenshot: i.screenshot ? undefined : 'No picture was taken for this step.',
+    };
+  });
+  // Steps and checks exploration never got to (it stopped earlier, or nothing was opened because the case must be rewritten first).
+  const seen = new Set(explored.filter((i) => i.phase === 'test').map((i) => i.id));
+  const never = [...model.steps, ...model.assertions]
+    .filter((x) => !seen.has(x.id))
+    .map((x) => {
+      const r = reasonOf(x.id);
+      return {
+        id: x.id,
+        phase: 'test' as const,
+        kind: ('source' in x ? 'check' : 'step') as 'step' | 'check',
+        raw: x.raw,
+        status: (x.status === 'unparsed' ? 'skipped' : 'not-run') as 'skipped' | 'not-run',
+        warnings: [] as string[],
+        review: r && { headline: r.headline, why: r.why, todo: r.todo },
+        noScreenshot:
+          x.status === 'unparsed'
+            ? 'No picture: nothing was opened, because this has to be rewritten first.'
+            : 'No picture: exploration stopped before it got here.',
+      };
+    });
+  return {
+    testId: model.id,
+    title: model.title,
+    warnings: model.warnings,
+    blocked: early && { status: early.status, reason: early.reason, category: early.category, review: early.review },
+    items: [...explored, ...never],
     changes: prepared.changes
       .filter((c) => /^(tests|pages|locators|data)\//.test(c.path))
       .map((c) => ({

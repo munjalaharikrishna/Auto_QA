@@ -54,13 +54,13 @@ async function legacyDatabase(target: string) {
 describe('migrations (D26)', () => {
   it('builds a fresh database to the latest version and records every step', async () => {
     const db = await SqliteDriver.open(':memory:');
-    assert.deepEqual(await migrate(db, MIGRATIONS), [1, 2, 3, 4, 5]);
+    assert.deepEqual(await migrate(db, MIGRATIONS), [1, 2, 3, 4, 5, 6]);
     const s = await status(db, MIGRATIONS);
-    assert.equal(s.current, 5);
+    assert.equal(s.current, 6);
     assert.equal(s.pending.length, 0);
     assert.deepEqual(
       s.applied.map((a) => a.name),
-      ['baseline', 'environments', 'job_log_ids', 'test_cases', 'project_rules'],
+      ['baseline', 'environments', 'job_log_ids', 'test_cases', 'project_rules', 'executions'],
     );
     assert.deepEqual(await migrate(db, MIGRATIONS), [], 'a second start applies nothing');
     await db.close();
@@ -107,7 +107,7 @@ describe('migrations (D26)', () => {
     await migrate(db, MIGRATIONS);
     await db.run("INSERT INTO schema_migrations (version, name, checksum, applied_at) VALUES (99, 'from_the_future', 'x', '2030-01-01T00:00:00.000Z')");
     await assert.rejects(migrate(db, MIGRATIONS), (e: Error) => e instanceof MigrationError && /newer Auto QA/.test(e.message));
-    assert.equal((await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM schema_migrations'))?.n, 6);
+    assert.equal((await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM schema_migrations'))?.n, 7);
     await db.close();
   });
 
@@ -115,17 +115,17 @@ describe('migrations (D26)', () => {
     const db = await SqliteDriver.open(':memory:');
     await migrate(db, MIGRATIONS);
     const edited: Migration = { ...MIGRATIONS[1], statements: (d) => [...MIGRATIONS[1].statements(d), 'CREATE TABLE sneaky (id INTEGER)'] };
-    await assert.rejects(migrate(db, [MIGRATIONS[0], edited, MIGRATIONS[2], MIGRATIONS[3], MIGRATIONS[4]]), /was changed after it was applied/);
+    await assert.rejects(migrate(db, [MIGRATIONS[0], edited, ...MIGRATIONS.slice(2)]), /was changed after it was applied/);
     await db.close();
   });
 
   it('applies a migration fully or not at all', async () => {
     const db = await SqliteDriver.open(':memory:');
     await migrate(db, MIGRATIONS);
-    const broken: Migration = { version: 6, name: 'broken', statements: () => ['CREATE TABLE half_done (id INTEGER)', 'CREATE TABLE half_done (id INTEGER)'] };
+    const broken: Migration = { version: 7, name: 'broken', statements: () => ['CREATE TABLE half_done (id INTEGER)', 'CREATE TABLE half_done (id INTEGER)'] };
     await assert.rejects(migrate(db, [...MIGRATIONS, broken]));
     assert.equal(await db.get("SELECT name FROM sqlite_master WHERE name = 'half_done'"), undefined, 'the first statement was rolled back');
-    assert.equal((await status(db, MIGRATIONS)).current, 5);
+    assert.equal((await status(db, MIGRATIONS)).current, 6);
     await db.close();
   });
 

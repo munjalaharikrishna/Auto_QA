@@ -93,6 +93,8 @@ Moves every piece of state that is only in a JSON file into the database, adds v
 
 **Done when** a fresh install and the current `.auto-qa/auto-qa.db` reach the same schema, a workbook run leaves no state only in JSON files (other than artifacts), and CI upgrades a database from the previous release.
 
+**Status (2026-10-05):** built for SQLite, all nine steps. A run is written as an execution with results, steps, checks, evidence and a code snapshot in one transaction; page routes, explorations and batch progress are in the database; files are named by reference; `db restore / export / import` exist and an upgrade fixture is tested. Remaining for V3: the PostgreSQL driver and the SQLite/PostgreSQL schema comparison in CI. Differences from the plan are listed in [DATABASE.md §10.1](DATABASE.md#101-where-m8-differs-from-the-plan-above).
+
 ## After V1
 
 1. **V2:** locator repository reuse → environments + page map → encrypted secrets → login state reuse → suites, history, HTML report → flows, unique data → table steps → re-discovery → API tests → Jira/TestRail import

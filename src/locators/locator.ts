@@ -1,4 +1,4 @@
-import type { Locator, Page } from 'playwright';
+import type { FrameLocator, Locator, Page } from 'playwright';
 
 /**
  * Locators as data (FR-LO-06). A spec can be printed as Playwright code for the generated
@@ -19,6 +19,11 @@ export interface LocatorSpec {
   options?: { name?: string; exact?: boolean };
   /** Position among the matches: 0 = `.first()`, -1 = `.last()`, n = `.nth(n)`. Ranked after all others. */
   nth?: number;
+  /**
+   * The iframes the element is inside, outermost first, each as a selector that finds just that iframe. A page locator
+   * never looks inside a frame, so an element in one is only found through `frameLocator(selector)` (and so is its generated code).
+   */
+  frame?: string[];
   /** `ladder`: built from the element's facts. `mcp`: the code Playwright MCP suggested (FR-LO-07). */
   source: 'ladder' | 'mcp';
 }
@@ -39,32 +44,42 @@ export function spec(method: Method, arg: string, options?: LocatorSpec['options
 
 const isXPath = (s: string) => s.startsWith('//') || s.startsWith('xpath=') || s.startsWith('(//');
 
-/** Playwright code for the spec, e.g. `getByRole('button', { name: 'Login', exact: true })`. */
+/** Playwright code for the spec, e.g. `getByRole('button', { name: 'Login', exact: true })`; inside a frame it starts with `frameLocator('…').`. */
 export function toCode(s: LocatorSpec): string {
   const opts = s.options ? Object.entries(s.options).map(([k, v]) => `${k}: ${typeof v === 'string' ? quote(v) : v}`) : [];
   const position = s.nth === undefined ? '' : s.nth === 0 ? '.first()' : s.nth === -1 ? '.last()' : `.nth(${s.nth})`;
-  return `${s.method}(${quote(s.arg)}${opts.length ? `, { ${opts.join(', ')} }` : ''})${position}`;
+  const frames = (s.frame ?? []).map((f) => `frameLocator(${quote(f)}).`).join('');
+  return `${frames}${s.method}(${quote(s.arg)}${opts.length ? `, { ${opts.join(', ')} }` : ''})${position}`;
 }
 
 export function toLocator(page: Page, s: LocatorSpec): Locator {
-  const base = baseLocator(page, s);
+  const base = baseLocator(scopeOf(page, s), s);
   return s.nth === undefined ? base : s.nth === -1 ? base.last() : base.nth(s.nth);
 }
 
-function baseLocator(page: Page, s: LocatorSpec): Locator {
+/** What locators are built on: the page, or the frame the spec says the element is in. */
+type Scope = Page | FrameLocator;
+
+function scopeOf(page: Page, s: LocatorSpec): Scope {
+  let scope: Scope = page;
+  for (const selector of s.frame ?? []) scope = scope.frameLocator(selector);
+  return scope;
+}
+
+function baseLocator(scope: Scope, s: LocatorSpec): Locator {
   switch (s.method) {
     case 'getByTestId':
-      return page.getByTestId(s.arg);
+      return scope.getByTestId(s.arg);
     case 'getByRole':
-      return page.getByRole(s.arg as Parameters<Page['getByRole']>[0], s.options);
+      return scope.getByRole(s.arg as Parameters<Page['getByRole']>[0], s.options);
     case 'getByLabel':
-      return page.getByLabel(s.arg, s.options);
+      return scope.getByLabel(s.arg, s.options);
     case 'getByPlaceholder':
-      return page.getByPlaceholder(s.arg, s.options);
+      return scope.getByPlaceholder(s.arg, s.options);
     case 'getByText':
-      return page.getByText(s.arg, s.options);
+      return scope.getByText(s.arg, s.options);
     case 'locator':
-      return page.locator(s.arg);
+      return scope.locator(s.arg);
   }
 }
 
@@ -77,8 +92,9 @@ export function quote(text: string): string {
 
 /**
  * Reads one locator call as Playwright MCP prints it, e.g. `getByTestId('username')` or
- * `page.getByRole('button', { name: 'Login' }).click();`. Returns undefined for anything it
- * cannot represent (chains, regexes, frames), so an odd suggestion is skipped, not misread.
+ * `page.getByRole('button', { name: 'Login' }).click();`. An element inside frames is read as MCP prints it,
+ * `locator('iframe[name="x"]').contentFrame().getByRole(…)` or `frameLocator('iframe[name="x"]').getByRole(…)`.
+ * Returns undefined for anything it cannot represent (other chains, regexes), so an odd suggestion is skipped, not misread.
  */
 export function parseLocatorCode(code: string, source: LocatorSpec['source'] = 'mcp'): LocatorSpec | undefined {
   let text = code
@@ -86,6 +102,20 @@ export function parseLocatorCode(code: string, source: LocatorSpec['source'] = '
     .replace(/^await\s+/, '')
     .replace(/;$/, '');
   text = text.replace(/^page\./, '');
+  // Frames come first, outermost first: each one is a selector that finds an iframe, and the rest is read inside it.
+  const frame: string[] = [];
+  for (;;) {
+    const head = readCall(text);
+    const selector = head && head.args.length === 1 && typeof head.args[0] === 'string' ? head.args[0] : undefined;
+    const after = head ? text.slice(head.end) : '';
+    if (head && selector !== undefined && head.method === 'frameLocator' && after.startsWith('.')) {
+      frame.push(selector);
+      text = after.slice(1);
+    } else if (head && selector !== undefined && head.method === 'locator' && after.startsWith('.contentFrame().')) {
+      frame.push(selector);
+      text = after.slice('.contentFrame().'.length);
+    } else break;
+  }
   const call = readCall(text);
   if (!call) return undefined;
   let rest = text.slice(call.end);
@@ -110,7 +140,7 @@ export function parseLocatorCode(code: string, source: LocatorSpec['source'] = '
     }
   }
   const result = spec(method as Method, args[0], options as LocatorSpec['options'], source);
-  return nth === undefined ? result : { ...result, nth };
+  return { ...result, ...(frame.length ? { frame } : {}), ...(nth === undefined ? {} : { nth }) };
 }
 
 type Value = string | boolean | Record<string, string | boolean>;
