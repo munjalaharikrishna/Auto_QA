@@ -1,0 +1,109 @@
+{
+  "testCase": {
+    "id": "TC_LOGIN_001",
+    "name": "Login with valid username and password",
+    "version": 1,
+    "source": {
+      "rows": [
+        2
+      ]
+    },
+    "priority": null,
+    "tags": []
+  },
+  "preconditions": [],
+  "data": {
+    "Username": {
+      "class": "EXPLICIT",
+      "source": "EXCEL",
+      "value": "cypress"
+    },
+    "test_password": {
+      "class": "REFERENCE",
+      "source": "ENV",
+      "value": "$env.TEST_PASSWORD",
+      "secret": true
+    }
+  },
+  "steps": [
+    {
+      "id": "S1",
+      "action": "NAVIGATE",
+      "target": {
+        "ontology": "Page",
+        "name": "OrangeHRM login"
+      },
+      "original": "Open the OrangeHRM login page."
+    },
+    {
+      "id": "S2",
+      "action": "ENTER_VALUE",
+      "target": {
+        "ontology": "TextBox",
+        "name": "Login Name"
+      },
+      "value": "$data.Username",
+      "original": "Enter username in the Login Name text box."
+    },
+    {
+      "id": "S3",
+      "action": "ENTER_VALUE",
+      "target": {
+        "ontology": "TextBox",
+        "name": "Password"
+      },
+      "value": "$data.test_password",
+      "original": "Enter password in the Password text box."
+    },
+    {
+      "id": "S4",
+      "action": "CLICK",
+      "target": {
+        "ontology": "Button",
+        "name": "Login"
+      },
+      "original": "Click the 'Login' button."
+    }
+  ],
+  "expectations": [
+    {
+      "id": "E1",
+      "clause": "User is successfully logged in and redirected to the OrangeHRM home/dashboard page.",
+      "negated": true,
+      "condition": {
+        "type": "URL",
+        "check": "url-unchanged"
+      }
+    },
+    {
+      "id": "E2",
+      "clause": "User is successfully logged in and redirected to the OrangeHRM home/dashboard page.",
+      "negated": false,
+      "condition": {
+        "type": "URL",
+        "expect": "OrangeHRM home",
+        "check": "url"
+      }
+    },
+    {
+      "id": "E3",
+      "clause": "automatic check: health",
+      "negated": false,
+      "condition": {
+        "type": "HEALTH",
+        "expect": "no crash",
+        "check": "health"
+      },
+      "automatic": true
+    }
+  ],
+  "conditionals": [],
+  "references": [],
+  "assumptions": [],
+  "versions": {
+    "grammar": "0.1.0-legacy",
+    "vocabulary": "0.1.0-legacy",
+    "ontology": "0.1.0-legacy",
+    "patterns": "0.1.0-legacy"
+  }
+}

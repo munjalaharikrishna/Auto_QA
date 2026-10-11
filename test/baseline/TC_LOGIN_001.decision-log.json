@@ -1,0 +1,104 @@
+{
+  "status": "compiled",
+  "versions": {
+    "ir": "1.0.0",
+    "pipeline": "1.0.0",
+    "grammar": "0.1.0-legacy",
+    "vocabulary": "0.1.0-legacy",
+    "ontology": "0.1.0-legacy",
+    "patterns": "0.1.0-legacy"
+  },
+  "log": [
+    {
+      "seq": 1,
+      "stage": "Read",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "test case read",
+      "data": {
+        "id": "TC_LOGIN_001",
+        "steps": 4
+      }
+    },
+    {
+      "seq": 2,
+      "stage": "Understand",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "text turned into steps and checks",
+      "data": {
+        "steps": 4,
+        "checks": 3
+      }
+    },
+    {
+      "seq": 3,
+      "stage": "Validate",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "every step and check understood"
+    },
+    {
+      "seq": 4,
+      "stage": "BuildIr",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "QA-IR built and valid",
+      "data": {
+        "steps": 4,
+        "expectations": 3
+      }
+    },
+    {
+      "seq": 5,
+      "stage": "ResolveData",
+      "testId": "TC_LOGIN_001",
+      "kind": "decision",
+      "message": "Username: EXPLICIT",
+      "data": {
+        "source": "EXCEL"
+      }
+    },
+    {
+      "seq": 6,
+      "stage": "ResolveData",
+      "testId": "TC_LOGIN_001",
+      "kind": "decision",
+      "message": "test_password: REFERENCE (secret, kept as a reference)",
+      "data": {
+        "source": "ENV"
+      }
+    },
+    {
+      "seq": 7,
+      "stage": "ResolvePage",
+      "testId": "TC_LOGIN_001",
+      "kind": "decision",
+      "message": "OrangeHRM login is /orangehrm-2.5.0.2/login.php"
+    },
+    {
+      "seq": 8,
+      "stage": "ResolveTarget",
+      "testId": "TC_LOGIN_001",
+      "kind": "decision",
+      "message": "3 element(s) are located on the real page during exploration"
+    },
+    {
+      "seq": 9,
+      "stage": "BuildPlan",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "plan of 7 item(s)",
+      "data": {
+        "passAllowed": true
+      }
+    },
+    {
+      "seq": 10,
+      "stage": "ValidatePlan",
+      "testId": "TC_LOGIN_001",
+      "kind": "info",
+      "message": "every step and expectation is in the plan exactly once"
+    }
+  ]
+}

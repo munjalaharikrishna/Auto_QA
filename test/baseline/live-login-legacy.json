@@ -1,0 +1,82 @@
+{
+  "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+  "engine": "legacy",
+  "cases": 10,
+  "totals": {
+    "PASS": 4,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "NEEDS REVIEW": 5,
+    "NOT VERIFIED": 1
+  },
+  "needReview": 5,
+  "review": [
+    {
+      "testId": "TC_LOGIN_002",
+      "step": "A2 Login is rejected and an appropriate invalid username/password error message is displayed.",
+      "question": "A2 \"Login is rejected and an appropriate invalid username/password error message is displayed.\": More than one element matches \"appropriate invalid username\". 2 elements fit about equally well (cell \"Password :\", textbox \"Password\"), and guessing could test the wrong one. To fix: Click the right one on the screenshot."
+    },
+    {
+      "testId": "TC_LOGIN_003",
+      "step": "A2 Login is rejected and an appropriate invalid username/password error message is displayed.",
+      "question": "A2 \"Login is rejected and an appropriate invalid username/password error message is displayed.\": I could not find \"appropriate invalid username\" on the page. Nothing on this page looks like it. The page may not have opened yet, or an earlier step may not have worked. To fix: Click the right element on the screenshot."
+    },
+    {
+      "testId": "TC_LOGIN_004",
+      "step": "A2 Login is rejected and an appropriate authentication error message is displayed.",
+      "question": "A2 \"Login is rejected and an appropriate authentication error message is displayed.\": I could not find \"appropriate authentication error message\" on the page. Nothing on this page looks like it. The page may not have opened yet, or an earlier step may not have worked. To fix: Click the right element on the screenshot."
+    },
+    {
+      "testId": "TC_LOGIN_007",
+      "step": "A1 Login is not performed and required-field validation messages are displayed for the missing credentials.",
+      "question": "A1 \"Login is not performed and required-field validation messages are displayed for the missing credentials.\": I could not find \"missing credentials\" on the page. Nothing on this page looks like it. The page may not have opened yet, or an earlier step may not have worked. To fix: Click the right element on the screenshot."
+    },
+    {
+      "testId": "TC_LOGIN_008",
+      "step": "A3 The password is displayed as masked characters and the actual password text is not visible.",
+      "question": "A3 \"The password is displayed as masked characters and the actual password text is not visible.\": More than one element matches \"actual password\". 2 elements fit about equally well (cell \"Password :\", textbox \"Password\"), and guessing could test the wrong one. To fix: Click the right one on the screenshot."
+    }
+  ],
+  "perCase": [
+    {
+      "id": "TC_LOGIN_001",
+      "status": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_002",
+      "status": "NEEDS REVIEW"
+    },
+    {
+      "id": "TC_LOGIN_003",
+      "status": "NEEDS REVIEW"
+    },
+    {
+      "id": "TC_LOGIN_004",
+      "status": "NEEDS REVIEW"
+    },
+    {
+      "id": "TC_LOGIN_005",
+      "status": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_006",
+      "status": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_007",
+      "status": "NEEDS REVIEW"
+    },
+    {
+      "id": "TC_LOGIN_008",
+      "status": "NEEDS REVIEW"
+    },
+    {
+      "id": "TC_LOGIN_009",
+      "status": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_010",
+      "status": "NOT VERIFIED"
+    }
+  ]
+}
