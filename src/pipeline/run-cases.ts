@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
+import { type CompileResult, compileCase, type EngineKind } from '../engine/index.js';
 import { type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
@@ -55,6 +56,10 @@ export interface PipelineOptions {
   onRunEvent?: (event: RunEvent) => void;
   /** Optional helper for unreadable steps (FR-AI-01). Default: none. */
   assist?: AssistProvider;
+  /** `legacy` (default) runs exactly as before. `semantic` first compiles every case to QA-IR with a decision log (E0.1). */
+  engine?: EngineKind;
+  /** Called with each case's compilation, when the engine is `semantic`. */
+  onCompiled?: (result: CompileResult) => void | Promise<void>;
 }
 
 export interface PipelineResult {
@@ -97,6 +102,42 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     // A check nothing can verify does not stop the test (balanced and lenient); under strict it is asked about.
     const model = policy === 'strict' ? original : observeUnclearChecks(original);
     const at = `[${index + 1}/${models.length}] ${model.id}`;
+    if (options.engine === 'semantic') {
+      const compiled = await compileCase(
+        {
+          id: original.id,
+          title: original.title,
+          type: original.type,
+          preconditions: original.source.rawPreconditions,
+          steps: original.source.rawSteps,
+          testData: original.source.rawTestData,
+          expected: original.source.rawExpected,
+          requirementId: original.requirementId,
+          row: original.source.row,
+        },
+        { config: options.config, pageRoutes: await pages.load() },
+      );
+      const dir = path.join(exploreDir, original.id);
+      await mkdir(dir, { recursive: true });
+      if (compiled.ir)
+        await writeFile(
+          path.join(dir, 'qa-ir.json'),
+          `${JSON.stringify(compiled.ir, null, 2)}
+`,
+        );
+      await writeFile(
+        path.join(dir, 'decision-log.json'),
+        `${JSON.stringify({ status: compiled.status, versions: compiled.versions, log: compiled.log }, null, 2)}
+`,
+      );
+      await options.onCompiled?.(compiled);
+      progress(`… ${at}: compiled (${compiled.status}), ${compiled.log.length} decision(s) logged`);
+      // A stage that broke its contract is an engine fault, not a test result: say so instead of running on a bad plan.
+      if (compiled.status === 'error') {
+        early.set(model.id, stopped(model, 'NEEDS REVIEW', `The new engine could not compile this test case (${compiled.error}).`));
+        continue;
+      }
+    }
     const unparsed = [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed');
     if (unparsed.length) {
       // Nothing to explore until the tester rewrites these; no browser needed to say so.
