@@ -11,6 +11,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { engineFrom } from '../engine/index.js';
 import { FIELDS, type Field } from '../importer/columns.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
 import { runBatch } from '../pipeline/batch.js';
@@ -20,7 +21,7 @@ import type { TestVerdict } from '../results/verdict.js';
 import { terminalResolver } from './terminal-resolver.js';
 
 const args = process.argv.slice(2);
-const valueFlags = ['--id', '--base-url', '--env-file', '--test-id-attribute', '--workspace', '--login', '--sheet', '--out', '--map'];
+const valueFlags = ['--engine', '--id', '--base-url', '--env-file', '--test-id-attribute', '--workspace', '--login', '--sheet', '--out', '--map'];
 const all = (name: string) => args.flatMap((a, i) => (a === name && args[i + 1] ? [args[i + 1]] : []));
 const flag = (name: string) => all(name)[0];
 const [file] = args.filter((a, i) => !a.startsWith('--') && !valueFlags.includes(args[i - 1]));
@@ -34,6 +35,7 @@ if (!file) {
   --workspace dir             where to generate the project (default workspaces/<site>)
   --reexplore                 explore again even when a saved exploration can be reused
   --headed                    show the browser
+  --engine legacy|semantic    legacy (default) or the new semantic engine, which compiles each case to QA-IR with a decision log first
 
   Workbooks:
   --sheet name                worksheet (default: the first with test cases)
@@ -70,6 +72,7 @@ const common = {
   headless: !args.includes('--headed'),
   workspace: flag('--workspace'),
   reexplore: args.includes('--reexplore'),
+  engine: engineFrom(flag('--engine') ?? process.env.AUTO_QA_ENGINE),
   onProgress: (m: string) => console.log(m),
 };
 

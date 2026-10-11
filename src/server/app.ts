@@ -6,6 +6,7 @@ import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { ENGINES, engineFrom } from '../engine/index.js';
 import { FIELDS, type Field } from '../importer/columns.js';
 import { buildProjectExport, type ExportCase } from '../importer/project-export.js';
 import { readWorkbook } from '../importer/workbook.js';
@@ -64,6 +65,8 @@ const ProjectPatch = z.object({
   password: z.string().optional(),
   variables: z.record(z.string().regex(/^[A-Za-z_]\w*$/), z.string().nullable()).optional(),
   policy: z.enum(POLICIES).optional(),
+  /** Which engine runs this project's test cases (PD-1). Default: legacy. */
+  engine: z.enum(ENGINES).optional(),
 });
 const MappingBody = z.object({ mapping: z.partialRecord(z.enum(FIELDS), z.string()).default({}) });
 const AnswerBody = z.object({ answer: z.unknown() });
@@ -86,7 +89,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     (() => {
       throw notFound('Project');
     })();
-  const withEnv = async (p: Project) => ({ ...p, env: describeEnv(p.workspace), policy: await store.projectPolicy(p.id) });
+  const withEnv = async (p: Project) => ({
+    ...p,
+    env: describeEnv(p.workspace),
+    policy: await store.projectPolicy(p.id),
+    engine: engineFrom(await store.setting('project', p.id, 'engine')),
+  });
 
   // Live events for every open page (FR-RUN-02).
   const sockets = new Set<{ send(data: string): void }>();
@@ -139,6 +147,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (body.policy) {
       await store.setSetting('project', project.id, 'policy', body.policy);
       await store.audit('project.policy', 'project', project.id, project.id, { policy: body.policy });
+    }
+    if (body.engine) {
+      await store.setSetting('project', project.id, 'engine', body.engine);
+      await store.audit('project.engine', 'project', project.id, project.id, { engine: body.engine });
     }
     return withEnv(updated);
   });

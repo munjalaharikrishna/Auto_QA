@@ -4,6 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createTwoFilesPatch } from 'diff';
 import { describeFile, type FileFacts } from '../db/artifacts.js';
+import { engineFrom } from '../engine/index.js';
 import type { ExplorationResult, Resolver } from '../explorer/controller.js';
 import { explain, sentence } from '../explorer/explain.js';
 import type { PageStore } from '../explorer/page-store.js';
@@ -250,6 +251,7 @@ export class JobRunner extends EventEmitter {
     return {
       policy,
       config,
+      engine: engineFrom(await store.setting('project', project.id, 'engine')),
       pages: await this.pagesFor(project),
       nextExecutionId: () => store.nextExecutionId(),
       // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
