@@ -19,6 +19,10 @@ export const RawTestCaseSchema = z.object({
   testData: z.string().optional(),
   expected: z.string().min(1),
   requirementId: z.string().optional(),
+  /** Optional columns of the sheet (IN-12 to IN-14): kept with the test case, never used to decide a verdict. */
+  priority: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  actual: z.string().optional(),
   /** Spreadsheet row, for messages and generated ids. */
   row: z.number().int().positive().optional(),
 });
@@ -267,6 +271,8 @@ export const TestModelSchema = z.object({
   title: z.string(),
   type: z.enum(TEST_TYPES).optional(),
   requirementId: z.string().optional(),
+  priority: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   preconditions: z.array(PreconditionSchema),
   /** Non-secret test data only (FR-TD-03). Secret-looking keys are bound to env vars instead. */
   data: z.record(z.string(), z.string()),

@@ -68,7 +68,7 @@ export interface ProjectInput {
   policy?: Policy;
 }
 
-export type Field = 'id' | 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId';
+export type Field = 'id' | 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId' | 'stepNo' | 'actual' | 'priority' | 'tags';
 
 export interface Preview {
   uploadId: string;
@@ -209,9 +209,12 @@ export const api = {
   reviewQueue: (id: string) => call<Job>(`/api/jobs/${id}/review-queue`, json('POST', {})),
   testCases: (projectId: string) => call<TestCaseRecord[]>(`/api/projects/${projectId}/test-cases`),
   testCase: (projectId: string, id: string) =>
-    call<TestCaseRecord & { versions: Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase }>; runs: TestCaseRun[] }>(
-      `/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`,
-    ),
+    call<
+      TestCaseRecord & {
+        versions: Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase; changes: Array<{ text: string }> }>;
+        runs: TestCaseRun[];
+      }
+    >(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`),
   updateTestCase: (projectId: string, id: string, c: Omit<RawTestCase, 'row'>) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, json('PUT', c)),
   deleteTestCase: (projectId: string, id: string) => call(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}`, { method: 'DELETE' }),

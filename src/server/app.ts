@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ENGINES, engineFrom } from '../engine/index.js';
 import { FIELDS, type Field } from '../importer/columns.js';
+import { describeChange, diffCases } from '../importer/diff.js';
 import { buildProjectExport, type ExportCase } from '../importer/project-export.js';
 import { readWorkbook } from '../importer/workbook.js';
 import { POLICIES } from '../model/policy.js';
@@ -263,7 +264,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const params = req.params as { id: string; caseId: string };
     const project = await projectOf(params.id);
     const record = await caseOf(project.id, params.caseId);
-    return { ...record, versions: await store.testCaseVersions(record.id), runs: await store.testCaseRuns(project.id, record.extId) };
+    // Newest first: each version is compared with the one before it, so a re-import that changed one step shows that step (IN-23).
+    const stored = await store.testCaseVersions(record.id);
+    const versions = stored.map((v, i) => ({
+      ...v,
+      changes: stored[i + 1] ? diffCases(stored[i + 1].raw, v.raw).map((c) => ({ ...c, text: describeChange(c) })) : [],
+    }));
+    return { ...record, versions, runs: await store.testCaseRuns(project.id, record.extId) };
   });
 
   /** Edit a saved test case: it becomes a new version; running it again explores the changed steps. */

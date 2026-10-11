@@ -34,8 +34,8 @@ describe('column matching (FR-IN-09)', () => {
       'Priority',
       'Req ID',
     ]);
-    assert.deepEqual(r.map, { id: 2, title: 3, preconditions: 4, steps: 5, testData: 6, expected: 7, requirementId: 9 });
-    assert.deepEqual(r.unmatched, ['S.No', 'Priority']);
+    assert.deepEqual(r.map, { id: 2, title: 3, preconditions: 4, steps: 5, testData: 6, expected: 7, priority: 8, requirementId: 9 });
+    assert.deepEqual(r.unmatched, ['S.No']);
     assert.deepEqual(r.missing, []);
   });
 
@@ -70,7 +70,7 @@ describe('workbook import (FR-IN-01)', () => {
     const r = await readWorkbook(file);
     assert.equal(r.sheet, 'Regression');
     assert.equal(r.headerRow, 2);
-    assert.deepEqual(r.unmatched, ['S.No', 'Priority']);
+    assert.deepEqual(r.unmatched, ['S.No']);
     assert.equal(r.cases.length + r.problems.length, written.length);
     assert.deepEqual(
       r.problems.map((p) => p.text),

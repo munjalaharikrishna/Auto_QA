@@ -6,7 +6,20 @@ import { normKey } from '../parser/config.js';
  * the same matcher as its first guess; a mapping file overrides it for unusual headers.
  */
 
-export const FIELDS = ['id', 'title', 'type', 'preconditions', 'steps', 'testData', 'expected', 'requirementId'] as const;
+export const FIELDS = [
+  'id',
+  'title',
+  'type',
+  'preconditions',
+  'steps',
+  'testData',
+  'expected',
+  'requirementId',
+  'stepNo',
+  'actual',
+  'priority',
+  'tags',
+] as const;
 export type Field = (typeof FIELDS)[number];
 export const REQUIRED: Field[] = ['title', 'steps', 'expected'];
 
@@ -37,6 +50,7 @@ const NAMES: Record<Field, string[]> = {
     'steps to reproduce',
     'step description',
     'steps description',
+    'test design description',
     'procedure',
     'test procedure',
     'actions',
@@ -53,6 +67,12 @@ const NAMES: Record<Field, string[]> = {
     'expected behavior',
     'expected result(s)',
   ],
+  /** The number of a step in a sheet with one step per row: "Step 1", "Step 2". Used to order the steps (IN-18). */
+  stepNo: ['step no', 'step number', 'step #', 'step id', 'step', 'test design steps', 'step num'],
+  /** The tester's own actual-result column (IN-12). Optional: absent is no error. */
+  actual: ['actual result', 'actual results', 'actual', 'actual outcome', 'actual behaviour', 'actual behavior', 'observed result'],
+  priority: ['priority', 'test priority', 'severity', 'test severity'],
+  tags: ['tags', 'tag', 'labels', 'label', 'keywords'],
   requirementId: ['requirement id', 'requirement', 'req id', 'req', 'requirement reference', 'user story', 'story', 'story id', 'jira id'],
 };
 /** The header names per field; a test checks that no name belongs to two fields. */

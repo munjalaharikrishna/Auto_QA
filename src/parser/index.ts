@@ -136,6 +136,8 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
     title: raw.title.trim(),
     type: knownType,
     requirementId: raw.requirementId?.trim() || undefined,
+    priority: raw.priority?.trim() || undefined,
+    tags: raw.tags?.length ? raw.tags : undefined,
     preconditions,
     data: testData.data,
     steps,

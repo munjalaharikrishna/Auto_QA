@@ -78,6 +78,15 @@ describe('approval, Web Automation, releases, dashboard', () => {
     assert.equal(ok.status, 200, JSON.stringify(ok.body));
     assert.equal(ok.body.version, 2);
     assert.match(ok.body.raw.expected, /Dashboard page\.\nPage title is "Swag Labs"$/);
+    // The versions list says what changed since the version before (IN-23).
+    const versions = (await json('GET', '/api/projects/shop/test-cases/TC-1')).body.versions;
+    assert.deepEqual(
+      versions.map((v: { version: number; changes: Array<{ text: string }> }) => [v.version, v.changes.map((c) => c.text)]),
+      [
+        [2, ['Expected 2 added: "Page title is "Swag Labs""']],
+        [1, []],
+      ],
+    );
 
     const again = await json('POST', '/api/projects/shop/test-cases/TC-1/assertions', { text: 'Page title is "Swag Labs"' });
     assert.equal(again.status, 400);

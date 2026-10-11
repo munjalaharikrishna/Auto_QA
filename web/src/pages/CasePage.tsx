@@ -4,7 +4,10 @@ import { CaseForm, duration, ErrorNote, JobBadge, StatusBadge, when } from '../c
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
 
-type Detail = TestCaseRecord & { versions: Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase }>; runs: TestCaseRun[] };
+type Detail = TestCaseRecord & {
+  versions: Array<{ version: number; reason: string; createdAt: string; raw: RawTestCase; changes: Array<{ text: string }> }>;
+  runs: TestCaseRun[];
+};
 
 /** One saved test case: what was written, every run of it, and Run again (item 1, item 3). */
 export function CasePage({ projectId, caseId }: { projectId: string; caseId: string }) {
@@ -167,6 +170,13 @@ export function CasePage({ projectId, caseId }: { projectId: string; caseId: str
             {c.versions.map((v) => (
               <li key={v.version}>
                 Version {v.version} · {v.reason} · {when(v.createdAt)}
+                {!!v.changes.length && (
+                  <ul>
+                    {v.changes.map((x) => (
+                      <li key={x.text}>{x.text}</li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

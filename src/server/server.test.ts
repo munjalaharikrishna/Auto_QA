@@ -215,7 +215,7 @@ describe('API (M7a)', () => {
     assert.equal(res.statusCode, 201);
     const p = res.json();
     assert.deepEqual([p.ok, p.sheet, p.headerRow, p.total], [true, 'Regression', 2, 12]);
-    assert.deepEqual(p.columns, { id: 2, title: 3, preconditions: 4, steps: 5, testData: 6, expected: 7 });
+    assert.deepEqual(p.columns, { id: 2, title: 3, preconditions: 4, steps: 5, testData: 6, expected: 7, priority: 8 });
     assert.equal(p.sample.length, 5);
     // A mapping that names a column that is not there is refused before anything runs.
     const bad = await app.inject({ method: 'POST', url: `/api/uploads/${p.uploadId}/preview`, payload: { mapping: { steps: 'Nope' } } });
