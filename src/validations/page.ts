@@ -99,7 +99,7 @@ export const pageSpecs: ValidationSpec[] = [
     targets: 'one',
     parse: (ctx) =>
       firstMatch(ctx.text, [[re(`(?<s>.+?)\\s+opens?\\s+(?:safely|securely)(?:\\s+in\\s+a\\s+new\\s+tab)?`), (g) => ({ target: ctx.name(g.s!) })]]),
-    code: (a, c) => [`await expect(${c.target()}).toHaveAttribute('target', '_blank');`, `await expect(${c.target()}).toHaveAttribute('rel', /noopener/);`],
+    code: (_a, c) => [`await expect(${c.target()}).toHaveAttribute('target', '_blank');`, `await expect(${c.target()}).toHaveAttribute('rel', /noopener/);`],
     passed: (a) => `${nameOf(a)} opens in a new tab with rel="noopener"`,
     examples: ['External link opens safely'],
   },

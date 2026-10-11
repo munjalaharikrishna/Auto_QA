@@ -1,4 +1,4 @@
-import { BE, CMP, collectionCode, compareWords, firstMatch, NOT, NUM, nameOf, OBE, re, timeoutArg, toCompare, toNumber } from './common.js';
+import { BE, CMP, collectionCode, compareWords, firstMatch, NOT, NUM, nameOf, re, timeoutArg, toCompare, toNumber } from './common.js';
 import type { ValidationSpec } from './types.js';
 
 /** B. Element presence and state (VALIDATIONS.md §3.B). Visible, hidden, enabled, disabled, checked are older and live in the parser. */

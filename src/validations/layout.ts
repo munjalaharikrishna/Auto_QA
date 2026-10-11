@@ -277,7 +277,7 @@ export const layoutSpecs: ValidationSpec[] = [
         [re(`(?:all\\s+|the\\s+|every\\s+)?(?:[\\p{L}]+\\s+)?images?\\s+(?:are|is)\\s+(?:shown|displayed|loaded|visible|not broken)`), () => ({})],
         [re(`no\\s+broken\\s+images?`), () => ({})],
       ]),
-    code: (a, c) => [`await expect(page.locator('body')).${NOT(a)}toHaveLoadedImages();`],
+    code: (a, _c) => [`await expect(page.locator('body')).${NOT(a)}toHaveLoadedImages();`],
     passed: (a) => (a.negated ? 'Some images did not load' : 'Every image had loaded'),
     examples: ['Product images are shown', 'No broken images'],
   },
@@ -315,7 +315,7 @@ export const layoutSpecs: ValidationSpec[] = [
       firstMatch(ctx.text, [
         [re(`(?:the\\s+)?page\\s+(?:jumps?|shifts?|moves?|flickers?)(?:\\s+around)?\\s+(?:while|during|when)\\s+loading`), () => ({ negated: !ctx.negated })],
       ]),
-    code: (a, c) => {
+    code: (_a, c) => {
       c.helpers.add('expectWebVitals');
       return ['await expectWebVitals(page, { cls: 0.1 });'];
     },

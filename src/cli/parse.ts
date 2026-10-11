@@ -58,7 +58,7 @@ for (const m of models) {
           .join('; '),
     );
   }
-  for (const item of executionOrder(m)) console.log('   ' + describe(item));
+  for (const item of executionOrder(m)) console.log(`   ${describe(item)}`);
   for (const w of m.warnings) console.log(`   ${w.code === 'UNPARSED' ? '✖' : '⚠'} ${w.at ? `${w.at} ` : ''}${w.code}: ${w.text}`);
 }
 
@@ -67,7 +67,7 @@ console.log(`\n${models.length} test case(s) parsed, ${total} item(s) need the t
 
 const out = flag('--json');
 if (out) {
-  await writeFile(out, JSON.stringify(models, null, 2) + '\n');
+  await writeFile(out, `${JSON.stringify(models, null, 2)}\n`);
   console.log(`Saved ${out}`);
 }
 if (failed) process.exitCode = 1;

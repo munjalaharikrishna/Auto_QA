@@ -178,7 +178,7 @@ export const messageSpecs: ValidationSpec[] = [
           () => ({}),
         ],
       ]),
-    code: (a, c) => {
+    code: (_a, c) => {
       c.helpers.add('expectLoadingDone');
       return ['await expectLoadingDone(page);'];
     },

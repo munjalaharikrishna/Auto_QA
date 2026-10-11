@@ -142,7 +142,7 @@ function cellLabel(node: SnapshotNode): string | undefined {
   const cell = node.parent;
   if (!cell || !['cell', 'gridcell'].includes(cell.role) || cell.children.length !== 1) return undefined;
   const row = cell.parent;
-  if (!row || row.role !== 'row') return undefined;
+  if (row?.role !== 'row') return undefined;
   const prev = row.children[row.children.indexOf(cell) - 1];
   if (!prev || !['cell', 'gridcell', 'rowheader'].includes(prev.role)) return undefined;
   const only = prev.children.length === 1 && prev.children[0].role === 'text' ? prev.children[0].text : undefined;

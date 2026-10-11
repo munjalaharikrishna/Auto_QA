@@ -170,8 +170,8 @@ export class McpBrowser {
         .map((c) => c.text ?? '')
         .join('\n'),
     );
-    if (result.isError || reply.sections['Error'] !== undefined) {
-      throw new McpToolError(`MCP tool ${name} failed: ${(reply.sections['Error'] ?? reply.raw).trim()}`, reply);
+    if (result.isError || reply.sections.Error !== undefined) {
+      throw new McpToolError(`MCP tool ${name} failed: ${(reply.sections.Error ?? reply.raw).trim()}`, reply);
     }
     return reply;
   }
@@ -213,11 +213,11 @@ export function parseToolReply(raw: string): ToolReply {
 
 /** Reads the page URL, title and YAML snapshot out of a browser_snapshot reply. */
 export function pageState(reply: ToolReply): PageState {
-  const page = reply.sections['Page'] ?? '';
+  const page = reply.sections.Page ?? '';
   return {
     url: /- Page URL: (.*)/.exec(page)?.[1]?.trim() ?? '',
     title: /- Page Title: (.*)/.exec(page)?.[1]?.trim() ?? '',
-    snapshotYaml: extractFence(reply.sections['Snapshot'] ?? '', 'yaml'),
+    snapshotYaml: extractFence(reply.sections.Snapshot ?? '', 'yaml'),
   };
 }
 
@@ -229,6 +229,6 @@ function splitSections(text: string): Record<string, string> {
 }
 
 function extractFence(text: string, lang: string): string {
-  const match = new RegExp('```' + lang + '\\r?\\n([\\s\\S]*?)```').exec(text);
+  const match = new RegExp(`\`\`\`${lang}\\r?\\n([\\s\\S]*?)\`\`\``).exec(text);
   return (match ? match[1] : text).trimEnd();
 }

@@ -145,7 +145,7 @@ export function escapeRegex(text: string): string {
 /** Regex for a phrase as whole words, with any run of spaces between the words. */
 export function phraseRegex(phrase: string, flags = 'i'): RegExp {
   const body = phrase.trim().split(/\s+/).map(escapeRegex).join('\\s+');
-  return new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, flags.includes('u') ? flags : flags + 'u');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, flags.includes('u') ? flags : `${flags}u`);
 }
 
 /** Verb forms a tester might use: click → clicks, clicked, clicking; type → typed, typing; submit → submitted. */

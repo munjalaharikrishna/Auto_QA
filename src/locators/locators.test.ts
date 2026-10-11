@@ -160,7 +160,8 @@ describe('locator specs (FR-LO-06, FR-LO-07)', () => {
       "getByRole('button', { name: 'x', level: 2 })",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: a template literal is exactly what must be rejected
       'getByText(`a ${b}`)',
-      "frameLocator('iframe').getByText('x')",
+      // a frame chosen by a variable cannot be read (a frame named by a literal is, since iframe support)
+      "frameLocator(frameName).getByText('x')",
       'evaluate(() => 1)',
     ]) {
       assert.equal(parseLocatorCode(code), undefined, code);
