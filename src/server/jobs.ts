@@ -383,6 +383,18 @@ export class JobRunner extends EventEmitter {
       const again = job.input.rerun === true && prepared.explored.length > 0 && prepared.early.size === 0;
       const early = prepared.early.get(model.id);
       if (early) await this.options.store.recordResult(project.id, model.id, { jobId: job.id, status: early.status, at: new Date().toISOString() });
+      // Web Automation "Record": explore and generate the script, keep it, and stop. Nothing runs, so there is nothing to approve here.
+      if (job.input.record === true && prepared.explored.length && !prepared.early.size) {
+        const saved = await this.options.store.testCase(project.id, model.id);
+        if (saved) await this.options.store.markRecorded(project.id, model.id, saved.version, job.id);
+        await this.log(job.id, 'Script recorded');
+        await this.update(job.id, {
+          status: 'done',
+          output: { review: reviewOf(model, prepared), workspace, recorded: true },
+          finishedAt: new Date().toISOString(),
+        });
+        return;
+      }
       await this.update(job.id, { status: again ? 'running' : 'review', output: { review: reviewOf(model, prepared), workspace } });
       let decision: Decision = again ? { action: 'approve' } : await this.decision(job.id);
       if (again) await this.log(job.id, 'Running the saved test again');
@@ -413,6 +425,10 @@ export class JobRunner extends EventEmitter {
         onRunEvent: (e) => e.event === 'step-end' && void this.log(job.id, `${e.status === 'passed' ? '✔' : '✖'} ${e.step}`),
       });
       const recordedAt = new Date().toISOString();
+      if (prepared.explored.length) {
+        const saved = await this.options.store.testCase(project.id, model.id);
+        if (saved) await this.options.store.markRecorded(project.id, model.id, saved.version, job.id);
+      }
       await this.options.store.saveRun(
         { id: job.id, projectId: project.id },
         {

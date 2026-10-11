@@ -1,11 +1,28 @@
 import type { BatchSummary } from '../../src/importer/results.js';
 import type { RawTestCase } from '../../src/model/test-model.js';
+import type { ReleaseSummary } from '../../src/releases/impact.js';
 import type { ReviewReason, TestVerdict } from '../../src/results/verdict.js';
-import type { Job, Project, Question, TestCaseRecord, TestCaseRun } from '../../src/server/store.js';
+import type { Job, Project, Question, ReleaseChange, ReleaseFeature, ReleaseRecord, TestCaseRecord, TestCaseRun } from '../../src/server/store.js';
+import type { CatalogueEntry } from '../../src/validations/catalogue.js';
 
 /** Typed calls to the platform API (src/server/app.ts). */
 
-export type { BatchSummary, Job, Project, Question, RawTestCase, ReviewReason, TestCaseRecord, TestCaseRun, TestVerdict };
+export type {
+  BatchSummary,
+  CatalogueEntry,
+  Job,
+  Project,
+  Question,
+  RawTestCase,
+  ReleaseChange,
+  ReleaseFeature,
+  ReleaseRecord,
+  ReleaseSummary,
+  ReviewReason,
+  TestCaseRecord,
+  TestCaseRun,
+  TestVerdict,
+};
 
 export type Policy = 'strict' | 'balanced' | 'lenient';
 
@@ -109,6 +126,57 @@ export interface JobDetail extends Job {
   verdicts: Array<{ testId: string; row?: number; status: string; verdict: TestVerdict & { problem?: string } }>;
 }
 
+export type ScriptState = 'none' | 'ready' | 'out-of-date';
+export type AutomationCase = TestCaseRecord & { projectName: string; script: ScriptState; scriptReady: boolean; running: boolean };
+
+export interface ReleaseCase {
+  extId: string;
+  title: string;
+  approval: 'draft' | 'approved';
+  lastStatus?: string;
+}
+export interface ReleaseDetail extends ReleaseRecord {
+  features: ReleaseFeature[];
+  changes: ReleaseChange[];
+  summary: ReleaseSummary;
+  cases: ReleaseCase[];
+}
+export interface ReleaseInput {
+  name: string;
+  version: string;
+  scope: string;
+  teamSize: number;
+  startDate?: string;
+  plannedDate: string;
+  features: Array<{ title: string; effortDays: number; caseIds: string[] }>;
+}
+export interface FeatureInput {
+  title: string;
+  description?: string;
+  requirementId?: string;
+  effortDays: number;
+  caseIds: string[];
+  reason?: string;
+  newDate?: string;
+}
+export interface Impact {
+  dueDate: string;
+  suggestedDate: string;
+  extraCalendarDays: number;
+  teamSize: number;
+  effortDaysAfter: number;
+  scopeGrowthPercentAfter: number;
+}
+export interface Dashboard {
+  totals: { projects: number; cases: number; approved: number; scripts: number; pass: number; fail: number; notRun: number };
+  projects: Array<{
+    project: { id: string; name: string; baseUrl: string };
+    cases: { total: number; approved: number; draft: number; scripts: number; pass: number; fail: number; notRun: number };
+    executions: Array<{ execId: string; status: string; totals: Record<string, number>; startedAt?: string }>;
+    releases: Array<ReleaseRecord & { summary: ReleaseSummary }>;
+  }>;
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   const body = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
@@ -150,6 +218,36 @@ export const api = {
   saveObservation: (projectId: string, id: string, body: { check: string; facts: unknown }) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/accept-observation`, json('POST', body)),
   runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
+  setApproval: (projectId: string, id: string, approval: 'draft' | 'approved') =>
+    call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/approval`, json('PUT', { approval })),
+  automation: () => call<AutomationCase[]>('/api/automation'),
+  recordCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/record`, json('POST', {})),
+  scriptPreview: (projectId: string, id: string) =>
+    call<{ files: Array<{ name: string; content: string }> }>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/script/preview`),
+  validations: () => call<CatalogueEntry[]>('/api/validations'),
+  addAssertion: (projectId: string, id: string, text: string) =>
+    call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/assertions`, json('POST', { text })),
+  dashboard: () => call<Dashboard>('/api/dashboard'),
+  allReleases: () => call<Array<ReleaseRecord & { projectName: string; summary: ReleaseSummary }>>('/api/releases'),
+  releases: (projectId: string) => call<ReleaseDetail[]>(`/api/projects/${projectId}/releases`),
+  createRelease: (projectId: string, r: ReleaseInput) => call<ReleaseDetail>(`/api/projects/${projectId}/releases`, json('POST', r)),
+  updateRelease: (
+    projectId: string,
+    id: string,
+    r: Partial<Pick<ReleaseInput, 'name' | 'version' | 'scope' | 'teamSize'>> & { status?: ReleaseRecord['status'] },
+  ) => call<ReleaseDetail>(`/api/projects/${projectId}/releases/${id}`, json('PATCH', r)),
+  deleteRelease: (projectId: string, id: string) => call(`/api/projects/${projectId}/releases/${id}`, { method: 'DELETE' }),
+  lockRelease: (projectId: string, id: string) => call<ReleaseDetail>(`/api/projects/${projectId}/releases/${id}/lock`, json('POST', {})),
+  releaseImpact: (projectId: string, id: string, effortDays: number) =>
+    call<Impact>(`/api/projects/${projectId}/releases/${id}/impact`, json('POST', { effortDays })),
+  addFeature: (projectId: string, id: string, f: FeatureInput) =>
+    call<{ feature: ReleaseFeature; release: ReleaseDetail }>(`/api/projects/${projectId}/releases/${id}/features`, json('POST', f)),
+  updateFeature: (projectId: string, id: string, fid: string, f: Partial<{ status: ReleaseFeature['status']; caseIds: string[]; effortDays: number }>) =>
+    call<ReleaseDetail>(`/api/projects/${projectId}/releases/${id}/features/${fid}`, json('PATCH', f)),
+  removeFeature: (projectId: string, id: string, fid: string, c: { reason?: string; newDate?: string }) =>
+    call<ReleaseDetail>(`/api/projects/${projectId}/releases/${id}/features/${fid}`, json('DELETE', c)),
+  moveRelease: (projectId: string, id: string, newDate: string, reason: string) =>
+    call<ReleaseDetail>(`/api/projects/${projectId}/releases/${id}/date`, json('POST', { newDate, reason })),
   rules: (projectId: string) => call<ProjectRule[]>(`/api/projects/${projectId}/rules`),
   saveRule: (projectId: string, r: { kind: string; pattern: string; meaning: string; source?: string }) =>
     call<ProjectRule>(`/api/projects/${projectId}/rules`, json('POST', r)),

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { DEFAULT_POLICY, isPolicy, type Policy } from '../model/policy.js';
 import type { RawTestCase } from '../model/test-model.js';
 import { type ProjectRule, type RuleKind, ruleKey } from '../parser/rules.js';
+import type { ReleaseStatus } from '../releases/impact.js';
 import { type ArtifactStore, type FileFacts, isRef } from './artifacts.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
@@ -81,6 +82,13 @@ export interface TestCaseRecord {
   lastExecutionId?: string;
   lastRunAt?: string;
   runCount: number;
+  /** `draft` until a tester approves it; only approved cases are offered in Web Automation. */
+  approval: 'draft' | 'approved';
+  approvedAt?: string;
+  /** The version of the case a script was last recorded for. The script is out of date when this is behind `version`. */
+  recordedVersion?: number;
+  recordedAt?: string;
+  recordedJobId?: string;
 }
 
 export interface TestCaseRun {
@@ -94,6 +102,51 @@ export interface TestCaseRun {
   finishedAt?: string;
   summary?: string;
   durationMs?: number;
+}
+
+export interface ReleaseRecord {
+  id: string;
+  projectId: string;
+  name: string;
+  version: string;
+  scope: string;
+  status: ReleaseStatus;
+  teamSize: number;
+  startDate?: string;
+  /** The date when the scope was locked, and the date now. They differ once the release has slipped. */
+  baselineDate: string;
+  dueDate: string;
+  baselinedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReleaseFeature {
+  id: string;
+  releaseId: string;
+  title: string;
+  description: string;
+  requirementId?: string;
+  effortDays: number;
+  status: 'planned' | 'in-progress' | 'done';
+  addedAfterBaseline: boolean;
+  removed: boolean;
+  /** Test cases (their ids in the project) that cover the feature. */
+  caseIds: string[];
+  createdAt: string;
+}
+
+export interface ReleaseChange {
+  id: string;
+  releaseId: string;
+  at: string;
+  kind: 'feature-added' | 'feature-removed' | 'date-changed' | 'scope-locked';
+  featureId?: string;
+  summary: string;
+  reason: string;
+  effortDays: number;
+  oldDate?: string;
+  newDate?: string;
 }
 
 export interface Environment {
@@ -928,6 +981,218 @@ export class Store {
     return runs.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
   }
 
+  /** Approving a case offers it in Web Automation; taking the approval back removes it from there (its script is kept). */
+  async setApproval(projectId: string, extId: string, approval: 'draft' | 'approved'): Promise<TestCaseRecord | undefined> {
+    const r = await this.db.run('UPDATE test_cases SET approval_status = ?, approved_at = ? WHERE project_id = ? AND ext_id = ? AND deleted_at IS NULL', [
+      approval,
+      approval === 'approved' ? now() : null,
+      projectId,
+      extId,
+    ]);
+    if (!r.changes) return undefined;
+    const record = await this.testCase(projectId, extId);
+    if (record) await this.audit(approval === 'approved' ? 'testcase.approve' : 'testcase.unapprove', 'testcase', record.id, projectId, { ext_id: extId });
+    return record;
+  }
+
+  /** A script was generated for this version of the case. */
+  async markRecorded(projectId: string, extId: string, version: number, jobId: string): Promise<void> {
+    await this.db.run('UPDATE test_cases SET recorded_version = ?, recorded_at = ?, recorded_job_id = ? WHERE project_id = ? AND ext_id = ?', [
+      version,
+      now(),
+      jobId,
+      projectId,
+      extId,
+    ]);
+  }
+
+  // Releases: scope, date, features, and every change after the scope was locked
+
+  async releases(projectId?: string): Promise<ReleaseRecord[]> {
+    const rows = projectId
+      ? await this.db.all<Row>('SELECT * FROM releases WHERE project_id = ? AND deleted_at IS NULL ORDER BY due_date, created_at', [projectId])
+      : await this.db.all<Row>('SELECT * FROM releases WHERE deleted_at IS NULL ORDER BY due_date, created_at');
+    return rows.map(toRelease);
+  }
+
+  async release(projectId: string, id: string): Promise<ReleaseRecord | undefined> {
+    const r = await this.db.get<Row>('SELECT * FROM releases WHERE project_id = ? AND id = ? AND deleted_at IS NULL', [projectId, id]);
+    return r && toRelease(r);
+  }
+
+  async createRelease(
+    projectId: string,
+    r: { name: string; version: string; scope: string; teamSize: number; startDate?: string; plannedDate: string },
+  ): Promise<ReleaseRecord> {
+    const id = newId('REL');
+    const at = now();
+    await this.db.run(
+      `INSERT INTO releases (id, project_id, name, version, scope, status, team_size, start_date, baseline_date, due_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?)`,
+      [id, projectId, r.name, r.version, r.scope, r.teamSize, r.startDate ?? null, r.plannedDate, r.plannedDate, at, at],
+    );
+    await this.audit('release.create', 'release', id, projectId, { name: r.name });
+    return (await this.release(projectId, id))!;
+  }
+
+  /** Name, scope, team size, start date and status. The date moves only through `moveRelease`, so each move has a reason on record. */
+  async updateRelease(
+    projectId: string,
+    id: string,
+    c: Partial<{ name: string; version: string; scope: string; teamSize: number; startDate: string | null; status: ReleaseStatus }>,
+  ): Promise<ReleaseRecord | undefined> {
+    const found = await this.release(projectId, id);
+    if (!found) return undefined;
+    const next = { ...found, ...c, startDate: c.startDate === undefined ? found.startDate : (c.startDate ?? undefined) };
+    await this.db.run('UPDATE releases SET name = ?, version = ?, scope = ?, team_size = ?, start_date = ?, status = ?, updated_at = ? WHERE id = ?', [
+      next.name,
+      next.version,
+      next.scope,
+      next.teamSize,
+      next.startDate ?? null,
+      next.status,
+      now(),
+      id,
+    ]);
+    // Starting the work locks the scope: from here on a new requirement is a change with a cost.
+    if (next.status === 'in-progress' && !found.baselinedAt) await this.lockScope(projectId, id);
+    return this.release(projectId, id);
+  }
+
+  async deleteRelease(projectId: string, id: string): Promise<boolean> {
+    const r = await this.db.run('UPDATE releases SET deleted_at = ? WHERE project_id = ? AND id = ? AND deleted_at IS NULL', [now(), projectId, id]);
+    return r.changes > 0;
+  }
+
+  /** Locks the scope: the features and the date as they are now become the baseline everything later is measured against. */
+  async lockScope(projectId: string, id: string): Promise<ReleaseRecord | undefined> {
+    const found = await this.release(projectId, id);
+    if (!found || found.baselinedAt) return found;
+    await this.transaction(async (s) => {
+      await s.db.run('UPDATE releases SET baselined_at = ?, baseline_date = due_date, updated_at = ? WHERE id = ?', [now(), now(), id]);
+      await s.addChange(id, { kind: 'scope-locked', summary: `Scope locked with a date of ${found.dueDate}`, newDate: found.dueDate });
+    });
+    return this.release(projectId, id);
+  }
+
+  async releaseFeatures(releaseId: string): Promise<ReleaseFeature[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM release_features WHERE release_id = ? ORDER BY created_at, id', [releaseId]);
+    return rows.map(toFeature);
+  }
+
+  async releaseChanges(releaseId: string): Promise<ReleaseChange[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM release_changes WHERE release_id = ? ORDER BY at, id', [releaseId]);
+    return rows.map(toChange);
+  }
+
+  private async addChange(
+    releaseId: string,
+    c: { kind: ReleaseChange['kind']; summary: string; featureId?: string; reason?: string; effortDays?: number; oldDate?: string; newDate?: string },
+  ): Promise<void> {
+    await this.db.run(
+      'INSERT INTO release_changes (id, release_id, at, kind, feature_id, summary, reason, effort_days, old_date, new_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [newId('RCH'), releaseId, now(), c.kind, c.featureId ?? null, c.summary, c.reason ?? '', c.effortDays ?? 0, c.oldDate ?? null, c.newDate ?? null],
+    );
+  }
+
+  /**
+   * Adds a feature. Before the scope is locked it is part of the baseline. After, it is an added requirement:
+   * the change is recorded with its reason and the date it moves the release to (`newDate`, or unchanged).
+   */
+  async addFeature(
+    release: ReleaseRecord,
+    f: { title: string; description: string; requirementId?: string; effortDays: number; caseIds: string[] },
+    change: { reason: string; newDate?: string } = { reason: '' },
+  ): Promise<ReleaseFeature> {
+    const id = newId('RFT');
+    const late = !!release.baselinedAt;
+    await this.transaction(async (s) => {
+      await s.db.run(
+        `INSERT INTO release_features (id, release_id, title, description, requirement_id, effort_days, added_after_baseline, case_ids, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, release.id, f.title, f.description, f.requirementId ?? null, f.effortDays, late ? 1 : 0, JSON.stringify(f.caseIds), now()],
+      );
+      if (!late) return;
+      const moved = change.newDate && change.newDate !== release.dueDate;
+      if (moved) await s.db.run('UPDATE releases SET due_date = ?, updated_at = ? WHERE id = ?', [change.newDate!, now(), release.id]);
+      await s.addChange(release.id, {
+        kind: 'feature-added',
+        featureId: id,
+        summary: `Added "${f.title}" (${f.effortDays} day(s) of work)`,
+        reason: change.reason,
+        effortDays: f.effortDays,
+        oldDate: release.dueDate,
+        newDate: moved ? change.newDate : release.dueDate,
+      });
+    });
+    return (await this.releaseFeatures(release.id)).find((x) => x.id === id)!;
+  }
+
+  async updateFeature(
+    releaseId: string,
+    id: string,
+    c: Partial<{ title: string; description: string; requirementId: string | null; effortDays: number; status: ReleaseFeature['status']; caseIds: string[] }>,
+  ): Promise<ReleaseFeature | undefined> {
+    const found = (await this.releaseFeatures(releaseId)).find((x) => x.id === id);
+    if (!found) return undefined;
+    const next = { ...found, ...c, requirementId: c.requirementId === undefined ? found.requirementId : (c.requirementId ?? undefined) };
+    await this.db.run('UPDATE release_features SET title = ?, description = ?, requirement_id = ?, effort_days = ?, status = ?, case_ids = ? WHERE id = ?', [
+      next.title,
+      next.description,
+      next.requirementId ?? null,
+      next.effortDays,
+      next.status,
+      JSON.stringify(next.caseIds),
+      id,
+    ]);
+    return (await this.releaseFeatures(releaseId)).find((x) => x.id === id);
+  }
+
+  /** Takes a feature out of the scope. After the lock the row stays (the baseline is still worked out from it) and the removal is a recorded change. */
+  async removeFeature(release: ReleaseRecord, id: string, change: { reason: string; newDate?: string } = { reason: '' }): Promise<boolean> {
+    const found = (await this.releaseFeatures(release.id)).find((x) => x.id === id && !x.removed);
+    if (!found) return false;
+    await this.transaction(async (s) => {
+      // Before the lock the plan is still being drawn: a feature taken out was never in the baseline, so it leaves no trace.
+      if (!release.baselinedAt) {
+        await s.db.run('DELETE FROM release_features WHERE id = ?', [id]);
+        return;
+      }
+      await s.db.run('UPDATE release_features SET removed_at = ? WHERE id = ?', [now(), id]);
+      const moved = change.newDate && change.newDate !== release.dueDate;
+      if (moved) await s.db.run('UPDATE releases SET due_date = ?, updated_at = ? WHERE id = ?', [change.newDate!, now(), release.id]);
+      await s.addChange(release.id, {
+        kind: 'feature-removed',
+        featureId: id,
+        summary: `Removed "${found.title}" (${found.effortDays} day(s) of work)`,
+        reason: change.reason,
+        effortDays: -found.effortDays,
+        oldDate: release.dueDate,
+        newDate: moved ? change.newDate : release.dueDate,
+      });
+    });
+    return true;
+  }
+
+  /** Moves the date. Before the scope is locked this is just planning; after, it is a recorded change with a reason. */
+  async moveRelease(release: ReleaseRecord, newDate: string, reason: string): Promise<ReleaseRecord> {
+    await this.transaction(async (s) => {
+      if (release.baselinedAt) {
+        await s.db.run('UPDATE releases SET due_date = ?, updated_at = ? WHERE id = ?', [newDate, now(), release.id]);
+        await s.addChange(release.id, {
+          kind: 'date-changed',
+          summary: `Date moved from ${release.dueDate} to ${newDate}`,
+          reason,
+          oldDate: release.dueDate,
+          newDate,
+        });
+      } else {
+        await s.db.run('UPDATE releases SET due_date = ?, baseline_date = ?, updated_at = ? WHERE id = ?', [newDate, newDate, now(), release.id]);
+      }
+    });
+    return (await this.release(release.projectId, release.id))!;
+  }
+
   // Project rules (FR-RULE): the answers testers gave in review, kept so the same wording is never asked about again
 
   async rules(projectId: string): Promise<ProjectRule[]> {
@@ -1121,6 +1386,60 @@ function toTestCase(r: Row): TestCaseRecord {
     lastExecutionId: r.last_execution_id === null ? undefined : String(r.last_execution_id),
     lastRunAt: r.last_run_at === null ? undefined : String(r.last_run_at),
     runCount: Number(r.run_count),
+    approval: r.approval_status === 'approved' ? 'approved' : 'draft',
+    approvedAt: r.approved_at === null ? undefined : String(r.approved_at),
+    recordedVersion: r.recorded_version === null ? undefined : Number(r.recorded_version),
+    recordedAt: r.recorded_at === null ? undefined : String(r.recorded_at),
+    recordedJobId: r.recorded_job_id === null ? undefined : String(r.recorded_job_id),
+  };
+}
+
+function toRelease(r: Row): ReleaseRecord {
+  return {
+    id: String(r.id),
+    projectId: String(r.project_id),
+    name: String(r.name),
+    version: String(r.version),
+    scope: String(r.scope),
+    status: String(r.status) as ReleaseStatus,
+    teamSize: Number(r.team_size),
+    startDate: r.start_date === null ? undefined : String(r.start_date),
+    baselineDate: String(r.baseline_date),
+    dueDate: String(r.due_date),
+    baselinedAt: r.baselined_at === null ? undefined : String(r.baselined_at),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  };
+}
+
+function toFeature(r: Row): ReleaseFeature {
+  return {
+    id: String(r.id),
+    releaseId: String(r.release_id),
+    title: String(r.title),
+    description: String(r.description),
+    requirementId: r.requirement_id === null ? undefined : String(r.requirement_id),
+    effortDays: Number(r.effort_days),
+    status: String(r.status) as ReleaseFeature['status'],
+    addedAfterBaseline: Boolean(r.added_after_baseline),
+    removed: r.removed_at !== null,
+    caseIds: JSON.parse(String(r.case_ids)),
+    createdAt: String(r.created_at),
+  };
+}
+
+function toChange(r: Row): ReleaseChange {
+  return {
+    id: String(r.id),
+    releaseId: String(r.release_id),
+    at: String(r.at),
+    kind: String(r.kind) as ReleaseChange['kind'],
+    featureId: r.feature_id === null ? undefined : String(r.feature_id),
+    summary: String(r.summary),
+    reason: String(r.reason),
+    effortDays: Number(r.effort_days),
+    oldDate: r.old_date === null ? undefined : String(r.old_date),
+    newDate: r.new_date === null ? undefined : String(r.new_date),
   };
 }
 

@@ -34,6 +34,9 @@ export const TABLE_ORDER = [
   'explorations',
   'exploration_items',
   'generation_snapshots',
+  'releases',
+  'release_features',
+  'release_changes',
 ] as const;
 
 /** Tables that are not data: the migration log, and the old copy of `verdicts` kept for one release. */

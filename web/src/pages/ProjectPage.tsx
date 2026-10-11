@@ -289,7 +289,7 @@ function WorkbookTab({ project, mode = 'run', onImported }: { project: ProjectVi
 }
 
 /** Every test case written or imported, with its last result and Run again (item 1, item 3). */
-function TestCasesTab({ project }: { project: ProjectView }) {
+export function TestCasesTab({ project }: { project: ProjectView }) {
   const [cases, setCases] = useState<TestCaseRecord[]>();
   const [error, setError] = useState<string>();
   const [importing, setImporting] = useState(false);
@@ -321,7 +321,7 @@ function TestCasesTab({ project }: { project: ProjectView }) {
       </a>
       <span className="muted">
         {cases.length
-          ? `${cases.length} test case(s). Export gives one sheet with every case, its status, the actual result and the screenshot${notRun ? `; ${notRun} not run yet are listed as NOT RUN` : ''}.`
+          ? `${cases.length} test case(s), ${cases.filter((c) => c.approval === 'approved').length} approved (approved ones appear in Web Automation). Export gives one sheet with every case, its status, the actual result and the screenshot${notRun ? `; ${notRun} not run yet are listed as NOT RUN` : ''}.`
           : 'No test cases yet. Import a workbook, or write one in "Single test case".'}
       </span>
     </div>
@@ -358,6 +358,7 @@ function TestCasesTab({ project }: { project: ProjectView }) {
           <tr>
             <th>Test case</th>
             <th>Steps</th>
+            <th>Approval</th>
             <th>Last result</th>
             <th>Last run</th>
             <th>Runs</th>
@@ -374,6 +375,18 @@ function TestCasesTab({ project }: { project: ProjectView }) {
                 <span className="case-title">{c.title}</span>
               </td>
               <td>{c.raw.steps.split(/\r?\n/).filter(Boolean).length}</td>
+              <td>
+                {c.approval === 'approved' ? <span className="badge PASS">Approved</span> : <span className="badge job">Draft</span>}{' '}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await api.setApproval(project.id, c.extId, c.approval === 'approved' ? 'draft' : 'approved');
+                    load();
+                  }}
+                >
+                  {c.approval === 'approved' ? 'Unapprove' : 'Approve'}
+                </button>
+              </td>
               <td>{c.lastStatus ? <StatusBadge status={c.lastStatus} /> : <span className="muted">not run</span>}</td>
               <td>{when(c.lastRunAt)}</td>
               <td>{c.runCount}</td>

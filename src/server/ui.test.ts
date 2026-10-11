@@ -51,7 +51,7 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
   });
 
   it('creates a project with its run settings, without showing the password again', async () => {
-    await page.goto(url);
+    await page.goto(`${url}/projects`);
     await page.getByRole('button', { name: 'New project' }).click();
     await page.getByLabel('Project name').fill('Demo app');
     await page.getByLabel('Application URL').fill(demo.url);
@@ -117,6 +117,47 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     // Item 2 and 4: each step with its time and screenshot, and the video.
     await page.getByRole('button', { name: /Page after S1, full size/ }).waitFor();
     await page.locator('video').first().waitFor({ state: 'attached' });
+  });
+
+  it('has a left menu: approve a test case, find it in Web Automation, add an assertion, plan a release', async () => {
+    await page.goto(`${url}/test-cases`);
+    await page.getByRole('heading', { name: 'Test Cases' }).waitFor();
+    await page
+      .getByRole('row', { name: /Security details open/ })
+      .getByRole('button', { name: 'Approve', exact: true })
+      .click();
+    await page.getByText('Approved', { exact: true }).first().waitFor();
+
+    await page.getByRole('link', { name: 'Web Automation' }).click();
+    const row = page.getByRole('row', { name: /Security details open/ });
+    await row.waitFor();
+    await row.getByRole('button', { name: 'Assertions' }).click();
+    await page.getByLabel('Search validations').fill('title');
+    await page
+      .getByRole('button', { name: /Page title/ })
+      .first()
+      .click();
+    await page.getByLabel('Assertion sentence').fill('Page title is "Demo"');
+    await page.getByRole('button', { name: 'Add assertion' }).click();
+    await page.getByText('Record it again', { exact: false }).waitFor();
+
+    await page.getByRole('link', { name: 'Releases' }).click();
+    await page.getByRole('button', { name: 'New release' }).click();
+    await page.getByLabel('Name', { exact: true }).fill('R1');
+    await page.getByLabel('Release date').fill('2030-01-31');
+    await page.getByLabel('Feature 1', { exact: true }).fill('Login');
+    await page.getByRole('button', { name: 'Create release' }).click();
+    await page.getByRole('button', { name: 'Lock the scope' }).click();
+    await page.getByLabel('Title', { exact: true }).fill('Export');
+    await page.getByLabel('Effort (working days)').fill('5');
+    await page.getByText('Effect of this requirement').waitFor();
+    await page.getByLabel('Why is it added?').fill('Customer request');
+    await page.getByRole('button', { name: 'Add requirement and update the date' }).click();
+    await page.getByText('added after lock').first().waitFor();
+
+    await page.getByRole('link', { name: 'Dashboard' }).click();
+    await page.getByRole('heading', { name: 'Releases in progress' }).waitFor();
+    await page.getByRole('link', { name: 'R1' }).waitFor();
   });
 
   it('had no errors in the page', () => {

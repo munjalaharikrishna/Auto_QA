@@ -12,11 +12,12 @@ import { readWorkbook } from '../importer/workbook.js';
 import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
-import { RULE_KINDS, ruleKey } from '../parser/rules.js';
+import { RULE_KINDS } from '../parser/rules.js';
 import type { TestVerdict } from '../results/verdict.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
 import { reviewGroups } from './review-groups.js';
+import { registerAutomationRoutes } from './routes-automation.js';
 import type { Project, Store } from './store.js';
 
 /**
@@ -409,6 +410,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     runner.enqueue(job);
     return reply.status(202).send(job);
   });
+
+  registerAutomationRoutes({ app, store, runner, projectOf, caseOf, notFound, bad });
 
   // Jobs, questions, results (FR-RV-02, FR-HI-01, FR-HI-06)
 

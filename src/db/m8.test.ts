@@ -149,7 +149,7 @@ describe('executions and results (FR-DB-07, FR-DB-11, FR-DB-12)', () => {
       r?.steps.map((s) => [s.id, s.result, s.screenshotRef]),
       [
         ['S1', 'passed', undefined],
-        ['S2', 'passed', 'local:projects/p/runs/' + execId + '/evidence/S2.png'],
+        ['S2', 'passed', `local:projects/p/runs/${execId}/evidence/S2.png`],
       ],
     );
     assert.deepEqual(
@@ -388,7 +388,7 @@ describe('bundle, restore, verify (FR-DB-15, FR-DB-16)', () => {
     const peek = await SqliteDriver.open(at('bundle-src.db'));
     const manifest = await exportBundle(peek, MIGRATIONS, at('bundle'));
     await peek.close();
-    assert.equal(manifest.schemaVersion, 6);
+    assert.equal(manifest.schemaVersion, 7);
     assert.ok(manifest.tables.test_results.rows >= 1 && manifest.tables.evidence.rows === 1);
     assert.ok(!readdirSync(at('bundle')).includes('verdicts_legacy.ndjson'), 'the legacy copy is not exported');
 
@@ -458,7 +458,7 @@ describe('bundle, restore, verify (FR-DB-15, FR-DB-16)', () => {
     await c.close();
 
     const result = await restoreDatabase(live, backupFile, MIGRATIONS, at('restore-backups'));
-    assert.equal(result.version, 6);
+    assert.equal(result.version, 7);
     assert.match(result.previous ?? '', /before-restore\.db$/);
     const restored = await Store.open(live);
     assert.deepEqual(

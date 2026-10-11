@@ -419,3 +419,175 @@ dialog {
 .explain ul {
   margin: 0;
 }
+
+/* Left menu */
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+aside.side {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  width: 220px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 0.75rem;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+aside.side .brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 0 0.5rem;
+}
+aside.side .tagline {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  padding: 0 0.5rem 0.75rem;
+}
+aside.side nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+aside.side nav.more {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 0.5rem;
+}
+aside.side nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+aside.side nav a:hover {
+  background: var(--sunk);
+}
+aside.side nav a.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+aside.side .icon {
+  width: 1.2rem;
+  text-align: center;
+}
+.shell > main {
+  flex: 1;
+  min-width: 0;
+  max-width: 1180px;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .shell {
+    flex-direction: column;
+  }
+  aside.side {
+    position: static;
+    height: auto;
+    width: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  aside.side nav,
+  aside.side nav.more {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+  aside.side .tagline {
+    display: none;
+  }
+}
+
+/* Dashboard, releases */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+.tile .num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.tile .label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.bar {
+  display: flex;
+  height: 0.6rem;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+.bar > span.pass {
+  background: var(--pass-ink);
+}
+.bar > span.fail {
+  background: var(--fail-ink);
+}
+.bar > span.other {
+  background: var(--review-ink);
+}
+.health {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.health.ok,
+.health.done {
+  background: var(--pass-bg);
+  color: var(--pass-ink);
+}
+.health.watch {
+  background: var(--review-bg);
+  color: var(--review-ink);
+}
+.health.late {
+  background: var(--fail-bg);
+  color: var(--fail-ink);
+}
+.codebox {
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+  overflow: auto;
+  max-height: 22rem;
+  white-space: pre;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+button.chip {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+}
