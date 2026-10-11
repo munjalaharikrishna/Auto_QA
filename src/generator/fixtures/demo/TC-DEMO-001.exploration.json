@@ -1,0 +1,248 @@
+{
+  "testId": "TC-DEMO-001",
+  "title": "Verify a user can log in",
+  "baseUrl": "http://127.0.0.1:4173",
+  "testIdAttribute": "data-testid",
+  "startedAt": "2026-09-30T10:32:48.844Z",
+  "finishedAt": "2026-09-30T10:32:54.204Z",
+  "status": "complete",
+  "items": [
+    {
+      "id": "S1",
+      "kind": "step",
+      "raw": "Open Login page",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "navigate",
+      "effect": "url /"
+    },
+    {
+      "id": "S2",
+      "kind": "step",
+      "raw": "Enter valid username",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "fill",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('textbox', { name: 'Username', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "textbox",
+        "name": "Username"
+      },
+      "alternatives": ["getByRole('textbox', { name: 'Username' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e5",
+          "role": "textbox",
+          "name": "Username",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "textbox",
+        "name": "Username",
+        "tag": "input",
+        "label": "Username",
+        "id": "username",
+        "nameAttr": "username",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "value set",
+      "url": "http://127.0.0.1:4173/"
+    },
+    {
+      "id": "S3",
+      "kind": "step",
+      "raw": "Enter valid password",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "fill",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('textbox', { name: 'Password', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "textbox",
+        "name": "Password"
+      },
+      "alternatives": ["getByRole('textbox', { name: 'Password' })  (MCP, after action)"],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e7",
+          "role": "textbox",
+          "name": "Password",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "textbox",
+        "name": "Password",
+        "tag": "input",
+        "type": "password",
+        "label": "Password",
+        "id": "password",
+        "nameAttr": "password",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "value set",
+      "url": "http://127.0.0.1:4173/"
+    },
+    {
+      "id": "S4",
+      "kind": "step",
+      "raw": "Click the Login button",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "action": "click",
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByTestId('login')",
+        "strategy": "testid",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "button",
+        "name": "Login"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "e9",
+          "role": "button",
+          "name": "Login",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "button",
+        "name": "Login",
+        "tag": "button",
+        "type": "submit",
+        "testId": "login",
+        "text": "Login",
+        "form": "login",
+        "context": "form \"Login\""
+      },
+      "page": {
+        "name": "LoginPage",
+        "path": "/",
+        "title": "Login · Demo"
+      },
+      "effect": "url /dashboard",
+      "url": "http://127.0.0.1:4173/dashboard"
+    },
+    {
+      "id": "A1",
+      "kind": "check",
+      "raw": "User is redirected to Dashboard page.",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "url",
+      "observed": {
+        "url": "http://127.0.0.1:4173/dashboard",
+        "title": "Dashboard · Demo"
+      }
+    },
+    {
+      "id": "A2",
+      "kind": "check",
+      "raw": "Dashboard heading is displayed.",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "visible",
+      "observed": {
+        "url": "http://127.0.0.1:4173/dashboard",
+        "title": "Dashboard · Demo"
+      },
+      "resolvedBy": "rules",
+      "locator": {
+        "code": "getByRole('heading', { name: 'Dashboard', exact: true })",
+        "strategy": "role",
+        "source": "ladder",
+        "validated": true
+      },
+      "element": {
+        "role": "heading",
+        "name": "Dashboard"
+      },
+      "alternatives": [],
+      "score": 1,
+      "candidates": [
+        {
+          "ref": "f1e2",
+          "role": "heading",
+          "name": "Dashboard",
+          "score": 1
+        }
+      ],
+      "fingerprint": {
+        "role": "heading",
+        "name": "Dashboard",
+        "tag": "h1",
+        "text": "Dashboard"
+      },
+      "page": {
+        "name": "DashboardPage",
+        "path": "/dashboard",
+        "title": "Dashboard · Demo"
+      }
+    },
+    {
+      "id": "A3",
+      "kind": "check",
+      "raw": "",
+      "phase": "test",
+      "status": "done",
+      "warnings": [],
+      "type": "health",
+      "observed": {
+        "url": "http://127.0.0.1:4173/dashboard",
+        "title": "Dashboard · Demo"
+      }
+    }
+  ],
+  "pages": {
+    "LoginPage": {
+      "path": "/",
+      "title": "Login · Demo"
+    },
+    "DashboardPage": {
+      "path": "/dashboard",
+      "title": "Dashboard · Demo"
+    }
+  },
+  "learnedPageUrls": {
+    "Login": "/",
+    "Dashboard": "/dashboard"
+  }
+}

@@ -25,7 +25,7 @@ export function checkQuality(model: TestModel, config: ParserConfig): ModelWarni
   const first = model.steps[0];
   const firstIsCheck = model.assertions.some((a) => a.source === 'step' && first && stepNumber(a.step) < stepNumber(first.id));
   const hasStart = model.preconditions.some((p) => p.kind === 'flow' || p.kind === 'logged-in');
-  if ((!first || first.action !== 'navigate' || firstIsCheck) && !hasStart) {
+  if ((first?.action !== 'navigate' || firstIsCheck) && !hasStart) {
     warnings.push({
       code: 'NO_START',
       text: 'The test does not say where it starts. Make step 1 "Open <page>", or add a precondition such as "On Login page".',

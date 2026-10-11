@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
+import type { ParserRules } from './rules.js';
 
 /**
  * Loads the parser's vocabulary from lexicon.json and synonyms.json (NFR-10).
@@ -11,11 +12,21 @@ const wordMap = z.record(z.string(), z.string());
 
 const LexiconSchema = z.object({
   actions: z.object({
-    navigate: words, fill: words, clear: words, click: words, select: words, check: words,
-    uncheck: words, hover: words, upload: words, press: words, refresh: words,
+    navigate: words,
+    fill: words,
+    clear: words,
+    click: words,
+    select: words,
+    check: words,
+    uncheck: words,
+    hover: words,
+    upload: words,
+    press: words,
+    refresh: words,
   }),
   browserPhrases: z.object({ back: words, forward: words }),
   assertionVerbs: words,
+  browserStart: z.object({ phrases: words }),
   assertionMarkers: words,
   negations: wordMap,
   vagueOutcomes: words,
@@ -36,6 +47,8 @@ export type Lexicon = z.infer<typeof LexiconSchema>;
 const SynonymsSchema = z.object({ groups: z.array(words) });
 
 export interface ParserConfig {
+  /** The project's own rules: wording it already explained, and words it already named (FR-RULE). */
+  rules?: ParserRules;
   lexicon: Lexicon;
   /** Synonym groups, each word already normalised with `normKey`. */
   synonyms: string[][];
@@ -62,6 +75,11 @@ export function loadParserConfig(
   return { lexicon, synonyms };
 }
 
+/** The same vocabulary with a project's rules added. */
+export function withRules(config: ParserConfig, rules: ParserRules): ParserConfig {
+  return { ...config, rules };
+}
+
 let cached: ParserConfig | undefined;
 export function defaultParserConfig(): ParserConfig {
   return (cached ??= loadParserConfig());
@@ -81,7 +99,9 @@ function stripComments(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stripComments);
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).filter(([k]) => !k.startsWith('$')).map(([k, v]) => [k, stripComments(v)]),
+      Object.entries(value)
+        .filter(([k]) => !k.startsWith('$'))
+        .map(([k, v]) => [k, stripComments(v)]),
     );
   }
   return value;

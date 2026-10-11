@@ -3,3 +3,6 @@ node_modules/
 .playwright-mcp/
 *.log
 .env
+workspaces/
+examples/demo-app/*.xlsx
+web/dist/

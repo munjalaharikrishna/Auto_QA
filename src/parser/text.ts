@@ -40,7 +40,13 @@ export function splitNumbered(cell: string): NumberedLine[] {
       .map((line, i) => ({ n: i + 1, text: line }));
   }
   return markers
-    .map((m, i) => ({ n: m.n, text: text.slice(m.end, markers[i + 1]?.index ?? text.length).replace(/\s*\n\s*/g, ' ').trim() }))
+    .map((m, i) => ({
+      n: m.n,
+      text: text
+        .slice(m.end, markers[i + 1]?.index ?? text.length)
+        .replace(/\s*\n\s*/g, ' ')
+        .trim(),
+    }))
     .filter((l) => l.text);
 }
 
@@ -58,7 +64,10 @@ export function splitSentences(text: string): string[] {
 /** Splits on `separator`, never inside a quoted string. */
 export function splitOutsideQuotes(text: string, separator: RegExp): string[] {
   const p = protectQuotes(text);
-  return p.text.split(separator).map((part) => p.restore(part).trim()).filter(Boolean);
+  return p.text
+    .split(separator)
+    .map((part) => p.restore(part).trim())
+    .filter(Boolean);
 }
 
 /** Removes decoration that is not part of an element name: arrows, trailing punctuation, extra spaces (FR-PA-05). */
@@ -136,7 +145,7 @@ export function escapeRegex(text: string): string {
 /** Regex for a phrase as whole words, with any run of spaces between the words. */
 export function phraseRegex(phrase: string, flags = 'i'): RegExp {
   const body = phrase.trim().split(/\s+/).map(escapeRegex).join('\\s+');
-  return new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, flags.includes('u') ? flags : flags + 'u');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, flags.includes('u') ? flags : `${flags}u`);
 }
 
 /** Verb forms a tester might use: click → clicks, clicked, clicking; type → typed, typing; submit → submitted. */

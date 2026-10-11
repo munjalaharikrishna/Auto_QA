@@ -1,0 +1,64 @@
+{
+  "username": {
+    "locator": "getByRole('textbox', { name: 'Username', exact: true })",
+    "strategy": "role",
+    "page": "LoginPage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:32:54.204Z",
+    "fingerprint": {
+      "role": "textbox",
+      "name": "Username",
+      "tag": "input",
+      "label": "Username",
+      "id": "username",
+      "nameAttr": "username",
+      "form": "login",
+      "context": "form \"Login\""
+    },
+    "alternatives": [
+      "getByRole('textbox', { name: 'Username' })"
+    ],
+    "history": []
+  },
+  "password": {
+    "locator": "getByRole('textbox', { name: 'Password', exact: true })",
+    "strategy": "role",
+    "page": "LoginPage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:32:54.204Z",
+    "fingerprint": {
+      "role": "textbox",
+      "name": "Password",
+      "tag": "input",
+      "type": "password",
+      "label": "Password",
+      "id": "password",
+      "nameAttr": "password",
+      "form": "login",
+      "context": "form \"Login\""
+    },
+    "alternatives": [
+      "getByRole('textbox', { name: 'Password' })"
+    ],
+    "history": []
+  },
+  "loginButton": {
+    "locator": "getByTestId('login')",
+    "strategy": "testid",
+    "page": "LoginPage",
+    "validated": true,
+    "validatedAt": "2026-09-30T10:32:54.204Z",
+    "fingerprint": {
+      "role": "button",
+      "name": "Login",
+      "tag": "button",
+      "type": "submit",
+      "testId": "login",
+      "text": "Login",
+      "form": "login",
+      "context": "form \"Login\""
+    },
+    "alternatives": [],
+    "history": []
+  }
+}

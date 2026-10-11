@@ -1,9 +1,20 @@
-import type { AssertionType } from '../model/test-model.js';
+import type { Assertion, AssertionOptions, AssertionType } from '../model/test-model.js';
+import { parseValidation } from '../validations/registry.js';
 import type { ParserConfig } from './config.js';
-import { cleanName, extractTarget, stripArticles, type Target } from './target.js';
+import { parseIntent } from './intents.js';
+import { cleanName, extractContainer, extractTarget, stripArticles, type Target } from './target.js';
 import {
-  clean, containsPhrase, findQuoted, hasProtectedQuote, looksLikeUrl, matchLeading, phraseRegex,
-  protectQuotes, splitOutsideQuotes,
+  clean,
+  containsPhrase,
+  findQuoted,
+  hasProtectedQuote,
+  looksLikeUrl,
+  matchLeading,
+  phraseRegex,
+  protectQuotes,
+  removePhrases,
+  splitOutsideQuotes,
+  unquote,
 } from './text.js';
 
 /**
@@ -25,6 +36,12 @@ export interface ParsedAssertion {
   exact?: boolean;
   roleHint?: string;
   expected?: string;
+  /** The general outcome this check makes concrete, e.g. LOGIN_REJECTED. */
+  intent?: string;
+  options?: AssertionOptions;
+  other?: Assertion['other'];
+  /** The name is a part of the page: look for the form or region holding it. */
+  container?: boolean;
   match?: 'page' | 'url';
   negated: boolean;
   reason?: { code: string; text: string };
@@ -39,29 +56,61 @@ const PREDICATE = '(?:displayed|shown|visible|present|appears?|appeared|seen|ren
  * `bare` means the text came after "Verify"/"Observe", so a plain name is a visibility check.
  */
 export function parseAssertions(text: string, config: ParserConfig, bare: boolean): ParsedAssertion[] {
+  // "Both username and password fields are cleared": one check for each field.
+  const whole = intentsOf(text, config);
+  if (whole) return whole;
   const parts = splitOutsideQuotes(text, /\s+and\s+/i);
   if (parts.length > 1) {
-    const parsed = parts.map((p) => parseAssertion(p, config, false));
+    const parsed = parts.flatMap((p) => parseAssertions(p, config, false));
     if (parsed.every((p) => p.type)) return parsed;
+    // "Login is rejected and an appropriate error is displayed": when a part is an outcome the platform knows, the
+    // parts are separate checks, so one that cannot be read does not hide the ones that can (RW-E05).
+    if (parsed.some((p) => p.intent) && parsed.length === parts.length) return parsed;
   }
   return [parseAssertion(text, config, bare)];
 }
 
-export function parseAssertion(text: string, config: ParserConfig, bare: boolean): ParsedAssertion {
-  const { lexicon } = config;
+/** The checks of an outcome intent, for a sentence that is one (FR-PA-18). */
+function intentsOf(text: string, config: ParserConfig): ParsedAssertion[] | undefined {
   const p = protectQuotes(clean(text));
   let s = p.text;
+  const verb = matchLeading(
+    s,
+    config.lexicon.assertionVerbs.map((v) => [v, v] as [string, string]),
+    true,
+  );
+  if (verb) s = verb.rest;
+  s = removePhrases(s.replace(/^that\s+/i, ''), config.lexicon.fillers).text;
+  return parseIntent(s, config, p.restore);
+}
 
-  const verb = matchLeading(s, lexicon.assertionVerbs.map((v) => [v, v] as [string, string]), true);
+export function parseAssertion(text: string, config: ParserConfig, bare: boolean): ParsedAssertion {
+  const { lexicon } = config;
+  const outcome = intentsOf(text, config);
+  if (outcome) return outcome[0];
+  // Arrows are decoration in a name ("Apply →"), but separate the keys in "Tab goes Email → Password → Login".
+  const p = protectQuotes(clean(/\btab\b/i.test(text) ? text.replace(/\s*(?:→|➜|➔|->|=>|»)\s*/g, ', ') : text));
+  let s = p.text;
+
+  const verb = matchLeading(
+    s,
+    lexicon.assertionVerbs.map((v) => [v, v] as [string, string]),
+    true,
+  );
   if (verb) {
     s = verb.rest;
     bare = true;
   }
   s = s.replace(/^that\s+/i, '');
+  // "User is successfully redirected": the filler is not part of the check (RW-E01).
+  s = removePhrases(s, lexicon.fillers).text;
 
   // "Error message: Invalid credentials": the text after the colon is taken as written, like a quote,
   // so words such as "do not" inside the message are not read as negation.
-  const labelled = /^(?:an?\s+|the\s+)?(?:(?:error|success|warning|info|validation)\s+)?(?:message|error|text|alert|toast|notification|banner|title|heading)\s*[:=]\s*(.+)$/i.exec(s);
+  const labelled =
+    /^(?:an?\s+|the\s+)?(?:(?:error|success|warning|info|validation)\s+)?(?:message|error|text|alert|toast|notification|banner|title|heading)\s*[:=]\s*(.+)$/i.exec(
+      s,
+    );
   if (labelled) {
     return { type: 'text', expected: expectedText(p.restore(labelled[1])), alternatives: [], negated: false, warnings: [] };
   }
@@ -83,13 +132,25 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     .replace(/\b(?:should|must|will|shall|can|could)\s+/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
-  const subject = matchLeading(s, lexicon.subjects.map((w) => [w, w] as [string, string]));
+  const subject = matchLeading(
+    s,
+    lexicon.subjects.map((w) => [w, w] as [string, string]),
+  );
   if (subject?.rest) s = subject.rest;
+  // "User able to navigate to PIM page", "User is able to open Reports": what the user can reach.
+  s = s.replace(/^(?:is\s+|are\s+|be\s+)?(?:able|allowed)\s+to\s+/i, '');
+  const checkText = s;
+  // Where on the page something is cannot be checked; the check keeps the element.
+  const positionWarnings: ParsedAssertion['warnings'] = [];
+  s = s.replace(POSITION, (found) => {
+    positionWarnings.push({ code: 'POSITION_IGNORED', text: `"${found.trim()}" ignored: where something is on the page is not checked` });
+    return '';
+  });
 
   const result = (r: Omit<ParsedAssertion, 'negated' | 'alternatives' | 'warnings'> & Partial<ParsedAssertion>): ParsedAssertion => ({
     alternatives: [],
-    warnings: [],
     ...r,
+    warnings: [...positionWarnings, ...(r.warnings ?? [])],
     negated: r.negated ?? negated,
   });
   const named = (raw: string) => extractTarget(p.restore(raw), config);
@@ -104,9 +165,53 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     const r = p.restore(raw).trim();
     if (looksLikeUrl(r)) return result({ type, expected: r.replace(/[.,;]+$/, ''), match: 'url' });
     const name = cleanName(r, config);
-    return name.name ? result({ type, expected: name.name, match: 'page', exact: name.exact }) : result({ type });
+    if (!name.name) return result({ type });
+    // "home/dashboard page", "Dashboard or Home": either name is the page; the one the application goes to is learned (RW-E02).
+    const aliases = name.name.split(/\s*(?:\/|\bor\b)\s*/i).filter(Boolean);
+    if (aliases.length > 1 && !name.exact) {
+      return result({
+        type,
+        expected: aliases[0],
+        alternatives: aliases.slice(1),
+        match: 'page',
+        warnings: [{ code: 'PAGE_ALIAS', text: `"${name.name}" is either page: the one the application goes to is used.` }],
+      });
+    }
+    return result({ type, expected: name.name, match: 'page', exact: name.exact });
   };
   let m: RegExpExecArray | null;
+
+  // 0. The checks of the validation catalogue (VALIDATIONS.md): layout, counts, tables, messages, network…
+  // They read the sentence as the tester wrote it, before the position words are taken off.
+  const known = parseValidation({
+    text: checkText,
+    negated,
+    config,
+    value: (t) => unquote(p.restore(t).trim()),
+    quoted: (t) => hasProtectedQuote(t),
+    name: (raw) => extractTarget(p.restore(raw), config),
+    container: (raw) => extractContainer(p.restore(raw), config),
+  });
+  if (known) {
+    const t = known.target;
+    const needsTarget = known.spec.targets !== 'none';
+    if (needsTarget && !t?.target && !t?.roleHint) return unparsed('NO_TARGET', 'Say which element to check.');
+    if (known.spec.targets === 'two' && !known.other?.target) return unparsed('NO_TARGET', 'Say which second element to compare with.');
+    // The words about where it is on the page are part of this check, so they are not "ignored".
+    return {
+      type: known.type,
+      target: t?.target,
+      alternatives: t?.alternatives ?? [],
+      exact: t?.exact,
+      roleHint: t?.roleHint,
+      container: t?.container,
+      expected: known.expected,
+      options: known.options,
+      other: known.other && { target: known.other.target, alternatives: known.other.alternatives, exact: known.other.exact, roleHint: known.other.roleHint },
+      negated: known.negated ?? negated,
+      warnings: t?.warnings ?? [],
+    };
+  }
 
   // 1. Stays on a page.
   if ((m = /^(?:is\s+|are\s+)?(?:still\s+)?(?:remains?|remained|stays?|stayed|is kept|kept)\s+(?:still\s+)?(?:on|at|in)\s+(.+)$/i.exec(s))) {
@@ -115,7 +220,10 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
 
   // 2. Goes to a page.
   if (
-    (m = /^(?:is\s+|are\s+|gets\s+|was\s+)?(?:redirected|navigated|taken|sent|moved|brought|directed|forwarded|routed)\s+(?:back\s+)?(?:to|towards)\s+(.+)$/i.exec(s)) ||
+    (m =
+      /^(?:is\s+|are\s+|gets\s+|was\s+)?(?:redirected|navigated|taken|sent|moved|brought|directed|forwarded|routed)\s+(?:back\s+)?(?:to|towards)\s+(.+)$/i.exec(
+        s,
+      )) ||
     (m = /^(?:lands?|landed|landing|arrives?)\s+(?:on|at)\s+(.+)$/i.exec(s)) ||
     (m = /^(?:open|opens|access|accesses|reach|reaches|visit|visits|(?:navigate|navigates|go|goes|get|gets)\s+to)\s+(.+)$/i.exec(s))
   ) {
@@ -140,7 +248,12 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   }
 
   // 4. Element state.
-  if ((m = /^(.+?)\s+(?:is\s+|are\s+|becomes?\s+|gets\s+|remains?\s+|stays?\s+)?(enabled|disabled|checked|unchecked|selected|ticked|unticked|greyed out|grayed out)$/i.exec(s))) {
+  if (
+    (m =
+      /^(.+?)\s+(?:is\s+|are\s+|becomes?\s+|gets\s+|remains?\s+|stays?\s+)?(enabled|disabled|checked|unchecked|selected|ticked|unticked|greyed out|grayed out)$/i.exec(
+        s,
+      ))
+  ) {
     const state = m[2].toLowerCase();
     if (state === 'enabled') return withTarget('enabled', m[1]);
     if (state === 'disabled' || state.endsWith('out')) return withTarget('disabled', m[1]);
@@ -164,16 +277,30 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
     }
 
     let target: string | undefined;
-    const where = /^(?:in|under|below|above|near|next to|inside|within|on|beside)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(afterRest);
+    const where = /^(?:in|under|below|above|near|next to|inside|within|on|beside)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(
+      afterRest,
+    );
     const owner = /^(.+?)\s+(?:shows|displays|contains|has|reads|says|shows the text|displays the text)$/i.exec(before);
     if (where) target = where[1];
     else if (owner) target = owner[1];
     const t = target ? extractTarget(target, config) : undefined;
-    return result({ type: 'text', expected: q.value, target: t?.target, alternatives: t?.alternatives ?? [], roleHint: t?.roleHint, warnings: t?.warnings ?? [] });
+    return result({
+      type: 'text',
+      expected: q.value,
+      target: t?.target,
+      alternatives: t?.alternatives ?? [],
+      roleHint: t?.roleHint,
+      warnings: t?.warnings ?? [],
+    });
   }
 
   // 6. Message text without quotes: "A message saying Saved is shown".
-  if ((m = /\b(?:message|error|text|alert|notification|toast|banner)\s+(?:saying|stating|reading|that says|which says|with text|with the text|containing)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(s))) {
+  if (
+    (m =
+      /\b(?:message|error|text|alert|notification|toast|banner)\s+(?:saying|stating|reading|that says|which says|with text|with the text|containing)\s+(.+?)(?:\s+(?:is\s+|are\s+)?(?:displayed|shown|visible|appears?))?$/i.exec(
+        s,
+      ))
+  ) {
     return result({ type: 'text', expected: expectedText(p.restore(m[1])) });
   }
 
@@ -194,8 +321,15 @@ export function parseAssertion(text: string, config: ParserConfig, bare: boolean
   if (vague) {
     return unparsed('VAGUE_CHECK', `"${vague}" cannot be checked. Say what the user sees, e.g. Error "…" is shown, or User is redirected to Dashboard.`);
   }
-  return unparsed('NO_PATTERN', 'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled.');
+  return unparsed(
+    'NO_PATTERN',
+    'No check pattern matched. Examples: X is displayed; Error "…" is shown; User is redirected to X; User stays on X; X is disabled; Login form is in the middle of the page; 6 products are shown; Table columns are Name, Email. The Writing guide lists every check.',
+  );
 }
+
+/** "at middle of the page", "on the top right of the screen", "on the page". */
+const POSITION =
+  /\s+(?:at|in|on|towards)\s+(?:the\s+)?(?:(?:top|bottom|middle|centre|center|left|right|upper|lower)(?:\s+(?:left|right))?(?:\s+(?:side|part|corner|half))?\s+of\s+(?:the\s+)?)?(?:page|screen|window)\b/i;
 
 function isRoleWord(text: string, config: ParserConfig): boolean {
   const t = text.toLowerCase().replace(/^(?:the|a|an)\s+/, '');
@@ -207,4 +341,3 @@ function expectedText(text: string): string {
   const q = findQuoted(text);
   return q ? q.value : clean(text);
 }
-

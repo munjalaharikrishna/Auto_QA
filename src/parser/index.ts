@@ -1,11 +1,19 @@
 import {
-  RawTestCaseSchema, TEST_TYPES, TestModelSchema,
-  type Assertion, type ModelWarning, type RawTestCase, type Step, type TestModel,
+  type Assertion,
+  type ModelWarning,
+  type RawTestCase,
+  RawTestCaseSchema,
+  type Step,
+  TEST_TYPES,
+  type TestModel,
+  TestModelSchema,
 } from '../model/test-model.js';
-import { parseAssertions, type ParsedAssertion } from './assertions.js';
+import { type ParsedAssertion, parseAssertions } from './assertions.js';
 import { defaultParserConfig, type ParserConfig } from './config.js';
+import { normalizeText } from './normalize.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
+import { applyWording } from './rules.js';
 import { parseStepLine } from './steps.js';
 import { parseTestData } from './test-data.js';
 import { hash, splitList, splitNumbered, splitSentences } from './text.js';
@@ -29,40 +37,74 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
   const checks: Check[] = [];
   const ctx = { config, data: testData.bindings };
 
-  const lines = splitNumbered(raw.steps).map((line) => ({ ...line, parsed: parseStepLine(line.text, ctx) }));
-  const secrets = [...testData.secrets, ...lines.flatMap((l) => (l.parsed.kind === 'action' && l.parsed.action.secret ? [l.parsed.action.secret] : []))];
+  // The project's rules come after the normaliser: a wording the tester explained once is read that way every time (FR-RULE-01).
+  const lines = expandRepeats(splitNumbered(raw.steps)).map((line) => {
+    const ruled = applyWording(normalizeText(line.text), config.rules?.step);
+    return { ...line, rule: ruled.rule, parsed: parseStepLine(ruled.text, ctx) };
+  });
+  const secrets = [
+    ...testData.secrets,
+    ...lines.flatMap((l) =>
+      l.parsed.kind === 'action'
+        ? l.parsed.action.secret
+          ? [l.parsed.action.secret]
+          : []
+        : l.parsed.kind === 'actions'
+          ? l.parsed.actions.flatMap((a) => (a.secret ? [a.secret] : []))
+          : [],
+    ),
+  ];
   const mask = (text: string) => maskSecrets(text, secrets);
 
-  for (const { n, text, parsed } of lines) {
+  for (const { n, text, parsed, rule } of lines) {
     const id = `S${n}`;
     const lineText = mask(text);
+    if (rule) warnings.push({ at: id, code: 'PROJECT_RULE', text: `"${rule.from}" is read as "${rule.to}" (a project rule).` });
     warnings.push(...parsed.warnings.map((w) => ({ at: id, ...w })));
 
     if (parsed.kind === 'checks') {
       for (const c of parsed.checks) checks.push(toAssertion(c, lineText, 'step', id));
       continue;
     }
-    const a = parsed.action;
-    warnings.push(...a.warnings.map((w) => ({ at: id, ...w })));
-    steps.push(compact({
-      id,
-      action: a.action,
-      target: a.target,
-      alternatives: a.alternatives,
-      exact: a.exact,
-      roleHint: a.roleHint,
-      value: a.value,
-      url: a.url,
-      page: a.page,
-      key: a.key,
-      raw: lineText,
-      status: a.action && !a.reason ? 'parsed' : 'unparsed',
-      reason: a.reason,
-    }));
+    if (parsed.kind === 'note') {
+      warnings.push({ at: id, code: 'NO_STEP_NEEDED', text: parsed.text });
+      continue;
+    }
+    // One line can hold several actions: they are S3.1, S3.2… so the tester's own number stays the start of the id (FR-GE-03).
+    const list = parsed.kind === 'actions' ? parsed.actions : [parsed.action];
+    for (const [k, a] of list.entries()) {
+      const stepId = list.length > 1 ? `${id}.${k + 1}` : id;
+      warnings.push(...a.warnings.map((w) => ({ at: stepId, ...w })));
+      steps.push(
+        compact({
+          id: stepId,
+          action: a.action,
+          target: a.target,
+          alternatives: a.alternatives,
+          exact: a.exact,
+          roleHint: a.roleHint,
+          value: a.value,
+          url: a.url,
+          baseUrl: a.baseUrl,
+          page: a.page,
+          key: a.key,
+          raw: lineText,
+          status: a.action && !a.reason ? 'parsed' : 'unparsed',
+          reason: a.reason,
+        }),
+      );
+    }
   }
 
   for (const line of splitList(raw.expected, { semicolons: true }).flatMap(splitSentences)) {
-    for (const c of parseAssertions(line, config, false)) checks.push(toAssertion(c, line, 'expected'));
+    const ruled = applyWording(normalizeText(line), config.rules?.check);
+    const parsed = parseAssertions(ruled.text, config, false);
+    for (const [k, c] of parsed.entries()) {
+      const check = toAssertion(c, line, 'expected');
+      if (ruled.rule && k === 0)
+        check.warnings = [...check.warnings, { code: 'PROJECT_RULE', text: `"${ruled.rule.from}" is read as "${ruled.rule.to}" (a project rule).` }];
+      checks.push(check);
+    }
   }
   // "No crash" runs in every test (FR-VAL-04).
   checks.push({
@@ -138,6 +180,10 @@ function toAssertion(c: ParsedAssertion, raw: string, source: 'step' | 'expected
     exact: c.exact,
     roleHint: c.roleHint,
     expected: c.expected,
+    intent: c.intent,
+    options: c.options,
+    other: c.other,
+    container: c.container,
     match: c.match,
     negated: c.negated,
     step,
@@ -162,4 +208,25 @@ function generatedId(raw: RawTestCase): string {
 /** Drops undefined fields so the JSON stays short and diffs stay clean. */
 function compact<T extends object>(value: T): T {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+}
+
+/**
+ * "Repeat steps 1-3" is the steps it points to, written out again (RW-S09). When something is repeated the steps after it
+ * are numbered afresh, so every step still has its own number.
+ */
+function expandRepeats(lines: ReturnType<typeof splitNumbered>): ReturnType<typeof splitNumbered> {
+  const REPEAT = /^(?:repeat|redo|perform|do)\s+(?:the\s+)?steps?\s+(\d+)(?:\s*(?:-|–|to|through)\s*(\d+))?\.?$/i;
+  if (!lines.some((l) => REPEAT.test(l.text.trim()))) return lines;
+  const out: string[] = [];
+  const byNumber = new Map<number, string>();
+  for (const line of lines) {
+    const m = REPEAT.exec(line.text.trim());
+    const from = m ? Number(m[1]) : 0;
+    const to = m ? Number(m[2] ?? m[1]) : 0;
+    const wanted = m ? Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => byNumber.get(from + i)) : [];
+    if (m && wanted.length && wanted.every((w) => w !== undefined)) out.push(...(wanted as string[]));
+    else out.push(line.text);
+    byNumber.set(line.n, line.text);
+  }
+  return out.map((text, i) => ({ n: i + 1, text }));
 }

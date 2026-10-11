@@ -6,7 +6,7 @@
  */
 import { writeFile } from 'node:fs/promises';
 import { McpBrowser } from '../explorer/mcp-browser.js';
-import { ELEMENT_KINDS, contextOf, listElements, nearbyText, parseSnapshot } from '../explorer/snapshot-parser.js';
+import { contextOf, ELEMENT_KINDS, listElements, nearbyText, parseSnapshot } from '../explorer/snapshot-parser.js';
 
 const args = process.argv.slice(2);
 const url = args.find((a) => /^https?:\/\//.test(a));
@@ -35,13 +35,15 @@ try {
     Type: ELEMENT_KINDS[n.role],
     Name: n.name || n.text || (nearbyText(n) ? `(no name) next to "${nearbyText(n)}"` : '(no name)'),
     Ref: n.ref,
-    'Inside': contextOf(n),
+    Inside: contextOf(n),
     Extra: [
       n.attributes.level ? `level ${n.attributes.level}` : '',
       n.attributes.checked ? 'checked' : '',
       n.attributes.disabled ? 'disabled' : '',
       n.props.url ? `→ ${n.props.url}` : '',
-    ].filter(Boolean).join(', '),
+    ]
+      .filter(Boolean)
+      .join(', '),
   }));
   console.table(rows);
 

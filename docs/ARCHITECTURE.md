@@ -1,5 +1,7 @@
 # Auto QA: Architecture
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 Diagrams are written in Mermaid. They render on GitHub and in VS Code (with a Mermaid extension). To view them in any browser, open [architecture.html](architecture.html).
 Requirement IDs (FR-…, D…) refer to [SPEC.md](SPEC.md).
 
@@ -332,6 +334,8 @@ sequenceDiagram
 
 ## 9. Data model
 
+The full database design (tables, migrations, repositories, SQLite → PostgreSQL) is in [DATABASE.md](DATABASE.md). This diagram is the overview; DATABASE.md §5.1 refines it (an execution is one run holding many test results).
+
 ```mermaid
 erDiagram
   PROJECT ||--o{ ENVIRONMENT : has
@@ -351,7 +355,8 @@ erDiagram
   EXECUTION ||--o{ STEP_RESULT : records
   EXECUTION ||--o{ EVIDENCE : captures
   USER ||--o{ EXECUTION : starts
-  REQUIREMENT }o--o{ TEST_CASE : "traces (V4)"
+  REQUIREMENT ||--o{ SCENARIO : "splits into (V4)"
+  SCENARIO ||--o{ TEST_CASE : "groups (V4)"
   EXECUTION ||--o| DEFECT : "raises (V4)"
 ```
 
@@ -419,22 +424,29 @@ Auto_QA/
   docs/                    SPEC.md, ARCHITECTURE.md, architecture.html
   src/
     explorer/              ✅ mcp-browser.ts, snapshot-parser.ts   (M1)
-                           ⬜ controller.ts (state machine)          (M4)
+                           ✅ controller.ts (state machine), values.ts (M4)
     model/                 ✅ test-model.ts (types + zod schema)    (M2)
     parser/                ✅ steps, assertions, target, test-data,  (M2)
                               preconditions, quality, lexicon.json, synonyms.json
-    locators/              ⬜ scoring, ladder, probe, fingerprint    (M3)
-    generator/             ⬜ templates/*.hbs                         (M5)
-    executor/              ⬜ runner adapter, custom reporter         (M6)
-    results/               ⬜ validator, classifier                  (M6)
+    locators/              ✅ match, locator, ladder, probe,         (M3)
+                              engine, session (shared Chrome)
+    generator/             ✅ names, plan, render, templates/*.hbs   (M5)
+    executor/              ✅ runner.ts (runs Playwright Test)      (M6)
+    results/               ✅ verdict.ts, report.ts                 (M6)
+    pipeline/              ✅ run-cases.ts (parse → … → verdict)    (M6)
+                           ✅ batch.ts (a whole workbook)           (M6b)
     evidence/              ⬜ capture, masking, report               (M6)
-    importer/              ⬜ excel, csv (V1); jira, testrail (V2)   (M7)
-    server/                ⬜ Fastify API, jobs, WebSocket           (M7)
+    importer/              ✅ columns, workbook, results (xlsx, csv) (M6b)
+                           ⬜ jira, testrail                         (V2)
+    server/                ✅ app (API), jobs (runner), store         (M7)
+                              (node:sqlite), credentials (.env)
     recovery/              ⬜ self-healing                           (V3)
-    assist/                ⬜ AssistProvider (no-op)                 (V1 interface)
-    cli/                   ✅ snapshot.ts (M1), parse.ts (M2)
+    assist/                ✅ AssistProvider (no-op)                 (M7)
+    cli/                   ✅ snapshot.ts (M1), parse.ts (M2), match.ts (M3), explore.ts (M4), generate.ts (M5), tools.ts
   examples/                test-cases.json (sample input for npm run parse)
-  web/                     ⬜ React UI                               (M7)
+                           demo-app/ (local app + test cases for end-to-end tests)
+  web/                     ✅ React UI (Vite): projects, workbook,   (M7)
+                              single test, question, review, results
   workspaces/              generated projects, one per app under test
 ```
 
@@ -448,11 +460,25 @@ workspaces/<app-name>/     own git repo, runs without the platform
   locators/login.locators.json
   fixtures/test.fixture.ts          health check, evidence hooks
   data/login.data.ts
-  reporters/auto-qa-reporter.ts
+  reporters/auto-qa-reporter.ts     events + results for the platform (M6)
+  auto-qa.json                      manifest: tests, checks, env vars (M6)
+  reports/                          git-ignored: HTML report, results, evidence per run
   playwright.config.ts
+  .env                              git-ignored: credentials from the form (FR-ENV-05)
   .env.example                      BASE_URL, TEST_USERNAME, TEST_PASSWORD
   package.json
 ```
+
+The generated project has no `utils/` folder (D15): parsing, locator discovery and code generation stay in the platform. Locators are one file per Page Object (D16).
+
+**Action methods (FR-GE-10).** The generator groups steps into Page Object methods by fixed rules, so the same test always gives the same methods:
+
+| Steps on one page | Becomes |
+|---|---|
+| Enter username, Enter password, Click Login | `login(username: string, password: string)` |
+| Select country, Click Save changes | `saveChanges(country: string)` |
+| Click Cart (alone) | `openCart()` |
+| Verify Products heading is visible | stays in the spec: `await expect(inventoryPage.productsHeading).toBeVisible()` |
 
 ## 12. Deployment
 
@@ -496,6 +522,7 @@ flowchart LR
     v2c[Locator repo reuse + history]
     v2d[Environments + page routes + secrets]
     v2e[Suites + history + trace/video]
+    v2f[API tests: request client, no MCP]
   end
   subgraph v3["V3 · Intelligent + team"]
     v3a[Recovery engine]
@@ -515,10 +542,10 @@ flowchart LR
 | Component | V1 | V2 | V3 | V4 |
 |---|---|---|---|---|
 | Importer | Excel, CSV | + Jira, TestRail, re-import diff | | + result sync |
-| Parser | Core rules | + generators, tabs, dialogs | + data sets | + `api` steps, Gherkin |
+| Parser | Core rules | + generators, tabs, dialogs, API steps and checks | + data sets | + API steps inside UI tests, Gherkin |
 | Exploration | Chromium, state machine | + pop-up handling | | |
 | Locator engine | Score, ladder, probe | + scoped locators, repo reuse | + healing | |
-| Generator | POM + specs | + ts-morph updates, flows, git | | + Cucumber |
+| Generator | POM + specs | + ts-morph updates, flows, git, API specs + API clients | + API contract checks | + Cucumber |
 | Execution | Chromium, single test | + suites, login state | + browsers, parallel, mobile | + CI, schedules |
 | Results | Expected vs actual, health | + history, HTML report | + classification, retry | + dashboards |
 | Evidence | Screenshot, masking | + trace, video, restricted | + retention | + attach to defects |
@@ -537,3 +564,6 @@ Interfaces that keep the design open for future versions without rewrites:
 | `EvidenceStore` | Local disk | S3 / MinIO |
 | `JobQueue` | In-process | BullMQ + Redis |
 | `DefectTracker` | none | Jira |
+| `Driver` (database) | SQLite (`node:sqlite`) | PostgreSQL (`pg`) |
+| `ArtifactStore` | Local disk, storage refs | S3 / MinIO |
+| `SearchIndex` | SQLite FTS5 | PostgreSQL `tsvector` |

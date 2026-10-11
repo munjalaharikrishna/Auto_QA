@@ -111,6 +111,7 @@ html{scroll-behavior:smooth}
 </style>
 
 <div class="wrap">
+<div class="callout" style="margin-top:16px"><b>Replaced on 8 Oct 2026</b><p>This page was based on Auto_QA.docx, which is no longer the source of requirements. The current documents are ENGINE-SPEC.md and ENGINE-PLAN.md in the project docs folder. Kept for history only.</p></div>
 <header class="top">
   <div class="eyebrow">System architecture · v1.1 · Auto_QA.docx §1–30 + agreed decisions · requirement IDs in SPEC.md</div>
   <h1>Auto QA: manual test case to Playwright framework</h1>
@@ -512,7 +513,9 @@ erDiagram
   fixtures/test.fixture.ts   # evidence hooks, page objects
   data/login.data.ts         # non-secret test data
   reporters/auto-qa-reporter.ts
+  reports/                   # git-ignored: HTML report, evidence per run
   playwright.config.ts       # projects per browser, envs
+  .env                       # git-ignored: credentials from the form
   .env.example               # BASE_URL, TEST_USERNAME...
   package.json
 </pre></div>
@@ -547,7 +550,7 @@ erDiagram
       <ul><li>Excel/CSV import + column mapping</li><li>Parser: alternatives, checks, negatives, data binding, UNPARSED</li><li>Basic quality check</li><li>MCP exploration with the step state machine</li><li>Locator scoring, ladder, probe, nearby text</li><li>Review with pick element</li><li>POM + spec generation</li><li>Run in Chromium; expected vs actual; health check; screenshot; masking</li></ul>
       <div class="adds">Single user on your laptop, SQLite, in-process jobs. Username + password logins only.</div></div>
     <div class="ver"><div class="vn">V2</div><h3>Automation management</h3>
-      <ul><li>Jira / TestRail import</li><li>Reusable flows, unique test data</li><li>Locator repository reuse + history</li><li>Environments, page URL map, encrypted secrets</li><li>Login state reuse, suites</li><li>Trace/video, history, HTML report</li><li>Duplicate detection, git commits</li></ul>
+      <ul><li>Jira / TestRail import</li><li>Reusable flows, unique test data</li><li>Locator repository reuse + history</li><li>Environments, page URL map, encrypted secrets</li><li>Login state reuse, suites</li><li>Trace/video, history, HTML report</li><li>Duplicate detection, git commits</li><li>API tests (Playwright request client, no MCP)</li></ul>
       <div class="adds">Adds: flows, secrets service, suites, evidence manager (full).</div></div>
     <div class="ver"><div class="vn">V3</div><h3>Intelligent automation + team</h3>
       <ul><li>Locator recovery (propose / auto)</li><li>Failure classification, controlled retry</li><li>Firefox, WebKit, parallel, mobile emulation</li><li>Data-driven runs</li><li><b>Team mode</b>: shared server, login, roles, PostgreSQL</li></ul>

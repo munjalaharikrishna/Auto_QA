@@ -1,13 +1,15 @@
 # Auto QA: Product Specification
 
+> **Replaced on 8 Oct 2026.** This document was based on `Auto_QA.docx`, which is no longer the source of requirements. The current documents are [ENGINE-SPEC.md](ENGINE-SPEC.md) (requirements) and [ENGINE-PLAN.md](ENGINE-PLAN.md) (build plan). Kept for history only (decision PD-7).
+
 | | |
 |---|---|
 | **Product** | Auto QA: manual test cases to Playwright automation |
-| **Spec version** | 1.2 |
-| **Date** | 2026-09-29 |
+| **Spec version** | 1.15 |
+| **Date** | 2026-09-30 |
 | **Owner** | Harikrishna Munjala |
 | **Source** | `Auto_QA.docx` (sections §1–§30), plus the design decisions agreed after it (§ references below point to that document) |
-| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html) |
+| **Related** | [ARCHITECTURE.md](ARCHITECTURE.md), [architecture.html](architecture.html), [PLAN.md](PLAN.md), [DATABASE.md](DATABASE.md), [VALIDATIONS.md](VALIDATIONS.md) |
 
 ---
 
@@ -26,6 +28,7 @@ It works **without any paid AI API**. Every decision is made by the platform's o
 - Username + password login
 - Test case import from Excel/CSV (V1) and Jira/TestRail (V2)
 - Generated code: Playwright Test + TypeScript + Page Object Model
+- **API tests** for HTTP/JSON (REST) services, written in the same sheet as UI tests (V2, §6.21)
 - Local, single-user use first; a shared team server later
 
 ### Out of scope (for now)
@@ -55,13 +58,32 @@ The design must allow moving from stage 1 to stage 2 **without a rewrite**. All 
 | **D3** | Normal runs use **Playwright Test** on the generated code, never MCP. | What the tester approved is exactly what runs. |
 | **D4** | Playwright **Codegen is not used** to write scripts. It is only a manual "pick locator" backup. | Codegen records a human, hard-codes passwords, and creates no POM or locator repository. |
 | **D5** | The **platform** and the **generated project** are separate codebases. The generated project runs on its own with `npx playwright test`. | Any engineer or CI server can run it without the platform. |
-| **D6** | **Ask, don't guess.** If a step is vague or matches more than one element, the platform stops and asks the tester. | Wrong guesses create false PASS/FAIL results. |
+| **D6** | **Ask only when the meaning is truly unclear.** Resolve the rest with known rules, learn safely from what the application shows, mark every assumption, and never block a run for wording alone. A wrong guess still never becomes a PASS (D31). *(Revised 2026-10-01; before: "if a step is vague or matches more than one element, stop and ask".)* | Wrong guesses create false PASS/FAIL results, but asking about every wording stopped 10 of 10 real test cases. |
 | **D7** | Locators are validated with the **Playwright library (Locator Probe)** connected to the **same browser** as MCP (CDP). | MCP refs (`e15`) are temporary, not locators. Validation must use the same engine as the tests. |
 | **D8** | Exploration runs in **Chromium/Chrome only**. Other browsers are used only for execution. | The locators work in every browser, and CDP sharing needs Chromium. |
 | **D9** | Exploration is allowed only on **non-production** environments by default. | Exploration really clicks buttons and can create data. |
 | **D10** | Locator self-healing is **proposed for approval** by default (not auto-applied). Assertion targets are never healed. | A changed element may be a real defect. |
 | **D11** | An AI helper is **not planned**. The code keeps one extension point (`AssistProvider`) so one could be added later. | "Decide later". The platform must be complete without it. |
 | **D12** | Check the MCP tool names at startup and **pin the MCP version**. | Tool inputs change between versions (e.g. `ref` → `target` in v0.0.83). |
+| **D13** | All MCP capability groups are on (72 tools in v0.0.83). The platform calls a tool only where code uses it. The two tools that run arbitrary page code (`browser_run_code_unsafe`, `browser_evaluate`) are **off** unless explicitly allowed. | The extra tools help later milestones (`browser_generate_locator` for FR-LO-07, `browser_storage_state` for login reuse, tracing/video for evidence). Arbitrary code breaks NFR-02. |
+| **D14** | **API tests do not use MCP or a browser.** They are parsed into the same Test Model and generated as Playwright Test specs that use Playwright's built-in API client (`request` / `APIRequestContext`). | An API has no UI to explore, and Playwright MCP has no tool to send requests. The same runner, reports and CI serve both kinds of test. |
+| **D15** | The **generated project holds only what a test needs to run**: pages, tests, locators, fixtures, data, config, reporter and `reports/`. The document's §9 `utils/` (test-parser, locator-engine, result-validator, evidence-manager, script-generator) are **platform** components and are not copied into it. The run-time parts of result validation and evidence live in `fixtures/test.fixture.ts` and `reporters/`. | The generated project never parses or explores, so it has no use for them (D5). One copy of the engine means one place to fix it. |
+| **D16** | The locator repository is **one file per Page Object** (`locators/login.locators.json` for `LoginPage`), not one file per feature and not one file for everything. | The document shows both of the other layouts (§7 per feature, §9 a single `locator-repository.json`). Per page matches the POM: each Page Object loads its own file, and two features that share a page share its locators. |
+| **D17** | **[Generate & Execute Test]** (document §3) means generate → review → **Approve & Execute**. Review is never skipped in V1. | §11 and §12 require review before execution, and a wrong locator gives a false PASS/FAIL (D6). Optional auto-approve is FR-RV-08 (V2). A workbook run is approved when the tester starts it: it runs every case unattended (D22) and its results are reviewed afterwards. |
+| **D18** | The form's **Browser** field (document §1, §28) is shown from V1 with only **Chromium** enabled; Firefox and WebKit are enabled in V3. The choice applies to **execution**; exploration always uses Chromium (D8). | The MVP keeps one browser, and the field is in the form from day one so the input does not change later. |
+| **D19** | **V1 page names**: the first step's page ("Open Login page") opens the environment's `BASE_URL`. A page name in any later step asks the tester for its URL once, and the answer is saved with the environment, keyed by its base URL and stored as a path. A check such as "redirected to Dashboard" also teaches the page's path. | The page map (FR-ENV-03) is V2. The first page is almost always the base URL; guessing any other URL would break D6. A check never names a page that already has another name, nor one whose saved URL is elsewhere: then the expected page was not reached (e.g. the login failed), and the tester is asked instead. |
+| **D20** | The web UI is **React**, served by a **Fastify** API with a job runner and WebSocket, storing data in **SQLite** (PostgreSQL from V3). | Confirmed 2026-09-30. One Node process on a laptop in V1–V2 (§3), with a clear path to the team server. |
+| **D21** | Excel import uses **ExcelJS**. | Maintained and on npm. Current SheetJS versions are only on its own CDN. |
+| **D22** | A **batch run never waits for the tester**. A case that needs review is set aside with status NEEDS REVIEW and the batch moves on; the tester answers the review queue at the end, and only those cases run again. | A 100-case sheet must not stall on case 37. Setting a case aside keeps D6 (never guess). |
+| **D23** | Results are written to a **copy** of the workbook (`<name>.results.xlsx`), never to the original. | A failed or interrupted run cannot damage the tester's source sheet. |
+| **D24** | **Hybrid storage**: the database is the system of record for metadata, structure and history; bulk artifacts (screenshots, traces, workbooks, generated projects) stay as files and are referenced from rows. | Queries and history need rows; files do not belong in them. Keeps D15. Details: [DATABASE.md](DATABASE.md). |
+| **D25** | **Portable SQL**: one schema, two dialects (SQLite now, PostgreSQL in V3), only the common SQL subset, all SQL behind repositories in `src/db/`. | Moving to the team server (SPEC §3) is a driver change and a data copy, not a rewrite. |
+| **D26** | **Forward-only, checksummed migrations**, applied automatically, additive first (expand, then contract), with a backup first and a refusal to run on a newer database. | Old and new versions must never corrupt each other's data. |
+| **D27** | **Storage references**: files are saved as `scheme:key` relative to a root (`local:…`, later `s3:…`), never an absolute path. | SPEC §3: no hard-coded paths. |
+| **D30** | **Confidence policy** for real-world test cases: every decision has a confidence (certain, high, medium, low); a project setting (strict, balanced, lenient; default **balanced**) decides what runs, what runs marked *assumed* or *learned*, and what is asked. An unclear **step** blocks only its own test case; an unclear **check** never blocks: it runs and is reported NOT VERIFIED. Details: [REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md). | Testers do not rewrite their test cases; 10 of 10 real OrangeHRM cases stopped under strict asking. |
+| **D31** | **A learned value must agree with what the tester asked for.** If the tester expects an error and the application logs the user in, that is a FAIL, never "learned". Anything assumed or learned is marked in the report and the review screen, and can be undone. | Learning must never turn a defect into a passing test (P1, P4). |
+| **D29** | **Validation registry.** Every kind of check is one module (`src/validations/<family>.ts`) holding its tester wording, its Playwright code and its reported sentence; the runtime part is one file copied into the generated project (`utils/matchers.ts`). A part of the page named by a tester ("the login section") is found as the form, table or panel that holds it; if candidate parts would give different results, the tester is asked once (D6). | Adding a check never touches the rest of the platform, and a check never guesses which element it measures. |
+| **D28** | **Secrets in the database** only from V2, as AES-256-GCM ciphertext with the key outside the database; never in V1 (FR-ENV-05). | NFR-03. |
 
 ## 5. Test case input format
 
@@ -77,6 +99,32 @@ Every test case, however it is imported, becomes these fields:
 | Test data | no | `Email=existing.registered@example.com` |
 | Expected result | yes | Error "This email is already registered" is shown |
 | Requirement ID | no (V4) | `REQ-REG-001` |
+| Scenario ID | no (V4) | `SC-REG-003` (the test scenario the case belongs to, FR-EN-01) |
+
+**Run settings.** The web form (FR-IN-04) also asks for the settings a run needs, as in the document's §3 example. They belong to the environment, not to the test case, so an imported sheet does not need them.
+
+| Setting | Required | Stored as |
+|---|---|---|
+| Application URL | yes | `BASE_URL` of the environment |
+| Username | yes, if the app needs a login | `TEST_USERNAME` (FR-ENV-05) |
+| Password | yes, if the app needs a login | `TEST_PASSWORD`; the field is masked and never shown again (FR-ENV-05) |
+| Browser | yes (Chromium in V1, D18) | Playwright project used for execution |
+| Environment | from V2 | Which environment's settings to use (FR-ENV-02) |
+
+### 5.1 API test cases (V2)
+
+An API test uses the same fields, with **Type = `api`** (or a first step that sends a request). Steps and checks are plain English, parsed by the same rule-based parser with an API vocabulary. No JSON knowledge is needed beyond the request body.
+
+| Field | Example |
+|---|---|
+| Title | Verify a new user can be created |
+| Type | `api` |
+| Preconditions | `Authenticated as admin` (a named auth profile, §6.21) |
+| Steps | 1. Send POST `/api/users` with body `NewUser`  2. Save response field `id` as `userId`  3. Send GET `/api/users/{{userId}}` |
+| Test data | `NewUser={"name":"Asha","role":"tester"}` |
+| Expected result | Status is 201 · Response field `name` is "Asha" · Response header `Content-Type` contains "json" |
+
+The base URL comes from the environment (FR-ENV), so steps use paths, not full URLs. Tokens and passwords come from secrets, never from the sheet (same rule as UI tests, FR-TD).
 
 ---
 
@@ -88,30 +136,33 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases |
-| FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping |
-| FR-IN-03 | Steps in one cell are split on numbering (`1.`, `2)`) and line breaks | V1 | A cell with "1. … 2. … 3. …" gives 3 steps |
-| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc) | V1 | Form fields as in §5 |
+| FR-IN-01 | Import test cases from `.xlsx` and `.csv` | V1 | A 50-row sheet imports as 50 test cases · ✅ Done (M6b): .xlsx and .csv (comma, semicolon or tab); old .xls must be saved as .xlsx |
+| FR-IN-02 | **Column mapping screen**: the tester maps the sheet's columns to the fields in §5. The mapping is saved and reused for the next import. | V1 | A sheet with different column names imports correctly after mapping · ✅ Done (M7): each field's column pre-selected, with a live preview; the project's last mapping is reused for the next upload when that sheet has its headers |
+| FR-IN-03 | Steps in one cell are split on numbering (`1.`, `2)`) and line breaks | V1 | A cell with "1. … 2. … 3. …" gives 3 steps · ✅ Done (M2) |
+| FR-IN-04 | Enter or edit a single test case in a web form (§3 of the doc), with the run settings: Application URL, Username, Password and Browser | V1 | Form fields and run settings as in §5; one click starts generation (D17) · ✅ Done (M7) |
 | FR-IN-05 | Import from **Jira** (Xray/Zephyr) | V2 | Pull test cases by project/filter |
 | FR-IN-06 | Import from **TestRail** | V2 | Pull test cases by suite |
 | FR-IN-07 | Re-import updates changed test cases (matched by ID) and shows what changed | V2 | Changed steps are flagged for re-generation |
+| FR-IN-08 | **Unattended batch run of a workbook**: every test case, one by one, each in a fresh browser context: parse → explore → generate → run (D22). Cases that need the tester are set aside, and a review queue lists them at the end; after review only those run again. A "Logged in" precondition reuses the sheet's login case. The run can be stopped and resumed, skipping finished cases. | V1 | A 100-row sheet runs to the end without stopping; one case needing review does not block the others; a resumed run skips finished cases · ✅ Done (M6b): a 100-row sheet runs unattended in about 4 minutes, 2 on a resumed run; identical cases share one exploration |
+| FR-IN-09 | **Automatic column matching** for command-line and batch imports: the sheet's headers are matched to the §5 fields by name and synonyms (`Test Case` → Title, `Expected Result` → Expected), with a saved mapping file for anything else. The mapping screen (FR-IN-02) uses the same matcher as its first guess. | V1 | A sheet with the usual headers imports with no mapping · ✅ Done (M6b): header row found under title rows; `--map field="Header"` for anything else |
 
 ### 6.2 Test case parser (FR-PA) · §4
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-PA-01 | Convert each test case into the **Structured Test Model** (§8 of ARCHITECTURE.md) before any browser opens | V1 | Model JSON is shown in review · ✅ Parsed (M2) |
-| FR-PA-02 | **Action lexicon** (JSON, editable): open/go to/navigate → navigate; enter/type/input/fill → fill; click/press/tap/submit → click; select/choose → select; check/tick/uncheck → check; hover → hover; upload → upload; press key → press | V1 | Each verb maps correctly · ✅ Parsed (M2) |
+| FR-PA-02 | **Action lexicon** (JSON, editable): open/go to/navigate → navigate; enter/type/input/fill → fill; click/press/tap/submit → click; select/choose → select; check/tick/uncheck → check; hover → hover; upload → upload; press key → press | V1 | Each verb maps correctly · ✅ Parsed (M2) · "Enter the URL (for …)" and "Open the application" open BASE_URL exactly; "Open Browser" needs no step |
 | FR-PA-03 | **Target extraction**: the words after the verb, with role words ("button", "field", "link") removed and kept as a `roleHint` | V1 | "Click the Login button" → target `Login`, roleHint `button` · ✅ Parsed (M2) |
 | FR-PA-04 | **Alternative names**: "X (or Y)", "X (Y)", "X / Y" → several candidate names | V1 | "Apply to the Network (or Apply)" → 2 names · ✅ Parsed (M2) |
 | FR-PA-05 | Ignore noise: arrows (→ ➜ >), text in brackets that isn't an alternative name, filler ("as applicable", "the", "valid", "successfully") | V1 | "Click Apply →" → target `Apply` · ✅ Parsed (M2) |
 | FR-PA-06 | **Check words**: observe / verify / should / is displayed / is shown → assertion, not action | V1 | "Observe Registration page" → visibility assertion · ✅ Parsed (M2) |
-| FR-PA-07 | **Assertion patterns**: redirected to X → url; X displayed → visible; message "Y" → text; remain on X → url unchanged; X enabled/disabled; field value | V1 | Examples parse to the right type · ✅ Parsed (M2) |
+| FR-PA-07 | **Assertion patterns**: redirected to X → url; X displayed → visible; message "Y" → text; remain on X → url unchanged; X enabled/disabled; field value | V1 | Examples parse to the right type · ✅ Parsed (M2) · "Checking/Verifying X" and "User able to navigate to X"; positions ("at middle of the page") are ignored with a warning |
 | FR-PA-08 | **Negative assertions**: cannot / does not / is not / rejects / blocked → negated check | V1 | "User cannot open Personal" → `not.toHaveURL` · ✅ Parsed (M2) |
 | FR-PA-09 | **Browser actions**: back, forward, refresh, open URL directly, switch/close tab, accept/dismiss dialog | V1 (back, refresh, open URL) · V2 (tabs, dialogs) | "Use browser Back" → `goBack` · ✅ Parsed (M2): back, forward, refresh, open URL |
-| FR-PA-10 | **Data binding**: "valid username" → `env.TEST_USERNAME`; quoted value → literal; value from Test Data column; `{{unique.email}}` → generated | V1 (env, literal, column) · V2 (generators) | Secrets are never literal in the model · ✅ Parsed (M2), generators included |
+| FR-PA-10 | **Data binding**: "valid username" → `env.TEST_USERNAME`; quoted value → literal; value from Test Data column; `{{unique.email}}` → generated | V1 (env, literal, column) · V2 (generators) | Secrets are never literal in the model · ✅ Parsed (M2), generators included · "Enter user name in Login Name text box": a credential or Test Data key named before "in <field>" |
 | FR-PA-11 | Steps that match no rule are marked **UNPARSED** with a reason. No guessing. | V1 | Shown as a warning in review · ✅ Parsed (M2) |
 | FR-PA-12 | Synonyms table (JSON, editable): username ↔ email ↔ user id; login ↔ sign in ↔ log in; continue ↔ next ↔ proceed | V1 | Team can add entries without code changes · ✅ Parsed (M2) |
+| FR-PA-13 | **Table steps and checks**: act in a row found by its text (`Click Edit in the row containing "Jason"`), check a cell (`Email in the row containing "Jason" is "jsmith@gmail.com"`), the row count (`Users table has 4 rows`), or that the table shows a text | V2 | Parsed into a step or check with a `row` qualifier; locators are row-scoped (FR-LO-13) |
 
 ### 6.3 Test case quality check (FR-QC)
 
@@ -121,13 +172,13 @@ Every test case, however it is imported, becomes these fields:
 | FR-QC-02 | Flag a missing starting point (first step is not navigate and there is no precondition) | V1 | Warning shown · ✅ Done (M2) |
 | FR-QC-03 | Flag near-duplicate test cases (same steps, data and expected result) | V2 | Similar pair shown with a similarity % |
 | FR-QC-04 | Quality score per imported sheet (ready / needs fixes / blocked) | V2 | Summary after import |
-| FR-QC-05 | Built-in **writing guide** for testers (§11) | V1 | Linked from the import and review screens |
+| FR-QC-05 | Built-in **writing guide** for testers (§11) | V1 | Linked from the import and review screens · ✅ Done (M7) |
 
 ### 6.4 Preconditions and reusable flows (FR-PF)
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-PF-01 | Precondition keywords: "Unauthenticated visitor" → fresh browser context; "Logged in as X" → saved login state | V1 | Both work · ✅ Parsed (M2); applied in M4 |
+| FR-PF-01 | Precondition keywords: "Unauthenticated visitor" → fresh browser context; "Logged in as X" → saved login state | V1 | Both work · ✅ Done (M4): fresh context per exploration; "Logged in" runs the login test case first (`--login`) |
 | FR-PF-02 | **Reusable flows**: save a sequence of steps under a name (e.g. `On Registration page`) and use it as a precondition or step | V2 | One flow is used by many tests |
 | FR-PF-03 | Flows are generated as Page Object methods / fixtures, not copied into every test | V2 | One method, many callers |
 | FR-PF-04 | A flow can take parameters (e.g. `Login as {user}`) | V2 | |
@@ -138,7 +189,7 @@ Every test case, however it is imported, becomes these fields:
 |---|---|---|---|
 | FR-TD-01 | Parse `key=value` pairs (one per line or `;`-separated) from the Test Data column | V1 | `Email=a@b.com` → data key `Email` · ✅ Parsed (M2) |
 | FR-TD-02 | Credentials and secrets come only from environment variables (`TEST_USERNAME`, `TEST_PASSWORD`, `BASE_URL`) | V1 | No secret in generated code, model or report · ✅ Parser side (M2): secret-looking values become env refs and are masked |
-| FR-TD-03 | Non-secret data goes to `data/*.data.ts` in the generated project | V1 | |
+| FR-TD-03 | Non-secret data goes to `data/*.data.ts` in the generated project | V1 | ✅ Done (M5) |
 | FR-TD-04 | **Unique data generators**: `{{unique.email}}`, `{{unique.number}}`, `{{today}}` for tests that create records | V2 | Registration test passes twice in a row |
 | FR-TD-05 | Data sets: run one test with several data rows (data-driven) | V3 | 3 rows → 3 test runs |
 
@@ -147,14 +198,14 @@ Every test case, however it is imported, becomes these fields:
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-EX-01 | The platform starts Playwright MCP itself (stdio) and checks the required tools at startup | V1 | ✅ Done (M1) |
-| FR-EX-02 | **Step state machine**: LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE → DONE; any failure → NEEDS_REVIEW | V1 | Each step shows its state in the log |
-| FR-EX-03 | Fixed **action → MCP tool** mapping (see ARCHITECTURE.md §5) | V1 | |
-| FR-EX-04 | **Settle rule**: page loaded + no network activity for 500 ms + two identical snapshots in a row, within a timeout | V1 | No step runs on a half-loaded page |
-| FR-EX-05 | **Verify effect**: after a fill, the value is present; after a click, the URL, the snapshot, a dialog or the network changed | V1 | A click that does nothing is flagged |
-| FR-EX-06 | Exploration performs the steps in order (a guided dry run), so later pages can be explored | V1 | Dashboard elements found after Login |
-| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review |
-| FR-EX-08 | Exploration refused on Production unless confirmed | V1 | Confirmation dialog |
-| FR-EX-09 | Chromium only for exploration | V1 | |
+| FR-EX-02 | **Step state machine**: LOCATE → VALIDATE → ACT → VERIFY_EFFECT → SETTLE → DONE; any failure → NEEDS_REVIEW | V1 | Each step shows its state in the log · ✅ Done (M4): NEEDS_REVIEW waits for a resolver with the browser open |
+| FR-EX-03 | Fixed **action → MCP tool** mapping (see ARCHITECTURE.md §5) | V1 | ✅ Done (M4). Forward, refresh and upload use the Locator Probe (MCP has no tool for them) |
+| FR-EX-04 | **Settle rule**: page loaded + no network activity for 500 ms + two identical snapshots in a row, within a timeout | V1 | No step runs on a half-loaded page · ✅ Done (M4): the snapshot must stay unchanged for 500 ms |
+| FR-EX-05 | **Verify effect**: after a fill, the value is present; after a click, the URL, the snapshot, a dialog or the network changed | V1 | A click that does nothing is flagged · ✅ Done (M4) for value, checked, option, URL and snapshot; dialogs in V2 (FR-PA-09) |
+| FR-EX-06 | Exploration performs the steps in order (a guided dry run), so later pages can be explored | V1 | Dashboard elements found after Login · ✅ Done (M4) |
+| FR-EX-07 | Per-step screenshot during exploration | V1 | Shown in review · ✅ Taken (M4); shown in review in M7 · ✅ Shown in review (M7) |
+| FR-EX-08 | Exploration refused on Production unless confirmed | V1 | Confirmation dialog · ✅ Done (M4, `--production`) |
+| FR-EX-09 | Chromium only for exploration | V1 | ✅ Done (M4) |
 | FR-EX-10 | Handle an unexpected dialog/pop-up/cookie banner (dismiss, or ask) | V2 | |
 
 ### 6.7 Locator discovery and validation (FR-LO) · §6
@@ -162,23 +213,24 @@ Every test case, however it is imported, becomes these fields:
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
 | FR-LO-01 | Parse the MCP snapshot into elements (role, name, ref, attributes, context) | V1 | ✅ Done (M1) |
-| FR-LO-02 | **Nearby-text fallback** for unlabeled elements (text after a checkbox/radio, before a field) | V1 | ✅ Done (M1) |
-| FR-LO-03 | Filter candidates by role compatibility with the action (fill → textbox/combobox, click → button/link/menuitem/tab, check → checkbox/radio/switch) | V1 | |
-| FR-LO-04 | **Score** candidates: exact name, contains, fuzzy (Levenshtein), synonyms, nearby text, roleHint, context (form/dialog) | V1 | Scores shown in review |
-| FR-LO-05 | **Ambiguity rule**: if no candidate reaches the minimum score, or the top two are within the margin → NEEDS_REVIEW with the candidates | V1 | Never picks between two equal "Save" buttons |
-| FR-LO-06 | **Locator ladder**: getByTestId → getByRole+name → getByLabel → getByPlaceholder → getByText → CSS → XPath. The first one that validates wins. | V1 | |
-| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | |
-| FR-LO-08 | **Validation (Locator Probe)**: `count() === 1`, visible, enabled/editable, the action is possible | V1 | Invalid locators are never stored |
-| FR-LO-09 | Configurable test-id attribute per project (`data-testid`, `data-test`, `data-qa`…) | V1 | |
-| FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage |
-| FR-LO-11 | Store a **fingerprint** (role, name, label, tag, key attributes, parent form) for recovery | V1 | |
+| FR-LO-02 | **Nearby-text fallback** for unlabeled elements (text after a checkbox/radio, before a field; a heading just above an unnamed field, with a lower score) | V1 | ✅ Done (M1; heading in M3) · A field alone in a table cell is named by the cell before it ("Login Name :"), trailing ":" and "*" removed |
+| FR-LO-03 | Filter candidates by role compatibility with the action (fill → textbox/combobox, click → button/link/menuitem/tab, check → checkbox/radio/switch) | V1 | ✅ Done (M3) |
+| FR-LO-04 | **Score** candidates: exact name, contains, fuzzy (Levenshtein), synonyms, nearby text, roleHint, context (form/dialog) | V1 | Scores shown in review · ✅ Done (M3); constants in `src/locators/match.ts` (`SCORE`) |
+| FR-LO-05 | **Ambiguity rule**: if no candidate reaches the minimum score, or the top two are within the margin → NEEDS_REVIEW with the candidates | V1 | Never picks between two equal "Save" buttons · ✅ Done (M3): minimum 0.6, margin 0.1 |
+| FR-LO-06 | **Locator ladder**: getByTestId → getByRole+name → getByLabel → getByPlaceholder → getByText → CSS → XPath. The first one that validates wins. | V1 | ✅ Done (M3). CSS skips generated-looking ids; position-based locators (`.nth()`) come after all others |
+| FR-LO-07 | Use the code MCP reports after an action as an extra candidate | V1 | ✅ Done: MCP's `browser_generate_locator` suggestion joins the ladder and pins the element (M3); the code MCP reports after an action is validated and kept as an alternative (M4) |
+| FR-LO-08 | **Validation (Locator Probe)**: `count() === 1`, visible, enabled/editable, the action is possible | V1 | Invalid locators are never stored · ✅ Done (M3): also checks it is the same element the matcher chose; "possible" uses Playwright's trial actions |
+| FR-LO-09 | Configurable test-id attribute per project (`data-testid`, `data-test`, `data-qa`…) | V1 | ✅ Done (M3) |
+| FR-LO-10 | **Page grouping**: each element belongs to the page (URL path + title) where it was found | V1 | LoginPage vs DashboardPage · ✅ Done (M3): named from the tester's page name, else the path, else the title |
+| FR-LO-11 | Store a **fingerprint** (role, name, label, tag, key attributes, parent form) for recovery | V1 | ✅ Built (M3); saved to the locator repository in M5 |
 | FR-LO-12 | Scoped locators when needed (`form "Login"` → `getByRole('form').getByRole('button', …)`) to make a locator unique | V2 | |
+| FR-LO-13 | **Row-scoped locators** for tables: `getByRole('row').filter({ hasText: 'Jason' }).getByRole('link', { name: 'edit' })`, and cells by their column header | V2 | The 8 identical "edit" links on the-internet `/tables` resolve by row, not by position |
 
 ### 6.8 Locator repository (FR-LR) · §7
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-LR-01 | One JSON file per page in the generated project: `locators/<page>.locators.json` with locator, strategy, page, validatedAt, fingerprint, history | V1 | |
+| FR-LR-01 | One JSON file per page in the generated project: `locators/<page>.locators.json` with locator, strategy, page, validatedAt, fingerprint, history | V1 | ✅ Done (M5). The Page Object holds the locator code, as in the document's §10; the JSON holds the same locator with its fingerprint and history, and both are written together |
 | FR-LR-02 | Reuse a validated locator before exploring again | V2 | A second generation of the same page is faster |
 | FR-LR-03 | Locator history (who/what changed it, when, why) | V2 | |
 | FR-LR-04 | Mirror in the database for search ("which tests use this locator?") | V2 | |
@@ -187,24 +239,28 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-RV-01 | Show the plan: steps, locators with scores, assertions, per-step screenshots, warnings | V1 | |
-| FR-RV-02 | **Pick element on screenshot**: the tester clicks the right element for a NEEDS_REVIEW step. The platform builds and validates the locator. | V1 | Resolves ambiguous and unnamed elements |
-| FR-RV-03 | Actions: **Approve & Execute**, **Edit**, **Regenerate** | V1 | |
-| FR-RV-04 | Show the generated code with a diff against the previous version | V1 | |
-| FR-RV-05 | Edits to steps flow back into the Test Model (not only the code) | V1 | |
+| FR-RV-01 | Show the plan: steps, locators with scores, assertions, per-step screenshots, warnings | V1 | ✅ Done (M7) |
+| FR-RV-02 | **Pick element on screenshot**: the tester clicks the right element for a NEEDS_REVIEW step. The platform builds and validates the locator. | V1 | Resolves ambiguous and unnamed elements · ✅ Done (M7): the screenshot and the element boxes come from the same moment (the probe's snapshot, whose refs are MCP's); the smallest box under the click wins |
+| FR-RV-03 | Actions: **Approve & Execute**, **Edit**, **Regenerate** | V1 | ✅ Done (M7) for a single test case; a workbook run is approved by starting it (D17) |
+| FR-RV-04 | Show the generated code with a diff against the previous version | V1 | ✅ Done (M7) |
+| FR-RV-05 | Edits to steps flow back into the Test Model (not only the code) | V1 | ✅ Done (M7) |
 | FR-RV-06 | Approve locator-healing proposals (FR-REC) | V3 | |
+| FR-RV-07 | **Re-discover** a saved test (document §11: UI change, explicit request): explore again for all or chosen steps, compare the new locators with the repository and show the differences for approval | V2 | Only changed locators are updated; unchanged ones keep their history |
+| FR-RV-08 | Optional per-project **auto-approve**: a generated test with no NEEDS_REVIEW step, no UNPARSED item and no warning is approved and run without the review screen | V2 | Off by default (D17) |
 
 ### 6.10 Code generation (FR-GE) · §9, §10
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-GE-01 | Template-based generation (Handlebars + Prettier) | V1 | |
-| FR-GE-02 | Page Objects: `pages/<Name>Page.ts` with locators and action methods | V1 | Matches the §10 example |
-| FR-GE-03 | Specs: `tests/<name>.spec.ts`. Each step is a `test.step('S2: Enter username', …)` | V1 | Results map back to the tester's step numbers |
-| FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | |
-| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files | V1 | `npx playwright test` works standalone |
-| FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff |
-| FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Adding a test adds methods, keeps the old ones |
+| FR-GE-01 | Template-based generation (Handlebars + Prettier) | V1 | ✅ Done (M5) |
+| FR-GE-02 | Page Objects: `pages/<Name>Page.ts` with locators and action methods | V1 | Matches the §10 example · ✅ Done (M5) |
+| FR-GE-10 | **Action methods** (document §10, §30 "reusable actions"), by fixed rules: (1) a run of fill / select / check steps on one page that ends with a click or Enter on the same page becomes **one method named after that click** (`Login` → `login()`, `Save changes` → `saveChanges()`); (2) each filled value is a parameter, named after its field (`username`, `password`); (3) any other step becomes a one-action method (`openCart()`, `selectCountry(value)`); (4) checks stay in the spec file, using the page's locators. The spec passes secrets as `process.env.X!` | V1 | The §3 login test generates `LoginPage.login(username, password)` and the spec in document §10 · ✅ Done (M5) |
+| FR-GE-11 | A method with the same name and the same steps is reused; the same name with different steps gets a number (`login2`) and a warning in review | V1 | Deterministic (FR-GE-06) · ✅ Done (M5) |
+| FR-GE-03 | Specs: `tests/<name>.spec.ts`. Each step is a `test.step('S2: Enter username', …)` | V1 | Results map back to the tester's step numbers · ✅ Done (M5). Steps grouped into one method share one `test.step`, labelled with all their numbers (`S2, S3, S4: …`) |
+| FR-GE-04 | Secrets as `process.env.X!` only, plus a `.env.example` | V1 | ✅ Done (M5) |
+| FR-GE-05 | `playwright.config.ts`, `package.json`, fixtures, data files, and a `reports/` folder (git-ignored) for each run's HTML report, results and evidence | V1 | `npx playwright test` works standalone (D15) · ✅ Done (M5); the reporter follows in M6 |
+| FR-GE-06 | **Deterministic output**: the same model always gives the same code | V1 | Re-generating shows an empty diff · ✅ Done (M5): golden-file test, and the same output whatever order the tests come in |
+| FR-GE-07 | Update existing Page Objects without rewriting them (ts-morph) | V2 | Until then, a single test case from the form is generated into its own project, so it cannot disturb the workbook suite |
 | FR-GE-08 | Each approval is a git commit in the generated project | V2 | |
 | FR-GE-09 | Cucumber output: `features/`, `step-definitions/` (optional) | V4 | |
 
@@ -212,9 +268,9 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-RUN-01 | Run a test with `npx playwright test` in the generated project, injecting the environment's variables | V1 | |
-| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | |
-| FR-RUN-03 | Chromium | V1 | |
+| FR-RUN-01 | Run a test with `npx playwright test` in the generated project, injecting the environment's variables | V1 | ✅ Done (M6) |
+| FR-RUN-02 | Custom reporter streams step events live to the UI | V1 | ✅ Done (M6): one `AUTOQA {json}` line per event on stdout; the UI shows them in M7 · ✅ Shown live in the UI over a WebSocket (M7) |
+| FR-RUN-03 | Chromium | V1 | ✅ Done (M6) |
 | FR-RUN-04 | Log in once and reuse the session (`storageState` setup project) | V2 | |
 | FR-RUN-05 | Regression suites: select tests → Run Selected / Run All, with a summary | V2 | |
 | FR-RUN-06 | Firefox and WebKit through config `projects` | V3 | |
@@ -225,18 +281,27 @@ Every test case, however it is imported, becomes these fields:
 
 ### 6.12 Expected vs actual validation (FR-VAL) · §13
 
+The full catalogue of checks (layout, tables, messages, requests, storage…) is in [VALIDATIONS.md](VALIDATIONS.md); the ones marked built there are FR-VAL-06.
+
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-VAL-01 | For each assertion: expected, actual, result | V1 | |
-| FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" |
-| FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | |
-| FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test |
+| FR-VAL-06 | **The validation catalogue** (VALIDATIONS.md): a tester can write the checks of the catalogue in plain words ("Login form is in the middle of the screen", "6 products are shown", "Table columns are Name, Email", "Clicking Save calls POST /api/users"). Each is parsed, found on the page, generated as Playwright code with the matchers in `utils/matchers.ts`, run, and reported with Expected and Actual. A sentence that is not understood says why and gives examples | V1 (M9) | ✅ Built: about 70 check types in `src/validations/`; every example sentence is tested; `e2e.test.ts` runs them on a real page, passing and failing. Not built: see VALIDATIONS.md §9 |
+| FR-VAL-01 | For each assertion: expected, actual, result | V1 | ✅ Done (M6) |
+| FR-VAL-02 | **Actual** is built from captured facts: current URL, title, main heading, visible alerts/validation messages, the assertion error | V1 | "Actual: stayed on /login; alert 'Invalid credentials'" · ✅ Done (M6): from the assertion error and the page facts the fixture attaches |
+| FR-VAL-03 | Report the failed step, failure reason and evidence | V1 | ✅ Done (M6) |
+| FR-VAL-04 | Built-in **health check ("No crash")** in every test: no uncaught page errors, no 5xx on the page's requests, no error page | V1 | Can be switched off per test · ✅ Done (M6): uncaught page errors, 5xx responses, error pages; annotation `health: off` switches it off |
+| FR-VAL-05 | **Result statuses**: `PASS` every check passed; `FAIL` a check failed, or a step failed because of the application; `BLOCKED` the run could not be done (environment, network, missing credentials or test data); `NEEDS REVIEW` a step or check the rules cannot decide (UNPARSED, vague, ambiguous). A vague expected result is never judged. | V1 | "Works correctly" gives NEEDS REVIEW, never PASS · ✅ Done (M6). A script error in the generated test is BLOCKED, never blamed on the application |
+| FR-VAL-06 | **Validation catalogue**: every check type (page, element state, text, forms, messages, layout, tables, network, health, session, storage, accessibility, performance, files, calculations, timing, devices, API) with its tester wording, Playwright check and version, in [VALIDATIONS.md](VALIDATIONS.md) (VAL-A01…R08) | V1–V4 | Each VAL row is built in the version it lists |
+| FR-VAL-07 | **Page identity check** after every page-changing step: path pattern, title and key elements from a page fingerprint learned during exploration (VAL-A05) | V1 | Opening an error or maintenance page fails the step with "Expected Home page, actually on …" |
+| FR-VAL-08 | **Guard-rail levels**: each automatic check can be `fail`, `warn` or `off` per project and test, and is reported separately from the tester's expected result (VALIDATIONS §4) | V2 | |
+| FR-VAL-09 | **Quality gates** per suite: accessibility, broken links and images, page speed, visual comparison, cookie flags (VALIDATIONS §5) | V3 | |
+| FR-VAL-10 | **Validation registry**: one module per check type (phrases, probe, code template, actual text) and custom matchers in the generated project (`toBeCentered`, `toBeBelow`, `toBeSortedBy`…) | V2 | A new check type needs no change outside its module |
 
 ### 6.13 Failure classification and retry (FR-FC) · §15
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-FC-01 | Categories: Environment, Network, Application, Authentication, Test Data, Locator, Timeout, Assertion | V3 (basic labels in V1) | |
+| FR-FC-01 | Categories: Environment, Network, Application, Authentication, Test Data, Locator, Timeout, Assertion | V3 (basic labels in V1) | ✅ Basic labels (M6) |
 | FR-FC-02 | Rules are checked in a fixed order (see ARCHITECTURE.md §7) | V3 | |
 | FR-FC-03 | **Controlled retry**: retry once only for Environment, Network and Timeout; Locator → recovery; **never** retry Assertion, Application, Auth or Test Data | V3 | |
 
@@ -244,9 +309,9 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-EV-01 | Screenshot on failure, error message, failed locator/assertion, URL, timestamps, duration | V1 | |
+| FR-EV-01 | Screenshot on failure, error message, failed locator/assertion, URL, timestamps, duration | V1 | ✅ Done (M6): screenshot and trace on failure, copied to `.auto-qa/runs/<EXEC-ID>/` |
 | FR-EV-02 | Trace, video, console logs, network errors | V2 | |
-| FR-EV-03 | **Masking**: every secret value is replaced with `••••` in logs, errors and reports | V1 | |
+| FR-EV-03 | **Masking**: every secret value is replaced with `••••` in logs, errors and reports | V1 | ✅ Done (M6): secrets are masked in what the run produced (actual results, errors, page facts); the tester's own words and evidence paths are not masked, as they never hold a secret (FR-TD-02). Only secret-named variables are masked, not the username |
 | FR-EV-04 | Traces from tests that type a secret are marked **restricted** | V2 | |
 | FR-EV-05 | Retention setting (e.g. keep evidence 30 days) | V3 | |
 
@@ -264,20 +329,23 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-ENV-01 | One environment (base URL + credentials) | V1 | |
+| FR-ENV-01 | One environment (base URL + credentials) | V1 | ✅ Done (M6) |
 | FR-ENV-02 | Several environments: Development, QA, Staging, UAT, Production | V2 | Same test, different env |
 | FR-ENV-03 | **Page name → URL map** per environment (e.g. `Home → /`, `Opportunities → /opportunities`) | V2 | "Open Opportunities page" works in any env |
 | FR-ENV-04 | Secrets encrypted at rest (AES-GCM), shown masked in the UI | V2 | |
+| FR-ENV-05 | **V1 credential storage** (document §30 "enter credentials securely"): the username and password from the form are written only to the generated project's `.env`, which is git-ignored, and passed to the run as environment variables. They are never stored in the database, the Test Model, generated code, logs or reports. The password field is masked and never sent back to the browser. | V1 | A search of the database, the git history and the reports finds no password. Replaced by encrypted storage in V2 (FR-ENV-04) · ✅ Done (M7): the project form writes the workspace .env; the API reports only whether a secret is set |
 
 ### 6.17 History and reporting (FR-HI) · §20
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-HI-01 | Result screen for the last run: PASS/FAIL, steps, expected vs actual, screenshot, duration, code | V1 | |
+| FR-HI-01 | Result screen for the last run: PASS/FAIL, steps, expected vs actual, screenshot, duration, code | V1 | ✅ Done (M7) |
 | FR-HI-02 | Execution history list (test, status, duration, env, browser, date) | V2 | |
 | FR-HI-03 | Open any past run: steps, evidence, trace, logs, generated code at that time | V2 | |
 | FR-HI-04 | Standalone HTML report per run/suite | V2 | |
 | FR-HI-05 | Dashboards: pass rate trend, flaky tests, most-healed locators | V4 | |
+| FR-HI-06 | **Results written back to the workbook** (D23): a copy `<name>.results.xlsx` with the columns **Status**, **Actual Result**, **Failed Step**, **Executed At**, **Automation ID** and **Evidence** (link to the screenshot) added next to each test case. The original formatting is kept. Running again updates the same columns. | V1 | The tester opens the results file and sees PASS/FAIL and the actual result on every row · ✅ Done (M6b) |
+| FR-HI-07 | **Batch summary**: totals by status, duration, and the review queue (case, step, question) | V1 | "82 pass · 9 fail · 3 blocked · 6 need review" · ✅ Done (M6b): in the terminal and on an "Auto QA" sheet in the results copy |
 
 ### 6.18 Team mode (FR-TM)
 
@@ -292,8 +360,9 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-EN-01 | **Requirement traceability**: Requirement → Test Case → Automation → Execution → Result → Defect | V4 | |
-| FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | `api` action in the model |
+| FR-EN-01 | **Requirement traceability**: Requirement → Test Scenario → Test Case → Automation → Execution → Result → Defect (document §25) | V4 | `REQ-REG-001 → SC-REG-003 → TC-REG-014 → AUTO-REG-014 → EXEC-2026-00124 → FAIL → BUG-REG-032` |
+| FR-EN-06 | **Stable IDs from V1**, so traceability needs no renumbering later: generated automation `AUTO-<test case id without TC->` (TC-REG-014 → AUTO-REG-014); executions `EXEC-<year>-<5-digit sequence>`. Requirement and scenario IDs come from the sheet or Jira; defect IDs from Jira | V1 (automation and execution IDs) · V4 (the rest) | IDs never change after they are given · ✅ Done: automation IDs (M5), execution IDs (M6) |
+| FR-EN-02 | **API + UI hybrid** steps (e.g. create data by API, check in UI) | V4 | Reuses the API steps from §6.21 inside a UI test |
 | FR-EN-03 | Create a Jira defect from a failed run, with evidence attached | V4 | |
 | FR-EN-04 | Push results back to Jira/TestRail | V4 | |
 | FR-EN-05 | Cucumber / Gherkin generation | V4 | Same as FR-GE-09 |
@@ -302,12 +371,72 @@ Every test case, however it is imported, becomes these fields:
 
 | ID | Requirement | Version | Acceptance |
 |---|---|---|---|
-| FR-AI-01 | Keep an `AssistProvider` interface with a "no-op" default | V1 (interface only) | The platform works without it |
+| FR-AI-01 | Keep an `AssistProvider` interface with a "no-op" default | V1 (interface only) | The platform works without it · ✅ Done (M7): `src/assist/provider.ts`, used for unreadable steps |
 | FR-AI-02 | If added: a **local** model only (e.g. Ollama), used only at fallback points (unparsed step, low match score, recovery ranking, failure summary) | Decide later | |
 | FR-AI-03 | AI output is only a suggestion: it goes through the same validation and human review | Decide later | |
 | FR-AI-04 | Never used during test execution | Always | |
 
+### 6.21 API testing (FR-API) · D14
+
+| ID | Requirement | Version | Acceptance |
+|---|---|---|---|
+| FR-API-01 | Test cases with Type `api` (or a first step that sends a request) are API tests. They skip MCP exploration and go straight from the parser to code generation. | V2 | No browser opens |
+| FR-API-02 | **Request steps**: `Send GET/POST/PUT/PATCH/DELETE <path>`, optionally `with body <data key>` and `with query <data key>` | V2 | Parsed into an `api` step in the Test Model |
+| FR-API-03 | **Headers**: `Set header <name> to <value>` for the rest of the test | V2 | |
+| FR-API-04 | **Auth profiles** per environment: bearer token, basic, API key header. Chosen by a precondition such as `Authenticated as admin`. Values come from secrets. | V2 | Tokens never appear in code, reports or logs (FR-EV-03) |
+| FR-API-05 | **Checks**: status code (`Status is 201`), response field by path (`Response field user.name is "Asha"`), field exists / is empty, response contains text, header value, list length, response time under N ms | V2 | Each check reports expected vs actual (FR-VAL) |
+| FR-API-06 | **Chaining**: `Save response field <path> as <name>`, then use `{{name}}` in later paths, bodies and checks | V2 | |
+| FR-API-07 | **Generated code**: `tests/api/<id>.spec.ts` using Playwright's `request` fixture, and one API client per service (`api/<Service>Client.ts`), the API equivalent of a Page Object | V2 | Runs with `npx playwright test` like UI tests (D5) |
+| FR-API-08 | **Evidence**: method, URL, status, request and response bodies, timings, with secrets masked | V2 | |
+| FR-API-09 | **Contract check**: `Response matches schema <Name>`, using JSON Schema or an imported OpenAPI file | V3 | |
+| FR-API-10 | Import request definitions from OpenAPI or a Postman collection so testers pick endpoints instead of typing paths | V3 | |
+| FR-API-11 | API tests that change data run only on non-production environments by default | V2 | Same rule as D9 |
+
 ---
+
+### 6.22 Database (FR-DB) · [DATABASE.md](DATABASE.md)
+
+Full requirements FR-DB-01…26 (schema, migrations, backup, repositories, storage references, PostgreSQL, traceability tables) are in [DATABASE.md §11](DATABASE.md#11-requirements-fr-db). V1 part (FR-DB-01…18) is milestone **M8**; FR-DB-19…22 are V2, FR-DB-23/24 are V3, FR-DB-25/26 are V4. It also closes FR-LR-04 (V2), FR-ENV-04 (V2), FR-HI-02/03 (V2) and FR-TM-04 (V3).
+
+### 6.23 Real-world test cases (FR-RW) · [REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md)
+
+Goal: run test cases **as testers really write them**; ask only when the meaning is truly unclear, and once per wording. Target: 90% of real test cases run with no question. The catalogue of issues (RW-S, RW-E, RW-L, RW-R, RW-I), the outcome intents, the confidence policy and the walk-through of the 10 OrangeHRM cases are in the linked document, which is part of this specification. Built in phases R1–R5 (milestones in §8).
+
+| ID | Requirement | Phase | Acceptance |
+|---|---|---|---|
+| FR-PA-14 | **Text normaliser**: quotes, bullets, numbering, spaces; abbreviations (pwd, btn, txt box, DDL); spelling fixes against the page's own words (5+ letters, at most 2 different), marked *assumed* | R1 | RW-S06, S07, S08 |
+| FR-PA-15 | Split compound steps and checks ("Enter username and password and click Login"; "Login is rejected and an error is displayed") when each part is a full action or check | R1 | RW-S03, E05 |
+| FR-PA-16 | "Leave / keep X blank / empty", "Do not enter X" mean clearing the field | R1 | RW-S02 |
+| FR-PA-17 | Passive voice and "user should" in steps ("Login button is clicked", "User should click Login"); filler adverbs | R1 | RW-S01, S11, S12 |
+| FR-PA-18 | **Outcome intents library** (LOGIN_SUCCESS, LOGIN_REJECTED, ERROR_SHOWN, FIELD_ERROR, SUCCESS_SHOWN, FIELD_CLEARED, MASKED, STAYS, NAVIGATED, ACCESS_DENIED, LOGGED_OUT, DISABLED_UNTIL, LIST_CONTAINS, NO_CHANGE): vague outcome phrases become concrete checks | R1–R2 | RW-E03, E04, E06, E07, E10 |
+| FR-PA-19 | Step references: "Repeat steps 1–3" (built), "Same as TC_x" (not built) | R5 | RW-S10 |
+| FR-PA-20 | Conditional / optional steps ("If a cookie banner appears, accept it") | R5 | RW-S13 |
+| FR-PA-21 | Position words: first, last, second → `.first()`, `.last()`, `.nth()` | R5 | RW-L10 (moved from R1: it needs a change in how the locator is chosen) |
+| FR-LO-14 | A label in a separate cell or text right before a field is merged with the field ("Password :" + textbox) | R1 | RW-L01 |
+| FR-LO-15 | The element type follows the check type (masked, cleared, empty → fields; selected → dropdown/radio; clicked → button/link) | R1 | RW-L02 |
+| FR-LO-16 | Icon dictionary for unnamed icon buttons (title, aria-label, class names) | R5 | RW-L07 |
+| FR-LO-17 | Elements inside iframes, behind hover menus, in lazy lists | R5 | RW-L08, L09 |
+| FR-LRN-01 | **Learn message texts**: for "an appropriate error message is displayed", exploration records the new error-like message and turns it into a concrete text check, marked *learned*, only if it fits the intent (D31) | R2 | RW-E04 |
+| FR-LRN-02 | Learn page names and fingerprints for outcomes such as "home/dashboard page" | R2 | RW-E02 |
+| FR-LRN-03 | Learned values are marked in the report and review, and approvable in one click | R2 | §5, §8 |
+| FR-RULE-01 | Every review answer is saved as a **project rule** (phrase → meaning, word → element, page alias) and never asked again | R4 | M3 |
+| FR-RULE-02 | A rules page lists, edits and switches off rules | R4 | M3 |
+| FR-RULE-03 | Rules export / import between projects | R4 | M3 |
+| FR-RV-09 | **Grouped review** for a batch: questions grouped by reason, one answer for all test cases it affects | R4 | M8 |
+| FR-RV-10 | **Approve all** per group (learned values, assumptions) | R4 | §8 |
+| FR-RV-11 | The batch keeps running while questions wait; only affected test cases wait | R4 | §8 |
+| FR-RV-12 | **Edit a test case from the review list**: each row of the results (and of the review queue) has an Edit button that opens that test case's details, saves the changes as a new version, and the next run of the queue uses the edited version, not the sheet's | R0 | ✅ Done |
+| FR-VAL-11 | **NOT VERIFIED** status: steps ran without failure but a check could not be verified; shows what was observed | R3 | RW-E08, E09, E13, E14 |
+| FR-VAL-12 | **PASS (with assumptions)**: passed, with assumed or learned decisions listed | R2 | §7 |
+| FR-VAL-13 | "Observed → save as check": turn an observation into a real check for future runs | R3 | §7 |
+| FR-VAL-14 | **Policy setting** per project: strict, balanced (default), lenient (D30) | R3 | §6 |
+| FR-IN-10 | Import repair: one step per row, merged cells, per-step expected results, section rows, several sheets, duplicate ids | R5 | RW-I01…I07 |
+| FR-EX-11 | Known-overlay handler (cookie banners, pop-ups, tours) dismissed when they block the target, and recorded | R5 | RW-R01 |
+| FR-RUN-11 | Account lock-out guard: warn when a batch has more than N wrong-password tests for one user (default 3) | R5 | RW-R04 |
+| FR-RUN-12 | Dependency order between test cases ("uses the user created in TC_005") | R5 | RW-R05 |
+| FR-HI-08 | "Suggested wording" column in the results workbook | R5 | M10 |
+
+**Acceptance for the whole feature:** the 10 real OrangeHRM login test cases (the batch in the linked document, §9) run with 9 test cases running and 1 NOT VERIFIED, and 0–1 questions. They are kept as a fixture in the test suite, and every real test case that fails later is added.
 
 ## 7. Non-functional requirements
 
@@ -330,9 +459,9 @@ Every test case, however it is imported, becomes these fields:
 
 | Version | Theme | Main features |
 |---|---|---|
-| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation · run in Chromium · expected vs actual · health check · screenshot · masking |
-| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits |
-| **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · **team mode** (server, login, roles, PostgreSQL) |
+| **V1 · MVP** | One test case, end to end | Excel/CSV import + column mapping · parser (lexicon, alternatives, checks, negatives, data binding, UNPARSED) · basic quality check · MCP exploration with the step state machine · locator scoring, ladder, validation, nearby text · review with **pick element** · POM + spec generation with **action methods** · run settings in the form (URL, credentials, browser) · **batch run of a whole workbook** with results written back to a copy · credentials only in a git-ignored `.env` · run in Chromium · expected vs actual · health check · screenshot · masking |
+| **V2 · Automation management** | Many tests, reused | Jira/TestRail import · reusable flows · unique data generators · locator repository reuse + history · environments + page URL map + encrypted secrets · login state reuse · suites · trace/video · history · duplicate detection · git commits · **API tests** (requests, auth profiles, checks, chaining) · **table steps and checks** · **re-discover** a saved test · optional auto-approve |
+| **V3 · Intelligent automation + team** | Stable at scale | Locator recovery (propose/auto) · failure classification · controlled retry · Firefox/WebKit · parallel · mobile emulation · data-driven runs · API contract checks + OpenAPI/Postman import · **team mode** (server, login, roles, PostgreSQL) |
 | **V4 · Enterprise QA** | Connected to the QA process | Traceability · API + UI hybrid · Cucumber · Jira defects + result sync · CI/CD · scheduled runs · dashboards |
 | **Backlog** | Ideas, not planned | See §12 |
 
@@ -342,11 +471,23 @@ Every test case, however it is imported, becomes these fields:
 |---|---|---|
 | M1 | Connect to Playwright MCP, list page elements (FR-EX-01, FR-LO-01, FR-LO-02) | ✅ Done |
 | M2 | Parser: text → Test Model (FR-PA-*, FR-TD-01, FR-TD-02, FR-PF-01 parsing, FR-QC-01/02) | ✅ Done |
-| M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ⬜ Next |
-| M4 | Full exploration of one test case (FR-EX-02…09) | ⬜ |
-| M5 | Code generation (FR-GE-01…06) | ⬜ |
-| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03) | ⬜ |
-| M7 | Web UI: import, column mapping, review with pick element, results (FR-IN-01…04, FR-RV-*, FR-HI-01) | ⬜ |
+| M3 | Locator matching + Locator Probe validation (FR-LO-03…11) | ✅ Done |
+| M4 | Full exploration of one test case (FR-EX-02…09, FR-LO-07 after actions, FR-PF-01 applied, D19) | ✅ Done |
+| M5 | Code generation (FR-GE-01…06, FR-GE-10/11, FR-LR-01, FR-TD-03, automation IDs FR-EN-06) | ✅ Done |
+| M6 | Execution + expected vs actual + evidence (FR-RUN-01…03, FR-VAL-*, FR-EV-01, FR-EV-03, FR-ENV-01/05, execution IDs FR-EN-06) | ✅ Done |
+| M6b | Batch run of a workbook from the command line: Excel/CSV import with automatic column matching, unattended run, review queue, results written back (FR-IN-01, FR-IN-08, FR-IN-09, FR-HI-06, FR-HI-07, D22, D23) | ✅ Done |
+| M7 | Web UI (D20): server + storage, the batch run with progress and the review queue on screen, column mapping screen, single test form, review with pick element, results (FR-IN-02, FR-IN-04, FR-RV-01…05, FR-HI-01, FR-QC-05, FR-AI-01) | ✅ Done |
+| R0 | **Edit a test case from the review list** (FR-RV-12) | ✅ Done |
+| R1 | Real-world test cases, phase 1: parser and element fixes (FR-PA-14…18, FR-LO-14, 15; position words FR-PA-21 not yet) | ✅ Done |
+| R2 | Phase 2: outcome intents with learning, PASS (with assumptions) (FR-LRN-01, 03, FR-VAL-12; page-name learning FR-LRN-02 only as the alias rule) | ✅ Done |
+| R3 | Phase 3: NOT VERIFIED and the policy setting (FR-VAL-11, 13, 14) | ✅ Done |
+| R4 | Phase 4: grouped review and project rules (FR-RULE, FR-RV-09…11) | Planned |
+| R4 | Phase 4: project rules, grouped review, approve all | ✅ Built |
+| R5 | Phase 5: import repair (FR-IN-10) and "Repeat steps" built; run-time guards, overlay handler, dependency order, suggested wording (FR-EX-11, FR-RUN-11, 12, FR-PA-20, 21, FR-HI-08) | Partly built |
+| M9 | Fixes from real use and the validation catalogue: plain-language review reasons, browser pop-ups handled, a test case list with Run again, a screenshot after every step and a video, clearer run status, and the validation registry (FR-VAL-06) | ✅ Done |
+| M8 | Database foundation: versioned migrations, repositories, environments, test case versions, executions and results, evidence, storage references, `db` commands (FR-DB-01…18) | Built for SQLite: driver, migrations 0001–0006, store, environments and page routes, test case versions, explorations, executions/results/evidence, storage references, `db` status/backup/verify/restore/export/import. Not built: the PostgreSQL driver and the schema comparison in CI (V3) |
+
+The step-by-step plan is in [PLAN.md](PLAN.md).
 
 Practice sites used during development: `saucedemo.com` (login), `the-internet.herokuapp.com` (checkboxes, dropdowns, dialogs, tables).
 
@@ -365,13 +506,21 @@ Practice sites used during development: `saucedemo.com` (login), `the-internet.h
 | **Flow** | A named, reusable sequence of steps used as a precondition |
 | **Fingerprint** | Stored facts about an element used to find it again after the UI changes |
 | **NEEDS_REVIEW** | A step the platform could not resolve safely; the tester decides |
+| **Action method** | A Page Object method that performs one step or a group of steps, e.g. `login(username, password)` (FR-GE-10) |
+| **Re-discovery** | Exploring a saved test again to refresh its locators after the UI changed (FR-RV-07) |
+| **Batch run** | Running every test case in a workbook unattended, setting aside the ones that need the tester (FR-IN-08) |
+| **Review queue** | The cases a batch set aside, with the question each one needs answered (FR-HI-07) |
+| **Run settings** | Application URL, credentials, browser and environment for a run. They belong to the environment, not the test case (§5) |
+| **API test** | A test case that sends HTTP requests and checks the responses, with no browser (§6.21) |
+| **API client** | Generated class with one method per endpoint a test uses; the API equivalent of a Page Object |
+| **Auth profile** | A named way to authenticate API requests in an environment (bearer, basic, API key), with values from secrets |
 
 ---
 
 ## 10. Data model (summary)
 
-Project · Environment · Secret · TestCase · TestModelVersion · Flow · PageObject · Locator · LocatorChange · Suite · Execution · StepResult · Evidence · ImportMapping · (V4) Requirement · Defect.
-The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
+Project · Environment · Secret · TestCase · TestModelVersion · Flow · PageObject · Locator · LocatorChange · Suite · Execution · StepResult · Evidence · ImportMapping · (V4) Requirement · Scenario · Defect.
+The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model); tables and rules are in [DATABASE.md](DATABASE.md).
 
 ---
 
@@ -410,6 +559,10 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | Q2 | Which Jira test plugin (Xray, Zephyr, none)? | V2 |
 | Q3 | Keep evidence for how long? | V3 |
 | Q4 | AI helper: yes or no? | After V2 |
+| Q5 | Which API auth types do our services use (bearer, basic, API key, OAuth client credentials)? | V2 |
+| Q6 | Do our services publish OpenAPI files or Postman collections? | V3 |
+| Q8–Q11 | Database choices (one file or one per project, query builder, generated code storage, result sheets): see [DATABASE.md §12](DATABASE.md#12-risks-and-open-questions) | M8 |
+| Q7 | Are GraphQL or SOAP services in scope, or only REST/JSON? | V2 |
 
 ## 14. Change log
 
@@ -418,3 +571,22 @@ The full diagram is in [ARCHITECTURE.md §9](ARCHITECTURE.md#9-data-model).
 | 1.0 | 2026-09-29 | First version from `Auto_QA.docx` |
 | 1.1 | 2026-09-29 | Added decisions D1–D12 (MCP orchestration, no agent, Codegen role), import + column mapping, preconditions/flows, test data rules, quality check, health check, pick element, team mode, backlog. Scope: any web app, username/password only. M1 done. |
 | 1.2 | 2026-09-29 | M2 done: parser and Test Model. Added a `clear` action and a `checked` assertion type. "Select X" without "from" is read as choosing a radio/checkbox. Secret-looking test data keys become env vars (`Wrong Password` → `TEST_WRONG_PASSWORD`), and a password typed in a step is unparsed (`SECRET_LITERAL`). |
+| 1.3 | 2026-09-30 | Added API testing (§5.1, §6.21 FR-API, D14): API tests skip MCP and run with Playwright's `request` client; core in V2, contract checks and OpenAPI/Postman import in V3. D13: all 72 MCP tools on, unsafe tools off by default. Open questions Q5–Q7. |
+| 1.4 | 2026-09-30 | M3 done: locator matching, ladder and Locator Probe on a Chrome shared with MCP over CDP. An unnamed field just after a heading is named by it (lower score). Position-based locators rank last; generated-looking ids are not used for CSS. FR-LO-07 uses `browser_generate_locator` now; code after an action comes in M4. |
+| 1.5 | 2026-09-30 | Checked against every section of `Auto_QA.docx`. Added: run settings in the form (§5, FR-IN-04), V1 credential storage (FR-ENV-05), table steps and row-scoped locators (FR-PA-13, FR-LO-13), POM action methods (FR-GE-10, FR-GE-11), re-discovery and optional auto-approve (FR-RV-07, FR-RV-08), `reports/` folder (FR-GE-05), Test Scenario level and stable IDs (FR-EN-01, FR-EN-06). Recorded where the spec differs from the document: D15 (no `utils/` in the generated project), D16 (one locator file per page), D17 (Generate & Execute still reviews), D18 (Browser field with Chromium only in V1). |
+| 1.6 | 2026-09-30 | Decisions D19 (V1 page names: first page is `BASE_URL`, later pages ask), D20 (React + Fastify + SQLite), D21 (ExcelJS). Every open V1 requirement assigned to a milestone. Added PLAN.md. FR-IN-03 marked done. |
+| 1.7 | 2026-09-30 | M4 done: exploration controller with the step state machine, resolver for NEEDS_REVIEW, settle and verify-effect rules, preconditions, Production guard, per-step screenshots. Learned page URLs are per environment and stored as paths (D19). A "shown" check may target plain text. A role locator without a name ranks after a CSS id. Local demo app for end-to-end tests. |
+| 1.8 | 2026-09-30 | Batch run of a whole workbook (FR-IN-08, D22), automatic column matching (FR-IN-09), result statuses (FR-VAL-05), results written back to a copy of the workbook (FR-HI-06, D23), batch summary and review queue (FR-HI-07). New milestone M6b; Excel/CSV import moves from M7 to M6b. |
+| 1.9 | 2026-09-30 | M5 done: code generation into a standalone Playwright project (Page Objects with grouped action methods, specs, locator files, data, config). Locators are written in the Page Object and recorded in the locator JSON (FR-LR-01). Grouped steps share one `test.step` (FR-GE-03). Two page names for one path become one Page Object. |
+| 1.10 | 2026-09-30 | M6 done: execution with Playwright Test, verdicts PASS / FAIL / BLOCKED / NEEDS REVIEW with expected vs actual, health check, evidence kept per execution ID, basic failure labels, `npm run auto-qa` for the whole flow. Masking applies to run output only (FR-EV-03). A script error in a generated test is BLOCKED (FR-VAL-05). |
+| 1.11 | 2026-09-30 | M6b done: batch run of a workbook with automatic column matching, results written to a copy with an "Auto QA" summary and review queue sheet, resume, `--only-review`, the sheet's login case reused for "Logged in" cases, identical cases explored once. Explorations now record the login steps they ran. |
+| 1.12 | 2026-09-30 | M7 done: server (Fastify, node:sqlite, job runner, WebSocket) and web UI (React, Vite): projects with run settings, workbook upload with column mapping, batch runs with results download and the review queue, single test cases with questions, pick element on the screenshot, review with code diff, Approve & Execute / Edit / Regenerate, results, writing guide. AssistProvider no-op (FR-AI-01). D17 clarified for workbook runs; single tests use their own project until FR-GE-07. |
+| 1.13 | 2026-09-30 | From a real OrangeHRM test case: "Enter url…"/"Open the application" open BASE_URL with its path (it opened the site root before), "Enter user name in Login Name text box", "Open Browser" as no step, steps in quotes, "Checking X", "able to navigate to X", positions ignored, table-cell labels. D19: a check no longer teaches a page that was not reached, which could have given a false PASS. |
+| 1.14 | 2026-10-01 | Database specification and architecture ([DATABASE.md](DATABASE.md)): decisions D24–D28, requirements FR-DB-01…26, milestone M8. Plan to adopt the existing SQLite store as a baseline, add versioned migrations, repositories, environments, test case versions, executions/results/evidence, storage references, and the PostgreSQL path for V3. |
+| 1.16 | 2026-10-05 | M8 built for SQLite: executions, results, step/check results, evidence, explorations and generation snapshots as tables (migration 0006; `verdicts` kept as a view for one release), `EXEC-…` from a counter, learned page URLs as page routes, storage references for files, `db restore / export / import`, upgrade fixture in tests. PostgreSQL driver and CI schema comparison remain for V3. Differences from the plan: [DATABASE.md §10.1](DATABASE.md#101-where-m8-differs-from-the-plan-above). |
+| 1.15 | 2026-10-01 | M8 started: driver, versioned migrations (checksums, backup, downgrade guard), store moved to `src/db/`, environments, page routes, counters, audit log, `npm run db`. The real database was upgraded on a copy with no data lost. |
+| 1.16 | 2026-10-01 | Validation catalogue ([VALIDATIONS.md](VALIDATIONS.md)): 164 check types in 18 groups with wording, Playwright check, failure text and version; three layers (explicit, guard rails, quality gates); page identity check (FR-VAL-07); FR-VAL-06…10. |
+| 1.16 | 2026-10-01 | M9: fixes from real use. Review reasons in plain words (headline, why, what to do); browser alerts and confirms accepted automatically and reported; a test case list with versions and **Run again**; a screenshot after every step, a video and a trace per run, shown with step times; runs show where a cancelled run was stopped and refresh by themselves; the validation catalogue built as a registry (D29, FR-VAL-06), about 70 check types, tested on a real page and on a real OrangeHRM server. |
+| 1.17 | 2026-10-01 | Real-world test cases adopted ([REAL-WORLD-TEST-CASES.md](REAL-WORLD-TEST-CASES.md), §6.23, D6 revised, D30 confidence policy, D31 learned values agree with intent) and planned as phases R1–R5. R0 done: every row of the results and the review queue has an **Edit** button that opens that test case, saves it as a new version, and the next run of the review queue uses the edited version (FR-RV-12). |
+| 1.18 | 2026-10-01 | Real-world test cases R1–R3 built. The 10 OrangeHRM login cases (`examples/real-world/login-cases.json`, run against a login page laid out like OrangeHRM) now run unattended with no question: 9 PASS and 1 NOT VERIFIED. New: text normaliser, outcome intents (login rejected/success, error shown, fields cleared, masked), "leave blank", "both A and B", invalid values made up and marked assumed, one line with several actions becomes steps S3.1/S3.2, error text learned from the application (DOM message or browser alert) and listed as assumed/learned, PASS (with assumptions), the NOT VERIFIED status with "save what was seen as the expected result", and the project policy strict / balanced / lenient. |
+| 1.19 | 2026-10-01 | R4 built (project rules, grouped review, approve all). R5 started: import repair (FR-IN-10), "User is on the X page", "Repeat steps N-M" (FR-PA-19). Overlay handler, lock-out guard, dependency order, position words, suggested wording remain planned. |

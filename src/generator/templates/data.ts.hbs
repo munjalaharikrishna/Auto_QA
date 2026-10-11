@@ -1,0 +1,6 @@
+/** Non-secret test data for {{testId}} (FR-TD-03). Secrets come from the environment, never from here. */
+export const data = {
+{{#each values}}
+  {{@key}}: {{{quote this}}},
+{{/each}}
+} as const;
