@@ -147,8 +147,8 @@ describe('pipeline contract (GV-15)', () => {
     assert.equal(r.status, 'needs-review');
     assert.equal(r.stage, 'Validate');
     assert.equal(r.ir, undefined);
-    assert.match(r.unparsed[0].raw, /Frobnicate/);
-    assert.ok(r.log.some((l) => l.kind === 'warning' && /not understood/.test(l.message)));
+    assert.ok(r.unparsed[0].raw.includes('Frobnicate'));
+    assert.ok(r.log.some((l) => l.kind === 'warning' && l.message.includes('not understood')));
   });
 
   it('keeps a secret as a reference and never writes its value in the document or the log', async () => {
@@ -161,7 +161,7 @@ describe('pipeline contract (GV-15)', () => {
     assert.equal(r.status, 'compiled', String(r.error));
     const secrets = Object.entries(r.ir?.data ?? {}).filter(([, d]) => d.secret);
     assert.ok(secrets.length, 'the password is marked secret');
-    for (const [, d] of secrets) assert.match(d.value ?? '', /^\$env\.|^\*\*\*$/);
+    for (const [, d] of secrets) assert.ok((d.value ?? '').startsWith('$env.') || d.value === '***', String(d.value));
   });
 
   it('never allows a clean PASS when an assumption was made (DEC-05)', async () => {

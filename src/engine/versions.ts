@@ -11,7 +11,8 @@ export const COMPONENT_VERSIONS = {
   grammar: '0.1.0-legacy',
   vocabulary: '0.1.0-legacy',
   ontology: '0.1.0-legacy',
-  patterns: '0.1.0-legacy',
+  /** The pattern set and the normalizer and tokenizer built on it (src/engine/patterns, src/engine/text; E0.3). Per-pattern versions are in `patterns().versions`. */
+  patterns: '1.0.0',
 } as const;
 
 export type ComponentVersions = { -readonly [K in keyof typeof COMPONENT_VERSIONS]: string };

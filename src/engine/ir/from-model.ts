@@ -1,5 +1,6 @@
 import type { Action, Assertion, AssertionType, Precondition, Step, TestModel, ValueRef } from '../../model/test-model.js';
 import { isSecretName } from '../config/index.js';
+import { firstNumber, isStateName, lowerSnake, upperSnake } from '../patterns/shapes.js';
 import { componentVersions } from '../versions.js';
 import type { IrAction, IrData, IrExpectation, IrStep, IrTarget, QaIr } from './schema.js';
 
@@ -59,14 +60,11 @@ const CONDITION: Partial<Record<AssertionType, IrExpectation['condition']['type'
 };
 
 const stateName = (text: string): string => {
-  const name = text
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return /^[A-Z]/.test(name) ? name : `S_${name || 'STATE'}`;
+  const name = upperSnake(text);
+  return isStateName(name) ? name : `S_${name || 'STATE'}`;
 };
 
-const numberOf = (id: string): number => Number(/\d+/.exec(id)?.[0] ?? 0);
+const numberOf = firstNumber;
 
 export interface IrSource {
   file?: string;
@@ -87,7 +85,7 @@ export function toQaIr(model: TestModel, source: IrSource = {}): QaIr {
       if (!(ref.key in data)) data[ref.key] = { class: 'EXPLICIT', source: 'EXCEL' };
       return `$data.${ref.key}`;
     }
-    const key = ref.kind === 'env' ? ref.name.toLowerCase() : `gen_${ref.name.replace(/\W+/g, '_').toLowerCase()}`;
+    const key = ref.kind === 'env' ? ref.name.toLowerCase() : `gen_${lowerSnake(ref.name)}`;
     data[key] =
       ref.kind === 'env'
         ? { class: 'REFERENCE', source: 'ENV', value: `$env.${ref.name}`, ...(isSecretName(ref.name) ? { secret: true } : {}) }
