@@ -85,6 +85,10 @@ const FIELD_LABEL: Record<Field, string> = {
   testData: 'Test data',
   expected: 'Expected result',
   requirementId: 'Requirement ID',
+  stepNo: 'Step number (one step per row)',
+  actual: 'Actual result',
+  priority: 'Priority',
+  tags: 'Tags',
 };
 const REQUIRED: Field[] = ['title', 'steps', 'expected'];
 
