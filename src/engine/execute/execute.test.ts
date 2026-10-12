@@ -373,6 +373,13 @@ describe('execution through Playwright MCP on the demo app', { skip }, () => {
   });
 
   describe('a step that cannot be done safely stops the run, with a code', () => {
+    it('blocks instead of typing nothing when a password written inside a step was not kept', async () => {
+      const { trace, steps } = await run([`Open ${app.url}/`, "Enter 'demo123' in the Password field", "Click the 'Login' button"]);
+      assert.equal(trace.status, 'blocked');
+      assert.equal(steps.S2?.code, 'VALUE_UNRESOLVED');
+      assert.ok(steps.S2?.reason?.includes('is empty'), steps.S2?.reason ?? '');
+      assert.equal(steps.S3?.status, 'skipped');
+    });
     it('blocks on an element that is not there, and skips what comes after', async () => {
       const { trace, steps } = await run([`Open ${app.url}/ui/controls`, 'Click the Nothing Here button', 'Click the Show button']);
       assert.equal(trace.status, 'blocked');
