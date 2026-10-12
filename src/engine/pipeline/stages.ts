@@ -1,11 +1,15 @@
 import { z } from 'zod';
 import { type RawTestCase, RawTestCaseSchema } from '../../model/test-model.js';
 import type { ParserConfig } from '../../parser/index.js';
+import { buildContexts } from '../context/context.js';
 import { type ResolvedValue, resolveData as resolveDataValues } from '../data/resolver.js';
 import type { CredentialStore } from '../data/store.js';
 import type { IrSource } from '../ir/from-model.js';
 import { QaIrSchema } from '../ir/schema.js';
 import { validateIr } from '../ir/validate.js';
+import { consolidate } from '../knowledge/labels.js';
+import { resolvePage } from '../knowledge/pages.js';
+import type { Application } from '../knowledge/schema.js';
 import { type CaseLanguage, understandCase } from '../language/case.js';
 import type { ProductionPattern } from '../patterns/redact.js';
 import { nonBlankLines } from '../patterns/shapes.js';
@@ -35,6 +39,8 @@ export interface CompileOptions {
   run?: string;
   /** The longest value each field takes, from the application's knowledge. */
   maxLengths?: Record<string, number>;
+  /** What the engine knows about the application (AK-01, PK-01): its pages, routes and components, and what they are called. */
+  knowledge?: Application;
   /** Patterns for production identifiers (a real customer number): they are taken out of every output (DS-01). */
   productionPatterns?: ProductionPattern[];
 }
@@ -194,24 +200,47 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     },
   };
 
-  const resolvePage: Stage<z.infer<typeof WithIr>, z.infer<typeof WithPages>> = {
+  const resolvePageStage: Stage<z.infer<typeof WithIr>, z.infer<typeof WithPages>> = {
     name: 'ResolvePage',
     output: WithPages,
     run: ({ ir, language, values }, ctx) => {
+      const kb = options.knowledge;
       const pages: Record<string, string | null> = {};
-      for (const s of ir.steps) {
+      const issues = [...language.issues];
+      for (const [k, s] of ir.steps.entries()) {
         const name = s.action === 'NAVIGATE' && s.target?.ontology === 'Page' ? s.target.name : undefined;
-        if (name && !(name in pages)) {
+        if (!name || name in pages) continue;
+        // The stored page first (PK-01): its route, joined to the base address. A name two pages share is a question, never a pick.
+        const stored = resolvePage(kb, name);
+        if (stored.status === 'many') {
           pages[name] = pageRoutes[name] ?? null;
+          issues.push({
+            code: 'AMBIGUOUS',
+            severity: 'review',
+            where: `step ${s.id.slice(1)}`,
+            original: s.original,
+            message: `"${name}" fits more than one stored page: ${stored.pages.map((p) => p.name).join(', ')}`,
+            suggestion: 'Say which page: use its full name.',
+          });
+          ctx.log.add('ResolvePage', 'warning', `${name} fits ${stored.pages.length} stored pages: none is chosen`);
+          continue;
+        }
+        const page = stored.pages[0];
+        const route = page?.route === undefined ? undefined : `${kb?.baseUrl ?? ''}${page.route}`;
+        pages[name] = route ?? pageRoutes[name] ?? null;
+        if (page)
+          ctx.log.add('ResolvePage', 'decision', `${name} is the stored page "${page.name}"${route ? ` (${route})` : ', which has no route stored'}`, {
+            step: ir.steps[k]?.id ?? '',
+          });
+        else
           ctx.log.add(
             'ResolvePage',
             'decision',
             pages[name] ? `${name} is ${pages[name]}` : `${name} has no known address: found when the application is explored`,
           );
-        }
       }
       if (!Object.keys(pages).length) ctx.log.add('ResolvePage', 'info', 'no page to resolve');
-      return { ir, language, values, pages };
+      return { ir, language: { ...language, issues }, values, pages };
     },
   };
 
@@ -219,10 +248,58 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     name: 'ResolveTarget',
     output: WithPages,
     run: (input, ctx) => {
-      const targets = input.ir.steps.filter((s) => s.target && s.action !== 'NAVIGATE').length;
-      // The locator ladder runs against the real page when the test case is explored (E0.6 brings the knowledge layers).
-      ctx.log.add('ResolveTarget', 'decision', `${targets} element(s) are located on the real page during exploration`);
-      return input;
+      const kb = options.knowledge;
+      const { ir } = input;
+      const issues = [...input.language.issues];
+      const known = new Set<string>();
+      let toLocate = 0;
+      // Each name is brought to the one component it stands for (LU-01), searched on the page the test case is on first (CX-04).
+      const contexts = buildContexts(ir.testCase.id, ir.steps, ir.expectations);
+      const settle = (target: (typeof ir.steps)[number]['target'], page: string | undefined, where: string, original: string) => {
+        if (!target?.name) return target;
+        const found = consolidate(kb, target.name, { page });
+        if (found.status === 'one') {
+          const one = found.components[0] as (typeof found.components)[number];
+          const key = `${target.name}|${one.page}|${one.component.name}`;
+          if (!known.has(key)) {
+            known.add(key);
+            ctx.log.add('ResolveTarget', 'decision', `"${target.name}" is the component "${one.component.name}" of the page "${one.page}"`);
+          }
+          // A class the application's knowledge gives replaces "some element".
+          const ontology = target.ontology === 'Element' ? one.component.ontology : target.ontology;
+          return { ...target, ontology, component: one.component.name, page: one.page };
+        }
+        if (found.status === 'many') {
+          issues.push({
+            code: 'AMBIGUOUS',
+            severity: 'review',
+            where,
+            original,
+            message: `"${target.name}" fits more than one component: ${found.components.map((c) => `${c.component.name} (${c.page})`).join(', ')}`,
+            suggestion: 'Name the one meant: write its full name, or the page it is on.',
+          });
+          ctx.log.add('ResolveTarget', 'warning', `"${target.name}" fits ${found.components.length} components: none is chosen`);
+        }
+        return target;
+      };
+      const steps = ir.steps.map((s) => {
+        if (s.action !== 'NAVIGATE') toLocate++;
+        if (!s.target || s.action === 'NAVIGATE') return s;
+        return { ...s, target: settle(s.target, contexts.get(s.id)?.page, `step ${s.id.slice(1)}`, s.original) };
+      });
+      const expectations = ir.expectations.map((e) => {
+        const target = e.condition.target;
+        if (!target?.name || target.ontology === 'Page') return e;
+        const page = e.afterStep ? contexts.get(e.afterStep)?.page : undefined;
+        return { ...e, condition: { ...e.condition, target: settle(target, page, `check ${e.id}`, e.clause) } };
+      });
+      // What the knowledge does not settle is found on the real page, by the candidate levels of LC-01 (see src/engine/locate).
+      ctx.log.add(
+        'ResolveTarget',
+        'decision',
+        `${toLocate} element(s) are located on the real page, by the candidate levels${kb ? ` ("${kb.name}" knowledge, version ${kb.version})` : ''}`,
+      );
+      return { ...input, ir: { ...ir, steps, expectations }, language: { ...input.language, issues } };
     },
   };
 
@@ -283,7 +360,7 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     },
   };
 
-  return [read, understand, validate, buildIr, resolveData, resolvePage, resolveTarget, buildPlan, validatePlan];
+  return [read, understand, validate, buildIr, resolveData, resolvePageStage, resolveTarget, buildPlan, validatePlan];
 }
 
 /** The compilation stages come first, then Execute (run by the caller, which owns the browser). */

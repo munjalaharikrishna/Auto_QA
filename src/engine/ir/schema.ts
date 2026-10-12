@@ -54,6 +54,10 @@ export const IrTargetSchema = z.object({
   near: z.string().optional(),
   /** Where the tester says it is: "in the Employee Information section". */
   within: z.string().optional(),
+  /** The one component the names resolve to in the application's knowledge ("Login Name", "username": `Username`), LU-01. */
+  component: z.string().optional(),
+  /** The page of the application's knowledge the component is on (PK-01). */
+  page: z.string().optional(),
 });
 export type IrTarget = z.infer<typeof IrTargetSchema>;
 
