@@ -1,4 +1,6 @@
 export * from './config/index.js';
+export * from './context/index.js';
+export * from './data/index.js';
 export { toQaIr } from './ir/from-model.js';
 export * from './ir/index.js';
 export * from './language/index.js';

@@ -571,14 +571,13 @@ describe('coverage and the first T6 measurement', () => {
     assert.ok(coverage.employee.topReasons.length >= 1);
     assert.ok(Object.keys(coverage.login.byCategory).includes('AUTHENTICATION'));
 
-    // The numbers are recorded in test/baseline/e04-t6.json (npm run engine:report -- --write) and a change in them is seen at once.
-    if (process.env.UPDATE_GOLDEN === '1' && !existsSync(T6)) return;
-    assert.ok(existsSync(T6), 'run: npm run engine:report -- --write');
-    const recorded = JSON.parse(readFileSync(T6, 'utf8')).workbooks;
-    assert.deepEqual(recorded['OrangeHRM_Login_Test_Cases_Updated.xlsx'].steps, coverage.login.steps);
-    assert.deepEqual(recorded['OrangeHRM_Login_Test_Cases_Updated.xlsx'].expectations, coverage.login.expectations);
-    assert.deepEqual(recorded['Add_Employee.xlsx'].steps, coverage.employee.steps);
-    assert.deepEqual(recorded['Add_Employee.xlsx'].topReasons, coverage.employee.topReasons);
+    // The numbers of this version were recorded in test/baseline/e04-t6.json. Each later version records its own file and is
+    // compared with the one before (E0.5 does), so this file is history: it must stay, with the numbers it was made with.
+    assert.ok(existsSync(T6), 'the E0.4 measurement is kept in test/baseline/e04-t6.json');
+    const recorded = JSON.parse(readFileSync(T6, 'utf8'));
+    assert.equal(recorded.version, 'E0.4');
+    assert.equal(recorded.workbooks['OrangeHRM_Login_Test_Cases_Updated.xlsx'].steps.total, 39);
+    assert.ok(recorded.workbooks['Add_Employee.xlsx'].topReasons.length >= 1);
   });
 });
 

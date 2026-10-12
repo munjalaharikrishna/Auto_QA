@@ -29,3 +29,4 @@ export const patterns = (): PatternSet => {
 /** The built-in patterns plus a project's own (for example ID schemas, RX-10, when they are added). */
 export const patternsWith = (extra: readonly PatternDef[], options?: { limitMs?: number }): PatternSet =>
   new PatternSet([...BUILTIN_PATTERNS, ...extra], options);
+export { type ProductionPattern, REDACTED, redactProduction } from './redact.js';

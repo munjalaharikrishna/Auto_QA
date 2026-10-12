@@ -115,7 +115,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
           requirementId: original.requirementId,
           row: original.source.row,
         },
-        { config: options.config, pageRoutes: await pages.load() },
+        { config: options.config, pageRoutes: await pages.load(), env: options.env },
       );
       const dir = path.join(exploreDir, original.id);
       await mkdir(dir, { recursive: true });

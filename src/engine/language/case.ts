@@ -1,4 +1,7 @@
 import type { RawTestCase } from '../../model/test-model.js';
+import { resolveReferences } from '../context/references.js';
+import { validateStates } from '../context/states.js';
+import { Secret } from '../data/secret.js';
 import type { IrData, IrStep, QaIr } from '../ir/schema.js';
 import { validateIr } from '../ir/validate.js';
 import { dataKeyOf, isSecretName, nonBlankLines, splitStepLine } from '../patterns/shapes.js';
@@ -46,6 +49,10 @@ export interface CaseLanguage {
   decisions: Decision[];
   /** Which grammar models were used, and how often. */
   models: Partial<Record<GrammarModel, number>>;
+  /** The Test Data of the test case. The value of a secret is blank here: it is in `excelSecrets`. */
+  excel: DataEntry[];
+  /** The secrets of the Test Data by data key. A `Secret` is written as `***` by anything that turns it into text. */
+  excelSecrets: Record<string, Secret>;
 }
 
 export interface CaseOptions {
@@ -95,6 +102,19 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
     original: string,
   ): string | undefined => {
     if (!spec) return undefined;
+    // "the same value": it depends on where the step stands, so it is not remembered; the references settle it.
+    if (spec.kind === 'previous') {
+      issues.push({
+        code: 'NEEDS_REFERENCE',
+        severity: 'review',
+        where,
+        original,
+        reference: 'same value',
+        message: `"${original}" points at a value entered earlier ("same"); it is resolved from what the test case did before`,
+        suggestion: 'Write the value itself, or the name of the data it comes from.',
+      });
+      return '$ref.previous';
+    }
     const cacheKey = JSON.stringify([spec, target?.name]);
     const cached = keyOfValue.get(cacheKey);
     if (cached) return cached;
@@ -113,10 +133,10 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
         const entry = dataEntries.find((d) => d.key === spec.key) as DataEntry;
         key = dataKeyOf(entry.key);
         data[key] = entry.blank
-          ? { class: 'BLANK', source: 'EXCEL', value: '' }
+          ? { class: 'BLANK', source: 'EXCEL', value: '', ...(spec.intent ? { intent: spec.intent } : {}) }
           : entry.secret
-            ? { class: 'EXPLICIT', source: 'EXCEL', secret: true, value: '***' }
-            : { class: 'EXPLICIT', source: 'EXCEL', value: entry.value };
+            ? { class: 'EXPLICIT', source: 'EXCEL', secret: true, value: '***', ...(spec.intent ? { intent: spec.intent } : {}) }
+            : { class: 'EXPLICIT', source: 'EXCEL', value: entry.value, ...(spec.intent ? { intent: spec.intent } : {}) };
         break;
       }
       case 'blank':
@@ -136,6 +156,7 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
           severity: 'review',
           where,
           original,
+          data: key,
           message: `no value for "${field}": the step asks for a ${spec.dataClass.toLowerCase().replace('_', '-')} one and the test data gives none`,
           suggestion: `Add it to Test Data, for example "${field}: <value>", or write the value in quotes in the step.`,
         });
@@ -159,6 +180,8 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
 
   const take = (result: LineResult, where: string, lineNo: string, kind: Unit['kind'], original: string): void => {
     const first = issues.length;
+    const stepsBefore = steps.length;
+    const expectationsBefore = expectations.length;
     for (const note of result.notes) decisions.push({ kind: 'info', message: `note kept, not verified: ${note}`, data: { where } });
     for (const i of result.issues) issues.push({ ...i, where });
 
@@ -224,6 +247,12 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
         if (guardId) (conditionals.find((c) => c.id === guardId) as QaIr['conditionals'][number]).whenTrue.push(id);
         for (const d of e.decisions) decisions.push({ kind: 'decision', message: d, data: { expectation: id } });
       }
+    }
+    // A question about a reference is about one step or check of this line: it is named, so it can be settled alone.
+    const made = { steps: steps.slice(stepsBefore), expectations: expectations.slice(expectationsBefore) };
+    for (const i of issues.slice(first)) {
+      if (i.code !== 'NEEDS_REFERENCE' || i.item) continue;
+      i.item = made.expectations.find((e) => e.clause === i.original)?.id ?? made.steps.find((s) => s.original === i.original)?.id;
     }
     for (const m of result.models) models[m] = (models[m] ?? 0) + 1;
     const produced = result.steps.length + result.expectations.length;
@@ -300,6 +329,22 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
     });
   }
 
+  // ---- context (E0.5): what "it", "the same field" and "the added data" stand for, and the states the test case goes through ----
+  const loggedIn = preconditions.some((p) => p.type === 'LOGGED_IN');
+  const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn });
+  steps.splice(0, steps.length, ...refs.steps);
+  expectations.splice(0, expectations.length, ...refs.expectations);
+  issues.splice(0, issues.length, ...refs.issues);
+  for (const c of conditionals) {
+    c.whenTrue = c.whenTrue.flatMap((id) => refs.expectationMap[id] ?? [id]);
+    c.whenFalse = c.whenFalse.flatMap((id) => refs.expectationMap[id] ?? [id]);
+  }
+  for (const message of refs.decisions) decisions.push({ kind: 'decision', message });
+  const states = validateStates(steps, expectations, loggedIn ? 'DASHBOARD' : undefined);
+  steps.splice(0, steps.length, ...states.steps);
+  issues.push(...states.issues);
+  if (states.path.length) decisions.push({ kind: 'info', message: `states: ${states.path.map((p) => p.state).join(' → ')}` });
+
   // ---- QA-IR ----
   let ir: QaIr | undefined;
   let irProblems: string[] = [];
@@ -319,7 +364,7 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
       steps,
       expectations,
       conditionals,
-      references: [],
+      references: refs.references,
       assumptions: [],
       versions: { grammar, vocabulary, ontology, patterns },
     };
@@ -328,7 +373,9 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
     else irProblems = checked.issues.map((i) => `${i.path}: ${i.message}`);
   }
 
-  if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models };
+  const excel = dataEntries.map((e) => (e.secret ? { ...e, value: '' } : e));
+  const excelSecrets = Object.fromEntries(dataEntries.filter((e) => e.secret && !e.blank).map((e) => [dataKeyOf(e.key), new Secret(e.value)]));
+  if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models, excel, excelSecrets };
   // The tester's own words keep their quotes around a value; the value is taken out of them.
   const scrub = (text: string): string => {
     let out = text;
@@ -344,5 +391,5 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
     return out;
   };
   const clean = <T>(value: T): T => JSON.parse(scrub(JSON.stringify(value))) as T;
-  return clean({ testId, ir, irProblems, issues, units, decisions, models });
+  return { ...clean({ testId, ir, irProblems, issues, units, decisions, models, excel }), excelSecrets };
 }

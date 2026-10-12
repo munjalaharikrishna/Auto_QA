@@ -1,4 +1,4 @@
-import type { IrAction, IrCondition, IrTarget } from '../ir/schema.js';
+import type { DataClass, IrAction, IrCondition, IrTarget } from '../ir/schema.js';
 
 /**
  * What the language layers hand on. Nothing here is a verdict or a guess: a sentence that cannot be read gives an
@@ -42,15 +42,24 @@ export interface Issue {
   where: string;
   /** A clearer way to write it (BP-5). */
   suggestion?: string;
+  /** For NEEDS_REFERENCE: the word that points at something earlier ("it", "same", "added"), so it can be resolved (RF-01). */
+  reference?: string;
+  /** For MISSING_DATA: the key of the data entry, so the resolver can settle it (DR-01). */
+  data?: string;
+  /** The step or expectation the issue is about (`S3`, `E7`): the same sentence can stand in many places, so text alone cannot say which. */
+  item?: string;
 }
 
 /** A value a step needs. */
 export type ValueSpec =
   | { kind: 'literal'; value: string }
-  | { kind: 'data'; key: string }
+  /** A named value of the test data. `intent` is the kind the step asked for ("invalid username" with `Username: invaliduser`). */
+  | { kind: 'data'; key: string; intent?: DataClass }
   | { kind: 'blank' }
   /** A kind of value the text names ("valid", "invalid") for a field: the data resolver gives it a value (E0.5). */
-  | { kind: 'class'; dataClass: 'VALID' | 'INVALID' | 'EXISTING' | 'NON_EXISTING'; field: string }
+  | { kind: 'class'; dataClass: Exclude<DataClass, 'EXPLICIT' | 'REFERENCE' | 'BLANK'>; field: string }
+  /** "the same value": the value entered in the step before; resolved when references are (RF-01). */
+  | { kind: 'previous' }
   /** The name of an environment variable that holds it (`TEST_USERNAME`). */
   | { kind: 'env'; name: string; secret: boolean };
 

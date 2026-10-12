@@ -50,3 +50,8 @@ export function splitStepLine(line: string): { number?: number; text: string } {
   const m = STEP_LINE.exec(line);
   return m ? { number: Number(m[1]), text: (m[2] as string).trim() } : { text: line.trim() };
 }
+
+const KEY_SUFFIX = /_(valid|invalid|blank|empty|existing|maximum|minimum|boundary|random|generated|value)$/i;
+
+/** The field a data key was made for: `Last_name_valid` → `Last name`. */
+export const fieldFromKey = (key: string): string => key.replace(KEY_SUFFIX, '').split('_').join(' ');

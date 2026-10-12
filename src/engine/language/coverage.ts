@@ -1,4 +1,5 @@
-import type { CaseLanguage } from './case.js';
+import type { QaIr } from '../ir/schema.js';
+import type { Unit } from './case.js';
 import { CATEGORY } from './preflight.js';
 import type { GrammarModel, Issue } from './types.js';
 
@@ -36,7 +37,15 @@ export function reasonOf(issue: Pick<Issue, 'code' | 'message'>): string {
 
 const rate = (): Rate => ({ understood: 0, total: 0 });
 
-export function coverageOf(cases: readonly CaseLanguage[], top = 10): Coverage {
+/** What the coverage reads of a test case: the result of reading it (understandCase) or of compiling it (compileCase). */
+export interface CoverageInput {
+  units: readonly Unit[];
+  models: Partial<Record<GrammarModel, number>>;
+  issues: readonly Issue[];
+  ir?: QaIr;
+}
+
+export function coverageOf(cases: readonly CoverageInput[], top = 10): Coverage {
   const steps = rate();
   const expectations = rate();
   const byCategory: Record<string, Rate> = {};

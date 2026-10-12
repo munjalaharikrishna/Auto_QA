@@ -79,7 +79,10 @@ export const wordingOf = (issues: readonly Issue[]): string =>
     .map((r) => `${r.where}: "${r.original}" → ${r.suggestion}`)
     .join('\n');
 
-export function preflightOf(title: string, language: CaseLanguage): PreflightCase {
+/** What the pre-flight reads of a test case: the result of reading it (understandCase) or of compiling it (compileCase). */
+export type PreflightInput = Pick<CaseLanguage, 'issues' | 'units'> & { testId: string };
+
+export function preflightOf(title: string, language: PreflightInput): PreflightCase {
   const issues = language.issues;
   const blocking = issues.some((i) => i.severity === 'blocking');
   const review = issues.some((i) => i.severity === 'review');
