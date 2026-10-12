@@ -223,6 +223,28 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
     // An element that is not shown has no inner text; its words are still its name.
     const shown = squash((el as HTMLElement).innerText);
     const text = clip(full ? shown || squash(el.textContent) : own(), 120);
+    // What the field holds now. A password is never read.
+    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+    const typeAttr = (el.getAttribute('type') ?? '').toLowerCase();
+    const control = el as HTMLInputElement;
+    const heldValue = !isInput ? undefined : typeAttr === 'password' ? (control.value ? '••••' : '') : control.value;
+    const selectedText = tag === 'select' ? squash((el as HTMLSelectElement).selectedOptions[0]?.textContent) : undefined;
+    const checked =
+      typeAttr === 'checkbox' || typeAttr === 'radio'
+        ? control.checked
+        : el.getAttribute('aria-checked') === 'true'
+          ? true
+          : el.getAttribute('aria-checked') === 'false'
+            ? false
+            : undefined;
+    const describing: string[] = [];
+    for (const id of squash(el.getAttribute('aria-describedby')).split(' ')) {
+      const ref = id ? document.getElementById(id) : null;
+      if (ref && !ref.hasAttribute('hidden') && getComputedStyle(ref).display !== 'none') {
+        const t = squash(ref.textContent);
+        if (t) describing.push(t);
+      }
+    }
     const ancestors: string[] = [];
     for (let p = el.parentElement; p && ancestors.length < 4; p = p.parentElement)
       if (p !== document.body && p !== document.documentElement) ancestors.push(describe(p));
@@ -255,6 +277,11 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
       xpath: xpathOf(el),
       ...(formEl ? { form: formEl.getAttribute('id') ?? formEl.getAttribute('name') ?? 'form' } : {}),
       inDialog: el.closest('dialog[open], [role="dialog"], [aria-modal="true"]') !== null,
+      ...(heldValue !== undefined ? { value: heldValue } : {}),
+      ...(selectedText ? { selectedText } : {}),
+      ...(checked !== undefined ? { checked } : {}),
+      invalid: el.getAttribute('aria-invalid') === 'true',
+      ...(describing.length ? { describedBy: describing.join(' ') } : {}),
       frame: [],
     });
   }

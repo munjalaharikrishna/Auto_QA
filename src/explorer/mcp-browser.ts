@@ -66,8 +66,11 @@ export function serverArgs(options: McpBrowserOptions = {}): string[] {
   return args;
 }
 
+export type DialogPolicy = (dialog: string) => { accept: boolean; promptText?: string };
+
 export class McpBrowser {
   private readonly dialogs: string[] = [];
+  private policy: DialogPolicy = () => ({ accept: true });
 
   private constructor(
     private readonly client: Client,
@@ -127,6 +130,11 @@ export class McpBrowser {
     }
   }
 
+  /** What to do with the next pop-up (UI-03): accept it, as before, or dismiss it, or answer a prompt. */
+  setDialogPolicy(policy: DialogPolicy): void {
+    this.policy = policy;
+  }
+
   /**
    * Browser pop-ups (alert, confirm, prompt) seen since the last call to this method, e.g.
    * `alert "Invalid credentials"`. They are accepted as they appear, as the generated test does too.
@@ -153,7 +161,8 @@ export class McpBrowser {
   private async closeDialog(reply: ToolReply): Promise<boolean> {
     const found = dialogOf(reply.raw);
     try {
-      await this.callOnce('browser_handle_dialog', { accept: true });
+      const answer = this.policy(found ?? 'a browser pop-up');
+      await this.callOnce('browser_handle_dialog', { accept: answer.accept, ...(answer.promptText !== undefined ? { promptText: answer.promptText } : {}) });
     } catch {
       return false;
     }

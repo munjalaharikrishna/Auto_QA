@@ -52,6 +52,16 @@ export interface DomElement {
   form?: string;
   /** It is inside a dialog. */
   inDialog: boolean;
+  /** What the field holds now. A password is never read: it shows `••••` when there is one, and nothing when there is none. */
+  value?: string;
+  /** For a dropdown: the text of the option that is chosen. */
+  selectedText?: string;
+  /** A box or a switch: ticked or not. */
+  checked?: boolean;
+  /** The page says the field's value is not accepted (`aria-invalid`). */
+  invalid: boolean;
+  /** The text of the visible elements that describe the field (`aria-describedby`): its error message, when it has one (UI-04). */
+  describedBy?: string;
   /** The iframes it is inside, outermost first. Empty for the main page. */
   frame: string[];
 }
