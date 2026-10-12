@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import path from 'node:path';
 import type { Page } from 'playwright';
 import type { ResolvedValue } from '../data/resolver.js';
 import { Secret } from '../data/secret.js';
@@ -85,6 +86,8 @@ export interface StepRecord {
   submit?: { form: string };
   /** The checks of the QA-IR judged on the page this step leaves. */
   checksAfter: string[];
+  /** Pictures of the page before and after the step, when a folder was given: what a review card shows. */
+  screenshots?: { before?: string; after?: string };
   notes: string[];
 }
 
@@ -112,6 +115,8 @@ export interface ExecuteOptions {
   knowledge?: Application;
   testIdAttribute?: string;
   settle?: SettleOptions;
+  /** A folder to keep a picture of the page before and after every step in (the evidence of a review card). */
+  screenshotDir?: string;
   /** Keep the observations before and after each step in the trace. On by default. */
   keepObservations?: boolean;
 }
@@ -226,6 +231,7 @@ class Runner {
     const tabsBefore = this.tabCount();
     const pagesBefore = new Set(this.realPages());
     const before = await observe(this.page, { testIdAttribute: this.testIdAttribute, tabs: tabsBefore });
+    const beforeShot = await this.shoot(chain.step, 'before');
     this.o.mcp.setDialogPolicy?.(() => ({ accept: chain.dialog !== 'dismiss' }));
     try {
       await this.act(chain, rec);
@@ -247,11 +253,26 @@ class Runner {
     const delta = diff(before, after, rec.dialogs);
     rec.delta = delta;
     rec.changes = describe(delta);
+    const afterShot = await this.shoot(chain.step, 'after');
+    if (beforeShot || afterShot) rec.screenshots = { ...(beforeShot ? { before: beforeShot } : {}), ...(afterShot ? { after: afterShot } : {}) };
     if (keep) {
       rec.before = before;
       rec.after = after;
     }
     return rec;
+  }
+
+  private async shoot(step: string, when: 'before' | 'after'): Promise<string | undefined> {
+    const dir = this.o.screenshotDir;
+    if (!dir) return undefined;
+    const file = path.join(dir, `${this.input.plan.testId}-${step}-${when}.png`);
+    try {
+      mkdirSync(dir, { recursive: true });
+      await this.page.screenshot({ path: file });
+      return file;
+    } catch {
+      return undefined;
+    }
   }
 
   /** The tabs the MCP server lists: `- 1: [Help centre](http://…)`, the one it works in marked `(current)`. */
@@ -453,6 +474,11 @@ class Runner {
       case 'CLEAR':
       case 'SEARCH': {
         const value = action === 'CLEAR' ? { text: '', secret: false } : this.valueOf(chain.value, `"${target?.name}"`);
+        if (action === 'ENTER_VALUE' && value.text === '')
+          throw new Block(
+            'VALUE_UNRESOLVED',
+            `the value for "${target?.name}" is empty: a password or secret written inside a step is not kept, so give it in Test Data, an environment variable or the credential store`,
+          );
         const { selector } = await this.find(target ?? { ontology: 'Field', name: 'Search' }, rec);
         await this.tool('type', { target: selector, text: value.text, element: target?.name, ...(action === 'SEARCH' ? { submit: true } : {}) }, rec, {
           target: selector,
