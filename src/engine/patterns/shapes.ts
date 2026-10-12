@@ -35,3 +35,18 @@ export const lowerSnake = (s: string): string => s.replace(/\W+/g, '_').toLowerC
 
 /** The non-blank lines of a cell. */
 export const nonBlankLines = (s: string): string[] => s.split(/\r?\n/).filter((l) => l.trim());
+
+/** A key of the `data` table: the words of a test-data name joined by underscores (`Wrong Password` → `Wrong_Password`). */
+export const dataKeyOf = (name: string): string =>
+  name
+    .trim()
+    .replace(/\W+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const STEP_LINE = /^\s*(?:step\s*)?(\d{1,3})\s*[.):-]\s*(\S.*)$/i;
+
+/** One line of a Steps cell: the tester's number when it has one (`1.`, `2)`, `Step 3:`), and the text after it. */
+export function splitStepLine(line: string): { number?: number; text: string } {
+  const m = STEP_LINE.exec(line);
+  return m ? { number: Number(m[1]), text: (m[2] as string).trim() } : { text: line.trim() };
+}

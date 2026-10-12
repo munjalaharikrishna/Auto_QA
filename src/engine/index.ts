@@ -1,6 +1,7 @@
 export * from './config/index.js';
 export { toQaIr } from './ir/from-model.js';
 export * from './ir/index.js';
+export * from './language/index.js';
 export * from './patterns/index.js';
 export { type CompileResult, compileCase } from './pipeline/compile.js';
 export { type DecisionEntry, DecisionLog } from './pipeline/decision-log.js';

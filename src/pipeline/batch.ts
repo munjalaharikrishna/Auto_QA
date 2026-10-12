@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { wordingOf } from '../engine/language/preflight.js';
 import type { Field } from '../importer/columns.js';
 import { type BatchSummary, defaultResultsFile, type RowResult, writeResults } from '../importer/results.js';
 import { type ImportResult, readWorkbook } from '../importer/workbook.js';
@@ -94,7 +95,17 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   const login = pickLogin(models, options.loginId);
   if (login && selected.some((m) => m.preconditions.some((p) => p.kind === 'logged-in'))) progress(`"Logged in" cases start with ${login.id}'s steps`);
 
-  const run = await runCases(selected, { ...options, login });
+  // What the pre-flight suggests the tester writes instead, for the results workbook (BP-5; the semantic engine only).
+  const wording = new Map<string, string>();
+  const run = await runCases(selected, {
+    ...options,
+    login,
+    onCompiled: async (compiled) => {
+      const text = wordingOf(compiled.issues);
+      if (text) wording.set(compiled.testId, text);
+      await options.onCompiled?.(compiled);
+    },
+  });
   for (const v of run.verdicts) saved.verdicts[v.testId] = v;
   // Cases no longer in the sheet are dropped from the progress.
   saved.verdicts = Object.fromEntries(models.filter((m) => saved.verdicts[m.id]).map((m) => [m.id, saved.verdicts[m.id]]));
@@ -104,7 +115,11 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   }
 
   const results: RowResult[] = [
-    ...models.flatMap((m) => (saved.verdicts[m.id] ? [{ row: rowOf.get(m.id)!, verdict: saved.verdicts[m.id] }] : [])),
+    ...models.flatMap((m) =>
+      saved.verdicts[m.id]
+        ? [{ row: rowOf.get(m.id)!, verdict: saved.verdicts[m.id], ...(wording.has(m.id) ? { suggestedWording: wording.get(m.id) } : {}) }]
+        : [],
+    ),
     ...unreadable,
   ].sort((a, b) => a.row - b.row);
   const summary = summarize(results, run.executionId, models);

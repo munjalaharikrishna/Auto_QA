@@ -1,0 +1,275 @@
+{
+  "version": "E0.4",
+  "engine": "semantic",
+  "workbooks": {
+    "OrangeHRM_Login_Test_Cases_Updated.xlsx": {
+      "testCases": 10,
+      "withDocument": 10,
+      "ready": 9,
+      "preflight": {
+        "ready": 9,
+        "review": 0,
+        "blocked": 1
+      },
+      "steps": {
+        "understood": 39,
+        "total": 39
+      },
+      "expectations": {
+        "understood": 10,
+        "total": 11
+      },
+      "byCategory": {
+        "(not understood)": {
+          "understood": 0,
+          "total": 1
+        },
+        "AUTHENTICATION": {
+          "understood": 7,
+          "total": 7
+        },
+        "CLICK": {
+          "understood": 9,
+          "total": 9
+        },
+        "ENTER_VALUE": {
+          "understood": 20,
+          "total": 20
+        },
+        "MASKED": {
+          "understood": 2,
+          "total": 2
+        },
+        "NAVIGATE": {
+          "understood": 10,
+          "total": 10
+        },
+        "URL": {
+          "understood": 1,
+          "total": 1
+        },
+        "VALUE": {
+          "understood": 1,
+          "total": 1
+        },
+        "VISIBILITY": {
+          "understood": 7,
+          "total": 7
+        }
+      },
+      "models": {
+        "GR-01": 19,
+        "GR-02": 20,
+        "GR-06": 17,
+        "GR-05": 4,
+        "GR-07": 1
+      },
+      "topReasons": [
+        {
+          "reason": "not understood: the sentence fits none of the grammar models: it is neither an action nor a check",
+          "count": 1
+        },
+        {
+          "reason": "unknown branch: \"…\": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen",
+          "count": 1
+        }
+      ]
+    },
+    "Add_Employee.xlsx": {
+      "testCases": 19,
+      "withDocument": 19,
+      "ready": 1,
+      "preflight": {
+        "ready": 1,
+        "review": 1,
+        "blocked": 17
+      },
+      "steps": {
+        "understood": 165,
+        "total": 181
+      },
+      "expectations": {
+        "understood": 274,
+        "total": 275
+      },
+      "byCategory": {
+        "(not understood)": {
+          "understood": 0,
+          "total": 17
+        },
+        "CLICK": {
+          "understood": 48,
+          "total": 48
+        },
+        "ENTER_VALUE": {
+          "understood": 69,
+          "total": 69
+        },
+        "LAYOUT": {
+          "understood": 38,
+          "total": 38
+        },
+        "NAVIGATE": {
+          "understood": 38,
+          "total": 38
+        },
+        "SELECT": {
+          "understood": 1,
+          "total": 1
+        },
+        "STATE": {
+          "understood": 41,
+          "total": 41
+        },
+        "UPLOAD": {
+          "understood": 10,
+          "total": 10
+        },
+        "URL": {
+          "understood": 54,
+          "total": 54
+        },
+        "VALUE": {
+          "understood": 97,
+          "total": 97
+        },
+        "VISIBILITY": {
+          "understood": 53,
+          "total": 53
+        }
+      },
+      "models": {
+        "GR-01": 87,
+        "GR-06": 371,
+        "GR-05": 65,
+        "GR-02": 91
+      },
+      "topReasons": [
+        {
+          "reason": "missing data: no value for \"…\": the step asks for a valid one and the test data gives none",
+          "count": 91
+        },
+        {
+          "reason": "unresolved reference: the check compares with the value entered in an earlier step, which is resolved when references are built",
+          "count": 79
+        },
+        {
+          "reason": "unresolved reference: \"…\" points at something earlier (\"…\"); the engine does not guess what: it is resolved when references are built",
+          "count": 20
+        },
+        {
+          "reason": "ambiguous wording: the words \"…\" are not understood and are not checked",
+          "count": 18
+        },
+        {
+          "reason": "not understood: no check could be read: no word says what should be true",
+          "count": 17
+        }
+      ]
+    }
+  },
+  "total": {
+    "testCases": 29,
+    "steps": {
+      "understood": 204,
+      "total": 220
+    },
+    "expectations": {
+      "understood": 284,
+      "total": 286
+    },
+    "byCategory": {
+      "(not understood)": {
+        "understood": 0,
+        "total": 18
+      },
+      "AUTHENTICATION": {
+        "understood": 7,
+        "total": 7
+      },
+      "CLICK": {
+        "understood": 57,
+        "total": 57
+      },
+      "ENTER_VALUE": {
+        "understood": 89,
+        "total": 89
+      },
+      "LAYOUT": {
+        "understood": 38,
+        "total": 38
+      },
+      "MASKED": {
+        "understood": 2,
+        "total": 2
+      },
+      "NAVIGATE": {
+        "understood": 48,
+        "total": 48
+      },
+      "SELECT": {
+        "understood": 1,
+        "total": 1
+      },
+      "STATE": {
+        "understood": 41,
+        "total": 41
+      },
+      "UPLOAD": {
+        "understood": 10,
+        "total": 10
+      },
+      "URL": {
+        "understood": 55,
+        "total": 55
+      },
+      "VALUE": {
+        "understood": 98,
+        "total": 98
+      },
+      "VISIBILITY": {
+        "understood": 60,
+        "total": 60
+      }
+    },
+    "models": {
+      "GR-01": 106,
+      "GR-02": 111,
+      "GR-06": 388,
+      "GR-05": 69,
+      "GR-07": 1
+    },
+    "ready": 10,
+    "withDocument": 29,
+    "topReasons": [
+      {
+        "reason": "missing data: no value for \"…\": the step asks for a valid one and the test data gives none",
+        "count": 91
+      },
+      {
+        "reason": "unresolved reference: the check compares with the value entered in an earlier step, which is resolved when references are built",
+        "count": 79
+      },
+      {
+        "reason": "unresolved reference: \"…\" points at something earlier (\"…\"); the engine does not guess what: it is resolved when references are built",
+        "count": 20
+      },
+      {
+        "reason": "ambiguous wording: the words \"…\" are not understood and are not checked",
+        "count": 18
+      },
+      {
+        "reason": "not understood: no check could be read: no word says what should be true",
+        "count": 17
+      },
+      {
+        "reason": "not understood: the sentence fits none of the grammar models: it is neither an action nor a check",
+        "count": 1
+      },
+      {
+        "reason": "unknown branch: \"…\": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen",
+        "count": 1
+      }
+    ]
+  }
+}

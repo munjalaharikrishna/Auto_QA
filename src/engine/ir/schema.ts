@@ -25,6 +25,23 @@ export const IR_ACTIONS = [
   'BACK',
   'FORWARD',
   'REFRESH',
+  // The rest of the controlled action vocabulary (VO-01): the verbs the new language layer understands.
+  'DOWNLOAD',
+  'SUBMIT',
+  'LOGIN',
+  'LOGOUT',
+  'SEARCH',
+  'SCROLL',
+  'DRAG',
+  'DROP',
+  'REMOVE',
+  'DELETE',
+  'EDIT',
+  'SAVE',
+  'CANCEL',
+  'CLOSE',
+  'EXPAND',
+  'COLLAPSE',
 ] as const;
 export type IrAction = (typeof IR_ACTIONS)[number];
 
@@ -35,11 +52,15 @@ export const IrTargetSchema = z.object({
   label: z.string().optional(),
   /** "validation message near Username". */
   near: z.string().optional(),
+  /** Where the tester says it is: "in the Employee Information section". */
+  within: z.string().optional(),
 });
 export type IrTarget = z.infer<typeof IrTargetSchema>;
 
-export const DATA_CLASSES = ['EXPLICIT', 'BLANK', 'GENERATED', 'REFERENCE'] as const;
-export const DATA_SOURCES = ['EXCEL', 'ENV', 'GENERATOR'] as const;
+/** A value the tester gave, a blank, a generated or referenced one, or a kind of value the text only names ("valid", "invalid"; TD-01). */
+export const DATA_CLASSES = ['EXPLICIT', 'BLANK', 'GENERATED', 'REFERENCE', 'VALID', 'INVALID', 'EXISTING', 'NON_EXISTING'] as const;
+/** `UNRESOLVED`: the text names a kind of value and no source gives one yet; the data resolver (E0.5) must, or the test case is asked about. */
+export const DATA_SOURCES = ['EXCEL', 'ENV', 'GENERATOR', 'UNRESOLVED'] as const;
 
 export const IrDataSchema = z
   .object({
@@ -78,20 +99,41 @@ export const IrStepSchema = z.object({
   value: z.string().optional(),
   /** The page state the step should leave the application in. */
   expectedState: StateName.optional(),
+  /** The conditional (`C1`) this step only runs under (GR-03). */
+  guard: z.string().optional(),
   original: Original,
 });
 export type IrStep = z.infer<typeof IrStepSchema>;
 
-export const CONDITION_TYPES = ['VISIBILITY', 'TEXT', 'URL', 'STATE', 'AUTHENTICATION', 'VALUE', 'ENABLED', 'COUNT', 'HEALTH', 'OTHER'] as const;
+export const CONDITION_TYPES = [
+  'VISIBILITY',
+  'TEXT',
+  'URL',
+  'STATE',
+  'AUTHENTICATION',
+  'VALUE',
+  'ENABLED',
+  'COUNT',
+  'HEALTH',
+  'LAYOUT',
+  'MASKED',
+  'OTHER',
+] as const;
 export const IrConditionSchema = z.object({
   type: z.enum(CONDITION_TYPES),
   target: IrTargetSchema.optional(),
   expect: z.string().optional(),
+  /** What a message must say, in the tester's words ("username is required"): a meaning to look for, not an exact text. */
+  text: z.string().optional(),
+  /** Where a layout check puts the element: `center`, `top-left`, … */
+  region: z.string().optional(),
   /** A message must have appeared after the step, not be left over from earlier (freshness, VD-04). */
   fresh: z.boolean().optional(),
   /** The check type of the current platform this condition is verified with, until the new verifier exists (E0.8). */
   check: z.string().optional(),
 });
+
+export type IrCondition = z.infer<typeof IrConditionSchema>;
 
 export const IrExpectationSchema = z.object({
   id: z.string().refine(isExpectationId, 'an expectation id looks like E1'),
@@ -101,8 +143,29 @@ export const IrExpectationSchema = z.object({
   afterStep: z.string().refine(isStepId).optional(),
   /** A guard rail the platform adds on every test (e.g. "no crash"); there are no words of the tester to point back to. */
   automatic: z.boolean().optional(),
+  /** The conditional (`C1`) this expectation only holds under; it is checked only when the condition is true (CD-01). */
+  guard: z.string().optional(),
 });
 export type IrExpectation = z.infer<typeof IrExpectationSchema>;
+
+/**
+ * A condition and what follows from it (CD-01, CD-02): `given` is what is known about the condition before the run.
+ * `UNKNOWN` is never turned into a branch by guessing; it goes to the tester.
+ */
+export const IrConditionalSchema = z.object({
+  id: z.string().min(1),
+  keyword: z.string().min(1),
+  condition: IrConditionSchema,
+  given: z.enum(['TRUE', 'FALSE', 'UNKNOWN']),
+  /** Why `given` is what it is: the fact it rests on, or what is missing. */
+  because: z.string(),
+  whenTrue: z.array(z.string().refine(isExpectationId)),
+  whenFalse: z.array(z.string().refine(isExpectationId)),
+  /** Steps that only run when the condition is true. */
+  steps: z.array(z.string().refine(isStepId)),
+  original: Original,
+});
+export type IrConditional = z.infer<typeof IrConditionalSchema>;
 
 export const IrAssumptionSchema = z.object({ id: z.string().refine(isAssumptionId), text: Original, at: z.string().optional() });
 
@@ -122,7 +185,7 @@ export const QaIrSchema = z
     data: z.record(z.string(), IrDataSchema),
     steps: z.array(IrStepSchema).min(1, 'a test case needs at least one step'),
     expectations: z.array(IrExpectationSchema).min(1, 'a test case needs at least one expectation'),
-    conditionals: z.array(z.unknown()),
+    conditionals: z.array(IrConditionalSchema),
     references: z.array(z.unknown()),
     assumptions: z.array(IrAssumptionSchema),
     versions: IrVersionsSchema,
