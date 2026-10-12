@@ -7,10 +7,10 @@ export const COMPONENT_VERSIONS = {
   ir: '1.0.0',
   /** Compilation stages (src/engine/pipeline). */
   pipeline: '1.0.0',
-  /** The legacy parser the first stages still use for understanding, until M2/M3 replace it (E0.3, E0.4). */
-  grammar: '0.1.0-legacy',
-  vocabulary: '0.1.0-legacy',
-  ontology: '0.1.0-legacy',
+  /** The language layers (src/engine/language, E0.4): QA grammar, controlled vocabulary with the synonym directories, QA ontology. */
+  grammar: '1.0.0',
+  vocabulary: '1.0.0',
+  ontology: '1.0.0',
   /** The pattern set and the normalizer and tokenizer built on it (src/engine/patterns, src/engine/text; E0.3). Per-pattern versions are in `patterns().versions`. */
   patterns: '1.0.0',
 } as const;

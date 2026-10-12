@@ -11,6 +11,8 @@ import { type ImportResult, loadWorkbook } from './workbook.js';
 
 export const RESULT_COLUMNS = ['Status', 'Actual Result', 'Failed Step', 'Executed At', 'Automation ID', 'Evidence'] as const;
 export const SUMMARY_SHEET = 'Auto QA';
+/** Written only when a test case has a suggestion (BP-5): a clearer way to write what the pre-flight could not read. */
+export const WORDING_COLUMN = 'Suggested Wording';
 
 /** Row result: a verdict, or a row that could not be read as a test case. */
 export interface RowResult {
@@ -20,6 +22,8 @@ export interface RowResult {
   /** For a row that is not a complete test case: its ID and title as written, if any. */
   id?: string;
   title?: string;
+  /** What the pre-flight suggests the tester writes instead (BP-5), one line per sentence. */
+  suggestedWording?: string;
 }
 
 export interface BatchSummary {
@@ -61,6 +65,15 @@ export async function writeResults(imported: ImportResult, results: RowResult[],
     cell.value = name;
     cell.style = { ...style, font: { ...(style.font ?? {}), bold: true } };
   }
+  let wordingCol: number | undefined;
+  if (results.some((r) => r.suggestedWording)) {
+    const found = imported.headers.findIndex((h) => h.trim().toLowerCase() === WORDING_COLUMN.toLowerCase());
+    wordingCol = found >= 0 ? found + 1 : next++;
+    const cell = header.getCell(wordingCol);
+    cell.value = WORDING_COLUMN;
+    cell.style = { ...style, font: { ...(style.font ?? {}), bold: true } };
+    sheet.getColumn(wordingCol).width = 70;
+  }
   sheet.getColumn(cols['Actual Result']).width = 60;
   sheet.getColumn(cols['Failed Step']).width = 30;
   sheet.getColumn(cols.Status).width = 15;
@@ -83,6 +96,11 @@ export async function writeResults(imported: ImportResult, results: RowResult[],
         : `${v.actual}${v.reason && !v.actual.includes(v.reason) ? `\n${v.reason}` : ''}`
       : `Not run: ${r.problem}`;
     actual.alignment = { wrapText: true, vertical: 'top' };
+    if (wordingCol && r.suggestedWording) {
+      const cell = row.getCell(wordingCol);
+      cell.value = r.suggestedWording;
+      cell.alignment = { wrapText: true, vertical: 'top' };
+    }
     row.getCell(cols['Failed Step']).value = v?.failedStep ?? null;
     row.getCell(cols['Executed At']).value = v?.startedAt ? localTime(v.startedAt) : localTime(summary.finishedAt);
     row.getCell(cols['Automation ID']).value = v?.automationId ?? null;

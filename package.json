@@ -5,6 +5,7 @@
     "snapshot": "tsx src/cli/snapshot.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web",
     "parse": "tsx src/cli/parse.ts",
+    "engine:report": "tsx src/cli/engine-report.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "biome check .",
     "format": "biome check --write .",

@@ -1,0 +1,2277 @@
+{
+  "GR-01": [
+    {
+      "sentence": "Click Login",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Login"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Save' button",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Save"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click on the Add Button",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Add"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Hover over the Profile menu",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "HOVER",
+          "target": "Menu:Profile"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Open the Login page",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "NAVIGATE",
+          "target": "Page:Login"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Check the Remember me checkbox",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CHECK",
+          "target": "Checkbox:Remember me"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Clear the Search field",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CLEAR",
+          "target": "Field:Search"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Close the dialog",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "CLOSE",
+          "target": "Modal:<dialog>"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Expand the Details section",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "EXPAND",
+          "target": "Section:Details"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Delete the 'Draft' record",
+      "models": [
+        "GR-01"
+      ],
+      "steps": [
+        {
+          "action": "DELETE",
+          "target": "Record:Draft"
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-02": [
+    {
+      "sentence": "Enter cypress in username field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Username:username",
+          "value": {
+            "kind": "literal",
+            "value": "cypress"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Type 'abc' in the Email field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Fill the Email field with 'abc'",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Select 'India' from the Country dropdown",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "SELECT",
+          "target": "Dropdown:Country",
+          "value": {
+            "kind": "literal",
+            "value": "India"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Enter 'John' in the First name field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:First name",
+          "value": {
+            "kind": "literal",
+            "value": "John"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Type 'hello' into the Search box",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Search",
+          "value": {
+            "kind": "literal",
+            "value": "hello"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Enter 25 in the Age field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Age",
+          "value": {
+            "kind": "literal",
+            "value": "25"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Select Canada from the Country dropdown",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "SELECT",
+          "target": "Dropdown:Country",
+          "value": {
+            "kind": "literal",
+            "value": "Canada"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Search for 'laptop' in the Search field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "SEARCH",
+          "target": "Field:Search",
+          "value": {
+            "kind": "literal",
+            "value": "laptop"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Enter 'a@b.com' in the Email field",
+      "models": [
+        "GR-02"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "a@b.com"
+          }
+        }
+      ],
+      "expectations": [],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-03": [
+    {
+      "sentence": "Enter 'abc' in the Email field if the Email field is empty",
+      "models": [
+        "GR-02",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          },
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Type 'x' in the Name field when the Name field is empty",
+      "models": [
+        "GR-02",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Name",
+          "value": {
+            "kind": "literal",
+            "value": "x"
+          },
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Name",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Click the 'Save' button if the Save button is enabled",
+      "models": [
+        "GR-01",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Save",
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "ENABLED",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Click the 'Next' button when the Next button is enabled",
+      "models": [
+        "GR-01",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Next",
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Next",
+          "expect": "ENABLED",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Select 'India' from the Country dropdown if the Country dropdown is enabled",
+      "models": [
+        "GR-02",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "SELECT",
+          "target": "Dropdown:Country",
+          "value": {
+            "kind": "literal",
+            "value": "India"
+          },
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Dropdown:Country",
+          "expect": "ENABLED",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Enter 'abc' in the Email field unless the Email field is disabled",
+      "models": [
+        "GR-02",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          },
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "unless",
+          "negated": true,
+          "type": "ENABLED",
+          "target": "Field:Email",
+          "expect": "DISABLED",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Click the 'Save' button if the Save button is visible",
+      "models": [
+        "GR-01",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Save",
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Button:Save",
+          "expect": "VISIBLE",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Check the Remember me checkbox if the Remember me checkbox is unchecked",
+      "models": [
+        "GR-01",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "CHECK",
+          "target": "Checkbox:Remember me",
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "STATE",
+          "target": "Checkbox:Remember me",
+          "expect": "UNCHECKED",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Clear the Search field if the Search field is not empty",
+      "models": [
+        "GR-01",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "CLEAR",
+          "target": "Field:Search",
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": true,
+          "type": "VALUE",
+          "target": "Field:Search",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "Enter 'abc' in the Email field when the Email field is empty",
+      "models": [
+        "GR-02",
+        "GR-03"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          },
+          "guard": 0
+        }
+      ],
+      "expectations": [],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    }
+  ],
+  "GR-04": [
+    {
+      "sentence": "Click Save, a toast appears",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Save"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Element:toast",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Login' button, the Dashboard page is displayed",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Login"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Dashboard",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Add' button, the Add Employee page is displayed",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Add"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Add Employee",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Logout' button, the Login page is displayed",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Logout"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Login",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Save' button, an error message is displayed",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Save"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Delete' button, a confirmation dialog appears",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Delete"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Modal:confirmation",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Reset' button, the Email field is empty",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Reset"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": ""
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Search' button, the Results table is displayed",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Search"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Table:Results",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Close' button, the dialog is hidden",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Close"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Modal:<dialog>",
+          "expect": "HIDDEN"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Click the 'Next' button, the Next button is disabled",
+      "models": [
+        "GR-01",
+        "GR-04"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Next"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Next",
+          "expect": "DISABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-05": [
+    {
+      "sentence": "Verify the Login button is disabled",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Login",
+          "expect": "DISABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Save button is enabled",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Email field is empty",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": ""
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Remember me checkbox is checked",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "STATE",
+          "target": "Checkbox:Remember me",
+          "expect": "CHECKED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Password field is masked",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "MASKED",
+          "target": "Password:Password",
+          "expect": "MASKED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Login section is at the middle of the page",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "LAYOUT",
+          "target": "Section:Login",
+          "region": "center"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Search field has value 'abc'",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Search",
+          "expect": "abc"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Username field is empty",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Username:Username",
+          "expect": ""
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Next button is disabled",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Next",
+          "expect": "DISABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Continue button is enabled",
+      "models": [
+        "GR-05"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Continue",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-06": [
+    {
+      "sentence": "Verify an error message is displayed",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Dashboard heading is displayed",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Heading:Dashboard",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the user is redirected to the Dashboard page",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "URL",
+          "target": "Page:Dashboard",
+          "expect": "Dashboard"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the user is logged in",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "AUTHENTICATION",
+          "expect": "LOGGED_IN"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify a validation message is displayed",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Reports page is displayed",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Reports",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the user stays on the Login page",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "URL",
+          "target": "Page:Login",
+          "expect": "UNCHANGED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Success message is displayed",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Message:<message>",
+          "expect": "VISIBLE",
+          "text": "Success"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Logout link is visible",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Link:Logout",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Verify the Email field contains 'abc'",
+      "models": [
+        "GR-06"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "TEXT",
+          "target": "Field:Email",
+          "expect": "abc"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-07": [
+    {
+      "sentence": "If the password is invalid, an error message is displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Password:password",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the username is invalid then an error message should be displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Username:username",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the Email field is empty, a validation message is displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the password is invalid, the user is not logged in",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": true,
+          "type": "AUTHENTICATION",
+          "expect": "LOGGED_IN",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Password:password",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the username is blank, a validation message is displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Username:username",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the Email field is empty, the Save button is disabled",
+      "models": [
+        "GR-05",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "DISABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the password is incorrect, an error message is displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Password:password",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the email is invalid, a validation message is displayed",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Element:email",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the code is invalid, an error message appears",
+      "models": [
+        "GR-06",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Element:code",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "If the Name field is empty, the Save button is disabled",
+      "models": [
+        "GR-05",
+        "GR-07"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "DISABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "if",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Name",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    }
+  ],
+  "GR-08": [
+    {
+      "sentence": "When the Email field is empty, Login is disabled",
+      "models": [
+        "GR-05",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Login",
+          "expect": "DISABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the password is invalid, an error message is displayed",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Password:password",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the username is blank, a validation message is displayed",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Username:username",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the Email field is empty, the Save button is disabled",
+      "models": [
+        "GR-05",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "DISABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the Name field is valid, the Save button is enabled",
+      "models": [
+        "GR-05",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "ENABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Name",
+          "expect": "VALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the user is logged in, the Dashboard page is displayed",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Dashboard",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "AUTHENTICATION",
+          "expect": "LOGGED_IN",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the password is wrong, an error message is shown",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Password:password",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the code is invalid, an error message appears",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Error:<error message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Element:code",
+          "expect": "INVALID",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the Email field is empty, the Submit button is disabled",
+      "models": [
+        "GR-05",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Submit",
+          "expect": "DISABLED",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    },
+    {
+      "sentence": "When the Name field is blank, a validation message is displayed",
+      "models": [
+        "GR-06",
+        "GR-08"
+      ],
+      "steps": [],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Validation:<validation message>",
+          "expect": "VISIBLE",
+          "guard": 0
+        }
+      ],
+      "conditionals": [
+        {
+          "keyword": "when",
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Name",
+          "expect": "",
+          "given": "UNKNOWN"
+        }
+      ],
+      "issues": [
+        "UNKNOWN_BRANCH/review"
+      ]
+    }
+  ],
+  "GR-09": [
+    {
+      "sentence": "After clicking Reset, the Email field is empty",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Reset"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Email",
+          "expect": ""
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking Save, a message is displayed",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Save"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Message:<message>",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking the 'Login' button, the Dashboard page is displayed",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Login"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Dashboard",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking Logout, the Login page is displayed",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Logout"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Login",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking the 'Add' button, the Add Employee page is displayed",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Add"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Page:Add Employee",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking Cancel, the dialog is hidden",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Cancel"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Modal:<dialog>",
+          "expect": "HIDDEN"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking the 'Search' button, the Results table is displayed",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Search"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Table:Results",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After entering 'abc' in the Email field, the Email field contains 'abc'",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "ENTER_VALUE",
+          "target": "Field:Email",
+          "value": {
+            "kind": "literal",
+            "value": "abc"
+          }
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "TEXT",
+          "target": "Field:Email",
+          "expect": "abc"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After selecting 'India' from the Country dropdown, the Country dropdown has value 'India'",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "SELECT",
+          "target": "Dropdown:Country",
+          "value": {
+            "kind": "literal",
+            "value": "India"
+          }
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Dropdown:Country",
+          "expect": "India"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "After clicking Delete, the record is deleted",
+      "models": [
+        "GR-09"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Delete"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "STATE",
+          "target": "Record:<record>",
+          "expect": "DELETED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    }
+  ],
+  "GR-10": [
+    {
+      "sentence": "Before clicking Save, the Save button is enabled",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Save"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Save",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Login, the Login button is enabled",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Login"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Login",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Reset, the Reset button is visible",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Reset"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Button:Reset",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Submit, the Submit button is enabled",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Submit"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Submit",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking the 'Next' button, the Next button is enabled",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Button:Next"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Next",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Delete, the Delete button is enabled",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Delete"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "ENABLED",
+          "target": "Button:Delete",
+          "expect": "ENABLED"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Cancel, the Cancel button is visible",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Cancel"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Button:Cancel",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Add, the Add button is displayed",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Add"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VISIBILITY",
+          "target": "Button:Add",
+          "expect": "VISIBLE"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Search, the Search field is empty",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Search"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "VALUE",
+          "target": "Field:Search",
+          "expect": ""
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    },
+    {
+      "sentence": "Before clicking Logout, the user is logged in",
+      "models": [
+        "GR-10"
+      ],
+      "steps": [
+        {
+          "action": "CLICK",
+          "target": "Element:Logout"
+        }
+      ],
+      "expectations": [
+        {
+          "negated": false,
+          "type": "AUTHENTICATION",
+          "expect": "LOGGED_IN"
+        }
+      ],
+      "conditionals": [],
+      "issues": []
+    }
+  ]
+}
