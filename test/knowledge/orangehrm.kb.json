@@ -1,0 +1,78 @@
+{
+  "name": "OrangeHRM",
+  "pages": [
+    {
+      "name": "Login",
+      "aliases": ["Login page", "OrangeHRM login", "login section"],
+      "sections": ["Login"],
+      "forms": ["Login form"],
+      "components": [
+        { "name": "Username", "aliases": ["Login Name", "user name", "user id", "username field"], "ontology": "Username", "form": "Login form", "key": true },
+        { "name": "Password", "aliases": ["Password field"], "ontology": "Password", "form": "Login form", "key": true },
+        { "name": "Login", "aliases": ["Login button", "LOGIN"], "ontology": "Button", "form": "Login form", "key": true },
+        { "name": "Clear", "aliases": ["Clear button"], "ontology": "Button", "form": "Login form" }
+      ],
+      "messages": [
+        { "name": "Invalid credentials", "text": "Invalid", "kind": "error" },
+        { "name": "Required", "text": "required", "kind": "validation" }
+      ],
+      "expectedStates": ["LOGIN_PAGE", "LOGIN_FAILED", "ERROR_DISPLAYED"]
+    },
+    {
+      "name": "Employee Information",
+      "aliases": ["PIM", "Employee Information page", "Employee Information Section"],
+      "sections": ["Employee Information"],
+      "components": [
+        { "name": "Add", "aliases": ["Add Button", "Add employee button"], "ontology": "Button", "key": true },
+        { "name": "Delete", "aliases": ["Delete Button"], "ontology": "Button" }
+      ],
+      "expectedStates": ["DASHBOARD"]
+    },
+    {
+      "name": "Add Employee",
+      "aliases": ["Add Employee page", "Add Employee popup"],
+      "forms": ["Add Employee form"],
+      "components": [
+        { "name": "Employee Id", "aliases": ["code", "code/id", "code text box", "id"], "ontology": "Field", "form": "Add Employee form", "key": true },
+        { "name": "Last Name", "aliases": ["last name text box"], "ontology": "Field", "form": "Add Employee form", "key": true },
+        { "name": "First Name", "aliases": ["first name text box"], "ontology": "Field", "form": "Add Employee form", "key": true },
+        { "name": "Middle Name", "aliases": ["middle name text box"], "ontology": "Field", "form": "Add Employee form" },
+        { "name": "Nick Name", "aliases": ["nick name text box", "nickname"], "ontology": "Field", "form": "Add Employee form" },
+        { "name": "Photograph", "aliases": ["photo", "upload", "upload button", "photo upload"], "ontology": "Button", "form": "Add Employee form" },
+        { "name": "Save", "aliases": ["Save button"], "ontology": "Button", "form": "Add Employee form", "key": true },
+        { "name": "Reset", "aliases": ["Reset button"], "ontology": "Button", "form": "Add Employee form" },
+        { "name": "Back", "aliases": ["Back button"], "ontology": "Button", "form": "Add Employee form" }
+      ]
+    },
+    {
+      "name": "Employment",
+      "aliases": ["Employment section", "Employment page"],
+      "components": [
+        { "name": "Job Title", "aliases": ["Job Title field"], "ontology": "Dropdown" },
+        { "name": "Employment Status", "aliases": ["Employement Status"], "ontology": "Dropdown" },
+        { "name": "Sub-Division", "aliases": ["Sub Division", "Subdivision"], "ontology": "Dropdown" },
+        { "name": "Supervisor", "aliases": ["Supervisor field"], "ontology": "Field" }
+      ]
+    }
+  ],
+  "roles": ["Admin", "ESS"],
+  "modules": ["Admin", "PIM", "Leave", "Time", "Benefits", "Recruitment", "Reports", "Bug Tracker", "Help"],
+  "rules": [
+    { "id": "AR-1", "text": "The PIM module is the default page after a login." },
+    { "id": "AR-2", "text": "The code text box accepts only numbers." },
+    { "id": "AR-3", "text": "The name text boxes accept only alphabets." }
+  ],
+  "navigation": [
+    { "from": "Login", "to": "Employee Information", "via": "Login" },
+    { "from": "Employee Information", "to": "Add Employee", "via": "Add" },
+    { "from": "Add Employee", "to": "Employment", "via": "Save" }
+  ],
+  "authentication": { "loginPage": "Login", "usernameField": "Username", "passwordField": "Password", "loginButton": "Login", "successPage": "Employee Information", "mfa": "none" },
+  "vocabulary": [
+    { "term": "Employee", "ontology": "Record", "aliases": ["employees", "employee data", "employee records"] },
+    { "term": "Supervisor", "ontology": "Field", "aliases": [] },
+    { "term": "Sub-Division", "ontology": "Dropdown", "aliases": ["Sub Division"] },
+    { "term": "Job Title", "ontology": "Dropdown", "aliases": [] },
+    { "term": "Employment Status", "ontology": "Dropdown", "aliases": ["Employement Status"] }
+  ]
+}
