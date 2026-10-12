@@ -67,6 +67,8 @@ export interface NounPhrase {
   plural: boolean;
   /** Where the tester says it is: "in the Employee section". */
   within?: string;
+  /** The word before the place: "for John" is a row of a table, "in the Employee section" is a container. */
+  placeWord?: string;
   /** The tester's own words. */
   original: string;
   /** The words left after taking the determiners off, lower case. */
@@ -201,7 +203,7 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
       targets,
       ...(shared && lastHead ? { headClass: lastHead.cls } : {}),
       plural,
-      ...(place.length ? { within: nameOf(place) } : {}),
+      ...(place.length ? { within: nameOf(place), placeWord: lw(body[cut]) } : {}),
       original,
       words,
       itemTokens: tokensOfTargets,
@@ -220,7 +222,7 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
       targets,
       headClass: head.cls,
       plural,
-      ...(place.length ? { within: nameOf(place) } : {}),
+      ...(place.length ? { within: nameOf(place), placeWord: lw(body[cut]) } : {}),
       original,
       words,
       itemTokens: items.length ? items : [headWord],
@@ -231,7 +233,15 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
   // No head noun: a list of names, or one name, of the class the verb suggests.
   const items = split(main);
   const targets = items.length ? items.map((item) => defaultTarget(nameOf(item), fallbackClass)) : [defaultTarget(undefined, fallbackClass)];
-  return { targets, plural: false, ...(place.length ? { within: nameOf(place) } : {}), original, words, itemTokens: items.length ? items : [[]], ...flags };
+  return {
+    targets,
+    plural: false,
+    ...(place.length ? { within: nameOf(place), placeWord: lw(body[cut]) } : {}),
+    original,
+    words,
+    itemTokens: items.length ? items : [[]],
+    ...flags,
+  };
 }
 
 const refineIfField = (cls: string, name: string): string => (cls === 'Field' ? refineField(name) : cls);

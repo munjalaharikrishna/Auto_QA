@@ -42,6 +42,8 @@ export const IR_ACTIONS = [
   'CLOSE',
   'EXPAND',
   'COLLAPSE',
+  /** "Wait 5 seconds": until the page is idle, for at most that long (UI-09). Never a fixed sleep. */
+  'WAIT',
 ] as const;
 export type IrAction = (typeof IR_ACTIONS)[number];
 
@@ -54,6 +56,8 @@ export const IrTargetSchema = z.object({
   near: z.string().optional(),
   /** Where the tester says it is: "in the Employee Information section". */
   within: z.string().optional(),
+  /** The row of a table that the target is in, named by values it holds: "Edit for John Smith" (UI-06). `$data.name` or text. */
+  row: z.array(z.string()).optional(),
   /** The one component the names resolve to in the application's knowledge ("Login Name", "username": `Username`), LU-01. */
   component: z.string().optional(),
   /** The page of the application's knowledge the component is on (PK-01). */

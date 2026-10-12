@@ -7,6 +7,7 @@
  */
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { slowDelayMs, UI_PAGES } from './ui-pages.js';
 
 export const DEMO_USER = { username: 'demo', password: 'demo123' };
 
@@ -16,6 +17,7 @@ const layout = (title: string, body: string) => `<!doctype html>
 </head><body>${body}</body></html>`;
 
 const PAGES: Record<string, string> = {
+  ...UI_PAGES,
   '/': layout(
     'Login',
     `<h1>Sign in to Demo</h1>
@@ -165,6 +167,10 @@ export async function startDemoApp(port = 0): Promise<{ url: string; close(): Pr
   const server = http.createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
     if (path === '/api/reports') return res.writeHead(500, { 'content-type': 'application/json' }).end('{"error":"boom"}');
+    if (path === '/api/slow') {
+      setTimeout(() => res.writeHead(200, { 'content-type': 'application/json' }).end('{"done":true}'), slowDelayMs);
+      return;
+    }
     if (path === '/api/ping') return res.writeHead(201, { 'content-type': 'application/json' }).end('{"ok":true}');
     if (path === '/report.csv') {
       return res

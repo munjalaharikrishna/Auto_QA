@@ -1,5 +1,5 @@
 import type { IrAction, IrCondition, IrTarget } from '../ir/schema.js';
-import { keyOf, patterns } from '../patterns/index.js';
+import { keyOf, patterns, waitMs } from '../patterns/index.js';
 import { compactKey } from '../text/compound.js';
 import type { Token } from '../text/index.js';
 import { type Clause, splitClauses } from './clauses.js';
@@ -103,6 +103,9 @@ const navAction = (words: readonly string[], i: number): { canonical: string; le
   return hit && NAV_ACTIONS.has(hit.canonical) ? hit : undefined;
 };
 
+/** "Wait 5 seconds": not one of the 31 verbs, but read by its own pattern (RX-17): until the page is idle, never a fixed sleep (UI-09). */
+const WAIT_WORDS: ReadonlySet<string> = new Set(['wait', 'pause', 'sleep', 'delay']);
+
 /** Words that, right after a word, make it the subject of a sentence ("Login is rejected") and not a command ("Login"). */
 const AFTER_SUBJECT: ReadonlySet<string> = new Set([
   'is',
@@ -162,7 +165,7 @@ function kindOf(line: Line, clause: Clause, ctx: LineContext): 'action' | 'check
     return bare ? 'action' : 'check';
   }
   if (head === 'leave' || navAction(words, i)) return 'action';
-  const imperative = VERBS.some((v) => v.forms[0] === head) || readVerb(words, i)?.via !== undefined;
+  const imperative = VERBS.some((v) => v.forms[0] === head) || readVerb(words, i)?.via !== undefined || WAIT_WORDS.has(head);
   const subjectLed = AFTER_SUBJECT.has(words[i + 1] ?? '') || words[i + 1] === 'not';
   if (imperative && !hasModal(words.slice(i + 1, i + 4)) && !subjectLed) return 'action';
   if (subject.index !== stepStart(words) && verbOf(head)) return 'action';
@@ -254,6 +257,17 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     }
     return { steps, issues, model };
   };
+
+  if (WAIT_WORDS.has(words[i] ?? '')) {
+    const found = patterns().scan(clause.tokens.map((t) => t.text).join(' '), ['waitDuration']).matches[0];
+    const ms = found ? waitMs(found) : undefined;
+    decisions.push(
+      ms === undefined
+        ? '"wait" with no time: until the page is idle'
+        : `"wait ${ms} ms" is "until the page is idle, for at most ${ms} ms": never a fixed sleep`,
+    );
+    return done([step('WAIT', undefined, ms === undefined ? undefined : { kind: 'literal', value: String(ms) })], ms === undefined ? 'GR-01' : 'GR-02');
+  }
 
   // Phrases of the Navigation category: "open browser", "launch the application", "enter URL for X", "go back".
   const nav = navAction(words, i);
@@ -419,10 +433,16 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         if (t) target = t;
         decisions.push('"by clicking …" names the element that opens the file chooser');
       } else if (what.headClass === 'Button') target = what.targets[0] as IrTarget;
-      return done(
-        [step('UPLOAD', target, { kind: 'class', dataClass: 'VALID', field: what.headClass === 'Button' ? 'file' : (what.targets[0]?.name ?? 'file') })],
-        'GR-02',
-      );
+      else if (what.targets[0]?.name || what.targets[0]?.label) {
+        // "Upload the Photo": the file field called Photo, and its value is the Photo of the test data.
+        const named = what.targets[0] as IrTarget;
+        target = { ontology: 'File', name: named.name ?? named.label };
+        decisions.push(`"${target.name}" is the file field`);
+      }
+      const fileName = what.headClass === 'Button' ? 'file' : (what.targets[0]?.name ?? what.targets[0]?.label ?? 'file');
+      const bound = nested.length ? undefined : bindValue(line, what.itemTokens[0] ?? [], ctx.data, fileName);
+      if (bound?.spec.kind === 'data') decisions.push(...bound.decisions);
+      return done([step('UPLOAD', target, bound?.spec.kind === 'data' ? bound.spec : { kind: 'class', dataClass: 'VALID', field: fileName })], 'GR-02');
     }
     case 'LOGIN': {
       const cut = prepIndex(rest, new Set(['with', 'as', 'using']));
@@ -469,8 +489,10 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       // One thing is clicked or hovered: "Click Terms and Conditions" is one name.
       const np = parseNp(rest, DEFAULT_CLASS[action] ?? 'Element', { single: ['CLICK', 'HOVER'].includes(action) });
       if (np.headClass === undefined && action !== 'CLICK') decisions.push(`no kind of element named: read as a ${np.targets[0]?.ontology}`);
+      // "Edit for John Smith": the row of a table that holds those values, not a container of the page (UI-06).
+      const inRow = np.placeWord === 'for' && np.within ? [np.within] : undefined;
       return done(
-        np.targets.map((t) => step(action, t)),
+        np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : t)),
         'GR-01',
       );
     }
