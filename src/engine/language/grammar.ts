@@ -214,7 +214,8 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       issues.push({
         code: 'NEEDS_REFERENCE',
         severity: 'review',
-        message: `"${n.original}" points at something earlier ("${n.reference}"); the engine does not guess what: it is resolved when references are built`,
+        reference: n.reference,
+        message: `"${n.original}" points at something earlier ("${n.reference}"); the engine does not guess what, it is resolved from what the test case did before`,
         original,
         suggestion: 'Name it: write the field, record or value itself instead of "same", "added", "entered", "it".',
       });

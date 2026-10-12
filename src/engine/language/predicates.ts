@@ -146,6 +146,22 @@ export const PREDICATE_STARTS: ReadonlySet<string> = new Set([
 
 export const MESSAGE_HEADS: ReadonlySet<string> = new Set(['Error', 'Validation', 'Message']);
 
+/** Nouns that name data without saying which: "the added data", "updated records". */
+const GENERIC_DATA: ReadonlySet<string> = new Set([
+  'data',
+  'record',
+  'records',
+  'value',
+  'values',
+  'detail',
+  'details',
+  'information',
+  'item',
+  'items',
+  'entry',
+  'entries',
+]);
+
 const NEGATIONS: ReadonlySet<string> = new Set(['not', 'no', 'never', 'cannot', 'without', 'neither', 'nor', 'unable', 'fails to', 'fail to']);
 /** Verbs that only link a subject to its state: "Save stays disabled", "the field becomes empty". */
 const LINKING: ReadonlySet<string> = new Set(['stays', 'stay', 'remains', 'remain', 'becomes', 'become', 'gets', 'get', 'turns', 'turn']);
@@ -214,9 +230,10 @@ interface Hit {
 }
 
 /** The earliest start of any predicate word: where the subject ends. */
-function earliestPredicate(words: readonly string[]): number {
+function earliestPredicate(words: readonly string[], skip?: ReadonlySet<Kind>): number {
   let first = words.length;
   for (const def of PREDICATES) {
+    if (skip?.has(def.kind)) continue;
     for (const phrase of def.phrases) {
       for (let i = 0; i + phrase.length <= words.length && i < first; i++) {
         if (phrase.every((w, k) => words[i + k] === w) && !(def.endOnly && i + phrase.length !== words.length)) first = i;
@@ -226,9 +243,10 @@ function earliestPredicate(words: readonly string[]): number {
   return first;
 }
 
-function findPredicate(words: readonly string[]): Hit | undefined {
+function findPredicate(words: readonly string[], skip?: ReadonlySet<Kind>): Hit | undefined {
   let best: Hit | undefined;
   for (const def of PREDICATES) {
+    if (skip?.has(def.kind)) continue;
     for (const phrase of def.phrases) {
       for (let i = 0; i + phrase.length <= words.length; i++) {
         if (!phrase.every((w, k) => words[i + k] === w)) continue;
@@ -362,7 +380,17 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   }
 
   const words = kept.map((t) => lw(t));
-  const hit = thereNp ? undefined : findPredicate(words);
+  let hit = thereNp ? undefined : findPredicate(words);
+  // "The added data is displayed": "added" describes the data; the predicate is the one that comes after it.
+  let adjectives: ReadonlySet<Kind> | undefined;
+  if (hit && (hit.def.kind === 'CHANGED' || hit.def.kind === 'DELETED')) {
+    const skip = new Set<Kind>(['CHANGED', 'DELETED']);
+    const later = findPredicate(words, skip);
+    if (later && later.start >= hit.end) {
+      hit = later;
+      adjectives = skip;
+    }
+  }
   if (thereNp) {
     const out: CheckResult['expectations'] = [];
     for (const target of thereNp.targets)
@@ -412,7 +440,7 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     };
   }
 
-  const before = kept.slice(0, Math.min(hit.start, earliestPredicate(words)));
+  const before = kept.slice(0, Math.min(hit.start, earliestPredicate(words, adjectives)));
   const afterAll = kept.slice(hit.end);
   // "a validation message indicating that …": what comes after the lead is what the message says, not part of its name.
   const leadAt = afterAll.findIndex((t) => TEXT_LEADS.has(lw(t)));
@@ -525,7 +553,8 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       issues.push({
         code: 'NEEDS_REFERENCE',
         severity: 'review',
-        message: 'the check compares with the value entered in an earlier step, which is resolved when references are built',
+        reference: '$entered',
+        message: 'the check compares with the value entered in an earlier step, which is resolved from what the test case did before',
         original: clauseText,
         suggestion: 'Say what the field should hold: Verify the <field> field contains "<value>".',
       });
@@ -559,6 +588,11 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       // "the record is deleted", "User should succesfully deleted employee data": the thing is the object when there is one.
       const np = after.length ? objectNp() : subjectNp;
       decisions.push(`"${words[hit.start]}" says the data changed; the check is on the state of what changed`);
+      // "the added data", "the updated records": which data? Whatever the test case entered; the references say what (RF-01).
+      const changedWord = words[hit.start] ?? '';
+      if (kind === 'CHANGED' && np && np.words.length > 0 && np.words.every((w) => GENERIC_DATA.has(w))) {
+        issues.push(refIssue(['added', 'created', 'saved', 'stored'].includes(changedWord) ? 'added' : 'updated', np.original, clauseText));
+      }
       forTargets(np, (target) => ({
         type: 'STATE',
         ...(target ? { target } : {}),
@@ -612,7 +646,8 @@ const kind0 = (h: Hit): Kind => h.def.kind;
 const refIssue = (word: string, phrase: string, original: string): Omit<Issue, 'where'> => ({
   code: 'NEEDS_REFERENCE',
   severity: 'review',
-  message: `"${phrase}" points at something earlier ("${word}"); the engine does not guess what: it is resolved when references are built`,
+  reference: word,
+  message: `"${phrase}" points at something earlier ("${word}"); the engine does not guess what, it is resolved from what the test case did before`,
   original,
   suggestion: 'Name it: write the field, record or value itself instead of "same", "added", "entered", "it".',
 });

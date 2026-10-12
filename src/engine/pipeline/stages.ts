@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { type RawTestCase, RawTestCaseSchema } from '../../model/test-model.js';
 import type { ParserConfig } from '../../parser/index.js';
-import { isSecretName } from '../config/index.js';
+import { type ResolvedValue, resolveData as resolveDataValues } from '../data/resolver.js';
+import type { CredentialStore } from '../data/store.js';
 import type { IrSource } from '../ir/from-model.js';
 import { QaIrSchema } from '../ir/schema.js';
+import { validateIr } from '../ir/validate.js';
 import { type CaseLanguage, understandCase } from '../language/case.js';
+import type { ProductionPattern } from '../patterns/redact.js';
 import { nonBlankLines } from '../patterns/shapes.js';
 import { type AnyStage, STAGE_NAMES, type Stage } from './pipeline.js';
 
@@ -20,6 +23,20 @@ export interface CompileOptions {
   source?: IrSource;
   /** Page names the environment knows, with their paths (page routes). */
   pageRoutes?: Record<string, string>;
+  /** The environment variables the test data may come from (DR-01). Not given: they are read when the test runs. */
+  env?: Record<string, string | undefined>;
+  /** Central configuration values (`username.valid`, `TEST_PASSWORD`). */
+  dataConfig?: Record<string, string>;
+  /** The encrypted credential store (DS-04). */
+  store?: CredentialStore;
+  /** Test-data files, read already. */
+  dataFiles?: Record<string, string>;
+  /** The run, for the seed of generated values: the same run gives the same values. */
+  run?: string;
+  /** The longest value each field takes, from the application's knowledge. */
+  maxLengths?: Record<string, number>;
+  /** Patterns for production identifiers (a real customer number): they are taken out of every output (DS-01). */
+  productionPatterns?: ProductionPattern[];
 }
 
 const PlanItem = z.object({ seq: z.number().int().positive(), kind: z.enum(['step', 'expect']), ref: z.string() });
@@ -38,9 +55,60 @@ const Language = z.custom<CaseLanguage>(
 );
 const Read = z.object({ language: Language });
 const Understood = z.object({ language: Language, unparsed: Unparsed });
-const WithIr = z.object({ ir: QaIrSchema, language: Language });
+const Values = z.custom<Record<string, ResolvedValue>>((v) => typeof v === 'object' && v !== null, 'must be the resolved values');
+const WithIr = z.object({ ir: QaIrSchema, language: Language, values: Values.optional() });
 const WithPages = WithIr.extend({ pages: z.record(z.string(), z.string().nullable()) });
 const Planned = WithPages.extend({ plan: PlanSchema });
+
+/**
+ * Settles the values of a test case in the order of DR-01 (the data resolver) and says which questions that answers: a
+ * value that was found or made is no longer missing; one that could not be says why. It does not log: the stage logs
+ * what it returns, and a test case that stopped before the stage is settled the same way for its pre-flight report.
+ */
+export async function settleData(
+  options: CompileOptions,
+  language: CaseLanguage,
+  ir: z.infer<typeof QaIrSchema>,
+): Promise<{
+  ir: z.infer<typeof QaIrSchema>;
+  issues: CaseLanguage['issues'];
+  values: Record<string, ResolvedValue>;
+  decisions: Awaited<ReturnType<typeof resolveDataValues>>['decisions'];
+}> {
+  // Every value the test case needs is looked for in the fixed order of DR-01; a secret is never written anywhere.
+  const resolution = await resolveDataValues(ir.data, {
+    testId: ir.testCase.id,
+    run: options.run,
+    excel: language.excel,
+    excelSecrets: language.excelSecrets,
+    env: options.env,
+    config: options.dataConfig,
+    store: options.store,
+    files: options.dataFiles,
+    maxLengths: options.maxLengths,
+    steps: ir.steps,
+  });
+  // What was settled is no longer a question; what was not says why.
+  const why = new Map(resolution.unresolved.map((u) => [u.key, u.why]));
+  const issues = language.issues
+    .filter((i) => !(i.code === 'MISSING_DATA' && i.data && resolution.values[i.data]))
+    .map((i) => (i.code === 'MISSING_DATA' && i.data && why.has(i.data) ? { ...i, message: `${i.message}: ${why.get(i.data)}` } : i));
+  // A value that could not be found for a field the text did not even ask a question about becomes one.
+  for (const u of resolution.unresolved) {
+    if (!issues.some((i) => i.data === u.key)) {
+      issues.push({
+        code: 'MISSING_DATA',
+        severity: 'review',
+        where: 'test data',
+        original: u.field,
+        data: u.key,
+        message: `no value for "${u.field}": ${u.why}`,
+        suggestion: `Add it to Test Data: "${u.field}: <value>".`,
+      });
+    }
+  }
+  return { ir: { ...ir, data: resolution.data }, issues, values: resolution.values, decisions: resolution.decisions };
+}
 
 export function compileStages(options: CompileOptions = {}): AnyStage[] {
   const pageRoutes = options.pageRoutes ?? {};
@@ -115,24 +183,21 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
   const resolveData: Stage<z.infer<typeof WithIr>, z.infer<typeof WithIr>> = {
     name: 'ResolveData',
     output: WithIr,
-    run: ({ ir, language }, ctx) => {
-      const data = { ...ir.data };
-      for (const [name, d] of Object.entries(data)) {
-        const secret = d.secret || isSecretName(name) || (d.source === 'ENV' && isSecretName(d.value ?? ''));
-        // A secret is only ever kept as a reference, whatever the test case or the parser put there.
-        if (secret && d.class !== 'BLANK') data[name] = { ...d, secret: true, value: d.source === 'ENV' ? d.value : '***' };
-        ctx.log.add('ResolveData', 'decision', `${name}: ${d.class}${secret ? ' (secret, kept as a reference)' : ''}`, { source: d.source });
-      }
-      if (!Object.keys(data).length) ctx.log.add('ResolveData', 'info', 'no data to resolve');
+    run: async ({ ir, language }, ctx) => {
+      const settled = await settleData(options, language, ir);
+      for (const d of settled.decisions) ctx.log.add('ResolveData', d.kind, d.message, d.data);
+      if (!Object.keys(ir.data).length) ctx.log.add('ResolveData', 'info', 'no data to resolve');
       for (const a of ir.assumptions) ctx.log.add('ResolveData', 'assumption', a.text, { at: a.at ?? '' });
-      return { ir: { ...ir, data }, language };
+      const checked = validateIr(settled.ir);
+      if (!checked.ok) throw Object.assign(new Error(checked.issues.map((i) => `${i.path}: ${i.message}`).join('; ')), { issues: checked.issues });
+      return { ir: checked.ir, language: { ...language, issues: settled.issues }, values: settled.values };
     },
   };
 
   const resolvePage: Stage<z.infer<typeof WithIr>, z.infer<typeof WithPages>> = {
     name: 'ResolvePage',
     output: WithPages,
-    run: ({ ir, language }, ctx) => {
+    run: ({ ir, language, values }, ctx) => {
       const pages: Record<string, string | null> = {};
       for (const s of ir.steps) {
         const name = s.action === 'NAVIGATE' && s.target?.ontology === 'Page' ? s.target.name : undefined;
@@ -146,7 +211,7 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
         }
       }
       if (!Object.keys(pages).length) ctx.log.add('ResolvePage', 'info', 'no page to resolve');
-      return { ir, language, pages };
+      return { ir, language, values, pages };
     },
   };
 

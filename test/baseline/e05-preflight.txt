@@ -1,0 +1,275 @@
+==============================================================================
+OrangeHRM_Login_Test_Cases_Updated.xlsx
+==============================================================================
+
+Pre-flight: 10 test case(s): 9 ready, 0 need a decision, 1 blocked
+
+BLOCKED TC_LOGIN_010  risk 55/100  steps 4/4  checks 0/1  Login with username containing leading/trailing spaces
+    ✗ [not understood] expected result: the sentence fits none of the grammar models: it is neither an action nor a check
+        "The system handles the whitespace according to the application's validation rules"
+        → Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page.
+    ? [unknown branch] expected result: "spaces are not accepted": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen
+        "spaces are not accepted"
+        → Say which result is expected, for example: "If spaces are not accepted, <result A>; otherwise <result B>", or state the test data that decides it.
+
+Coverage: OrangeHRM_Login_Test_Cases_Updated.xlsx
+  test cases           10  (QA-IR built for 9; nothing to review in 9)
+  steps understood     39/39  100%
+  checks understood    10/11  91%
+  by category:
+    (not understood)    0/1    0%
+    AUTHENTICATION      7/7    100%
+    CLICK               9/9    100%
+    ENTER_VALUE        20/20   100%
+    MASKED              2/2    100%
+    NAVIGATE           10/10   100%
+    URL                 1/1    100%
+    VALUE               1/1    100%
+    VISIBILITY          7/7    100%
+  grammar models used  GR-01×19 GR-02×20 GR-05×4 GR-06×17 GR-07×1
+  top review reasons:
+       1  not understood: the sentence fits none of the grammar models: it is neither an action nor a check
+       1  unknown branch: "…": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen
+
+==============================================================================
+Add_Employee.xlsx
+==============================================================================
+
+Pre-flight: 19 test case(s): 1 ready, 1 need a decision, 17 blocked
+
+REVIEW  21022024_2  risk 17/100  steps 2/2  checks 6/6  TC02_Verify the functionality of Tabs
+    ? [ambiguous wording] expected result: the words "as a default page" are not understood and are not checked
+        "User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+
+BLOCKED 21022024_3  risk 59/100  steps 2/2  checks 7/8  TC03_Verify the functionality of Employee Information Section
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] expected result: no check could be read: no word says what should be true
+        "User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_4  risk 59/100  steps 3/4  checks 8/8  TC04_Verify the functionality of Add Button
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_5  risk 61/100  steps 4/5  checks 9/9  TC05_Verify the functionality of code/Id Text  Box
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_6  risk 63/100  steps 5/6  checks 10/10  TC06_Verify the functionality of Last Name Text Box
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_7  risk 65/100  steps 6/7  checks 11/11  TC07_Verify the functionality of First Name Text Box
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_8  risk 67/100  steps 7/8  checks 12/12  TC08_Verify the functionality of Middle Name Text Box
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_9  risk 69/100  steps 8/9  checks 13/13  TC09_Verify the functionality of Nick Name Text Box
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+
+BLOCKED 21022024_10  risk 84/100  steps 9/10  checks 14/14  TC10_Verify the functionality of Photo upload Button
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+
+BLOCKED 21022024_11  risk 84/100  steps 10/11  checks 15/15  TC11_Verify the functionality of Reset
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+
+BLOCKED 21022024_12  risk 84/100  steps 11/12  checks 16/16  TC12_Verify the functionality of Save
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+
+BLOCKED 21022024_13  risk 100/100  steps 11/12  checks 18/18  TC13_Verify the functionality of Added Data
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] expected result: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_14  risk 100/100  steps 12/13  checks 19/19  TC14_Verify the functionality of Back Button
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_15  risk 100/100  steps 13/14  checks 20/20  TC15_Verify the functionality of Employee Name
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_16  risk 100/100  steps 14/15  checks 21/21  TC16_Verify the functionality of Employee Section
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_17  risk 100/100  steps 15/16  checks 22/22  TC17_Verify the functionality of save
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_18  risk 100/100  steps 15/16  checks 24/24  TC18_Verify the functionality of updated Records
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+BLOCKED 21022024_19  risk 100/100  steps 16/17  checks 25/25  TC19_Verify the functionality of Delete Button
+    ? [ambiguous wording] step 8: the words "as a default page" are not understood and are not checked
+        "Verify User Should see tabs and PIM as a default page"
+        → Say it as a check of its own: Verify <what> is <state>.
+    ✗ [not understood] step 10: no check could be read: no word says what should be true
+        "Verify User should add  button in employee information section"
+        → Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.
+    ? [missing data] step 23: no value for "file": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+        "upload a photo by clicking upload button"
+        → Add it to Test Data, for example "file: <value>", or write the value in quotes in the step.
+    ? [unresolved reference] step 29: "data in personal information page" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "To checking the added data in personal information page"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+    ? [unresolved reference] step 30: "data" points at something earlier ("added"); the engine does not guess what, it is resolved from what the test case did before
+        "Verify User should see added data"
+        → Name it: write the field, record or value itself instead of "same", "added", "entered", "it".
+
+Coverage: Add_Employee.xlsx
+  test cases           19  (QA-IR built for 2; nothing to review in 1)
+  steps understood     165/181  91%
+  checks understood    274/275  100%
+  by category:
+    (not understood)    0/17   0%
+    CLICK              48/48   100%
+    ENTER_VALUE        69/69   100%
+    LAYOUT             38/38   100%
+    NAVIGATE           38/38   100%
+    SELECT              1/1    100%
+    STATE              41/41   100%
+    UPLOAD             10/10   100%
+    URL                54/54   100%
+    VALUE              97/97   100%
+    VISIBILITY         53/53   100%
+  grammar models used  GR-01×87 GR-02×91 GR-05×65 GR-06×371
+  top review reasons:
+      18  ambiguous wording: the words "…" are not understood and are not checked
+      17  not understood: no check could be read: no word says what should be true
+      14  unresolved reference: "…" points at something earlier ("…"); the engine does not guess what, it is resolved from what the test case did before
+      10  missing data: no value for "…": the step asks for a valid one and the test data gives none: a valid file cannot be made up: give it in Test Data (file: …), the environment variable TEST_FILE, or the credential store
+

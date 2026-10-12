@@ -123,7 +123,10 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
   const exclude = options.field ? FIELD_CONTEXT_EXCLUDE : undefined;
   const split = (parts: readonly Token[]): Token[][] => (options.single ? (parts.length ? [[...parts]] : []) : splitList(parts));
   const original = originalOf(line, tokens);
-  const bodyAll = strip(tokens);
+  // "Click it again": the word after the thing is not part of it.
+  const trimmed = [...tokens];
+  while (trimmed.length > 1 && ['again', 'also', 'too'].includes(lw(trimmed[trimmed.length - 1]))) trimmed.pop();
+  const bodyAll = strip(trimmed);
   // "PIM as a default page": what follows "as" says something the engine does not read; it is reported, never dropped silently.
   const asAt = bodyAll.findIndex((t, k) => k > 0 && lw(t) === 'as');
   const body = asAt > 0 ? bodyAll.slice(0, asAt) : bodyAll;

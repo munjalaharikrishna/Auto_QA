@@ -57,10 +57,37 @@ export const IrTargetSchema = z.object({
 });
 export type IrTarget = z.infer<typeof IrTargetSchema>;
 
-/** A value the tester gave, a blank, a generated or referenced one, or a kind of value the text only names ("valid", "invalid"; TD-01). */
-export const DATA_CLASSES = ['EXPLICIT', 'BLANK', 'GENERATED', 'REFERENCE', 'VALID', 'INVALID', 'EXISTING', 'NON_EXISTING'] as const;
-/** `UNRESOLVED`: the text names a kind of value and no source gives one yet; the data resolver (E0.5) must, or the test case is asked about. */
-export const DATA_SOURCES = ['EXCEL', 'ENV', 'GENERATOR', 'UNRESOLVED'] as const;
+/**
+ * The data classes of TD-01: a value the tester gave (EXPLICIT), or the kind of value the text asks for ("valid",
+ * "invalid", "blank", "existing", "maximum length"). `REFERENCE` is a value that lives elsewhere ($env.NAME).
+ */
+export const DATA_CLASSES = [
+  'EXPLICIT',
+  'VALID',
+  'INVALID',
+  'EMPTY',
+  'BLANK',
+  'MISSING',
+  'NULL',
+  'BOUNDARY',
+  'MAXIMUM',
+  'MINIMUM',
+  'EXISTING',
+  'NON_EXISTING',
+  'DUPLICATE',
+  'GENERATED',
+  'RANDOM',
+  'CREDENTIAL',
+  'ENVIRONMENT',
+  'REFERENCE',
+] as const;
+export type DataClass = (typeof DATA_CLASSES)[number];
+/**
+ * Where a value comes from, in the fixed order the resolver tries them (DR-01): the test case's own text, environment
+ * variables, central configuration, the credential store, test-data files, the generator, earlier steps, and what the
+ * application created. `UNRESOLVED`: nothing gave one yet; the test case is asked about it, never given a made-up value.
+ */
+export const DATA_SOURCES = ['EXCEL', 'ENV', 'CONFIG', 'STORE', 'FILE', 'GENERATOR', 'STEP', 'APPLICATION', 'UNRESOLVED'] as const;
 
 export const IrDataSchema = z
   .object({
@@ -68,6 +95,11 @@ export const IrDataSchema = z
     source: z.enum(DATA_SOURCES),
     value: z.string().optional(),
     secret: z.boolean().optional(),
+    /** What kind of value the step asked for when the value itself was given ("invalid username" with `Username: invaliduser`). */
+    intent: z.enum(DATA_CLASSES).optional(),
+    /** For a generated value: the rule that made it, and the seed (DG-01). Never the value of a secret. */
+    rule: z.string().optional(),
+    seed: z.string().optional(),
   })
   .superRefine((d, ctx) => {
     if (d.class === 'BLANK' && d.value !== undefined && d.value !== '') {
@@ -77,7 +109,7 @@ export const IrDataSchema = z
     if (d.secret && d.value !== undefined && d.value !== '***' && !d.value.startsWith('$')) {
       ctx.addIssue({ code: 'custom', path: ['value'], message: 'a secret must be a reference ($env.NAME) or ***, never the value' });
     }
-    if (d.source === 'ENV' && d.class !== 'REFERENCE') {
+    if (d.source === 'ENV' && !['REFERENCE', 'ENVIRONMENT', 'CREDENTIAL'].includes(d.class)) {
       ctx.addIssue({ code: 'custom', path: ['class'], message: 'a value from the environment is a REFERENCE' });
     }
   });
@@ -167,6 +199,22 @@ export const IrConditionalSchema = z.object({
 });
 export type IrConditional = z.infer<typeof IrConditionalSchema>;
 
+/** What a word like "it", "same field" or "added data" stands for, found from what the test case did earlier (RF-01). */
+export const REFERENCE_KINDS = ['PREVIOUS_TARGET', 'PREVIOUS_VALUE', 'ENTERED_DATA', 'PREVIOUS_STEP'] as const;
+export const IrReferenceSchema = z.object({
+  id: z.string().min(1),
+  /** The tester's own words. */
+  phrase: Original,
+  kind: z.enum(REFERENCE_KINDS),
+  status: z.enum(['RESOLVED', 'UNRESOLVED']),
+  /** The steps the phrase stands for. */
+  steps: z.array(z.string().refine(isStepId)),
+  /** The values those steps entered, as `$data.name`. */
+  values: z.array(z.string()),
+  because: z.string(),
+});
+export type IrReference = z.infer<typeof IrReferenceSchema>;
+
 export const IrAssumptionSchema = z.object({ id: z.string().refine(isAssumptionId), text: Original, at: z.string().optional() });
 
 export const IrVersionsSchema = z.object({ grammar: z.string(), vocabulary: z.string(), ontology: z.string(), patterns: z.string() });
@@ -186,7 +234,7 @@ export const QaIrSchema = z
     steps: z.array(IrStepSchema).min(1, 'a test case needs at least one step'),
     expectations: z.array(IrExpectationSchema).min(1, 'a test case needs at least one expectation'),
     conditionals: z.array(IrConditionalSchema),
-    references: z.array(z.unknown()),
+    references: z.array(IrReferenceSchema),
     assumptions: z.array(IrAssumptionSchema),
     versions: IrVersionsSchema,
   })

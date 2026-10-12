@@ -1,7 +1,7 @@
+import { classOfWords } from '../data/classes.js';
 import { isSecretName } from '../patterns/shapes.js';
 import { compactKey } from '../text/compound.js';
 import type { Token } from '../text/index.js';
-import { canonical } from './synonyms.js';
 import type { ValueSpec } from './types.js';
 import { type Line, lw, originalOf, textOf } from './view.js';
 
@@ -79,14 +79,6 @@ const VALUE_NOUNS: ReadonlySet<string> = new Set([
   'otp',
 ]);
 
-const DATA_CLASS_WORD: Readonly<Record<string, 'VALID' | 'INVALID' | 'BLANK' | 'EXISTING' | 'NON_EXISTING'>> = {
-  valid: 'VALID',
-  invalid: 'INVALID',
-  blank: 'BLANK',
-  existing: 'EXISTING',
-  'non-existing': 'NON_EXISTING',
-};
-
 /** The words that qualify a value without naming it: "username with leading/trailing spaces". */
 const QUALIFIER_WORDS: ReadonlySet<string> = new Set(['with', 'having', 'containing', 'that', 'which', 'of']);
 
@@ -110,6 +102,9 @@ const ENV_NAME: Readonly<Record<string, { name: string; secret: boolean }>> = {
  */
 export function bindValue(line: Line, tokens: readonly Token[], data: readonly DataEntry[], field?: string): BoundValue {
   const decisions: string[] = [];
+  // "the same value", "the previous username": what was entered before, found when references are resolved.
+  const pointsBack = tokens.map((t) => lw(t)).find((w) => w === 'same' || w === 'previous' || w === 'earlier');
+  if (pointsBack && VALUE_NOUNS.has(lw(tokens[tokens.length - 1]))) return { spec: { kind: 'previous' }, decisions };
   const only = tokens.length === 1 ? (tokens[0] as Token) : undefined;
   if (only && (only.kind === 'LITERAL' || only.kind === 'NUMBER' || only.kind === 'EMAIL' || only.kind === 'URL' || only.kind === 'DATE')) {
     return { spec: { kind: 'literal', value: textOf(only) }, decisions };
@@ -126,8 +121,9 @@ export function bindValue(line: Line, tokens: readonly Token[], data: readonly D
     decisions.push(`"${originalOf(line, tokens.slice(end))}" describes the value; the value itself is "${originalOf(line, tokens.slice(0, end))}"`);
   const head = tokens.slice(0, end).filter((t) => !DETERMINERS.has(lw(t)));
   const words = head.map((t) => lw(t));
-  const classWord = words.map((w) => DATA_CLASS_WORD[canonical('Data', w) ?? w]).find((c) => c !== undefined);
-  const plain = head.filter((t) => DATA_CLASS_WORD[canonical('Data', lw(t)) ?? lw(t)] === undefined);
+  const named = classOfWords(words);
+  const classWord = named?.cls;
+  const plain = head.filter((_, k) => !named?.at.includes(k));
   const fullKey = compactKey(words.join(' '));
   const plainKey = compactKey(plain.map((t) => lw(t)).join(' '));
   const fieldKey = field ? compactKey(field) : '';
@@ -139,7 +135,7 @@ export function bindValue(line: Line, tokens: readonly Token[], data: readonly D
     (!plainKey && fieldKey ? data.find((d) => compactKey(d.key) === fieldKey) : undefined);
   if (entry) {
     decisions.push(`"${originalOf(line, head)}" is "${entry.key}" of the test data`);
-    return { spec: { kind: 'data', key: entry.key }, entry, decisions };
+    return { spec: { kind: 'data', key: entry.key, ...(classWord ? { intent: classWord } : {}) }, entry, decisions };
   }
 
   if (classWord === 'BLANK') return { spec: { kind: 'blank' }, decisions };
@@ -155,7 +151,7 @@ export function bindValue(line: Line, tokens: readonly Token[], data: readonly D
     }
     return { spec: { kind: 'class', dataClass: 'VALID', field: fieldName }, decisions };
   }
-  if (classWord) return { spec: { kind: 'class', dataClass: classWord, field: fieldName }, decisions };
+  if (classWord && classWord !== 'EXPLICIT' && classWord !== 'REFERENCE') return { spec: { kind: 'class', dataClass: classWord, field: fieldName }, decisions };
 
   // 3. A noun that stands for a value ("Enter password"): the credential of the environment, or a value still to be named.
   const lastWord = words[words.length - 1] ?? '';
