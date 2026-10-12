@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dataRefKey, isAssumptionId, isExpectationId, isStateName, isStepId } from '../patterns/shapes.js';
 
 /**
  * QA-IR: the machine-readable form every test case is compiled into before anything executes (IR-01, ENGINE-SPEC §12).
@@ -7,7 +8,7 @@ import { z } from 'zod';
  */
 
 /** `LOGIN_PAGE`, `LOGIN_SUBMITTED`: upper snake case, so states are compared as names, never as free text. */
-const StateName = z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a state is written in UPPER_SNAKE_CASE');
+const StateName = z.string().refine(isStateName, 'a state is written in UPPER_SNAKE_CASE');
 const Original = z.string().trim().min(1, 'must hold the original words of the tester');
 
 export const IR_ACTIONS = [
@@ -70,7 +71,7 @@ export const IrPreconditionSchema = z.discriminatedUnion('type', [
 
 export const IrStepSchema = z.object({
   /** `S3`, or `S3.2` when one written step holds several actions. */
-  id: z.string().regex(/^S\d+(\.\d+)?$/, 'a step id looks like S1 or S3.2'),
+  id: z.string().refine(isStepId, 'a step id looks like S1 or S3.2'),
   action: z.enum(IR_ACTIONS),
   target: IrTargetSchema.optional(),
   /** `$data.username` (a name in `data`), or a literal. */
@@ -93,20 +94,17 @@ export const IrConditionSchema = z.object({
 });
 
 export const IrExpectationSchema = z.object({
-  id: z.string().regex(/^E\d+$/, 'an expectation id looks like E1'),
+  id: z.string().refine(isExpectationId, 'an expectation id looks like E1'),
   clause: Original,
   negated: z.boolean(),
   condition: IrConditionSchema,
-  afterStep: z
-    .string()
-    .regex(/^S\d+(\.\d+)?$/)
-    .optional(),
+  afterStep: z.string().refine(isStepId).optional(),
   /** A guard rail the platform adds on every test (e.g. "no crash"); there are no words of the tester to point back to. */
   automatic: z.boolean().optional(),
 });
 export type IrExpectation = z.infer<typeof IrExpectationSchema>;
 
-export const IrAssumptionSchema = z.object({ id: z.string().regex(/^A\d+$/), text: Original, at: z.string().optional() });
+export const IrAssumptionSchema = z.object({ id: z.string().refine(isAssumptionId), text: Original, at: z.string().optional() });
 
 export const IrVersionsSchema = z.object({ grammar: z.string(), vocabulary: z.string(), ontology: z.string(), patterns: z.string() });
 
@@ -134,8 +132,8 @@ export const QaIrSchema = z
     ir.steps.forEach((s, i) => {
       if (ids.has(s.id)) ctx.addIssue({ code: 'custom', path: ['steps', i, 'id'], message: `step id ${s.id} is used twice` });
       ids.add(s.id);
-      const ref = /^\$data\.(\w+)$/.exec(s.value ?? '');
-      if (ref && !(ref[1] in ir.data)) ctx.addIssue({ code: 'custom', path: ['steps', i, 'value'], message: `${s.value} is not in data` });
+      const key = dataRefKey(s.value ?? '');
+      if (key !== undefined && !(key in ir.data)) ctx.addIssue({ code: 'custom', path: ['steps', i, 'value'], message: `${s.value} is not in data` });
     });
     ir.expectations.forEach((e, i) => {
       if (e.afterStep && !ids.has(e.afterStep)) ctx.addIssue({ code: 'custom', path: ['expectations', i, 'afterStep'], message: `no step ${e.afterStep}` });

@@ -5,6 +5,7 @@ import { isSecretName } from '../config/index.js';
 import { type IrSource, toQaIr } from '../ir/from-model.js';
 import { QaIrSchema } from '../ir/schema.js';
 import { validateIr } from '../ir/validate.js';
+import { nonBlankLines } from '../patterns/shapes.js';
 import { type AnyStage, STAGE_NAMES, type Stage } from './pipeline.js';
 
 /**
@@ -43,7 +44,7 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     output: RawTestCaseSchema,
     run: (input, ctx) => {
       const raw = RawTestCaseSchema.parse(input);
-      ctx.log.add('Read', 'info', 'test case read', { id: raw.id ?? '', steps: raw.steps.split(/\r?\n/).filter((l) => l.trim()).length });
+      ctx.log.add('Read', 'info', 'test case read', { id: raw.id ?? '', steps: nonBlankLines(raw.steps).length });
       return raw;
     },
   };

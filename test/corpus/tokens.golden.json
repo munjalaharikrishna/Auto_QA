@@ -1,0 +1,2709 @@
+[
+  {
+    "sentence": "Open Browser",
+    "normalized": "open browser",
+    "tokens": [
+      "WORD:open",
+      "WORD:browser"
+    ]
+  },
+  {
+    "sentence": "Verify User should open browser",
+    "normalized": "verify user should open browser",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:open",
+      "WORD:browser"
+    ]
+  },
+  {
+    "sentence": "Enter url for Orange Hrm server",
+    "normalized": "enter url for orange hrm server",
+    "tokens": [
+      "WORD:enter",
+      "WORD:url",
+      "WORD:for",
+      "WORD:orange",
+      "WORD:hrm",
+      "WORD:server"
+    ]
+  },
+  {
+    "sentence": "Verify User should navigate to login section of Oragne Hrm",
+    "normalized": "verify user should navigate to login section of oragne hrm",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:login",
+      "WORD:section",
+      "WORD:of",
+      "WORD:oragne",
+      "WORD:hrm"
+    ]
+  },
+  {
+    "sentence": "Checking the login section at middle of the page",
+    "normalized": "checking the login section at middle of the page",
+    "tokens": [
+      "WORD:checking",
+      "WORD:the",
+      "WORD:login",
+      "WORD:section",
+      "WORD:at",
+      "WORD:middle",
+      "WORD:of",
+      "WORD:the",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Login section should be middle of the page",
+    "normalized": "login section should be middle of the page",
+    "tokens": [
+      "WORD:login",
+      "WORD:section",
+      "WORD:should",
+      "WORD:be",
+      "WORD:middle",
+      "WORD:of",
+      "WORD:the",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Verify Login section should be middle of the page",
+    "normalized": "verify login section should be middle of the page",
+    "tokens": [
+      "WORD:verify",
+      "WORD:login",
+      "WORD:section",
+      "WORD:should",
+      "WORD:be",
+      "WORD:middle",
+      "WORD:of",
+      "WORD:the",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+    "normalized": "checking the tabs of admin,pim (personal information manager), leave, time, benfits, recruitment, reports, bug tracker, help are visible or not. note:the pim should be as default page.",
+    "tokens": [
+      "WORD:checking",
+      "WORD:the",
+      "WORD:tabs",
+      "WORD:of",
+      "WORD:admin",
+      "SYMBOL:,",
+      "WORD:pim",
+      "SYMBOL:(",
+      "WORD:personal",
+      "WORD:information",
+      "WORD:manager",
+      "SYMBOL:)",
+      "SYMBOL:,",
+      "WORD:leave",
+      "SYMBOL:,",
+      "WORD:time",
+      "SYMBOL:,",
+      "WORD:benfits",
+      "SYMBOL:,",
+      "WORD:recruitment",
+      "SYMBOL:,",
+      "WORD:reports",
+      "SYMBOL:,",
+      "WORD:bug",
+      "WORD:tracker",
+      "SYMBOL:,",
+      "WORD:help",
+      "WORD:are",
+      "WORD:visible",
+      "WORD:or",
+      "WORD:not",
+      "SYMBOL:.",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:the",
+      "WORD:pim",
+      "WORD:should",
+      "WORD:be",
+      "WORD:as",
+      "WORD:default",
+      "WORD:page",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "User Should see tabs and PIM as a default page",
+    "normalized": "user should see tabs and pim as a default page",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:tabs",
+      "WORD:and",
+      "WORD:pim",
+      "WORD:as",
+      "WORD:a",
+      "WORD:default",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Verify User Should see tabs and PIM as a default page",
+    "normalized": "verify user should see tabs and pim as a default page",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:tabs",
+      "WORD:and",
+      "WORD:pim",
+      "WORD:as",
+      "WORD:a",
+      "WORD:default",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Under Employee Information Section there should be add button. Which should be in PIM page",
+    "normalized": "under employee information section there should be add button. which should be in pim page",
+    "tokens": [
+      "WORD:under",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:section",
+      "WORD:there",
+      "WORD:should",
+      "WORD:be",
+      "WORD:add",
+      "WORD:button",
+      "SYMBOL:.",
+      "WORD:which",
+      "WORD:should",
+      "WORD:be",
+      "WORD:in",
+      "WORD:pim",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User should add  button in employee information section",
+    "normalized": "user should add button in employee information section",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:add",
+      "WORD:button",
+      "WORD:in",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:section"
+    ]
+  },
+  {
+    "sentence": "Verify User should add  button in employee information section",
+    "normalized": "verify user should add button in employee information section",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:add",
+      "WORD:button",
+      "WORD:in",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:section"
+    ]
+  },
+  {
+    "sentence": "Click on the Add Button",
+    "normalized": "click on the add button",
+    "tokens": [
+      "WORD:click",
+      "WORD:on",
+      "WORD:the",
+      "WORD:add",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "User should navigate to Add Employee page/popup",
+    "normalized": "user should navigate to add employee page/popup",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:add",
+      "WORD:employee",
+      "WORD:page",
+      "SYMBOL:/",
+      "WORD:popup"
+    ]
+  },
+  {
+    "sentence": "Verify User should navigate to Add Employee page/popup",
+    "normalized": "verify user should navigate to add employee page/popup",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:add",
+      "WORD:employee",
+      "WORD:page",
+      "SYMBOL:/",
+      "WORD:popup"
+    ]
+  },
+  {
+    "sentence": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+    "normalized": "enter the valid code/id in code text box note: text box should accept only numbers",
+    "tokens": [
+      "WORD:enter",
+      "WORD:the",
+      "WORD:valid",
+      "WORD:code",
+      "SYMBOL:/",
+      "WORD:id",
+      "WORD:in",
+      "WORD:code",
+      "WORD:text",
+      "WORD:box",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:only",
+      "WORD:numbers"
+    ]
+  },
+  {
+    "sentence": "Text box should accept values",
+    "normalized": "text box should accept values",
+    "tokens": [
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:values"
+    ]
+  },
+  {
+    "sentence": "Verify Text box should accept values",
+    "normalized": "verify text box should accept values",
+    "tokens": [
+      "WORD:verify",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:values"
+    ]
+  },
+  {
+    "sentence": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+    "normalized": "enter valid last name in last name text box. note: text box should accept only alphabets",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:last",
+      "WORD:name",
+      "WORD:in",
+      "WORD:last",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:.",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:only",
+      "WORD:alphabets"
+    ]
+  },
+  {
+    "sentence": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+    "normalized": "enter valid first name in first name text box. note: text box should accept only alphabets",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:first",
+      "WORD:name",
+      "WORD:in",
+      "WORD:first",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:.",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:only",
+      "WORD:alphabets"
+    ]
+  },
+  {
+    "sentence": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+    "normalized": "enter valid middle name in middle name text box. note:text box should accept only alphabets",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:middle",
+      "WORD:name",
+      "WORD:in",
+      "WORD:middle",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:.",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:only",
+      "WORD:alphabets"
+    ]
+  },
+  {
+    "sentence": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+    "normalized": "enter valid nick name in nick name text box. note:text box should accept only alphabets",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:nick",
+      "WORD:name",
+      "WORD:in",
+      "WORD:nick",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:.",
+      "WORD:note",
+      "SYMBOL::",
+      "WORD:text",
+      "WORD:box",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:only",
+      "WORD:alphabets"
+    ]
+  },
+  {
+    "sentence": "upload a photo by clicking upload button",
+    "normalized": "upload a photo by clicking upload button",
+    "tokens": [
+      "WORD:upload",
+      "WORD:a",
+      "WORD:photo",
+      "WORD:by",
+      "WORD:clicking",
+      "WORD:upload",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "Upload button should accept photo",
+    "normalized": "upload button should accept photo",
+    "tokens": [
+      "WORD:upload",
+      "WORD:button",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:photo"
+    ]
+  },
+  {
+    "sentence": "Verify Upload button should accept photo",
+    "normalized": "verify upload button should accept photo",
+    "tokens": [
+      "WORD:verify",
+      "WORD:upload",
+      "WORD:button",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:photo"
+    ]
+  },
+  {
+    "sentence": "Entered text boxes and uploaded photo should empty by clicking reset",
+    "normalized": "entered text boxes and uploaded photo should empty by clicking reset",
+    "tokens": [
+      "WORD:entered",
+      "WORD:text",
+      "WORD:boxes",
+      "WORD:and",
+      "WORD:uploaded",
+      "WORD:photo",
+      "WORD:should",
+      "WORD:empty",
+      "WORD:by",
+      "WORD:clicking",
+      "WORD:reset"
+    ]
+  },
+  {
+    "sentence": "User should see the empty text boxes and uploaded",
+    "normalized": "user should see the empty text boxes and uploaded",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:the",
+      "WORD:empty",
+      "WORD:text",
+      "WORD:boxes",
+      "WORD:and",
+      "WORD:uploaded"
+    ]
+  },
+  {
+    "sentence": "photo",
+    "normalized": "photo",
+    "tokens": [
+      "WORD:photo"
+    ]
+  },
+  {
+    "sentence": "Verify User should see the empty text boxes and uploaded photo",
+    "normalized": "verify user should see the empty text boxes and uploaded photo",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:the",
+      "WORD:empty",
+      "WORD:text",
+      "WORD:boxes",
+      "WORD:and",
+      "WORD:uploaded",
+      "WORD:photo"
+    ]
+  },
+  {
+    "sentence": "Click on Save",
+    "normalized": "click on save",
+    "tokens": [
+      "WORD:click",
+      "WORD:on",
+      "WORD:save"
+    ]
+  },
+  {
+    "sentence": "User should naviagte to Personal Information page",
+    "normalized": "user should naviagte to personal information page",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:naviagte",
+      "WORD:to",
+      "WORD:personal",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Verify User should naviagte to Personal Information page",
+    "normalized": "verify user should naviagte to personal information page",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:naviagte",
+      "WORD:to",
+      "WORD:personal",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "To checking the added data in personal information page",
+    "normalized": "to checking the added data in personal information page",
+    "tokens": [
+      "WORD:to",
+      "WORD:checking",
+      "WORD:the",
+      "WORD:added",
+      "WORD:data",
+      "WORD:in",
+      "WORD:personal",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User should see added data",
+    "normalized": "user should see added data",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:added",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "Verify User should see added data",
+    "normalized": "verify user should see added data",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:added",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "Click on Back Button",
+    "normalized": "click on back button",
+    "tokens": [
+      "WORD:click",
+      "WORD:on",
+      "WORD:back",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "User should navigate to Employee Information page",
+    "normalized": "user should navigate to employee information page",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Verify User should navigate to Employee Information page",
+    "normalized": "verify user should navigate to employee information page",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Click on Employee Name",
+    "normalized": "click on employee name",
+    "tokens": [
+      "WORD:click",
+      "WORD:on",
+      "WORD:employee",
+      "WORD:name"
+    ]
+  },
+  {
+    "sentence": "User should naviagte to Employment section",
+    "normalized": "user should naviagte to employment section",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:naviagte",
+      "WORD:to",
+      "WORD:employment",
+      "WORD:section"
+    ]
+  },
+  {
+    "sentence": "Verify User should naviagte to Employment section",
+    "normalized": "verify user should naviagte to employment section",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:naviagte",
+      "WORD:to",
+      "WORD:employment",
+      "WORD:section"
+    ]
+  },
+  {
+    "sentence": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+    "normalized": "enter/update the job title, employement status, sub-division and supervisor in respective fileds on employment section",
+    "tokens": [
+      "WORD:enter",
+      "SYMBOL:/",
+      "WORD:update",
+      "WORD:the",
+      "WORD:job",
+      "WORD:title",
+      "SYMBOL:,",
+      "WORD:employement",
+      "WORD:status",
+      "SYMBOL:,",
+      "WORD:sub-division",
+      "WORD:and",
+      "WORD:supervisor",
+      "WORD:in",
+      "WORD:respective",
+      "WORD:fileds",
+      "WORD:on",
+      "WORD:employment",
+      "WORD:section"
+    ]
+  },
+  {
+    "sentence": "Respective fileds should accept the values",
+    "normalized": "respective fileds should accept the values",
+    "tokens": [
+      "WORD:respective",
+      "WORD:fileds",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:the",
+      "WORD:values"
+    ]
+  },
+  {
+    "sentence": "Verify Respective fileds should accept the values",
+    "normalized": "verify respective fileds should accept the values",
+    "tokens": [
+      "WORD:verify",
+      "WORD:respective",
+      "WORD:fileds",
+      "WORD:should",
+      "WORD:accept",
+      "WORD:the",
+      "WORD:values"
+    ]
+  },
+  {
+    "sentence": "User should updated the data",
+    "normalized": "user should updated the data",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:updated",
+      "WORD:the",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "Verify User should updated the data",
+    "normalized": "verify user should updated the data",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:updated",
+      "WORD:the",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "checking the same updated records in Employee information page",
+    "normalized": "checking the same updated records in employee information page",
+    "tokens": [
+      "WORD:checking",
+      "WORD:the",
+      "WORD:same",
+      "WORD:updated",
+      "WORD:records",
+      "WORD:in",
+      "WORD:employee",
+      "WORD:information",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User should see the same updated records",
+    "normalized": "user should see the same updated records",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:the",
+      "WORD:same",
+      "WORD:updated",
+      "WORD:records"
+    ]
+  },
+  {
+    "sentence": "Verify User should see the same updated records",
+    "normalized": "verify user should see the same updated records",
+    "tokens": [
+      "WORD:verify",
+      "WORD:user",
+      "WORD:should",
+      "WORD:see",
+      "WORD:the",
+      "WORD:same",
+      "WORD:updated",
+      "WORD:records"
+    ]
+  },
+  {
+    "sentence": "Select preferred Enployee/Employees and Click on Delete Button",
+    "normalized": "select preferred enployee/employees and click on delete button",
+    "tokens": [
+      "WORD:select",
+      "WORD:preferred",
+      "WORD:enployee",
+      "SYMBOL:/",
+      "WORD:employees",
+      "WORD:and",
+      "WORD:click",
+      "WORD:on",
+      "WORD:delete",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "User Should succesfully Deleted Employee Data",
+    "normalized": "user should succesfully deleted employee data",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:succesfully",
+      "WORD:deleted",
+      "WORD:employee",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "Open the OrangeHRM login page.",
+    "normalized": "open the OrangeHRM login page.",
+    "tokens": [
+      "WORD:open",
+      "WORD:the",
+      "WORD:OrangeHRM",
+      "WORD:login",
+      "WORD:page",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Enter username in the Login Name text box.",
+    "normalized": "enter username in the login name text box.",
+    "tokens": [
+      "WORD:enter",
+      "WORD:username",
+      "WORD:in",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Enter password in the Password text box.",
+    "normalized": "enter password in the password text box.",
+    "tokens": [
+      "WORD:enter",
+      "WORD:password",
+      "WORD:in",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Click the 'Login' button.",
+    "normalized": "click the 'Login' button.",
+    "tokens": [
+      "WORD:click",
+      "WORD:the",
+      "LITERAL:'Login'",
+      "WORD:button",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "User is successfully logged in and redirected to the OrangeHRM home/dashboard page.",
+    "normalized": "user is successfully logged in and redirected to the OrangeHRM home/dashboard page.",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:successfully",
+      "WORD:logged",
+      "WORD:in",
+      "WORD:and",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:the",
+      "WORD:OrangeHRM",
+      "WORD:home",
+      "SYMBOL:/",
+      "WORD:dashboard",
+      "WORD:page",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Username: cypress",
+    "normalized": "username: cypress",
+    "tokens": [
+      "WORD:username",
+      "SYMBOL::",
+      "WORD:cypress"
+    ]
+  },
+  {
+    "sentence": "Password: selenium",
+    "normalized": "password: selenium",
+    "tokens": [
+      "WORD:password",
+      "SYMBOL::",
+      "WORD:selenium"
+    ]
+  },
+  {
+    "sentence": "Login is rejected and an appropriate invalid username/password error message is displayed.",
+    "normalized": "login is rejected and an appropriate invalid username/password error message is displayed.",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:rejected",
+      "WORD:and",
+      "WORD:an",
+      "WORD:appropriate",
+      "WORD:invalid",
+      "WORD:username",
+      "SYMBOL:/",
+      "WORD:password",
+      "WORD:error",
+      "WORD:message",
+      "WORD:is",
+      "WORD:displayed",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Username: invaliduser",
+    "normalized": "username: invaliduser",
+    "tokens": [
+      "WORD:username",
+      "SYMBOL::",
+      "WORD:invaliduser"
+    ]
+  },
+  {
+    "sentence": "Password: wrongpassword",
+    "normalized": "password: wrongpassword",
+    "tokens": [
+      "WORD:password",
+      "SYMBOL::",
+      "WORD:wrongpassword"
+    ]
+  },
+  {
+    "sentence": "Login is rejected and an appropriate authentication error message is displayed.",
+    "normalized": "login is rejected and an appropriate authentication error message is displayed.",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:rejected",
+      "WORD:and",
+      "WORD:an",
+      "WORD:appropriate",
+      "WORD:authentication",
+      "WORD:error",
+      "WORD:message",
+      "WORD:is",
+      "WORD:displayed",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Leave the Login Name text box blank.",
+    "normalized": "leave the login name text box blank.",
+    "tokens": [
+      "WORD:leave",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "WORD:blank",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Login is not performed and the system displays a validation message indicating that the username is required.",
+    "normalized": "login is not performed and the system displays a validation message indicating that the username is required.",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:not",
+      "WORD:performed",
+      "WORD:and",
+      "WORD:the",
+      "WORD:system",
+      "WORD:displays",
+      "WORD:a",
+      "WORD:validation",
+      "WORD:message",
+      "WORD:indicating",
+      "WORD:that",
+      "WORD:the",
+      "WORD:username",
+      "WORD:is",
+      "WORD:required",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Username: Blank",
+    "normalized": "username: blank",
+    "tokens": [
+      "WORD:username",
+      "SYMBOL::",
+      "WORD:blank"
+    ]
+  },
+  {
+    "sentence": "Leave the Password text box blank.",
+    "normalized": "leave the password text box blank.",
+    "tokens": [
+      "WORD:leave",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box",
+      "WORD:blank",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Login is not performed and the system displays a validation message indicating that the password is required.",
+    "normalized": "login is not performed and the system displays a validation message indicating that the password is required.",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:not",
+      "WORD:performed",
+      "WORD:and",
+      "WORD:the",
+      "WORD:system",
+      "WORD:displays",
+      "WORD:a",
+      "WORD:validation",
+      "WORD:message",
+      "WORD:indicating",
+      "WORD:that",
+      "WORD:the",
+      "WORD:password",
+      "WORD:is",
+      "WORD:required",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Password: Blank",
+    "normalized": "password: blank",
+    "tokens": [
+      "WORD:password",
+      "SYMBOL::",
+      "WORD:blank"
+    ]
+  },
+  {
+    "sentence": "Login is not performed and required-field validation messages are displayed for the missing credentials.",
+    "normalized": "login is not performed and required-field validation messages are displayed for the missing credentials.",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:not",
+      "WORD:performed",
+      "WORD:and",
+      "WORD:required-field",
+      "WORD:validation",
+      "WORD:messages",
+      "WORD:are",
+      "WORD:displayed",
+      "WORD:for",
+      "WORD:the",
+      "WORD:missing",
+      "WORD:credentials",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Verify that the password is displayed as masked characters.",
+    "normalized": "verify that the password is displayed as masked characters.",
+    "tokens": [
+      "WORD:verify",
+      "WORD:that",
+      "WORD:the",
+      "WORD:password",
+      "WORD:is",
+      "WORD:displayed",
+      "WORD:as",
+      "WORD:masked",
+      "WORD:characters",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "The password is displayed as masked characters and the actual password text is not visible.",
+    "normalized": "the password is displayed as masked characters and the actual password text is not visible.",
+    "tokens": [
+      "WORD:the",
+      "WORD:password",
+      "WORD:is",
+      "WORD:displayed",
+      "WORD:as",
+      "WORD:masked",
+      "WORD:characters",
+      "WORD:and",
+      "WORD:the",
+      "WORD:actual",
+      "WORD:password",
+      "WORD:text",
+      "WORD:is",
+      "WORD:not",
+      "WORD:visible",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Click the 'Clear' button.",
+    "normalized": "click the 'Clear' button.",
+    "tokens": [
+      "WORD:click",
+      "WORD:the",
+      "LITERAL:'Clear'",
+      "WORD:button",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Both username and password fields are cleared.",
+    "normalized": "both username and password fields are cleared.",
+    "tokens": [
+      "WORD:both",
+      "WORD:username",
+      "WORD:and",
+      "WORD:password",
+      "WORD:fields",
+      "WORD:are",
+      "WORD:cleared",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Enter username with leading/trailing spaces in the Login Name text box.",
+    "normalized": "enter username with leading/trailing spaces in the login name text box.",
+    "tokens": [
+      "WORD:enter",
+      "WORD:username",
+      "WORD:with",
+      "WORD:leading",
+      "SYMBOL:/",
+      "WORD:trailing",
+      "WORD:spaces",
+      "WORD:in",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "The system handles the whitespace according to the application's validation rules. It should not authenticate an unintended username and should display an appropriate validation/error message if spaces are not accepted.",
+    "normalized": "the system handles the whitespace according to the application's validation rules. it should not authenticate an unintended username and should display an appropriate validation/error message if spaces are not accepted.",
+    "tokens": [
+      "WORD:the",
+      "WORD:system",
+      "WORD:handles",
+      "WORD:the",
+      "WORD:whitespace",
+      "WORD:according",
+      "WORD:to",
+      "WORD:the",
+      "WORD:application's",
+      "WORD:validation",
+      "WORD:rules",
+      "SYMBOL:.",
+      "WORD:it",
+      "WORD:should",
+      "WORD:not",
+      "WORD:authenticate",
+      "WORD:an",
+      "WORD:unintended",
+      "WORD:username",
+      "WORD:and",
+      "WORD:should",
+      "WORD:display",
+      "WORD:an",
+      "WORD:appropriate",
+      "WORD:validation",
+      "SYMBOL:/",
+      "WORD:error",
+      "WORD:message",
+      "WORD:if",
+      "WORD:spaces",
+      "WORD:are",
+      "WORD:not",
+      "WORD:accepted",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Username: ' cypress '",
+    "normalized": "username: ' cypress '",
+    "tokens": [
+      "WORD:username",
+      "SYMBOL::",
+      "LITERAL:' cypress '"
+    ]
+  },
+  {
+    "sentence": "Unauthenticated visitor",
+    "normalized": "unauthenticated visitor",
+    "tokens": [
+      "WORD:unauthenticated",
+      "WORD:visitor"
+    ]
+  },
+  {
+    "sentence": "Open Login page",
+    "normalized": "open login page",
+    "tokens": [
+      "WORD:open",
+      "WORD:login",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Enter valid username",
+    "normalized": "enter valid username",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:username"
+    ]
+  },
+  {
+    "sentence": "Enter password",
+    "normalized": "enter password",
+    "tokens": [
+      "WORD:enter",
+      "WORD:password"
+    ]
+  },
+  {
+    "sentence": "Click the Login button",
+    "normalized": "click the login button",
+    "tokens": [
+      "WORD:click",
+      "WORD:the",
+      "WORD:login",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "User is redirected to Inventory page and Products heading is displayed",
+    "normalized": "user is redirected to inventory page and products heading is displayed",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:inventory",
+      "WORD:page",
+      "WORD:and",
+      "WORD:products",
+      "WORD:heading",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Enter Username",
+    "normalized": "enter username",
+    "tokens": [
+      "WORD:enter",
+      "WORD:username"
+    ]
+  },
+  {
+    "sentence": "Click Login",
+    "normalized": "click login",
+    "tokens": [
+      "WORD:click",
+      "WORD:login"
+    ]
+  },
+  {
+    "sentence": "Error \"Epic sadface: Sorry, this user has been locked out.\" is shown. User stays on the Login page",
+    "normalized": "error \"Epic sadface: Sorry, this user has been locked out.\" is shown. user stays on the login page",
+    "tokens": [
+      "WORD:error",
+      "LITERAL:\"Epic sadface: Sorry, this user has been locked out.\"",
+      "WORD:is",
+      "WORD:shown",
+      "SYMBOL:.",
+      "WORD:user",
+      "WORD:stays",
+      "WORD:on",
+      "WORD:the",
+      "WORD:login",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Username=locked_out_user",
+    "normalized": "Username=locked_out_user",
+    "tokens": [
+      "WORD:Username",
+      "SYMBOL:=",
+      "WORD:locked_out_user"
+    ]
+  },
+  {
+    "sentence": "Open https://www.saucedemo.com",
+    "normalized": "open https://www.saucedemo.com",
+    "tokens": [
+      "WORD:open",
+      "URL:https://www.saucedemo.com"
+    ]
+  },
+  {
+    "sentence": "Enter wrong password",
+    "normalized": "enter wrong password",
+    "tokens": [
+      "WORD:enter",
+      "WORD:wrong",
+      "WORD:password"
+    ]
+  },
+  {
+    "sentence": "Error message: Epic sadface: Username and password do not match any user in this service",
+    "normalized": "error message: epic sadface: username and password do not match any user in this service",
+    "tokens": [
+      "WORD:error",
+      "WORD:message",
+      "SYMBOL::",
+      "WORD:epic",
+      "WORD:sadface",
+      "SYMBOL::",
+      "WORD:username",
+      "WORD:and",
+      "WORD:password",
+      "WORD:do",
+      "WORD:not",
+      "WORD:match",
+      "WORD:any",
+      "WORD:user",
+      "WORD:in",
+      "WORD:this",
+      "WORD:service"
+    ]
+  },
+  {
+    "sentence": "Wrong Password=not-the-password",
+    "normalized": "wrong Password=not-the-password",
+    "tokens": [
+      "WORD:wrong",
+      "WORD:Password",
+      "SYMBOL:=",
+      "WORD:not-the-password"
+    ]
+  },
+  {
+    "sentence": "Open https://the-internet.herokuapp.com/checkboxes",
+    "normalized": "open https://the-internet.herokuapp.com/checkboxes",
+    "tokens": [
+      "WORD:open",
+      "URL:https://the-internet.herokuapp.com/checkboxes"
+    ]
+  },
+  {
+    "sentence": "Check checkbox 1",
+    "normalized": "check checkbox 1",
+    "tokens": [
+      "WORD:check",
+      "WORD:checkbox",
+      "NUMBER:1"
+    ]
+  },
+  {
+    "sentence": "Uncheck checkbox 2",
+    "normalized": "uncheck checkbox 2",
+    "tokens": [
+      "WORD:uncheck",
+      "WORD:checkbox",
+      "NUMBER:2"
+    ]
+  },
+  {
+    "sentence": "checkbox 1 is checked; checkbox 2 is unchecked",
+    "normalized": "checkbox 1 is checked; checkbox 2 is unchecked",
+    "tokens": [
+      "WORD:checkbox",
+      "NUMBER:1",
+      "WORD:is",
+      "WORD:checked",
+      "SYMBOL:;",
+      "WORD:checkbox",
+      "NUMBER:2",
+      "WORD:is",
+      "WORD:unchecked"
+    ]
+  },
+  {
+    "sentence": "Open https://the-internet.herokuapp.com/dropdown",
+    "normalized": "open https://the-internet.herokuapp.com/dropdown",
+    "tokens": [
+      "WORD:open",
+      "URL:https://the-internet.herokuapp.com/dropdown"
+    ]
+  },
+  {
+    "sentence": "Select \"Option 2\" from the dropdown list",
+    "normalized": "select \"Option 2\" from the dropdown",
+    "tokens": [
+      "WORD:select",
+      "LITERAL:\"Option 2\"",
+      "WORD:from",
+      "WORD:the",
+      "WORD:dropdown"
+    ]
+  },
+  {
+    "sentence": "Dropdown list has value \"2\"",
+    "normalized": "dropdown has value \"2\"",
+    "tokens": [
+      "WORD:dropdown",
+      "WORD:has",
+      "WORD:value",
+      "LITERAL:\"2\""
+    ]
+  },
+  {
+    "sentence": "Unauthenticated visitor; On Registration page",
+    "normalized": "unauthenticated visitor; on registration page",
+    "tokens": [
+      "WORD:unauthenticated",
+      "WORD:visitor",
+      "SYMBOL:;",
+      "WORD:on",
+      "WORD:registration",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Enter Email (Email Address)",
+    "normalized": "enter email (email address)",
+    "tokens": [
+      "WORD:enter",
+      "WORD:email",
+      "SYMBOL:(",
+      "WORD:email",
+      "WORD:address",
+      "SYMBOL:)"
+    ]
+  },
+  {
+    "sentence": "Continue as applicable",
+    "normalized": "continue as applicable",
+    "tokens": [
+      "WORD:continue",
+      "WORD:as",
+      "WORD:applicable"
+    ]
+  },
+  {
+    "sentence": "Reach the OTP step",
+    "normalized": "reach the otp step",
+    "tokens": [
+      "WORD:reach",
+      "WORD:the",
+      "WORD:otp",
+      "WORD:step"
+    ]
+  },
+  {
+    "sentence": "Error \"This email is already registered\" is shown. System rejects the email",
+    "normalized": "error \"This email is already registered\" is shown. system rejects the email",
+    "tokens": [
+      "WORD:error",
+      "LITERAL:\"This email is already registered\"",
+      "WORD:is",
+      "WORD:shown",
+      "SYMBOL:.",
+      "WORD:system",
+      "WORD:rejects",
+      "WORD:the",
+      "WORD:email"
+    ]
+  },
+  {
+    "sentence": "Email=existing.registered@example.com",
+    "normalized": "Email=existing.registered@example.com",
+    "tokens": [
+      "WORD:Email",
+      "SYMBOL:=",
+      "EMAIL:existing.registered@example.com"
+    ]
+  },
+  {
+    "sentence": "Enter valid password",
+    "normalized": "enter valid password",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:password"
+    ]
+  },
+  {
+    "sentence": "User is redirected to Dashboard page. Dashboard heading is displayed.",
+    "normalized": "user is redirected to dashboard page. dashboard heading is displayed.",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:dashboard",
+      "WORD:page",
+      "SYMBOL:.",
+      "WORD:dashboard",
+      "WORD:heading",
+      "WORD:is",
+      "WORD:displayed",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Error \"Invalid username or password\" is shown. User stays on the Login page.",
+    "normalized": "error \"Invalid username or password\" is shown. user stays on the login page.",
+    "tokens": [
+      "WORD:error",
+      "LITERAL:\"Invalid username or password\"",
+      "WORD:is",
+      "WORD:shown",
+      "SYMBOL:.",
+      "WORD:user",
+      "WORD:stays",
+      "WORD:on",
+      "WORD:the",
+      "WORD:login",
+      "WORD:page",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Wrong Password=nope",
+    "normalized": "wrong Password=nope",
+    "tokens": [
+      "WORD:wrong",
+      "WORD:Password",
+      "SYMBOL:=",
+      "WORD:nope"
+    ]
+  },
+  {
+    "sentence": "Click Profile",
+    "normalized": "click profile",
+    "tokens": [
+      "WORD:click",
+      "WORD:profile"
+    ]
+  },
+  {
+    "sentence": "Enter Full name",
+    "normalized": "enter full name",
+    "tokens": [
+      "WORD:enter",
+      "WORD:full",
+      "WORD:name"
+    ]
+  },
+  {
+    "sentence": "Select India from Country",
+    "normalized": "select india from country",
+    "tokens": [
+      "WORD:select",
+      "WORD:india",
+      "WORD:from",
+      "WORD:country"
+    ]
+  },
+  {
+    "sentence": "Check Send me news",
+    "normalized": "check send me news",
+    "tokens": [
+      "WORD:check",
+      "WORD:send",
+      "WORD:me",
+      "WORD:news"
+    ]
+  },
+  {
+    "sentence": "Click Save changes",
+    "normalized": "click save changes",
+    "tokens": [
+      "WORD:click",
+      "WORD:save",
+      "WORD:changes"
+    ]
+  },
+  {
+    "sentence": "Message \"Profile saved\" is shown. Send me news is checked.",
+    "normalized": "message \"Profile saved\" is shown. send me news is checked.",
+    "tokens": [
+      "WORD:message",
+      "LITERAL:\"Profile saved\"",
+      "WORD:is",
+      "WORD:shown",
+      "SYMBOL:.",
+      "WORD:send",
+      "WORD:me",
+      "WORD:news",
+      "WORD:is",
+      "WORD:checked",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Full name=Asha Rao",
+    "normalized": "full name=Asha rao",
+    "tokens": [
+      "WORD:full",
+      "WORD:name",
+      "SYMBOL:=",
+      "WORD:Asha",
+      "WORD:rao"
+    ]
+  },
+  {
+    "sentence": "Click Reports",
+    "normalized": "click reports",
+    "tokens": [
+      "WORD:click",
+      "WORD:reports"
+    ]
+  },
+  {
+    "sentence": "Reports heading is displayed.",
+    "normalized": "reports heading is displayed.",
+    "tokens": [
+      "WORD:reports",
+      "WORD:heading",
+      "WORD:is",
+      "WORD:displayed",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Open browser",
+    "normalized": "open browser",
+    "tokens": [
+      "WORD:open",
+      "WORD:browser"
+    ]
+  },
+  {
+    "sentence": "Navigate to the OrangeHRM login page",
+    "normalized": "navigate to the OrangeHRM login page",
+    "tokens": [
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:the",
+      "WORD:OrangeHRM",
+      "WORD:login",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Enter valid username in the Login Name text box",
+    "normalized": "enter valid username in the login name text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:username",
+      "WORD:in",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Enter valid password in the Password text box",
+    "normalized": "enter valid password in the password text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:password",
+      "WORD:in",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "User is successfully redirected to the home/dashboard page",
+    "normalized": "user is successfully redirected to the home/dashboard page",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:successfully",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:the",
+      "WORD:home",
+      "SYMBOL:/",
+      "WORD:dashboard",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Enter invalid username in the Login Name text box",
+    "normalized": "enter invalid username in the login name text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:invalid",
+      "WORD:username",
+      "WORD:in",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Login is rejected and an appropriate error message is displayed",
+    "normalized": "login is rejected and an appropriate error message is displayed",
+    "tokens": [
+      "WORD:login",
+      "WORD:is",
+      "WORD:rejected",
+      "WORD:and",
+      "WORD:an",
+      "WORD:appropriate",
+      "WORD:error",
+      "WORD:message",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Enter invalid password in the Password text box",
+    "normalized": "enter invalid password in the password text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:invalid",
+      "WORD:password",
+      "WORD:in",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Leave the Login Name text box blank",
+    "normalized": "leave the login name text box blank",
+    "tokens": [
+      "WORD:leave",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box",
+      "WORD:blank"
+    ]
+  },
+  {
+    "sentence": "Leave the Password text box blank",
+    "normalized": "leave the password text box blank",
+    "tokens": [
+      "WORD:leave",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box",
+      "WORD:blank"
+    ]
+  },
+  {
+    "sentence": "Leave both the Login Name and Password text boxes blank",
+    "normalized": "leave both the login name and password text boxes blank",
+    "tokens": [
+      "WORD:leave",
+      "WORD:both",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:and",
+      "WORD:password",
+      "WORD:text",
+      "WORD:boxes",
+      "WORD:blank"
+    ]
+  },
+  {
+    "sentence": "Enter a password in the Password text box",
+    "normalized": "enter a password in the password text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:a",
+      "WORD:password",
+      "WORD:in",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "The password is displayed as masked characters",
+    "normalized": "the password is displayed as masked characters",
+    "tokens": [
+      "WORD:the",
+      "WORD:password",
+      "WORD:is",
+      "WORD:displayed",
+      "WORD:as",
+      "WORD:masked",
+      "WORD:characters"
+    ]
+  },
+  {
+    "sentence": "Click the Clear button",
+    "normalized": "click the clear button",
+    "tokens": [
+      "WORD:click",
+      "WORD:the",
+      "WORD:clear",
+      "WORD:button"
+    ]
+  },
+  {
+    "sentence": "Both username and password fields are cleared",
+    "normalized": "both username and password fields are cleared",
+    "tokens": [
+      "WORD:both",
+      "WORD:username",
+      "WORD:and",
+      "WORD:password",
+      "WORD:fields",
+      "WORD:are",
+      "WORD:cleared"
+    ]
+  },
+  {
+    "sentence": "Enter spaces in the Login Name text box",
+    "normalized": "enter spaces in the login name text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:spaces",
+      "WORD:in",
+      "WORD:the",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Enter spaces in the Password text box",
+    "normalized": "enter spaces in the password text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:spaces",
+      "WORD:in",
+      "WORD:the",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "The system handles the whitespace according to the application's validation rules",
+    "normalized": "the system handles the whitespace according to the application's validation rules",
+    "tokens": [
+      "WORD:the",
+      "WORD:system",
+      "WORD:handles",
+      "WORD:the",
+      "WORD:whitespace",
+      "WORD:according",
+      "WORD:to",
+      "WORD:the",
+      "WORD:application's",
+      "WORD:validation",
+      "WORD:rules"
+    ]
+  },
+  {
+    "sentence": "Home page is displayed",
+    "normalized": "home page is displayed",
+    "tokens": [
+      "WORD:home",
+      "WORD:page",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Reach the payment step",
+    "normalized": "reach the payment step",
+    "tokens": [
+      "WORD:reach",
+      "WORD:the",
+      "WORD:payment",
+      "WORD:step"
+    ]
+  },
+  {
+    "sentence": "Enter 5. Then wait",
+    "normalized": "enter 5. then wait",
+    "tokens": [
+      "WORD:enter",
+      "NUMBER:5",
+      "SYMBOL:.",
+      "WORD:then",
+      "WORD:wait"
+    ]
+  },
+  {
+    "sentence": "Go to Login page",
+    "normalized": "go to login page",
+    "tokens": [
+      "WORD:go",
+      "WORD:to",
+      "WORD:login",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User clicks Login",
+    "normalized": "user clicks login",
+    "tokens": [
+      "WORD:user",
+      "WORD:clicks",
+      "WORD:login"
+    ]
+  },
+  {
+    "sentence": "Tick Remember me",
+    "normalized": "tick remember me",
+    "tokens": [
+      "WORD:tick",
+      "WORD:remember",
+      "WORD:me"
+    ]
+  },
+  {
+    "sentence": "Untick Remember me",
+    "normalized": "untick remember me",
+    "tokens": [
+      "WORD:untick",
+      "WORD:remember",
+      "WORD:me"
+    ]
+  },
+  {
+    "sentence": "Hover over Profile",
+    "normalized": "hover over profile",
+    "tokens": [
+      "WORD:hover",
+      "WORD:over",
+      "WORD:profile"
+    ]
+  },
+  {
+    "sentence": "Then clear Search",
+    "normalized": "then clear search",
+    "tokens": [
+      "WORD:then",
+      "WORD:clear",
+      "WORD:search"
+    ]
+  },
+  {
+    "sentence": "Check the Remember me checkbox",
+    "normalized": "check the remember me checkbox",
+    "tokens": [
+      "WORD:check",
+      "WORD:the",
+      "WORD:remember",
+      "WORD:me",
+      "WORD:checkbox"
+    ]
+  },
+  {
+    "sentence": "Click Page Title",
+    "normalized": "click page title",
+    "tokens": [
+      "WORD:click",
+      "WORD:page",
+      "WORD:title"
+    ]
+  },
+  {
+    "sentence": "Click the 'Browse Opportunities' link",
+    "normalized": "click the 'Browse Opportunities' link",
+    "tokens": [
+      "WORD:click",
+      "WORD:the",
+      "LITERAL:'Browse Opportunities'",
+      "WORD:link"
+    ]
+  },
+  {
+    "sentence": "Browse Opportunities",
+    "normalized": "browse opportunities",
+    "tokens": [
+      "WORD:browse",
+      "WORD:opportunities"
+    ]
+  },
+  {
+    "sentence": "Press Ctrl + A",
+    "normalized": "press ctrl + a",
+    "tokens": [
+      "WORD:press",
+      "WORD:ctrl",
+      "SYMBOL:+",
+      "WORD:a"
+    ]
+  },
+  {
+    "sentence": "Press Continue",
+    "normalized": "press continue",
+    "tokens": [
+      "WORD:press",
+      "WORD:continue"
+    ]
+  },
+  {
+    "sentence": "Select \"India\" from Country dropdown",
+    "normalized": "select \"India\" from country dropdown",
+    "tokens": [
+      "WORD:select",
+      "LITERAL:\"India\"",
+      "WORD:from",
+      "WORD:country",
+      "WORD:dropdown"
+    ]
+  },
+  {
+    "sentence": "Select Country dropdown",
+    "normalized": "select country dropdown",
+    "tokens": [
+      "WORD:select",
+      "WORD:country",
+      "WORD:dropdown"
+    ]
+  },
+  {
+    "sentence": "Open Home page",
+    "normalized": "open home page",
+    "tokens": [
+      "WORD:open",
+      "WORD:home",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Navigate to https://www.saucedemo.com/inventory.html",
+    "normalized": "navigate to https://www.saucedemo.com/inventory.html",
+    "tokens": [
+      "WORD:navigate",
+      "WORD:to",
+      "URL:https://www.saucedemo.com/inventory.html"
+    ]
+  },
+  {
+    "sentence": "Launch the application",
+    "normalized": "launch the application",
+    "tokens": [
+      "WORD:launch",
+      "WORD:the",
+      "WORD:application"
+    ]
+  },
+  {
+    "sentence": "Enter the URL",
+    "normalized": "enter the url",
+    "tokens": [
+      "WORD:enter",
+      "WORD:the",
+      "WORD:url"
+    ]
+  },
+  {
+    "sentence": "Type the application URL",
+    "normalized": "type the application url",
+    "tokens": [
+      "WORD:type",
+      "WORD:the",
+      "WORD:application",
+      "WORD:url"
+    ]
+  },
+  {
+    "sentence": "Open the application URL",
+    "normalized": "open the application url",
+    "tokens": [
+      "WORD:open",
+      "WORD:the",
+      "WORD:application",
+      "WORD:url"
+    ]
+  },
+  {
+    "sentence": "Enter \"a@b.com\" in Email address field",
+    "normalized": "enter \"a@b.com\" in email address field",
+    "tokens": [
+      "WORD:enter",
+      "LITERAL:\"a@b.com\"",
+      "WORD:in",
+      "WORD:email",
+      "WORD:address",
+      "WORD:field"
+    ]
+  },
+  {
+    "sentence": "Enter user name in Login Name text box",
+    "normalized": "enter user name in login name text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:user",
+      "WORD:name",
+      "WORD:in",
+      "WORD:login",
+      "WORD:name",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Enter password in Password  text box",
+    "normalized": "enter password in password text box",
+    "tokens": [
+      "WORD:enter",
+      "WORD:password",
+      "WORD:in",
+      "WORD:password",
+      "WORD:text",
+      "WORD:box"
+    ]
+  },
+  {
+    "sentence": "Enter Email into the Login field",
+    "normalized": "enter email into the login field",
+    "tokens": [
+      "WORD:enter",
+      "WORD:email",
+      "WORD:into",
+      "WORD:the",
+      "WORD:login",
+      "WORD:field"
+    ]
+  },
+  {
+    "sentence": "Enter John in First name",
+    "normalized": "enter john in first name",
+    "tokens": [
+      "WORD:enter",
+      "WORD:john",
+      "WORD:in",
+      "WORD:first",
+      "WORD:name"
+    ]
+  },
+  {
+    "sentence": "User able to navigate to PIM page",
+    "normalized": "user able to navigate to pim page",
+    "tokens": [
+      "WORD:user",
+      "WORD:able",
+      "WORD:to",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:pim",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User should be able to open the Reports page",
+    "normalized": "user should be able to open the reports page",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:be",
+      "WORD:able",
+      "WORD:to",
+      "WORD:open",
+      "WORD:the",
+      "WORD:reports",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User is unable to navigate to Admin page",
+    "normalized": "user is unable to navigate to admin page",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:unable",
+      "WORD:to",
+      "WORD:navigate",
+      "WORD:to",
+      "WORD:admin",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Click on the login button and validate the title",
+    "normalized": "click on the login button and validate the title",
+    "tokens": [
+      "WORD:click",
+      "WORD:on",
+      "WORD:the",
+      "WORD:login",
+      "WORD:button",
+      "WORD:and",
+      "WORD:validate",
+      "WORD:the",
+      "WORD:title"
+    ]
+  },
+  {
+    "sentence": "Click Apply to the Network (or Apply)",
+    "normalized": "click apply to the network (or apply)",
+    "tokens": [
+      "WORD:click",
+      "WORD:apply",
+      "WORD:to",
+      "WORD:the",
+      "WORD:network",
+      "SYMBOL:(",
+      "WORD:or",
+      "WORD:apply",
+      "SYMBOL:)"
+    ]
+  },
+  {
+    "sentence": "Enter Email Address (Email)",
+    "normalized": "enter email address (email)",
+    "tokens": [
+      "WORD:enter",
+      "WORD:email",
+      "WORD:address",
+      "SYMBOL:(",
+      "WORD:email",
+      "SYMBOL:)"
+    ]
+  },
+  {
+    "sentence": "Email Address",
+    "normalized": "email address",
+    "tokens": [
+      "WORD:email",
+      "WORD:address"
+    ]
+  },
+  {
+    "sentence": "Click Login / Sign in",
+    "normalized": "click login / sign in",
+    "tokens": [
+      "WORD:click",
+      "WORD:login",
+      "SYMBOL:/",
+      "WORD:sign",
+      "WORD:in"
+    ]
+  },
+  {
+    "sentence": "Use browser Back",
+    "normalized": "use browser back",
+    "tokens": [
+      "WORD:use",
+      "WORD:browser",
+      "WORD:back"
+    ]
+  },
+  {
+    "sentence": "Refresh the page",
+    "normalized": "refresh the page",
+    "tokens": [
+      "WORD:refresh",
+      "WORD:the",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Enter valid email",
+    "normalized": "enter valid email",
+    "tokens": [
+      "WORD:enter",
+      "WORD:valid",
+      "WORD:email"
+    ]
+  },
+  {
+    "sentence": "Enter \"a@b.com\" in Email field",
+    "normalized": "enter \"a@b.com\" in email field",
+    "tokens": [
+      "WORD:enter",
+      "LITERAL:\"a@b.com\"",
+      "WORD:in",
+      "WORD:email",
+      "WORD:field"
+    ]
+  },
+  {
+    "sentence": "Enter Name as Asha",
+    "normalized": "enter name as asha",
+    "tokens": [
+      "WORD:enter",
+      "WORD:name",
+      "WORD:as",
+      "WORD:asha"
+    ]
+  },
+  {
+    "sentence": "Type a@b.com into Email",
+    "normalized": "type a@b.com into email",
+    "tokens": [
+      "WORD:type",
+      "EMAIL:a@b.com",
+      "WORD:into",
+      "WORD:email"
+    ]
+  },
+  {
+    "sentence": "Enter E-mail address",
+    "normalized": "enter e-mail address",
+    "tokens": [
+      "WORD:enter",
+      "WORD:e-mail",
+      "WORD:address"
+    ]
+  },
+  {
+    "sentence": "Fill the form with valid data",
+    "normalized": "fill the form with valid data",
+    "tokens": [
+      "WORD:fill",
+      "WORD:the",
+      "WORD:form",
+      "WORD:with",
+      "WORD:valid",
+      "WORD:data"
+    ]
+  },
+  {
+    "sentence": "User is redirected to Dashboard",
+    "normalized": "user is redirected to dashboard",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:dashboard"
+    ]
+  },
+  {
+    "sentence": "URL contains \"/inventory\"",
+    "normalized": "url contains \"/inventory\"",
+    "tokens": [
+      "WORD:url",
+      "WORD:contains",
+      "LITERAL:\"/inventory\""
+    ]
+  },
+  {
+    "sentence": "User remains on the Login page",
+    "normalized": "user remains on the login page",
+    "tokens": [
+      "WORD:user",
+      "WORD:remains",
+      "WORD:on",
+      "WORD:the",
+      "WORD:login",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "User stays on the same page",
+    "normalized": "user stays on the same page",
+    "tokens": [
+      "WORD:user",
+      "WORD:stays",
+      "WORD:on",
+      "WORD:the",
+      "WORD:same",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "Error \"This email is already registered\" is shown",
+    "normalized": "error \"This email is already registered\" is shown",
+    "tokens": [
+      "WORD:error",
+      "LITERAL:\"This email is already registered\"",
+      "WORD:is",
+      "WORD:shown"
+    ]
+  },
+  {
+    "sentence": "This email is already registered",
+    "normalized": "this email is already registered",
+    "tokens": [
+      "WORD:this",
+      "WORD:email",
+      "WORD:is",
+      "WORD:already",
+      "WORD:registered"
+    ]
+  },
+  {
+    "sentence": "Error message: Invalid credentials",
+    "normalized": "error message: invalid credentials",
+    "tokens": [
+      "WORD:error",
+      "WORD:message",
+      "SYMBOL::",
+      "WORD:invalid",
+      "WORD:credentials"
+    ]
+  },
+  {
+    "sentence": "Invalid credentials",
+    "normalized": "invalid credentials",
+    "tokens": [
+      "WORD:invalid",
+      "WORD:credentials"
+    ]
+  },
+  {
+    "sentence": "Error message: Username and password do not match",
+    "normalized": "error message: username and password do not match",
+    "tokens": [
+      "WORD:error",
+      "WORD:message",
+      "SYMBOL::",
+      "WORD:username",
+      "WORD:and",
+      "WORD:password",
+      "WORD:do",
+      "WORD:not",
+      "WORD:match"
+    ]
+  },
+  {
+    "sentence": "Username and password do not match",
+    "normalized": "username and password do not match",
+    "tokens": [
+      "WORD:username",
+      "WORD:and",
+      "WORD:password",
+      "WORD:do",
+      "WORD:not",
+      "WORD:match"
+    ]
+  },
+  {
+    "sentence": "The 'Save' button should be displayed",
+    "normalized": "the 'Save' button should be displayed",
+    "tokens": [
+      "WORD:the",
+      "LITERAL:'Save'",
+      "WORD:button",
+      "WORD:should",
+      "WORD:be",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Continue button is disabled",
+    "normalized": "continue button is disabled",
+    "tokens": [
+      "WORD:continue",
+      "WORD:button",
+      "WORD:is",
+      "WORD:disabled"
+    ]
+  },
+  {
+    "sentence": "Remember me is unchecked",
+    "normalized": "remember me is unchecked",
+    "tokens": [
+      "WORD:remember",
+      "WORD:me",
+      "WORD:is",
+      "WORD:unchecked"
+    ]
+  },
+  {
+    "sentence": "Email field contains \"a@b.com\"",
+    "normalized": "email field contains \"a@b.com\"",
+    "tokens": [
+      "WORD:email",
+      "WORD:field",
+      "WORD:contains",
+      "LITERAL:\"a@b.com\""
+    ]
+  },
+  {
+    "sentence": "User cannot open Personal",
+    "normalized": "user cannot open personal",
+    "tokens": [
+      "WORD:user",
+      "WORD:cannot",
+      "WORD:open",
+      "WORD:personal"
+    ]
+  },
+  {
+    "sentence": "Error is not displayed",
+    "normalized": "error is not displayed",
+    "tokens": [
+      "WORD:error",
+      "WORD:is",
+      "WORD:not",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "User is not redirected to Dashboard",
+    "normalized": "user is not redirected to dashboard",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:not",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:dashboard"
+    ]
+  },
+  {
+    "sentence": "Error \"You cannot proceed\" is shown",
+    "normalized": "error \"You cannot proceed\" is shown",
+    "tokens": [
+      "WORD:error",
+      "LITERAL:\"You cannot proceed\"",
+      "WORD:is",
+      "WORD:shown"
+    ]
+  },
+  {
+    "sentence": "You cannot proceed",
+    "normalized": "you cannot proceed",
+    "tokens": [
+      "WORD:you",
+      "WORD:cannot",
+      "WORD:proceed"
+    ]
+  },
+  {
+    "sentence": "User is redirected to Dashboard and Welcome is displayed",
+    "normalized": "user is redirected to dashboard and welcome is displayed",
+    "tokens": [
+      "WORD:user",
+      "WORD:is",
+      "WORD:redirected",
+      "WORD:to",
+      "WORD:dashboard",
+      "WORD:and",
+      "WORD:welcome",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Terms and Conditions link is displayed",
+    "normalized": "terms and conditions link is displayed",
+    "tokens": [
+      "WORD:terms",
+      "WORD:and",
+      "WORD:conditions",
+      "WORD:link",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "Terms and Conditions",
+    "normalized": "terms and conditions",
+    "tokens": [
+      "WORD:terms",
+      "WORD:and",
+      "WORD:conditions"
+    ]
+  },
+  {
+    "sentence": "Error is shown. User stays on Login page; Save is disabled",
+    "normalized": "error is shown. user stays on login page; save is disabled",
+    "tokens": [
+      "WORD:error",
+      "WORD:is",
+      "WORD:shown",
+      "SYMBOL:.",
+      "WORD:user",
+      "WORD:stays",
+      "WORD:on",
+      "WORD:login",
+      "WORD:page",
+      "SYMBOL:;",
+      "WORD:save",
+      "WORD:is",
+      "WORD:disabled"
+    ]
+  },
+  {
+    "sentence": "User should not be able to log in",
+    "normalized": "user should not be able to log in",
+    "tokens": [
+      "WORD:user",
+      "WORD:should",
+      "WORD:not",
+      "WORD:be",
+      "WORD:able",
+      "WORD:to",
+      "WORD:log",
+      "WORD:in"
+    ]
+  },
+  {
+    "sentence": "On Registration page",
+    "normalized": "on registration page",
+    "tokens": [
+      "WORD:on",
+      "WORD:registration",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "On Payment page",
+    "normalized": "on payment page",
+    "tokens": [
+      "WORD:on",
+      "WORD:payment",
+      "WORD:page"
+    ]
+  },
+  {
+    "sentence": "It Works Fine.",
+    "normalized": "it works fine.",
+    "tokens": [
+      "WORD:it",
+      "WORD:works",
+      "WORD:fine",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Dashboard heading is displayed",
+    "normalized": "dashboard heading is displayed",
+    "tokens": [
+      "WORD:dashboard",
+      "WORD:heading",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  },
+  {
+    "sentence": "S3: something",
+    "normalized": "S3: something",
+    "tokens": [
+      "WORD:S3",
+      "SYMBOL::",
+      "WORD:something"
+    ]
+  },
+  {
+    "sentence": "No action word.",
+    "normalized": "no action word.",
+    "tokens": [
+      "WORD:no",
+      "WORD:action",
+      "WORD:word",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "Start with an action word.",
+    "normalized": "start with an action word.",
+    "tokens": [
+      "WORD:start",
+      "WORD:with",
+      "WORD:an",
+      "WORD:action",
+      "WORD:word",
+      "SYMBOL:."
+    ]
+  },
+  {
+    "sentence": "NEEDS REVIEW",
+    "normalized": "needs review",
+    "tokens": [
+      "WORD:needs",
+      "WORD:review"
+    ]
+  },
+  {
+    "sentence": "Do the needful",
+    "normalized": "do the needful",
+    "tokens": [
+      "WORD:do",
+      "WORD:the",
+      "WORD:needful"
+    ]
+  },
+  {
+    "sentence": "S3: \"x\" was made up",
+    "normalized": "S3: \"x\" was made up",
+    "tokens": [
+      "WORD:S3",
+      "SYMBOL::",
+      "LITERAL:\"x\"",
+      "WORD:was",
+      "WORD:made",
+      "WORD:up"
+    ]
+  },
+  {
+    "sentence": "Dashboard is displayed",
+    "normalized": "dashboard is displayed",
+    "tokens": [
+      "WORD:dashboard",
+      "WORD:is",
+      "WORD:displayed"
+    ]
+  }
+]

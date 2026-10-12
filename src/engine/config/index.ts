@@ -15,15 +15,12 @@ export interface EngineConfig {
   engine: EngineKind;
   /** A run with an assumption in it is never a clean PASS (DEC-05). Fixed; here so the rule has one home. */
   assumptionsBlockPass: true;
-  /** Names that mark a value as a secret: it is only ever kept as a reference (DS-02). */
-  secretNames: RegExp;
   versions: typeof COMPONENT_VERSIONS;
 }
 
 const DEFAULTS: EngineConfig = {
   engine: 'legacy',
   assumptionsBlockPass: true,
-  secretNames: /PASS(WORD)?|SECRET|TOKEN|API_?KEY|PIN|OTP/i,
   versions: COMPONENT_VERSIONS,
 };
 
@@ -45,5 +42,5 @@ export function engineFrom(value: unknown): EngineKind {
   return isEngine(value) ? value : DEFAULTS.engine;
 }
 
-/** The names of the data a test case may keep as a reference, e.g. `TEST_PASSWORD`. */
-export const isSecretName = (name: string): boolean => engineConfig().secretNames.test(name);
+/** The names of the data a test case may keep as a reference, e.g. `TEST_PASSWORD`. The shape lives in the pattern layer (RX-01). */
+export { isSecretName } from '../patterns/shapes.js';
