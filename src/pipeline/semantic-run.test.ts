@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -39,8 +41,16 @@ async function compiled(r: RawTestCase, env: Record<string, string> = {}): Promi
   return compileCase(r, { env });
 }
 
-const obs = (messages: string[]): Observation => ({ url: 'http://x/', title: 'x', lines: [], elements: [], messages, fieldErrors: [], tabs: 1 });
-const stepRecord = (before: string[], after: string[]): StepRecord => ({
+const obs = (messages: string[], lines: string[] = []): Observation => ({
+  url: 'http://x/',
+  title: 'x',
+  lines,
+  elements: [],
+  messages,
+  fieldErrors: [],
+  tabs: 1,
+});
+const stepRecord = (before: string[], after: string[], lines: { before: string[]; after: string[] } = { before: [], after: [] }): StepRecord => ({
   step: 'S4',
   action: 'CLICK',
   original: "Click the 'Login' button",
@@ -50,14 +60,14 @@ const stepRecord = (before: string[], after: string[]): StepRecord => ({
   dialogs: [],
   checksAfter: ['E1', 'E2'],
   notes: [],
-  before: obs(before),
-  after: obs(after),
+  before: obs(before, lines.before),
+  after: obs(after, lines.after),
 });
-const traceOf = (before: string[], after: string[]): RunTrace => ({
+const traceOf = (before: string[], after: string[], lines?: { before: string[]; after: string[] }): RunTrace => ({
   testId: 'T',
   status: 'completed',
   capabilities: [],
-  steps: [stepRecord(before, after)],
+  steps: [stepRecord(before, after, lines)],
 });
 const evaluation = (over: Partial<Evaluation>): Evaluation => ({
   expectation: 'E2',
@@ -151,6 +161,41 @@ describe('the verdict of a semantic run, in the five statuses of the results she
     const v = toTestVerdict(model, verdictOf('FAIL', [evaluation({ actual: 'messages on the page: "Invalid Login"' })]), traceOf([], ['Invalid Login']), c);
     assert.equal(v.status, 'NEEDS REVIEW');
     assert.ok(JSON.stringify(v.review).includes('Invalid Login'), 'the message that was shown is in the reason');
+  });
+  it('sets a FAIL aside when text appeared that is not tagged as a message (an old page writes its error as plain text)', async () => {
+    const c = await compiled(raw('T', ['Open the login page', "Click the 'Login' button"], REJECTED));
+    const lines = { before: ['Login Name :', 'Password :'], after: ['Login Name :', 'Password :', 'Invalid Login'] };
+    const v = toTestVerdict(model, verdictOf('FAIL', [evaluation({})]), traceOf([], [], lines), c);
+    assert.equal(v.status, 'NEEDS REVIEW');
+    assert.ok(JSON.stringify(v.review).includes('Invalid Login'), 'the new text is in the reason');
+    assert.ok(v.reason.includes('Invalid Login'), `the row's own reason names the text: ${v.reason}`);
+    assert.ok(v.actual.includes('Invalid Login') && !v.actual.includes('nothing'), `the Actual Result says what the page showed: ${v.actual}`);
+  });
+  it('still fails when nothing new appeared on the page at all', async () => {
+    const c = await compiled(raw('T', ['Open the login page', "Click the 'Login' button"], REJECTED));
+    const lines = { before: ['Login Name :', 'Password :'], after: ['Login Name :', 'Password :'] };
+    assert.equal(toTestVerdict(model, verdictOf('FAIL', [evaluation({})]), traceOf([], [], lines), c).status, 'FAIL');
+  });
+  it('does not set a FAIL aside when the login itself was contradicted, whatever else appeared', async () => {
+    const c = await compiled(raw('T', ['Open the login page', "Click the 'Login' button"], REJECTED));
+    const lines = { before: ['Login'], after: ['Welcome', 'Dashboard'] };
+    const logged = evaluation({ expectation: 'E1', clause: 'Login is rejected', expected: 'not logged in', actual: 'logged in' });
+    assert.equal(toTestVerdict(model, verdictOf('FAIL', [logged, evaluation({})]), traceOf([], [], lines), c).status, 'FAIL');
+  });
+  it('never turns a run that stopped into a BLOCKED, a FAIL or a PASS: it stays NEEDS REVIEW with the engine reason', async () => {
+    const c = await compiled(raw('T', ['Open the login page', "Click the 'Login' button"], REJECTED));
+    const stopped: RunTrace = {
+      testId: 'T',
+      status: 'blocked',
+      capabilities: [],
+      steps: [{ ...stepRecord([], []), status: 'blocked', code: 'VALUE_UNRESOLVED', reason: 'the value for "Login Name" is empty' }],
+      stoppedAt: { step: 'S2', code: 'VALUE_UNRESOLVED', reason: 'the value for "Login Name" is empty' },
+    };
+    for (const name of ['BLOCKED', 'TEST_DATA_ERROR', 'ENVIRONMENT_ERROR', 'PASS', 'FAIL'] as const) {
+      const v = toTestVerdict(model, verdictOf(name, name === 'FAIL' ? [evaluation({})] : []), stopped, c);
+      assert.equal(v.status, 'NEEDS REVIEW', name);
+      assert.ok(v.review?.length, name);
+    }
   });
   it('still fails when the only message shown was already there before the step', async () => {
     const c = await compiled(raw('T', ['Open the login page', "Click the 'Login' button"], REJECTED));
@@ -279,6 +324,40 @@ describe('semantic runs on the demo app', { skip }, () => {
     const out = await run(login('demo', ["Click the 'Login' button"]), 'Error message "Invalid username or password" is displayed', 'nope');
     const v = out.get('T-SEM');
     assert.equal(v?.status, 'NEEDS REVIEW', JSON.stringify(v));
+  });
+  it('NEEDS REVIEW, not FAIL: an old-style page writes its error as plain text with no alert role', async () => {
+    const old = http.createServer((_req, res) => {
+      res.setHeader('content-type', 'text/html');
+      res.end(`<!doctype html><title>Old</title><h1>Login</h1>
+<label for="username">Username</label><input id="username" name="username">
+<label for="password">Password</label><input id="password" name="password" type="password">
+<button onclick="document.getElementById('msg').textContent='Invalid Login'">Login</button>
+<div id="msg" style="color:red"></div>`);
+    });
+    await new Promise<void>((resolve) => old.listen(0, '127.0.0.1', resolve));
+    const url = `http://127.0.0.1:${(old.address() as AddressInfo).port}`;
+    try {
+      const r = raw(
+        'T-OLD',
+        [`Open ${url}/`, "Enter 'demo' in the Username field", 'Enter password in the Password field', "Click the 'Login' button"],
+        REJECTED,
+        { testData: 'Password: nope' },
+      );
+      const c = await compiled(r, {});
+      const v = (await runSemanticJobs([{ model: parseTestCase(r, config), compiled: c, baseUrl: url }], {})).get('T-OLD');
+      assert.equal(v?.status, 'NEEDS REVIEW', JSON.stringify(v?.review ?? v?.reason));
+      assert.ok(JSON.stringify(v?.review).includes('Invalid Login'), 'the text the page showed is in the reason');
+    } finally {
+      await new Promise((resolve) => old.close(resolve));
+    }
+  });
+  it('NEEDS REVIEW, not BLOCKED: a step the executor cannot do ("leave blank") is set aside with its reason', async () => {
+    const r = raw('T-BLANK', [`Open ${app.url}/`, 'Leave the Username field blank', 'Leave the Password field blank', "Click the 'Login' button"], REJECTED);
+    const c = await compiled(r, {});
+    assert.ok(semanticSupport(c).ok, JSON.stringify(c.issues.filter((i) => i.severity === 'blocking')));
+    const v = (await runSemanticJobs([{ model: parseTestCase(r, config), compiled: c, baseUrl: app.url }], {})).get('T-BLANK');
+    assert.equal(v?.status, 'NEEDS REVIEW', JSON.stringify(v?.review ?? v?.reason));
+    assert.ok(v?.review?.length);
   });
   it('gives no verdict for a job whose case did not compile, so the legacy answer stays', async () => {
     const r = raw('T-BAD', ['Open the login page'], REJECTED);

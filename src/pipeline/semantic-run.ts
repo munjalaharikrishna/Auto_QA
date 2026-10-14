@@ -69,17 +69,22 @@ function wantsAMessage(exp: IrExpectation | undefined): boolean {
   return c.type === 'TEXT' && (c.target?.ontology === 'Message' || c.target?.ontology === 'Error');
 }
 
-/** The messages a step produced: on the page after it, and not already there before it. */
-function freshMessages(trace: RunTrace | undefined, step: string | undefined): string[] {
+/**
+ * What a step put on the page: messages tagged as alerts or status, and any other text that was not there before it. An old
+ * page writes its error as plain text with no role, which the observer does not call a message, so "no message appeared" is
+ * only a fact when no new text appeared either.
+ */
+function freshText(trace: RunTrace | undefined, step: string | undefined): string[] {
   const record = trace?.steps.find((s) => s.step === step);
   if (!record?.after) return [];
-  const before = new Set([...(record.before?.messages ?? []), ...(record.before?.fieldErrors.map((f) => f.message) ?? [])]);
-  return [...record.after.messages, ...record.after.fieldErrors.map((f) => f.message)].filter((m) => !before.has(m));
+  const known = new Set([...(record.before?.messages ?? []), ...(record.before?.fieldErrors.map((f) => f.message) ?? []), ...(record.before?.lines ?? [])]);
+  const now = [...record.after.messages, ...record.after.fieldErrors.map((f) => f.message), ...record.after.lines];
+  return [...new Set(now.filter((t) => !known.has(t)))].slice(0, 5).map((t) => (t.length > 120 ? `${t.slice(0, 120)}…` : t));
 }
 
 /**
  * A FAIL stands when the page contradicts the case. It is set aside when every disproven check is "a message with these words
- * is shown" and the step did show a message, only in other words: whether that is the appropriate message is for a person to say.
+ * is shown" and the step did put new text on the page, only not in those words: whether that is the appropriate message is for a person to say.
  */
 function looseWording(verdict: Verdict, trace: RunTrace | undefined, compiled: CompileResult): { shown: string[] } | undefined {
   if (verdict.verdict !== 'FAIL') return undefined;
@@ -88,7 +93,7 @@ function looseWording(verdict: Verdict, trace: RunTrace | undefined, compiled: C
   const shown: string[] = [];
   for (const e of disproven) {
     const exp = compiled.ir?.expectations.find((x) => x.id === e.expectation);
-    const messages = freshMessages(trace, e.step);
+    const messages = freshText(trace, e.step);
     if (!wantsAMessage(exp) || messages.length === 0) return undefined;
     shown.push(...messages);
   }
@@ -97,15 +102,24 @@ function looseWording(verdict: Verdict, trace: RunTrace | undefined, compiled: C
 
 const review = (id: string, raw: string, headline: string, why: string, todo: string[]): ReviewReason => ({ id, raw, headline, why, todo });
 
-function reasonsFor(verdict: Verdict, loose: { shown: string[] } | undefined): ReviewReason[] {
+function reasonsFor(verdict: Verdict, loose: { shown: string[] } | undefined, trace: RunTrace | undefined): ReviewReason[] {
+  const stop = trace?.stoppedAt;
+  if (stop) {
+    const record = trace?.steps.find((s) => s.step === stop.step);
+    return [
+      review(stop.step, record?.original ?? '', 'The new run stopped at a step it could not do:', `${stop.code}: ${stop.reason}`, [
+        'Reword the step, or do it by hand and decide on the review card.',
+      ]),
+    ];
+  }
   if (loose) {
     const e = verdict.evaluations.find((x) => x.result === 'disproven') as Evaluation;
     return [
       review(
         e.expectation,
         e.clause,
-        'A message was shown, but not in the words of the expected result.',
-        `Expected ${e.expected}; the page showed ${loose.shown.map((m) => `"${m}"`).join(', ')}.`,
+        'The page showed something, but not in the words of the expected result.',
+        `Expected ${e.expected}; after the step the page showed new text: ${loose.shown.map((m) => `"${m}"`).join(', ')}.`,
         ['If that message is the appropriate one, decide PASS on the review card; otherwise reword the expected result with the exact message.'],
       ),
     ];
@@ -136,8 +150,10 @@ export function toTestVerdict(
   durationMs = 0,
   startedAt?: string,
 ): TestVerdict {
+  // A run that stopped says nothing about the application: whatever the judge named it, it is set aside with the reason (never a PASS, FAIL or BLOCKED).
+  const stoppedEarly = !!trace && trace.status !== 'completed';
   const loose = looseWording(verdict, trace, compiled);
-  const status = loose ? 'NEEDS REVIEW' : STATUS[verdict.verdict];
+  const status = stoppedEarly || loose ? 'NEEDS REVIEW' : STATUS[verdict.verdict];
   const disproven = verdict.evaluations.find((e) => e.result === 'disproven');
   const stop = trace?.stoppedAt;
   const failedStep = stop ? stop.step : status === 'FAIL' && disproven ? `${disproven.expectation} ${disproven.clause}` : undefined;
@@ -151,19 +167,23 @@ export function toTestVerdict(
     status,
     ...(status === 'FAIL'
       ? { category: 'Assertion' as const }
-      : status === 'NEEDS REVIEW' || status === 'BLOCKED'
+      : (status === 'NEEDS REVIEW' || status === 'BLOCKED') && !stoppedEarly
         ? { category: verdict.rootCause ? CATEGORY[verdict.rootCause] : undefined }
         : {}),
     ...(failedStep ? { failedStep } : {}),
     reason: loose
-      ? `${verdict.evaluations.find((e) => e.result === 'disproven')?.clause ?? ''}: a message was shown, in other words than expected`
+      ? `${verdict.evaluations.find((e) => e.result === 'disproven')?.clause ?? ''}: the page showed new text (${loose.shown.map((m) => `"${m}"`).join(', ')}), but not in the words expected`
       : verdict.reason,
-    ...(status === 'NEEDS REVIEW' ? { review: reasonsFor(verdict, loose) } : {}),
+    ...(status === 'NEEDS REVIEW' ? { review: reasonsFor(verdict, loose, trace) } : {}),
     expected: model.assertions
       .map((a) => a.raw)
       .filter(Boolean)
       .join(' '),
-    actual: verdict.evaluations.length ? verdict.evaluations.map((e) => e.actual).join(' | ') : verdict.reason,
+    actual: verdict.evaluations.length
+      ? verdict.evaluations
+          .map((e) => (loose && e.result === 'disproven' ? `the page showed new text: ${loose.shown.map((m) => `"${m}"`).join(', ')}` : e.actual))
+          .join(' | ')
+      : verdict.reason,
     steps: model.steps.map((s) => {
       const r = records.get(s.id);
       return {
