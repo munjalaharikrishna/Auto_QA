@@ -19,6 +19,11 @@ export interface ExecutionSession {
   /** The page the run starts on. */
   page: Page;
   context: BrowserContext;
+  /**
+   * Gives the next test case a clean browser (VD-03): extra tabs closed, cookies, permissions, local and session storage,
+   * IndexedDB and caches cleared, and the page back on a blank one. Two test cases run in any order then give the same verdicts.
+   */
+  reset(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -46,8 +51,17 @@ export async function openExecutionSession(options: SessionOptions = {}): Promis
     args: [`--remote-debugging-port=${port}`],
   });
   const seen: string[] = [];
+  const origins = new Set<string>();
   let policy: Parameters<NonNullable<McpPort['setDialogPolicy']>>[0] = () => ({ accept: true });
   const watch = (page: Page): void => {
+    page.on('framenavigated', (frame) => {
+      try {
+        const { origin } = new URL(frame.url());
+        if (origin !== 'null') origins.add(origin);
+      } catch {
+        // an address that is not a URL has no origin to clear
+      }
+    });
     page.on('dialog', (dialog) => {
       const text = `${dialog.type()} "${dialog.message()}"`;
       seen.push(text);
@@ -65,8 +79,37 @@ export async function openExecutionSession(options: SessionOptions = {}): Promis
     throw e;
   }
   const page = context.pages()[0] ?? (await context.newPage());
+  const reset = async (): Promise<void> => {
+    for (const p of context.pages()) if (p !== page) await p.close().catch(() => undefined);
+    seen.length = 0;
+    policy = () => ({ accept: true });
+    // Storage belongs to an origin: every origin the run visited is cleared, then the cache and the cookies of the browser.
+    const cdp = await context.newCDPSession(page);
+    try {
+      for (const origin of origins) await cdp.send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' }).catch(() => undefined);
+      origins.clear();
+      await cdp.send('Network.clearBrowserCache').catch(() => undefined);
+      await cdp.send('Network.clearBrowserCookies').catch(() => undefined);
+    } finally {
+      await cdp.detach().catch(() => undefined);
+    }
+    await context.clearCookies();
+    await context.clearPermissions();
+    await page
+      .evaluate(() => {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {
+          // a page without storage (about:blank) has nothing to clear
+        }
+      })
+      .catch(() => undefined);
+    await page.goto('about:blank');
+  };
   return {
     page,
+    reset,
     context,
     port: {
       tools: mcp.tools,

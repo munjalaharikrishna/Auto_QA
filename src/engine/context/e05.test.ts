@@ -254,6 +254,54 @@ describe('TD-01: data classes', () => {
   });
 });
 
+describe('EX-09: boundaries, asked for and never invented', () => {
+  const steps = (...lines: string[]) =>
+    raw({ steps: ['1. Open the Application', ...lines.map((l, i) => `${i + 2}. ${l}`)].join('\n'), expected: 'An error message is displayed' });
+  it('makes a value one under the minimum, the minimum, the maximum and one over the maximum, from what the application knows', async () => {
+    const r = await compileCase(
+      steps(
+        'Enter a value below minimum in the Name field',
+        'Enter a minimum value in the Code field',
+        'Enter a max length value in the Nick field',
+        'Enter a boundary value in the Title field',
+      ),
+      { minLengths: { Name: 3, Code: 3 }, maxLengths: { Nick: 10, Title: 10 } },
+    );
+    const by = (cls: string) => Object.values(r.ir?.data ?? {}).find((d) => d.intent === cls);
+    const lengthOf = (cls: string) => reveal(r.values?.[Object.keys(r.ir?.data ?? {}).find((k) => r.ir?.data[k]?.intent === cls) ?? ''])?.length;
+    assert.equal(by('BELOW_MINIMUM')?.rule, 'boundary.min-1(3)');
+    assert.equal(by('MINIMUM')?.rule, 'short.string(3)');
+    assert.equal(by('MAXIMUM')?.rule, 'long.string(10)');
+    assert.equal(by('BOUNDARY')?.rule, 'boundary.max+1(10)');
+    assert.equal(lengthOf('BELOW_MINIMUM'), 2);
+    assert.equal(lengthOf('MINIMUM'), 3);
+    assert.equal(lengthOf('BOUNDARY'), 11);
+  });
+  it('does not make up a value under a minimum nobody knows: the value is asked for', async () => {
+    const r = await compileCase(steps('Enter a value below minimum in the Name field'));
+    assert.equal(Object.keys(r.values ?? {}).length, 0, 'no value was made up');
+    assert.ok(
+      r.issues.some((i) => i.code === 'MISSING_DATA'),
+      JSON.stringify(r.issues.map((i) => i.code)),
+    );
+  });
+  it('makes a value of Unicode spaces only, and no boundary value is made when the test case does not ask for one', async () => {
+    const r = await compileCase(steps('Enter whitespace in the Name field', 'Enter a valid code in the Code field'));
+    assert.equal(reveal(r.values?.[Object.keys(r.ir?.data ?? {}).find((k) => r.ir?.data[k]?.intent === 'WHITESPACE') ?? '']), '   　');
+    const classes = Object.values(r.ir?.data ?? {}).map((d) => d.intent ?? d.class);
+    assert.ok(!classes.some((c) => ['BOUNDARY', 'MINIMUM', 'MAXIMUM', 'BELOW_MINIMUM'].includes(c)), classes.join());
+  });
+  it('is deterministic, and one under the minimum of 1 is an empty value', () => {
+    const seed = seedOf('TC-1', 'S2');
+    assert.deepEqual(generate('BELOW_MINIMUM', 'personName', seed, { minLength: 5 }), generate('BELOW_MINIMUM', 'personName', seed, { minLength: 5 }));
+    assert.equal(generate('BELOW_MINIMUM', 'text', seed, { minLength: 1 }).value, '');
+    assert.throws(
+      () => generate('BELOW_MINIMUM', 'text', seed),
+      (e: Error) => e.message.includes('not known'),
+    );
+  });
+});
+
 describe('DG-01: the deterministic generator', () => {
   const KINDS = ['username', 'password', 'email', 'personName', 'number', 'code', 'phone', 'date', 'file', 'text'] as const;
   const CLASSES = ['VALID', 'INVALID', 'MAXIMUM', 'MINIMUM', 'BOUNDARY', 'RANDOM', 'NON_EXISTING', 'GENERATED', 'BLANK'] as const;

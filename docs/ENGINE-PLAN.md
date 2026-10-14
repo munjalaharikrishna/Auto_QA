@@ -439,9 +439,9 @@ All decisions were answered by the owner on 8 Oct 2026.
 | E0.5 | All | none |
 | E0.6 | All | none |
 | E0.7 | EX-01…05, UI-02…04, UI-05 (textbox, password, dropdown, checkbox, upload), UI-06, UI-08 (keys, click, hover), UI-09 | UI-01 frames and shadow DOM, UI-05 date picker/rich text/slider/toggle, UI-07 lists and cards, UI-08 drag-and-drop |
-| E0.8 | All, including basic learning | none |
+| E0.8 | All, including basic learning | EX-09 weekend and time boundaries (owner, 13 Oct: build in a later version); VD-03 and the rest of EX-09 are built |
 | E0.9 | none | All (OTP is needed only for apps that use it) |
-| E0.10 | GV-06, GV-08, GV-09, GV-13 (measurement and protection) | GV-01 editing screen, GV-02, GV-07, GV-10, GV-11, GV-16 full report |
+| E0.10 | GV-06, GV-08, GV-09, GV-13 (measurement and protection; built 13 Oct, `npm run engine:gate`; the answer key is filled in at E1.0) | GV-01 editing screen, GV-02, GV-07, GV-10, GV-11, GV-16 full report |
 
 After the minimum engine passes a T6 measurement of at least 80% on both workbooks, the deferred items are built in version order, and the release check (§6) runs when everything is complete.
 

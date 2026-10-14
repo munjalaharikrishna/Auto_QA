@@ -30,6 +30,8 @@ export const DATA_CLASS_DEFS: readonly DataClassDef[] = [
   d('BOUNDARY', 'a value at the edge of what is allowed', ['boundary', 'edge', 'limit']),
   d('MAXIMUM', 'the longest or largest value allowed', ['max', 'maximum', 'max length', 'maximum length', 'longest', 'largest', 'highest']),
   d('MINIMUM', 'the shortest or smallest value allowed', ['min', 'minimum', 'min length', 'minimum length', 'shortest', 'smallest', 'lowest']),
+  d('BELOW_MINIMUM', 'a value one step under the shortest or smallest allowed (min - 1)', ['below minimum', 'under minimum', 'below min', 'less than minimum']),
+  d('WHITESPACE', 'a value of spaces only, including Unicode spaces', ['whitespace', 'unicode space', 'unicode spaces', 'spaces only']),
   d('EXISTING', 'a value that is already in the application', ['existing', 'already registered', 'already existing', 'registered', 'present']),
   d('NON_EXISTING', 'a value that is not in the application', [
     'non-existing',

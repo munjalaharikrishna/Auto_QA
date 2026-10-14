@@ -1,0 +1,31 @@
+{
+  "version": "E0.10",
+  "modules": {
+    "OrangeHRM_Login_Test_Cases_Updated.xlsx": {
+      "testCases": 10,
+      "ready": 9,
+      "reviews": 1,
+      "steps": {
+        "understood": 39,
+        "total": 39
+      },
+      "expectations": {
+        "understood": 10,
+        "total": 11
+      }
+    },
+    "Add_Employee.xlsx": {
+      "testCases": 19,
+      "ready": 1,
+      "reviews": 18,
+      "steps": {
+        "understood": 165,
+        "total": 181
+      },
+      "expectations": {
+        "understood": 274,
+        "total": 275
+      }
+    }
+  }
+}

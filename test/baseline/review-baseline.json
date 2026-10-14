@@ -1,0 +1,19 @@
+{
+  "source": "test/baseline/legacy-parse.md: what the legacy parser (before any engine work, E0.0) understood. A test case with every step and check understood is ready; every other one is a review. This is the baseline of the review reduction (GV-08).",
+  "modules": {
+    "OrangeHRM_Login_Test_Cases_Updated.xlsx": {
+      "testCases": 10,
+      "ready": 9,
+      "reviews": 1,
+      "steps": { "understood": 39, "total": 39 },
+      "expectations": { "understood": 26, "total": 28 }
+    },
+    "Add_Employee.xlsx": {
+      "testCases": 19,
+      "ready": 0,
+      "reviews": 19,
+      "steps": { "understood": 68, "total": 307 },
+      "expectations": { "understood": 292, "total": 440 }
+    }
+  }
+}

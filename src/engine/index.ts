@@ -2,6 +2,7 @@ export * from './config/index.js';
 export * from './context/index.js';
 export * from './data/index.js';
 export * from './execute/index.js';
+export * from './governance/index.js';
 export { toQaIr } from './ir/from-model.js';
 export * from './ir/index.js';
 export * from './knowledge/index.js';

@@ -392,4 +392,28 @@ describe('execution through Playwright MCP on the demo app', { skip }, () => {
       assert.equal(steps.S2?.code, 'VALUE_UNRESOLVED');
     });
   });
+  describe('VD-03: isolation between test cases', () => {
+    it('a reset leaves no cookie, storage or extra tab for the next test case', async () => {
+      await session.page.goto(`${app.url}/lab`);
+      const before = await session.page.evaluate(() => ({ cookie: document.cookie, theme: localStorage.getItem('theme') }));
+      assert.deepEqual(before, { cookie: 'session=abc123', theme: 'dark' }, 'the lab page leaves state behind');
+      await session.context.newPage();
+      await session.reset();
+      assert.equal(session.context.pages().length, 1, 'only the run page is left');
+      assert.equal(session.page.url(), 'about:blank');
+      await session.page.goto(`${app.url}/ui/controls`);
+      const after = await session.page.evaluate(() => ({ cookie: document.cookie, theme: localStorage.getItem('theme') }));
+      assert.deepEqual(after, { cookie: '', theme: null }, 'nothing from the earlier case is seen');
+    });
+    it('gives the same verdict in either order', async () => {
+      const login = [`Open ${app.url}/lab`, 'Click the Show toast button'];
+      const first = await run(login);
+      await session.reset();
+      const second = await run(login);
+      assert.deepEqual(
+        first.trace.steps.map((s) => s.status),
+        second.trace.steps.map((s) => s.status),
+      );
+    });
+  });
 });

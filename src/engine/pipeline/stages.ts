@@ -39,6 +39,8 @@ export interface CompileOptions {
   run?: string;
   /** The longest value each field takes, from the application's knowledge. */
   maxLengths?: Record<string, number>;
+  /** The shortest value each field takes, from the application's knowledge. */
+  minLengths?: Record<string, number>;
   /** What the engine knows about the application (AK-01, PK-01): its pages, routes and components, and what they are called. */
   knowledge?: Application;
   /** Patterns for production identifiers (a real customer number): they are taken out of every output (DS-01). */
@@ -92,6 +94,7 @@ export async function settleData(
     store: options.store,
     files: options.dataFiles,
     maxLengths: options.maxLengths,
+    minLengths: options.minLengths,
     steps: ir.steps,
   });
   // What was settled is no longer a question; what was not says why.

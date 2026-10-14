@@ -2,7 +2,7 @@ import type { IrAction, IrCondition, IrTarget } from '../ir/schema.js';
 import { keyOf, patterns, waitMs } from '../patterns/index.js';
 import { compactKey } from '../text/compound.js';
 import type { Token } from '../text/index.js';
-import { type Clause, splitClauses } from './clauses.js';
+import { type Clause, type Relation, splitClauses } from './clauses.js';
 import { bindValue, type DataEntry } from './data-binding.js';
 import { type NounPhrase, type NounPhraseOptions, parseNounPhrase } from './nounphrase.js';
 import { actionsOf, allowsAction } from './ontology.js';
@@ -140,6 +140,47 @@ function readVerb(words: readonly string[], i: number): VerbHit | undefined {
   const syn = matchPhrase('Action', words, i, 3);
   const def = syn ? verbOf(syn.canonical) : undefined;
   return syn && def ? { def, length: syn.length, via: words.slice(i, i + syn.length).join(' ') } : undefined;
+}
+
+/** The verb a word ending in -ing comes from ("entering" is "enter", "selecting" "select"), when it is one of the verbs. */
+function gerundBase(word: string | undefined): string | undefined {
+  if (!word?.endsWith('ing') || word.length < 6) return undefined;
+  const stem = word.slice(0, -3);
+  return [stem, `${stem}e`, stem.slice(0, -1)].find((c) => c.length > 2 && verbOf(c));
+}
+
+/** The clause as a command: "entering employee details" becomes "enter employee details". */
+function asCommand(clause: Clause, base: string, relation: Relation): Clause {
+  const [first, ...more] = clause.tokens;
+  return { ...clause, relation, tokens: [{ ...(first as Token), text: base }, ...more] };
+}
+
+/**
+ * "Click Reset after entering employee details and selecting a photo": what comes after "after" happens first. The clauses are
+ * put in the order they happen, as commands: enter employee details, select a photo, then click Reset. A clause that does
+ * not start with the -ing form of a verb is left where it is.
+ */
+function doneBeforeOrder(clauses: Clause[]): Clause[] {
+  const out: Clause[] = [];
+  for (let i = 0; i < clauses.length; i++) {
+    const c = clauses[i] as Clause;
+    const next = clauses[i + 1];
+    const base = next?.relation === 'AFTER' ? gerundBase(lw(next.tokens[0])) : undefined;
+    if (c.relation === 'AFTER' || !next || base === undefined || ['COMMA', 'THEN'].includes(clauses[i + 2]?.relation ?? '')) {
+      out.push(c);
+      continue;
+    }
+    const group: Clause[] = [asCommand(next, base, c.relation)];
+    let k = i + 2;
+    for (; k < clauses.length && (clauses[k] as Clause).relation === 'AND'; k++) {
+      const more = gerundBase(lw((clauses[k] as Clause).tokens[0]));
+      if (more === undefined) break;
+      group.push(asCommand(clauses[k] as Clause, more, 'AND'));
+    }
+    out.push(...group, { ...c, relation: 'THEN' });
+    i = k - 1;
+  }
+  return out;
 }
 
 /** Whether a clause is an action, a check, or neither (unknown). */
@@ -519,7 +560,7 @@ const BRANCH_RELATIONS: ReadonlySet<string> = new Set(['IF', 'WHEN', 'UNLESS']);
 /** Reads a line (a step, or a sentence of an expected result) into steps, expectations and conditionals. */
 export function understandLine(raw: string, ctx: LineContext): LineResult {
   const line = readLine(raw);
-  const clauses = splitClauses(line);
+  const clauses = doneBeforeOrder(splitClauses(line));
   const out: LineResult = { steps: [], expectations: [], conditionals: [], sequence: [], notes: [], issues: [], models: [] };
   let subject: Subject | undefined;
   /** Whether the last clause emitted an action (an expectation after it belongs to it: GR-04). */

@@ -80,6 +80,8 @@ export const DATA_CLASSES = [
   'BOUNDARY',
   'MAXIMUM',
   'MINIMUM',
+  'BELOW_MINIMUM',
+  'WHITESPACE',
   'EXISTING',
   'NON_EXISTING',
   'DUPLICATE',

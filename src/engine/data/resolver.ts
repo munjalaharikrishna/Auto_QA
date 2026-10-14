@@ -42,6 +42,8 @@ export interface ResolveContext {
   files?: Record<string, string>;
   /** The longest value each field takes (from the application's knowledge); without one, 255. */
   maxLengths?: Record<string, number>;
+  /** The shortest value each field takes (from the application's knowledge); without one, "below the minimum" cannot be made. */
+  minLengths?: Record<string, number>;
   steps: readonly IrStep[];
 }
 
@@ -258,7 +260,10 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
     }
     try {
       const max = ctx.maxLengths?.[field] ?? ctx.maxLengths?.[fieldKey] ?? DEFAULT_MAX_LENGTH;
-      const g = generate(cls, kind, seedOf(ctx.testId, stepOf(key, ctx.steps), ctx.run ?? 'run-1', key), { maxLength: max });
+      const g = generate(cls, kind, seedOf(ctx.testId, stepOf(key, ctx.steps), ctx.run ?? 'run-1', key), {
+        maxLength: max,
+        minLength: ctx.minLengths?.[field] ?? ctx.minLengths?.[fieldKey],
+      });
       record(key, field, d, { class: dataClassDef(cls) ? 'GENERATED' : cls, source: 'GENERATOR', value: g.value, rule: g.rule, seed: g.seed }, tried);
       if ((cls === 'MAXIMUM' || cls === 'BOUNDARY') && ctx.maxLengths?.[field] === undefined && ctx.maxLengths?.[fieldKey] === undefined) {
         decisions.push({

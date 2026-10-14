@@ -1,6 +1,6 @@
 import type { Token } from '../text/index.js';
 import { isSymbol, type Line, lw, originalOf } from './view.js';
-import { ASSERTION_WORDS, isCommandForm } from './vocabulary.js';
+import { ASSERTION_WORDS, CHECK_MARKERS, isCommandForm } from './vocabulary.js';
 
 /**
  * Layer 8, the clause parser (CL-01). A sentence is cut into clauses at and, or, but, then, while, because, if, when,
@@ -171,6 +171,23 @@ function restOfSentence(tokens: readonly Token[], from: number): Token[] {
   return rest;
 }
 
+/**
+ * "Verify the Admin, PIM and Help tabs are visible": the left side is a check word and a list, with no predicate of its own;
+ * the predicate on the right is shared by the whole list, so "and" is part of the list and not a boundary. "Verify the Login
+ * button and verify the Reset button is displayed" is two clauses: the right side starts with a check word of its own.
+ */
+function sharesPredicate(left: readonly Token[], right: readonly Token[]): boolean {
+  const l = left.map((t) => lw(t));
+  const r = right.map((t) => lw(t));
+  const lead = l.find((w) => !FILLERS.has(w));
+  // The check word itself and "that" are in the predicate words: only what comes after them can be a predicate of its own.
+  if (lead === undefined || !CHECK_MARKERS.has(lead) || l.slice(l.indexOf(lead) + 1).some((w) => w !== 'that' && PREDICATE_WORDS.has(w))) return false;
+  const next = r.find((w) => !FILLERS.has(w));
+  if (next === undefined || CHECK_MARKERS.has(next)) return false;
+  // "… and Login button are visible": "Login" is a name here, because the words after it say something about it. "… and click Login" is a command.
+  return !isCommandForm(next) || r.slice(r.indexOf(next) + 1).some((w) => PREDICATE_WORDS.has(w));
+}
+
 const startsWithConnector = (tokens: readonly Token[]): boolean => CONNECTORS.has(lw(tokens[0]));
 
 /** Takes out what is written in brackets: an aside, not part of the sentence. */
@@ -242,7 +259,7 @@ export function splitClauses(line: Line): Clause[] {
       }
       if (w in COORDINATORS) {
         const rest = restOfSentence(tokens, i + 1);
-        if (cur.length && isClauseLike(cur) && isClauseLike(rest)) {
+        if (cur.length && isClauseLike(cur) && isClauseLike(rest) && !sharesPredicate(cur, rest)) {
           start(COORDINATORS[w] as Relation, w);
           continue;
         }

@@ -634,3 +634,85 @@ describe('determinism (GV-05)', () => {
     assert.ok(!JSON.stringify(wrong).includes('hunter2'), 'a value typed for a password in a step is kept masked');
   });
 });
+
+describe('real wording of the rewritten Employee workbook', () => {
+  const read = (sentence: string) => understandLine(sentence, { data: parseTestData(''), facts: new Map(), mode: 'step' });
+  const conditions = (sentence: string) => read(sentence).expectations.map((e) => e.condition);
+
+  it('reads "the browser opens successfully" as the application starting, not as a page to land on', () => {
+    assert.deepEqual(conditions('Verify The browser opens successfully'), [{ type: 'STATE', expect: 'APPLICATION_STARTED' }]);
+    assert.deepEqual(read('Verify The browser opens successfully').issues, []);
+  });
+  it('keeps a list of names with one shared predicate in one clause: "Verify the A, B (C) and D tabs are visible"', () => {
+    const r = read('Verify that the Admin, PIM (Personal Information Management), Leave, Time, Benefits and Help tabs are visible');
+    assert.deepEqual(
+      r.expectations.map((e) => e.condition.target?.name),
+      ['Admin', 'PIM', 'Leave', 'Time', 'Benefits', 'Help'],
+    );
+    assert.ok(r.expectations.every((e) => e.condition.type === 'VISIBILITY' && e.condition.target?.ontology === 'Tab'));
+    assert.deepEqual(r.issues, []);
+  });
+  it('still cuts at "and" when the right side is a check of its own', () => {
+    const r = read('Verify the Login button and verify the Reset button is displayed');
+    assert.equal(r.expectations.length, 1);
+    assert.equal(r.expectations[0]?.condition.target?.name, 'Reset');
+  });
+  it('reads "PIM is the default page" as a check on the page PIM, and leaves "as a default page" to the noun phrase', () => {
+    assert.deepEqual(conditions('PIM is the default page'), [{ type: 'STATE', target: { ontology: 'Page', name: 'PIM' }, expect: 'DEFAULT_PAGE' }]);
+    const old = read('Verify User Should see tabs and PIM as a default page');
+    assert.ok(old.issues.some((i) => i.code === 'AMBIGUOUS' && i.message.includes('as a default page')));
+  });
+  it('does not pick one of two alternatives: "form or page" is a question for the tester, with no check made', () => {
+    const r = read('Verify The Add Employee form or page is displayed');
+    assert.equal(r.expectations.length, 0);
+    assert.ok(r.issues.some((i) => i.code === 'AMBIGUOUS' && i.message.includes('alternatives')));
+  });
+  it('reads "selected image is uploaded and displayed in the photo area" as an uploaded image that is visible, not a ticked box', () => {
+    const r = read('Verify The selected image is uploaded and displayed in the photo area');
+    assert.deepEqual(
+      r.expectations.map((e) => [e.condition.type, e.condition.expect]),
+      [
+        ['STATE', 'UPLOADED'],
+        ['VISIBILITY', 'VISIBLE'],
+      ],
+    );
+  });
+  it('reads "the application saves the employee details" as a check that the data was saved', () => {
+    assert.deepEqual(
+      conditions('Verify The application saves the employee details').map((c) => c.expect),
+      ['SAVED'],
+    );
+  });
+  it('reads "the username is entered successfully" as a check on the value entered earlier, which a reference then settles', () => {
+    const r = read('Verify The username is entered successfully');
+    assert.deepEqual(
+      r.expectations.map((e) => [e.condition.type, e.condition.target?.name, e.condition.expect]),
+      [['VALUE', 'username', '$ref.entered']],
+    );
+    assert.ok(r.issues.some((i) => i.code === 'NEEDS_REFERENCE'));
+  });
+  it('does not take "entered" in "the entered username is displayed" for the check: the check is that it is displayed', () => {
+    const r = read('Verify the entered username is displayed');
+    assert.deepEqual(
+      r.expectations.map((e) => e.condition.type),
+      ['VISIBILITY'],
+    );
+  });
+  it('puts what comes after "after" first: "Click Reset after entering X and selecting Y" is enter, select, then click', () => {
+    const r = read('Click Reset after entering employee details and selecting a photo');
+    assert.deepEqual(
+      r.steps.map((s) => s.action),
+      ['ENTER_VALUE', 'SELECT', 'CLICK'],
+    );
+    assert.equal(r.steps[2]?.target?.name, 'Reset');
+  });
+  it('keeps "Verify the A field, B field, and Login button are visible" in one clause, though "Login" is also a command', () => {
+    const r = read('Verify that the Username field, Password field, and Login button are visible within the panel');
+    assert.deepEqual(r.steps, []);
+    assert.deepEqual(
+      r.expectations.map((e) => e.condition.target?.name),
+      ['Username', 'Password', 'Login'],
+    );
+    assert.equal(read('Verify the Username field is displayed and click Login').steps[0]?.action, 'CLICK');
+  });
+});

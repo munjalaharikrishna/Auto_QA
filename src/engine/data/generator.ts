@@ -20,6 +20,8 @@ export interface GeneratedValue {
 export interface GenerateOptions {
   /** The length a MAXIMUM or BOUNDARY value is made to. The limit of a field comes from the application's knowledge; without it, 255. */
   maxLength?: number;
+  /** The shortest value a field takes. Without it a value just under the minimum cannot be made: it is asked for, never guessed. */
+  minLength?: number;
   /** The day dates are counted from. Fixed, so a date never depends on today. */
   referenceDate?: string;
 }
@@ -144,8 +146,18 @@ export function generate(cls: DataClass, kind: FieldKind, seed: string, options:
       return make(long(kind, next, max), `long.string(${max})`, kind === 'password');
     case 'BOUNDARY':
       return make(long(kind, next, max + 1), `boundary.max+1(${max})`, kind === 'password');
-    case 'MINIMUM':
-      return make(long(kind, next, 1), 'short.string(1)', kind === 'password');
+    case 'MINIMUM': {
+      const min = Math.max(1, options.minLength ?? 1);
+      return make(long(kind, next, min), `short.string(${min})`, kind === 'password');
+    }
+    case 'BELOW_MINIMUM': {
+      if (options.minLength === undefined)
+        throw new Error('the shortest value of this field is not known, so one just under it cannot be made: give the minimum in the application knowledge');
+      return make(long(kind, next, Math.max(0, options.minLength - 1)), `boundary.min-1(${options.minLength})`, kind === 'password');
+    }
+    case 'WHITESPACE':
+      // A no-break space, an em space, a thin space and an ideographic space: they look empty and are not.
+      return make('   　', 'whitespace.unicode');
     case 'EMPTY':
     case 'BLANK':
       return make('', 'blank');

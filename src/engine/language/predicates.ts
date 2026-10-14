@@ -47,7 +47,8 @@ type Kind =
   | 'HIDDEN'
   | 'VISIBLE'
   | 'SHOWS'
-  | 'APP_STARTED';
+  | 'APP_STARTED'
+  | 'DEFAULT_PAGE';
 
 interface PredicateDef {
   kind: Kind;
@@ -61,7 +62,22 @@ const p = (kind: Kind, priority: number, ...phrases: string[]): PredicateDef => 
 const last = (def: PredicateDef): PredicateDef => ({ ...def, endOnly: true });
 
 const PREDICATES: readonly PredicateDef[] = [
-  p('APP_STARTED', 95, 'open browser', 'open the browser', 'open application', 'open the application', 'launch browser', 'launch application'),
+  p(
+    'APP_STARTED',
+    95,
+    'open browser',
+    'open the browser',
+    'open application',
+    'open the application',
+    'launch browser',
+    'launch application',
+    'browser opens',
+    'browser launches',
+    'browser starts',
+    'application opens',
+    'application launches',
+    'application starts',
+  ),
   p('MASKED', 90, 'masked characters', 'masked', 'asterisks', 'dots', 'obscured'),
   p(
     'LAYOUT',
@@ -106,7 +122,7 @@ const PREDICATES: readonly PredicateDef[] = [
   p('LOGGED_OUT', 75, 'logged out', 'log out', 'logs out', 'signed out', 'sign out'),
   p('PERFORMED', 76, 'performed', 'successful', 'completed', 'succeeds', 'succeed', 'done'),
   p('REJECTED', 74, 'rejected', 'rejects', 'reject', 'denied', 'denies', 'refused', 'declined', 'blocked', 'fails', 'failed'),
-  p('ACCEPTED', 55, 'accept', 'accepts', 'accepted', 'allowed'),
+  p('ACCEPTED', 55, 'accept', 'accepts', 'accepted', 'allowed', 'entered'),
   p('CONTAINS', 70, 'contains', 'contain', 'containing', 'includes', 'include', 'says', 'reads', 'with text', 'text is'),
   p('EQUALS', 70, 'equals', 'equal to', 'equal', 'exactly'),
   p('HAS_VALUE', 66, 'has value', 'have value', 'has the value', 'shows value'),
@@ -117,7 +133,8 @@ const PREDICATES: readonly PredicateDef[] = [
   p('UNCHECKED', 58, 'unchecked', 'unticked', 'deselected'),
   last(p('DATA_CLASS', 62, 'invalid', 'valid', 'incorrect', 'correct', 'wrong')),
   p('DELETED', 57, 'deleted', 'removed', 'erased'),
-  p('CHANGED', 56, 'updated', 'saved', 'added', 'created', 'modified', 'changed', 'stored'),
+  p('CHANGED', 56, 'updated', 'saved', 'saves', 'added', 'created', 'modified', 'changed', 'stored', 'uploaded'),
+  p('DEFAULT_PAGE', 68, 'default page', 'default screen', 'landing page', 'home page by default'),
   p('HIDDEN', 50, 'hidden', 'invisible', 'absent', 'unavailable', 'disappears', 'disappear', 'gone', 'not displayed'),
   p('SHOWS', 41, 'displays', 'display', 'shows', 'show', 'see', 'sees', 'shown to'),
   p('VISIBLE', 40, 'displayed', 'shown', 'visible', 'appears', 'appear', 'present', 'seen', 'listed', 'available', 'rendered', 'found', 'exist', 'exists'),
@@ -381,10 +398,14 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
 
   const words = kept.map((t) => lw(t));
   let hit = thereNp ? undefined : findPredicate(words);
+  // "see tabs and PIM as a default page": "as a default page" describes PIM, it is not a check of its own (the noun phrase reports it).
+  if (hit?.def.kind === 'DEFAULT_PAGE' && words[hit.start - 2] === 'as') hit = findPredicate(words, new Set<Kind>(['DEFAULT_PAGE']));
   // "The added data is displayed": "added" describes the data; the predicate is the one that comes after it.
   let adjectives: ReadonlySet<Kind> | undefined;
-  if (hit && (hit.def.kind === 'CHANGED' || hit.def.kind === 'DELETED')) {
-    const skip = new Set<Kind>(['CHANGED', 'DELETED']);
+  // "The selected image is uploaded": "selected" describes the image, it is not the state being checked.
+  const describing = (hit?.def.kind === 'CHECKED' && words[hit.start] === 'selected') || (hit?.def.kind === 'ACCEPTED' && words[hit.start] === 'entered');
+  if (hit && (hit.def.kind === 'CHANGED' || hit.def.kind === 'DELETED' || describing)) {
+    const skip = new Set<Kind>(describing ? [hit?.def.kind as Kind] : ['CHANGED', 'DELETED']);
     const later = findPredicate(words, skip);
     if (later && later.start >= hit.end) {
       hit = later;
@@ -440,7 +461,11 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     };
   }
 
-  const before = kept.slice(0, Math.min(hit.start, earliestPredicate(words, adjectives)));
+  const beforeAll = kept.slice(0, Math.min(hit.start, earliestPredicate(words, adjectives)));
+  // "The selected image": the word describes the image; it is not part of its name.
+  const unselected = describing ? beforeAll.filter((t) => lw(t) !== 'selected') : beforeAll;
+  // "PIM is the default page": the article before the predicate belongs to the predicate, not to the subject.
+  const before = hit.def.kind === 'DEFAULT_PAGE' && ['the', 'a', 'an'].includes(lw(unselected[unselected.length - 1])) ? unselected.slice(0, -1) : unselected;
   const afterAll = kept.slice(hit.end);
   // "a validation message indicating that …": what comes after the lead is what the message says, not part of its name.
   const leadAt = afterAll.findIndex((t) => TEXT_LEADS.has(lw(t)));
@@ -497,6 +522,16 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'APP_STARTED':
       out.push(make({ type: 'STATE', expect: 'APPLICATION_STARTED' }));
       break;
+    case 'DEFAULT_PAGE': {
+      // "PIM is the default page": the page the application opens on. The name is the subject, as the tester wrote it.
+      const name = subjectNp ? subjectNp.original : undefined;
+      if (!name) {
+        issues.push({ code: 'AMBIGUOUS', severity: 'review', message: 'it does not say which page is the default', original: clauseText });
+        break;
+      }
+      out.push(make({ type: 'STATE', target: { ontology: 'Page', name }, expect: 'DEFAULT_PAGE' }));
+      break;
+    }
     case 'MASKED':
       forTargets(subjectNp ?? objectNp('Field'), (target) => ({ type: 'MASKED', ...(target ? { target } : {}), expect: 'MASKED', check: 'masked' }));
       break;
@@ -596,7 +631,7 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       forTargets(np, (target) => ({
         type: 'STATE',
         ...(target ? { target } : {}),
-        expect: kind === 'DELETED' ? 'DELETED' : (words[hit.start] ?? 'CHANGED').toUpperCase(),
+        expect: kind === 'DELETED' ? 'DELETED' : stateOf(words[hit.start]),
       }));
       break;
     }
@@ -640,6 +675,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   }
   return { predicate: kind, expectations: out, issues, subject };
 }
+
+/** The state a changing verb names: "saves" and "saved" are both SAVED. */
+const stateOf = (word: string | undefined): string => (word === 'saves' ? 'SAVED' : (word ?? 'CHANGED').toUpperCase());
 
 const kind0 = (h: Hit): Kind => h.def.kind;
 
@@ -695,6 +733,17 @@ function pushVisibility(
   issues: CheckResult['issues'],
 ): void {
   const expect = hidden ? 'HIDDEN' : 'VISIBLE';
+  // "The Add Employee form or page is displayed": two alternatives. Which one is checked is the tester's to say; none is picked.
+  if (np.words.includes('or')) {
+    issues.push({
+      code: 'AMBIGUOUS',
+      severity: 'review',
+      message: `the check names alternatives ("${np.original}"): the engine does not pick one`,
+      original: clauseText,
+      suggestion: 'Name the one that should be shown: Verify the <name> form is displayed.',
+    });
+    return;
+  }
   if (np.headClass && MESSAGE_CLASSES.has(np.headClass)) {
     const { target, text } = messageTarget(np);
     // What follows the message: "indicating that the username is required", "for the missing credentials".
