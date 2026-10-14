@@ -3,7 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
-import { type RunEvent, runWorkspace } from '../executor/runner.js';
+import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
 import { filePageStore, type PageStore } from '../explorer/page-store.js';
@@ -15,6 +15,7 @@ import type { TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
+import { runSemanticJobs, type SemanticJob, semanticSupport } from './semantic-run.js';
 
 /**
  * The whole flow for a set of test cases (M6): parse → explore → generate → run → verdict.
@@ -77,6 +78,11 @@ export interface Prepared {
   workspace?: string;
   /** Generated files that are new or changed, with what was there before (FR-RV-04). */
   changes: Array<{ path: string; before?: string; after: string }>;
+  /**
+   * Cases the legacy route stopped on that the new engine understood and the verdict engine can judge, offered to run through it
+   * (semantic engine only). Each also has its legacy stop in `early`, which stays the answer unless the new run gives a verdict.
+   */
+  semantic?: Map<string, SemanticJob>;
 }
 
 /** parse → explore → generate → run → verdict. */
@@ -90,6 +96,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const progress = options.onProgress ?? (() => {});
   const exploreDir = options.exploreDir ?? path.join('.auto-qa', 'explore');
   const early = new Map<string, TestVerdict>();
+  const semantic = new Map<string, SemanticJob>();
   const explored: GenerateInput[] = [];
   const pages = options.pages ?? filePageStore(options.baseUrl);
   let pageUrls = await pages.load();
@@ -103,6 +110,12 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     const model = policy === 'strict' ? original : observeUnclearChecks(original);
     const at = `[${index + 1}/${models.length}] ${model.id}`;
     let compiledOf: CompileResult | undefined;
+    /** The legacy route could not finish this case: offer it to the new run, if the new engine understood it and the verdict engine judges every check. */
+    const offerSemantic = (m: TestModel): boolean => {
+      if (options.engine !== 'semantic' || !compiledOf || !semanticSupport(compiledOf).ok) return false;
+      semantic.set(m.id, { model: m, compiled: compiledOf, baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
+      return true;
+    };
     if (options.engine === 'semantic') {
       const compiled = await compileCase(
         {
@@ -164,7 +177,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         },
       ];
       early.set(model.id, stopped(model, 'NEEDS REVIEW', reasonText(reasons), undefined, undefined, reasons));
-      progress(`? ${at}: understood by the new engine, not yet runnable`);
+      progress(`? ${at}: understood by the new engine, not yet runnable${offerSemantic(model) ? ', offered to the new run' : ''}`);
       continue;
     }
     if (unparsed.length) {
@@ -241,7 +254,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
       if (result.status !== 'complete') {
         const asked = options.questions?.().slice(before) ?? [];
         early.set(model.id, fromExploration(model, result, asked));
-        progress(`${early.get(model.id)?.status === 'BLOCKED' ? '■' : '?'} ${at}: ${early.get(model.id)?.reason}`);
+        const offered = early.get(model.id)?.status === 'NEEDS REVIEW' && offerSemantic(model);
+        progress(`${early.get(model.id)?.status === 'BLOCKED' ? '■' : '?'} ${at}: ${early.get(model.id)?.reason}${offered ? ' (offered to the new run)' : ''}`);
         continue;
       }
     }
@@ -287,7 +301,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     for (const dir of ['tests', 'pages', 'locators', 'data']) await rm(path.join(workspace, dir), { recursive: true, force: true });
     await writeProject(workspace, files);
   }
-  return { explored, early, workspace, changes };
+  return { explored, early, workspace, changes, ...(semantic.size ? { semantic } : {}) };
 }
 
 /** Runs what `prepareCases` generated and puts every case's verdict in the models' order. */
@@ -312,7 +326,15 @@ export async function executeCases(
     for (const v of run.verdicts) ran.set(v.testId, v);
   }
 
-  const verdicts = models.map((m) => ran.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
+  // Cases the legacy route could not finish and the new engine can judge: a verdict from the new run replaces the legacy stop.
+  const fromNewRun = new Map<string, TestVerdict>();
+  if (prepared.semantic?.size) {
+    executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
+    const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'semantic');
+    for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, onProgress: options.onProgress })) fromNewRun.set(id, v);
+  }
+
+  const verdicts = models.map((m) => ran.get(m.id) ?? fromNewRun.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
   for (const v of verdicts) if (executionId && !ran.has(v.testId)) v.executionId = executionId;
   return { verdicts, workspace, executionId };
 }
