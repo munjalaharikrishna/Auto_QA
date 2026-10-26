@@ -102,11 +102,15 @@ export type GoldSet = z.infer<typeof GoldSetSchema>;
 // Scoring: the engine's QA-IR against the gold, clause by clause.
 // ---------------------------------------------------------------------------------------------------------------------
 
+const isAlnum = (c: string): boolean => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+/** Lower case, every run of other characters one space, trimmed. */
 const norm = (s: string | undefined): string =>
-  (s ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+  [...(s ?? '').toLowerCase()]
+    .map((c) => (isAlnum(c) ? c : ' '))
+    .join('')
+    .split(' ')
+    .filter(Boolean)
+    .join(' ');
 
 /** How one clause came out. `wrong` is the dangerous one: the engine was sure and mistaken. `abstained` is the engine saying it did not know. */
 export type ClauseOutcome = 'correct' | 'rightly-abstained' | 'wrong' | 'missed' | 'abstained' | 'should-abstain-but-answered';
@@ -208,7 +212,7 @@ const NOT_UNDERSTOOD_CODES = new Set<Issue['code']>([
 
 /** The engine keeps the tester's noun phrase ("valid username"); the gold names the element ("Username"). The same element when the phrase equals the name or ends with it. */
 const sameName = (engine: readonly string[], gold: string): boolean =>
-  engine.some((n) => n === norm(gold) || n.endsWith(` ${norm(gold)}`) || n.replace(/ /g, '') === norm(gold).replace(/ /g, ''));
+  engine.some((n) => n === norm(gold) || n.endsWith(` ${norm(gold)}`) || n.split(' ').join('') === norm(gold).split(' ').join(''));
 
 const nameOf = (t: { name?: string | undefined; label?: string | undefined; component?: string | undefined } | undefined): string[] =>
   t ? [t.name, t.label, t.component].filter((x): x is string => !!x).map(norm) : [];
@@ -259,7 +263,7 @@ export function readingOfLanguage(lang: CaseLanguage): CaseReading {
           .map((u) => ({ kind: 'expectation', original: u.original, abstained: !u.understood, ...(u.categories[0] ? { type: u.categories[0] } : {}) })),
       };
   // A "Verify …" line the engine could not place as a step is the tester's expected result: score it as one.
-  const stray = reading.steps.filter((r) => /^verify /i.test(r.original) && !('action' in r));
+  const stray = reading.steps.filter((r) => r.original.toLowerCase().startsWith('verify ') && !('action' in r));
   reading.steps = reading.steps.filter((r) => !stray.includes(r));
   reading.expectations.push(...stray.map((r): Reading => ({ ...r, kind: 'expectation' })));
   // A sentence the engine raised a question about is one it set aside, even when it also drew a step from it.
@@ -268,7 +272,7 @@ export function readingOfLanguage(lang: CaseLanguage): CaseReading {
 }
 
 /** The engine writes a step's own expected result as "Verify …" (stepsWithChecks); the tester wrote it without. */
-const bare = (s: string): string => norm(s).replace(/^verify /, '');
+const bare = (s: string): string => (norm(s).startsWith('verify ') ? norm(s).slice('verify '.length) : norm(s));
 
 /** Takes the first reading of the engine with the same words that no gold clause has taken yet. */
 function take(pool: Reading[], taken: Set<Reading>, words: string): Reading | undefined {

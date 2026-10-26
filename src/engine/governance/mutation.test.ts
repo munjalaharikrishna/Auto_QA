@@ -49,8 +49,8 @@ describe('the engine against broken copies of the demo app', { skip }, () => {
     const mutant = await startMutant(app.url, m.rewrite);
     try {
       const html = await (await fetch(`${mutant.url}/`)).text();
-      assert.match(html, /Something went wrong/);
-      assert.doesNotMatch(html, /error\.textContent = 'Invalid username or password'/);
+      assert.ok(html.includes('Something went wrong'));
+      assert.ok(!html.includes("error.textContent = 'Invalid username or password'"));
     } finally {
       await mutant.close();
     }

@@ -95,8 +95,8 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.getByRole('link', { name: 'demo-app' }).click();
     await page.getByRole('tab', { name: 'Single test case' }).click();
     await page.getByLabel('Title').fill('Security details open');
-    await page.getByLabel('Steps').fill('1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Details');
-    await page.getByLabel('Expected result').fill('Message "Security details" is shown');
+    await page.getByLabel('Steps', { exact: true }).fill('1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login\n5. Click Details');
+    await page.getByLabel('Expected result', { exact: true }).fill('Message "Security details" is shown');
     await page.getByRole('button', { name: 'Generate' }).click();
 
     await page.getByText('Needs an answer').waitFor({ timeout: 180_000 });

@@ -39,7 +39,10 @@ describe('gold set schema', () => {
 
 describe('gold set scoring', () => {
   it('will not score a set nobody checked, unless it is asked for as a draft', async () => {
-    assert.throws(() => scoreGold(set, new Map()), /nobody checked/);
+    assert.throws(
+      () => scoreGold(set, new Map()),
+      (e: Error) => e.message.includes('nobody checked'),
+    );
     assert.doesNotThrow(() => scoreGold(set, new Map(), { allowDraft: true }));
   });
   it('lists a case the engine did not run, and counts a case it produced nothing for as missed', () => {

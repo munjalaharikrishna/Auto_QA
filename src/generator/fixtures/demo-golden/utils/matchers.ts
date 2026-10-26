@@ -883,7 +883,11 @@ export const expect = baseExpect.extend({
 export async function expectNoText(page: Page, text: string): Promise<void> {
   const shown = async () => {
     let n = 0;
-    for (const frame of page.frames()) n += await frame.getByText(text).count().catch(() => 0);
+    for (const frame of page.frames())
+      n += await frame
+        .getByText(text)
+        .count()
+        .catch(() => 0);
     return n;
   };
   await baseExpect.poll(shown, { message: `"${text}" is not shown on the page or in any frame` }).toBe(0);
