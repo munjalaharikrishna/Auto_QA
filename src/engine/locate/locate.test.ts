@@ -85,7 +85,10 @@ describe('LC-01, LA-01, DM-01 on the DOM fixture pages', { skip }, () => {
 
   describe('the order of the candidate levels (LC-01)', () => {
     it('lists the eleven levels of the specification, with falling weights', () => {
-      assert.deepEqual([...LEVELS], ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'words', 'xpath', 'inspection']);
+      assert.deepEqual(
+        [...LEVELS],
+        ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'words', 'xpath', 'inspection'],
+      );
       const weights = LEVELS.map((l) => WEIGHT[l]);
       for (let i = 1; i < weights.length; i++) assert.ok((weights[i] as number) < (weights[i - 1] as number), `${LEVELS[i]} weighs less than ${LEVELS[i - 1]}`);
     });

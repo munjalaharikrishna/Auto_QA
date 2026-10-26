@@ -41,7 +41,12 @@ interface SavedExploration {
 }
 
 /** The application as the explorations in `dir` saw it, with the testers' words for its elements added as aliases. */
-export async function knowledgeFromRuns(name: string, baseUrl: string | undefined, dir: string, words: readonly ElementWord[] = []): Promise<Application | undefined> {
+export async function knowledgeFromRuns(
+  name: string,
+  baseUrl: string | undefined,
+  dir: string,
+  words: readonly ElementWord[] = [],
+): Promise<Application | undefined> {
   const pages = new Map<string, Map<string, Component>>();
   if (existsSync(dir)) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -87,7 +92,18 @@ export async function knowledgeFromRuns(name: string, baseUrl: string | undefine
     messages: [],
     expectedStates: [],
   }));
-  return { version: 1, name, ...(baseUrl ? { baseUrl } : {}), pages: list, roles: [], modules: [], rules: [], navigation: [], authentication: { mfa: 'none' }, vocabulary: [] };
+  return {
+    version: 1,
+    name,
+    ...(baseUrl ? { baseUrl } : {}),
+    pages: list,
+    roles: [],
+    modules: [],
+    rules: [],
+    navigation: [],
+    authentication: { mfa: 'none' },
+    vocabulary: [],
+  };
 }
 
 function originOf(url: string): string {

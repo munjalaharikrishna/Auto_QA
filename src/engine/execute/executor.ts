@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type { Page } from 'playwright';
+import { withoutClassWords } from '../data/classes.js';
 import type { ResolvedValue } from '../data/resolver.js';
 import { Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
-import { withoutClassWords } from '../data/classes.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
 import { type DomElement, inspectPage, type Level, type LocateQuery, locate, sameFrame, selectorIn, type Tried } from '../locate/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
@@ -363,7 +363,12 @@ class Runner {
     const name = withoutClassWords(written);
     const found = consolidate(this.o.knowledge, name, { page: target?.page });
     const one = found.status === 'one' ? found.components[0]?.component : undefined;
-    const aliases = [...(name !== written ? [written] : []), ...(one?.aliases ?? []), ...(one ? [one.name] : []), ...(found.core ? [found.core, ...(CORE_LABELS[found.core] ?? [])] : [])];
+    const aliases = [
+      ...(name !== written ? [written] : []),
+      ...(one?.aliases ?? []),
+      ...(one ? [one.name] : []),
+      ...(found.core ? [found.core, ...(CORE_LABELS[found.core] ?? [])] : []),
+    ];
     const ontology = target?.ontology && target.ontology !== 'Element' ? target.ontology : (one?.ontology ?? target?.ontology);
     return {
       name,

@@ -1,5 +1,5 @@
 import type { Frame, Page } from 'playwright';
-import { prepareFrame, visibleFrames } from './frames.js';
+import { visibleFrames } from './frames.js';
 import type { DomElement } from './types.js';
 
 /**

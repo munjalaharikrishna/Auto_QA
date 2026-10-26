@@ -1,8 +1,8 @@
 import type { StepRecord } from '../execute/executor.js';
 import type { Observation, ObservedElement } from '../execute/observe.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
-import { tokenize } from '../text/index.js';
 import { compactKey } from '../text/compound.js';
+import { tokenize } from '../text/index.js';
 
 /**
  * Layers 41 to 44: the assertion engine (EX-06), evidence freshness (EX-07) and the vacuous assertion guard (EX-08).
@@ -293,7 +293,14 @@ export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Eval
     if (value === undefined)
       return unproven(exp, 'UNRESOLVED', named, 'the value is not known', 'the value the check compares with was not resolved', ctx.stepOf.get(exp.id));
     if (typeof value !== 'string')
-      return unproven(exp, 'UNRESOLVED', named, 'the value is a secret', 'a secret is never shown, so it is not compared with the page', ctx.stepOf.get(exp.id));
+      return unproven(
+        exp,
+        'UNRESOLVED',
+        named,
+        'the value is a secret',
+        'a secret is never shown, so it is not compared with the page',
+        ctx.stepOf.get(exp.id),
+      );
     return evaluateExpectation({ ...exp, condition: { ...exp.condition, expect: value } }, ctx);
   }
   const c = exp.condition;
@@ -313,7 +320,15 @@ export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Eval
       // "User stays on the Login page": the step did not move the page, which is a comparison with the page before it, not with a name.
       if (c.check === 'url-unchanged' || wanted === 'UNCHANGED') {
         const was = page.before?.url;
-        if (!was) return unproven(exp, 'NO_PAGE', 'the address stays the same', 'there is no page before the step to compare with', 'nothing to compare the address with', p.step);
+        if (!was)
+          return unproven(
+            exp,
+            'NO_PAGE',
+            'the address stays the same',
+            'there is no page before the step to compare with',
+            'nothing to compare the address with',
+            p.step,
+          );
         const same = pathOf(was) === pathOf(page.after.url);
         return settled(
           exp,

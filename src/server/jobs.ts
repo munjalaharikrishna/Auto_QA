@@ -14,7 +14,7 @@ import type { Policy } from '../model/policy.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { type ParserConfig, withRules } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
-import { rulesFor, ruleKey } from '../parser/rules.js';
+import { ruleKey, rulesFor } from '../parser/rules.js';
 import { runBatch } from '../pipeline/batch.js';
 import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';

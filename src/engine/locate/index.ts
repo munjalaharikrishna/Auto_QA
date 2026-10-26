@@ -1,5 +1,5 @@
 export { accessibleName, broadFit, type LocateOptions, locate, roleFits, toLocatorSpec } from './candidates.js';
-export { frameSelector, framePath, prepareFrame, sameFrame, selectorIn, visibleFrames } from './frames.js';
+export { framePath, frameSelector, prepareFrame, sameFrame, selectorIn, visibleFrames } from './frames.js';
 export { type InspectOptions, inspectPage, readDom } from './inspector.js';
 export {
   type Box,

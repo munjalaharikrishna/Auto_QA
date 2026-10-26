@@ -3,9 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
-import { mismatchedSecrets, mismatchText } from '../parser/secret-check.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
-import { reconcile } from './shadow.js';
 import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
@@ -16,9 +14,11 @@ import { planProject } from '../generator/plan.js';
 import { openSession } from '../locators/session.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
+import { mismatchedSecrets, mismatchText } from '../parser/secret-check.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
 import { runSemanticJobs, type SemanticJob, semanticSupport } from './semantic-run.js';
+import { reconcile } from './shadow.js';
 
 /**
  * The whole flow for a set of test cases (M6): parse → explore → generate → run → verdict.
@@ -110,7 +110,12 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   // What the application calls things, from what earlier runs saw and what testers said an element means (D1).
   const knowledge =
     options.engine === 'semantic'
-      ? await knowledgeFromRuns(workspaceName(options.baseUrl), options.baseUrl, exploreDir, Object.entries(options.config.rules?.element ?? {}).map(([word, means]) => ({ word, means })))
+      ? await knowledgeFromRuns(
+          workspaceName(options.baseUrl),
+          options.baseUrl,
+          exploreDir,
+          Object.entries(options.config.rules?.element ?? {}).map(([word, means]) => ({ word, means })),
+        )
       : undefined;
   let pageUrls = await pages.load();
 
@@ -122,7 +127,9 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const loginFor = (): Promise<CompileResult | undefined> => {
     const login = options.login;
     loginCompiled ??= login
-      ? compileCase(rawOf(login), { config: options.config, pageRoutes: {}, env: options.env, knowledge }).then((c) => (c.ir && c.plan && c.status === 'compiled' ? c : undefined))
+      ? compileCase(rawOf(login), { config: options.config, pageRoutes: {}, env: options.env, knowledge }).then((c) =>
+          c.ir && c.plan && c.status === 'compiled' ? c : undefined,
+        )
       : Promise.resolve(undefined);
     return loginCompiled;
   };
@@ -144,7 +151,14 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     /** The legacy route could not finish this case: offer it to the new run, if the new engine understood it and the verdict engine judges every check. */
     const offerSemantic = (m: TestModel): boolean => {
       if (options.engine !== 'semantic' || !compiledOf || !semanticSupport(compiledOf).ok) return false;
-      semantic.set(m.id, { model: m, knowledge, compiled: withLearnedPages(compiledOf, pageUrls), baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
+      semantic.set(m.id, {
+        model: m,
+        knowledge,
+        compiled: withLearnedPages(compiledOf, pageUrls),
+        baseUrl: options.baseUrl,
+        headless: options.headless,
+        testIdAttribute: options.testIdAttribute,
+      });
       return true;
     };
     if (options.engine === 'semantic') {
@@ -308,7 +322,15 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     // An element the tester picked on the screenshot cannot be picked again by the new engine: that choice is the tester's, and stands.
     const testerChose = result.items.some((i) => i.resolvedBy === 'tester');
     if (options.engine === 'semantic' && compiledOf && !testerChose && semanticSupport(compiledOf).ok && (!needsLogin(compiledOf) || login))
-      shadow.set(model.id, { model, knowledge, ...(login ? { login } : {}), compiled: withLearnedPages(compiledOf, pageUrls), baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
+      shadow.set(model.id, {
+        model,
+        knowledge,
+        ...(login ? { login } : {}),
+        compiled: withLearnedPages(compiledOf, pageUrls),
+        baseUrl: options.baseUrl,
+        headless: options.headless,
+        testIdAttribute: options.testIdAttribute,
+      });
   }
 
   let workspace: string | undefined;

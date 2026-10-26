@@ -96,7 +96,12 @@ export async function runWorkspace(workspace: string, options: RunOptions = {}):
   const verdicts: TestVerdict[] = [];
   for (const t of tests) {
     const r = reported.find((x) => x.testId === t.testId);
-    const v = verdictFor(t, r, { executionId, missingEnv: needs(t), runError: reported.length ? undefined : runErrorOf(output), approvedAssumptions: options.approvedAssumptions });
+    const v = verdictFor(t, r, {
+      executionId,
+      missingEnv: needs(t),
+      runError: reported.length ? undefined : runErrorOf(output),
+      approvedAssumptions: options.approvedAssumptions,
+    });
     v.evidence.screenshots = await keep(workspace, dir, v.evidence.screenshots);
     if (v.evidence.trace) v.evidence.trace = (await keep(workspace, dir, [v.evidence.trace]))[0];
     if (v.evidence.video) v.evidence.video = (await keep(workspace, dir, [v.evidence.video]))[0];

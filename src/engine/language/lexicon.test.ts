@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { DATA_CLASS_DEFS } from '../data/classes.js';
+import { understandCase } from './case.js';
 import { DATA_CLASS_CHECK_WORDS, DATA_WORDS, STATE_WORDS } from './lexicon.js';
 import { SYNONYM_SETS } from './synonyms.js';
-import { understandCase } from './case.js';
 
 /** D2: one list of words. The copies that used to disagree are built from it, and a new copy that drifts fails here. */
 
@@ -11,8 +11,14 @@ describe('D2: one vocabulary', () => {
   it('the synonym sets for states and data are the lexicon, word for word', () => {
     const entries = (category: 'State' | 'Data') => SYNONYM_SETS[category].entries.map((e) => [e.canonical, ...e.phrases]);
     // The State set also holds the layout words ("centered"), which are not a state of a control.
-    assert.deepEqual(entries('State').slice(0, Object.keys(STATE_WORDS).length), Object.values(STATE_WORDS).map((w) => [...w]));
-    assert.deepEqual(entries('Data'), Object.values(DATA_WORDS).map((w) => [...w]));
+    assert.deepEqual(
+      entries('State').slice(0, Object.keys(STATE_WORDS).length),
+      Object.values(STATE_WORDS).map((w) => [...w]),
+    );
+    assert.deepEqual(
+      entries('Data'),
+      Object.values(DATA_WORDS).map((w) => [...w]),
+    );
   });
 
   it('the data classes use the lexicon words, and a word belongs to one class only', () => {
@@ -34,7 +40,8 @@ describe('D2: one vocabulary', () => {
   });
 
   it('a state word of the lexicon is read as that state in a check', () => {
-    const kind = (word: string) => understandCase({ id: 'T', title: 'T', steps: '1. Open the Login page', expected: `The Password field is ${word}` }).ir?.expectations[0]?.condition;
+    const kind = (word: string) =>
+      understandCase({ id: 'T', title: 'T', steps: '1. Open the Login page', expected: `The Password field is ${word}` }).ir?.expectations[0]?.condition;
     assert.equal(kind('masked')?.type, 'MASKED');
     assert.equal(kind('obscured')?.type, 'MASKED');
     assert.equal(kind('hidden characters')?.type, 'MASKED');
@@ -44,7 +51,8 @@ describe('D2: one vocabulary', () => {
 });
 
 describe('D2: word forms, adjectives and verbs the grammar did not have', () => {
-  const read = (steps: string[], expected: string) => understandCase({ id: 'T', title: 'T', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected });
+  const read = (steps: string[], expected: string) =>
+    understandCase({ id: 'T', title: 'T', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected });
   const last = (steps: string[]) => read(['Open the Add Employee page', ...steps], 'The Employee List heading is displayed').ir?.steps.at(-1);
 
   it('"hides characters" and "masks" are the masked check', () => {

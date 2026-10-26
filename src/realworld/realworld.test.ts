@@ -66,7 +66,10 @@ describe('real-world login test cases (REAL-WORLD-TEST-CASES.md §9)', { skip: !
   const passesUnlessAssumed = (id: string) => {
     const v = of(id);
     assert.equal(v?.status, v?.assumptions?.length ? 'NEEDS REVIEW' : 'PASS', detail(id));
-    assert.ok(v.checks.every((c) => c.result === 'passed'), detail(id));
+    assert.ok(
+      v.checks.every((c) => c.result === 'passed'),
+      detail(id),
+    );
   };
 
   const detail = (id: string) =>

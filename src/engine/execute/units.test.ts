@@ -62,7 +62,11 @@ describe('waits and rows in the grammar', () => {
     ] as const) {
       const plan = await compile(['Open http://localhost:3000/x', line]);
       assert.equal(plan.chains[1]?.action, action, line);
-      assert.deepEqual(plan.chains[1]?.target?.row?.map((r) => r.toLowerCase()), ['john smith'], line);
+      assert.deepEqual(
+        plan.chains[1]?.target?.row?.map((r) => r.toLowerCase()),
+        ['john smith'],
+        line,
+      );
     }
   });
 });

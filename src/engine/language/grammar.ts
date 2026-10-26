@@ -493,7 +493,13 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         if (bound.spec.kind === 'data') decisions.push(...bound.decisions);
         decisions.push(`"${fieldName}" is the file field the file goes to`);
         return done(
-          [step('UPLOAD', { ontology: 'File', name: fieldName }, bound.spec.kind === 'data' ? bound.spec : { kind: 'class', dataClass: 'VALID', field: fieldName })],
+          [
+            step(
+              'UPLOAD',
+              { ontology: 'File', name: fieldName },
+              bound.spec.kind === 'data' ? bound.spec : { kind: 'class', dataClass: 'VALID', field: fieldName },
+            ),
+          ],
           'GR-02',
         );
       }
@@ -954,19 +960,44 @@ function takeRow(rest: readonly Token[]): { rest: Token[]; row?: string } {
     }
     // "in the Anita Roy row": the words between "the" and a final "row"
     const last = rest.length - 1;
-    if (words[last] === 'row' && last > at) return { rest: rest.slice(0, k) as Token[], row: rest.slice(at, last).map((t) => t.text).join(' ') };
+    if (words[last] === 'row' && last > at)
+      return {
+        rest: rest.slice(0, k) as Token[],
+        row: rest
+          .slice(at, last)
+          .map((t) => t.text)
+          .join(' '),
+      };
   }
   return { rest: rest as Token[] };
 }
 
 const SCOPE_PREPS: ReadonlySet<string> = new Set(['in', 'on', 'under', 'within', 'inside']);
-const SCOPE_HEADS: ReadonlySet<string> = new Set(['section', 'tab', 'panel', 'form', 'page', 'screen', 'area', 'block', 'card', 'modal', 'dialog', 'popup', 'pane', 'menu', 'table', 'tile', 'widget']);
+const SCOPE_HEADS: ReadonlySet<string> = new Set([
+  'section',
+  'tab',
+  'panel',
+  'form',
+  'page',
+  'screen',
+  'area',
+  'block',
+  'card',
+  'modal',
+  'dialog',
+  'popup',
+  'pane',
+  'menu',
+  'table',
+  'tile',
+  'widget',
+]);
 
 /** "In the Employment section" at the start of a clause: the name of the section, and what comes after it (after a comma, if any). */
 function scopeOf(tokens: readonly Token[]): { name: string; rest: Token[] } | undefined {
   const words = tokens.map((t) => lw(t));
   if (words.length < 3 || !SCOPE_PREPS.has(words[0] ?? '')) return undefined;
-  const end = words.findIndex((w, k) => k >= 2 && SCOPE_HEADS.has(words[k] ?? '') && (k === words.length - 1 || isSymbol(tokens[k + 1], ',')));
+  const end = words.findIndex((w, k) => k >= 2 && SCOPE_HEADS.has(w) && (k === words.length - 1 || isSymbol(tokens[k + 1], ',')));
   if (end < 0) return undefined;
   const from = words[1] === 'the' ? 2 : 1;
   const name = tokens.slice(from, end);
@@ -983,5 +1014,28 @@ function asideSays(tokens: readonly Token[], word: string): boolean {
 /** Where "to", "into" or "onto" sits in the words of an upload, after something that is uploaded. */
 const by0 = (rest: readonly Token[]): number => rest.findIndex((t, k) => k > 0 && ['to', 'into', 'onto'].includes(lw(t)));
 
-const BROWSER_NAMES: ReadonlySet<string> = new Set(['browser', 'webbrowser', 'chrome', 'googlechrome', 'firefox', 'edge', 'safari', 'chromebrowser', 'newbrowser', 'newwebbrowser', 'browserwindow']);
-const APPLICATION_NAMES: ReadonlySet<string> = new Set(['application', 'app', 'site', 'website', 'webapp', 'webapplication', 'url', 'applicationurl', 'siteurl', 'systemurl']);
+const BROWSER_NAMES: ReadonlySet<string> = new Set([
+  'browser',
+  'webbrowser',
+  'chrome',
+  'googlechrome',
+  'firefox',
+  'edge',
+  'safari',
+  'chromebrowser',
+  'newbrowser',
+  'newwebbrowser',
+  'browserwindow',
+]);
+const APPLICATION_NAMES: ReadonlySet<string> = new Set([
+  'application',
+  'app',
+  'site',
+  'website',
+  'webapp',
+  'webapplication',
+  'url',
+  'applicationurl',
+  'siteurl',
+  'systemurl',
+]);

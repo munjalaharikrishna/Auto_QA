@@ -48,7 +48,12 @@ describe('a screen inside an iframe (UI-01)', { skip }, () => {
   });
 
   async function run(lines: string[]): Promise<RunTrace> {
-    const raw: RawTestCase = { id: 'T-FRAME', title: 'A frame', steps: lines.map((l, i) => `${i + 1}. ${l}`).join('\n'), expected: 'The Employee Information heading is displayed' };
+    const raw: RawTestCase = {
+      id: 'T-FRAME',
+      title: 'A frame',
+      steps: lines.map((l, i) => `${i + 1}. ${l}`).join('\n'),
+      expected: 'The Employee Information heading is displayed',
+    };
     const c = await compileCase(raw, { env: {} });
     assert.ok(c.ir && c.plan, JSON.stringify(c.issues.filter((i) => i.severity === 'blocking')));
     return executePlan({ plan: planActions(c.ir, c.plan), values: c.values, pages: c.pages }, { mcp: session.port, page: session.page, baseUrl: base });
@@ -61,7 +66,10 @@ describe('a screen inside an iframe (UI-01)', { skip }, () => {
     const name = elements.find((e) => e.id === 'name');
     assert.ok(name, 'the field in the frame is found');
     assert.equal(name.frame.length, 1);
-    assert.ok(elements.some((e) => e.frame.length === 0 && e.text === 'Shell'), 'the page itself is read too');
+    assert.ok(
+      elements.some((e) => e.frame.length === 0 && e.text === 'Shell'),
+      'the page itself is read too',
+    );
     assert.ok(new Set(elements.map((e) => e.index)).size === elements.length, 'indexes are unique across frames');
     const seen = await observe(session.page);
     assert.ok(seen.lines.includes('Employee Information'), seen.lines.join(' | '));
@@ -77,7 +85,10 @@ describe('a screen inside an iframe (UI-01)', { skip }, () => {
       renderTrace(trace),
     );
     const last = trace.steps[trace.steps.length - 1];
-    assert.ok(last?.after?.lines.some((l) => l.includes('Saved Asha Rao')), `the reloaded frame is waited for: ${last?.after?.lines.join(' | ')}`);
+    assert.ok(
+      last?.after?.lines.some((l) => l.includes('Saved Asha Rao')),
+      `the reloaded frame is waited for: ${last?.after?.lines.join(' | ')}`,
+    );
     assert.ok(last?.located?.selector.includes('enter-frame'), last?.located?.selector ?? '');
   });
 

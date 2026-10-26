@@ -2,8 +2,8 @@ import path from 'node:path';
 import { executePlan, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
 import { planActions } from '../engine/execute/planner.js';
 import type { CompileResult } from '../engine/index.js';
-import type { Application } from '../engine/knowledge/schema.js';
 import type { IrExpectation } from '../engine/ir/schema.js';
+import type { Application } from '../engine/knowledge/schema.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
 import { judge, type Verdict } from '../engine/verdict/index.js';
 import type { TestModel } from '../model/test-model.js';
@@ -243,10 +243,18 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
         await session.reset();
         const needsLogin = ir.preconditions.some((p) => p.type === 'LOGGED_IN');
         if (needsLogin && job.login?.ir && job.login.plan) {
-          const loginPages = Object.fromEntries(Object.entries({ ...job.login.pages, ...compiled.pages }).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]));
+          const loginPages = Object.fromEntries(
+            Object.entries({ ...job.login.pages, ...compiled.pages }).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]),
+          );
           const signedIn = await executePlan(
             { plan: planActions(job.login.ir, job.login.plan), values: job.login.values, pages: loginPages },
-            { mcp: session.port, page: session.page, baseUrl: job.baseUrl, testIdAttribute: job.testIdAttribute, ...(job.knowledge ? { knowledge: job.knowledge } : {}) },
+            {
+              mcp: session.port,
+              page: session.page,
+              baseUrl: job.baseUrl,
+              testIdAttribute: job.testIdAttribute,
+              ...(job.knowledge ? { knowledge: job.knowledge } : {}),
+            },
           );
           if (signedIn.status !== 'completed') {
             const why = signedIn.stoppedAt ? `${signedIn.stoppedAt.code}: ${signedIn.stoppedAt.reason}` : 'the login did not finish';

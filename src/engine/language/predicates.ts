@@ -1,6 +1,6 @@
 import type { IrCondition, IrTarget } from '../ir/schema.js';
-import { DATA_CLASS_CHECK_WORDS, STATE_WORDS } from './lexicon.js';
 import type { Token } from '../text/index.js';
+import { DATA_CLASS_CHECK_WORDS, STATE_WORDS } from './lexicon.js';
 import { type NounPhrase, parseNounPhrase } from './nounphrase.js';
 import type { Issue } from './types.js';
 import { isSymbol, type Line, lw, originalOf } from './view.js';
@@ -671,7 +671,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       // "The Personal Details form or page is shown", "The Success message or the Employee List page is shown": either will do.
       const either = !hidden && !negated ? alternativesIn(line, kind === 'SHOWS' ? after : before) : undefined;
       if (either) {
-        decisions.push(either.same ? 'the alternatives name one thing in two ways: it is one check' : 'any of the alternatives being shown satisfies the check');
+        decisions.push(
+          either.same ? 'the alternatives name one thing in two ways: it is one check' : 'any of the alternatives being shown satisfies the check',
+        );
         out.push(
           make({
             type: 'VISIBILITY',
@@ -726,7 +728,9 @@ const droppedIssue = (text: string, original: string): Omit<Issue, 'where'> => {
   return {
     code: 'AMBIGUOUS',
     severity: describes ? 'info' : 'review',
-    message: describes ? `the words "${text}" describe what is shown; they are kept as written and nothing verifies them` : `the words "${text}" are not understood and are not checked`,
+    message: describes
+      ? `the words "${text}" describe what is shown; they are kept as written and nothing verifies them`
+      : `the words "${text}" are not understood and are not checked`,
     original,
     suggestion: 'Say it as a check of its own: Verify <what> is <state>.',
   };
@@ -821,7 +825,10 @@ function pushVisibility(
     return;
   }
   // "The added data is displayed on the Personal Information page / in the table": where it is shown is part of the check.
-  const place = !objectIsNp && after.length && ['in', 'on', 'at', 'under', 'within'].includes(lw(after[0])) ? after.slice(1).filter((t, i) => !(i === 0 && lw(t) === 'the')) : [];
+  const place =
+    !objectIsNp && after.length && ['in', 'on', 'at', 'under', 'within'].includes(lw(after[0]))
+      ? after.slice(1).filter((t, i) => !(i === 0 && lw(t) === 'the'))
+      : [];
   const where = np.within ?? (place.length ? place.map((t) => t.text).join(' ') : undefined);
   for (const target of np.targets) {
     out.push(make({ type: 'VISIBILITY', target: { ...target, ...(where ? { within: where } : {}) }, expect, check: 'visible' }));

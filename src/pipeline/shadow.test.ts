@@ -77,7 +77,12 @@ describe('a legacy PASS is re-judged by a run of the new engine', { skip }, () =
   const login = (id: string, expected: string): RawTestCase => ({
     id,
     title: id,
-    steps: ['Navigate to the login page', 'Enter valid username in the Login Name text box', 'Enter valid password in the Password text box', 'Click the Login button']
+    steps: [
+      'Navigate to the login page',
+      'Enter valid username in the Login Name text box',
+      'Enter valid password in the Password text box',
+      'Click the Login button',
+    ]
       .map((x, i) => `${i + 1}. ${x}`)
       .join('\n'),
     expected,

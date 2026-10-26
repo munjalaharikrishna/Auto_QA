@@ -285,5 +285,11 @@ const LISTS: ReadonlySet<string> = new Set(['table', 'list', 'grid', 'results', 
  * fields are read as before.
  */
 function shownElsewhere(place: string | undefined): boolean {
-  return !!place && place.toLowerCase().split(' ').some((w) => LISTS.has(w));
+  return (
+    !!place &&
+    place
+      .toLowerCase()
+      .split(' ')
+      .some((w) => LISTS.has(w))
+  );
 }

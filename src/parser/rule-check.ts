@@ -1,6 +1,6 @@
 import { parseAssertions } from './assertions.js';
 import { defaultParserConfig, type ParserConfig } from './config.js';
-import { ruleKey, type ProjectRule } from './rules.js';
+import { type ProjectRule, ruleKey } from './rules.js';
 import { parseStepLine } from './steps.js';
 
 /**
@@ -21,11 +21,14 @@ export function ruleProblem(rule: Pick<ProjectRule, 'kind' | 'pattern' | 'meanin
   if (rule.kind === 'check') {
     const checks = parseAssertions(meaning, plain, false);
     const bad = checks.find((c) => !c.type || c.reason || c.type === 'observe' || c.type === 'health' || !(c.target || c.expected || c.match));
-    return bad ? `"${meaning}" is not read as a check that judges something (${bad.reason?.text ?? 'it names nothing to look for'}). Write it as, for example: Error "…" is shown.` : undefined;
+    return bad
+      ? `"${meaning}" is not read as a check that judges something (${bad.reason?.text ?? 'it names nothing to look for'}). Write it as, for example: Error "…" is shown.`
+      : undefined;
   }
   const line = parseStepLine(meaning, { config: plain, data: new Map() });
   if (line.kind === 'note') return `"${meaning}" is not a step: ${line.text}`;
-  if (line.kind === 'checks') return line.checks.every((c) => c.type && !c.reason && c.type !== 'observe') ? undefined : `"${meaning}" is not read as a check that judges something.`;
+  if (line.kind === 'checks')
+    return line.checks.every((c) => c.type && !c.reason && c.type !== 'observe') ? undefined : `"${meaning}" is not read as a check that judges something.`;
   const actions = line.kind === 'actions' ? line.actions : [line.action];
   const bad = actions.find((a) => !a.action || a.reason);
   return bad ? `"${meaning}" is not read as a step${bad.reason ? `: ${bad.reason.text}` : ''}.` : undefined;

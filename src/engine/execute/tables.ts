@@ -1,6 +1,6 @@
 import type { Page } from 'playwright';
-import { compactKey } from '../text/compound.js';
 import { prepareFrame, visibleFrames } from '../locate/frames.js';
+import { compactKey } from '../text/compound.js';
 import { waitSettled } from './waits.js';
 
 /**
