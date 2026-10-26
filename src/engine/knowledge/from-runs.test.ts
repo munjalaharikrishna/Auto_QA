@@ -31,6 +31,16 @@ describe('D1: the application vocabulary from runs and rules', () => {
     assert.deepEqual(comps.find((c) => c.name === 'Code')?.aliases, ['employee id']);
   });
 
+  it('lists an element once when two explorations name its page differently, so it is never "more than one component"', async () => {
+    await mkdir(path.join(dir, 'TC3'), { recursive: true });
+    await writeFile(path.join(dir, 'TC3', 'exploration.json'), JSON.stringify({ baseUrl: 'http://app.test/x', items: [item('button', 'Save', 'OtherNameForThePage')], status: 'complete' }));
+    const kb = await knowledgeFromRuns('app', 'http://app.test/', dir);
+    assert.equal(kb?.pages.flatMap((p) => p.components).filter((c) => c.name === 'Save').length, 1);
+    const c = await compileCase({ id: 'T', title: 'T', steps: '1. Open the Add Employee page
+2. Click the Save button', expected: 'The Save button is displayed' }, { env: {}, knowledge: kb });
+    assert.equal(c.status, 'compiled', JSON.stringify(c.issues.map((i) => i.message)));
+  });
+
   it('reads "Employee ID" as the field the application calls Code', async () => {
     const kb = await knowledgeFromRuns('app', 'http://app.test/', dir, [{ word: 'employee id', means: 'Code' }]);
     const raw = { id: 'T', title: 'T', steps: '1. Open the Add Employee page\n2. Enter Employee ID', expected: 'The Save button is displayed', testData: 'Employee ID: 7' };

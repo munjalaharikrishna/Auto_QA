@@ -60,7 +60,9 @@ export async function knowledgeFromRuns(name: string, baseUrl: string | undefine
         const label = item.element?.name?.trim();
         const ontology = ONTOLOGY_OF_ROLE[item.element?.role ?? ''];
         if (item.status !== 'done' || !label || !ontology) continue;
-        const page = item.page?.name ?? 'Application';
+        // One list for the whole application: explorations name the same page differently (LoginPage, OrangeHRMLoginPage), and the same
+        // element on two pages is not two things to choose between.
+        const page = 'Application';
         const components = pages.get(page) ?? new Map<string, Component>();
         pages.set(page, components);
         const key = `${ontology}|${label.toLowerCase()}`;
