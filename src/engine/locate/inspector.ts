@@ -1,4 +1,5 @@
-import type { Page } from 'playwright';
+import type { Frame, Page } from 'playwright';
+import { prepareFrame, visibleFrames } from './frames.js';
 import type { DomElement } from './types.js';
 
 /**
@@ -288,9 +289,23 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
   return out;
 }
 
-/** Reads every element of the page that a person could mean (DM-01). */
-export async function inspectPage(page: Page, options: InspectOptions = {}): Promise<DomElement[]> {
+/** Reads every element of one frame. */
+async function readFrame(frame: Frame, options: InspectOptions): Promise<DomElement[]> {
   // The tools that compile this file add a helper called `__name` to the functions inside `readDom`; the page does not have it.
-  await page.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)');
-  return page.evaluate(readDom, { testIdAttribute: options.testIdAttribute ?? 'data-testid', includeText: options.includeText ?? true });
+  await frame.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)');
+  return frame.evaluate(readDom, { testIdAttribute: options.testIdAttribute ?? 'data-testid', includeText: options.includeText ?? true });
+}
+
+/**
+ * Reads every element of the page that a person could mean (DM-01): the page's own, then each frame that can be seen,
+ * with `frame` telling which iframes an element is in. A frame that changes while it is read is left out, not an error.
+ */
+export async function inspectPage(page: Page, options: InspectOptions = {}): Promise<DomElement[]> {
+  const out: DomElement[] = await readFrame(page.mainFrame(), options);
+  for (const { frame, path } of await visibleFrames(page)) {
+    if (path.length === 0) continue;
+    const inside = await readFrame(frame, options).catch(() => [] as DomElement[]);
+    for (const e of inside) out.push({ ...e, index: out.length, frame: path });
+  }
+  return out;
 }

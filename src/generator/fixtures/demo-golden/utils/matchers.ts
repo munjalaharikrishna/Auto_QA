@@ -879,6 +879,16 @@ export const expect = baseExpect.extend({
 
 // ---------------------------------------------------------------- checks on the page as a whole
 
+/** Text that must not be shown anywhere: the page and every frame in it (an element inside an iframe is not "absent" because the outer page lacks it). */
+export async function expectNoText(page: Page, text: string): Promise<void> {
+  const shown = async () => {
+    let n = 0;
+    for (const frame of page.frames()) n += await frame.getByText(text).count().catch(() => 0);
+    return n;
+  };
+  await baseExpect.poll(shown, { message: `"${text}" is not shown on the page or in any frame` }).toBe(0);
+}
+
 /** The page path, ignoring the host so every environment works. */
 export async function expectPath(page: Page, path: string, options: { not?: boolean } = {}): Promise<void> {
   const current = () => new URL(page.url()).pathname;

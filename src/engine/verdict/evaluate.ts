@@ -2,6 +2,7 @@ import type { StepRecord } from '../execute/executor.js';
 import type { Observation, ObservedElement } from '../execute/observe.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
 import { tokenize } from '../text/index.js';
+import { compactKey } from '../text/compound.js';
 
 /**
  * Layers 41 to 44: the assertion engine (EX-06), evidence freshness (EX-07) and the vacuous assertion guard (EX-08).
@@ -42,6 +43,10 @@ export interface JudgeContext {
   seen: readonly Observation[];
   /** What the tester said the run is about (the clause of a failure case: "login fails"). */
   clause: string;
+  /** The address of each page the case names, by name: "the Login page" is where the run opened it. */
+  pages?: Readonly<Record<string, string | null | undefined>>;
+  /** The values of the run by data key: what a check that names a value ("$data.First_Name") compares with. A secret is not a string here. */
+  values?: Readonly<Record<string, { value: unknown }>>;
 }
 
 const ROLES: Record<string, readonly string[]> = {
@@ -146,6 +151,22 @@ function messageEvidence(
 
 const quote = (xs: readonly string[]): string => (xs.length ? xs.map((x) => `"${x}"`).join(', ') : 'nothing');
 
+const pathOf = (url: string): string => {
+  try {
+    const p = new URL(url, 'http://x').pathname;
+    return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+  } catch {
+    return url;
+  }
+};
+
+/** The path of the page a name stands for, when the case or the run knows where that page is. */
+function routeOf(name: string, pages: JudgeContext['pages']): string | undefined {
+  const want = compactKey(name);
+  for (const [page, where] of Object.entries(pages ?? {})) if (where && compactKey(page) === want) return pathOf(where);
+  return undefined;
+}
+
 function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after: Observation }): Evaluation {
   const wantVisible = (c.expect ?? 'VISIBLE') !== 'HIDDEN';
   const want = wantVisible !== exp.negated;
@@ -186,16 +207,21 @@ function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after:
       p.step,
     );
   }
-  const found = elementsFor(p.after, c.target);
-  const heading = c.target?.ontology === 'Heading' || found.length > 0 ? found : [];
-  const here = heading.length > 0;
-  const lineHit = !here && c.target?.name ? p.after.lines.some((l) => squash(l).includes(squash(c.target?.name ?? ''))) : false;
-  const visible = here || lineHit;
+  // "A or B is shown": the check holds when any of them is; with one target this is the plain check.
+  const targets = [c.target, ...(c.alternatives ?? [])];
+  const shown = (t: IrTarget | undefined): boolean => {
+    const found = elementsFor(p.after, t);
+    const heading = t?.ontology === 'Heading' || found.length > 0 ? found : [];
+    return heading.length > 0 || (t?.name ? p.after.lines.some((l) => squash(l).includes(squash(t.name ?? ''))) : false);
+  };
+  const which = targets.filter(shown);
+  const visible = which.length > 0;
+  const named = targets.map((t) => describeTarget(t)).join(' or ');
   return settled(
     exp,
     visible === want,
-    `${describeTarget(c.target)} ${want ? 'is shown' : 'is not shown'}`,
-    visible ? `${describeTarget(c.target)} is on the page` : `${describeTarget(c.target)} is not on the page`,
+    `${named} ${want ? 'is shown' : 'is not shown'}`,
+    visible ? `${which.map((t) => describeTarget(t)).join(' and ')} is on the page` : `${named} is not on the page`,
     visible ? 'it is on the page' : 'it is not on the page',
     true,
     p.step,
@@ -259,6 +285,17 @@ function judgeAuthentication(exp: IrExpectation, p: Pages & { after: Observation
 
 /** Judges one expectation on the page its step left (EX-06). */
 export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
+  // A value the check names by its data key ("$data.First_Name") is compared as the value it stands for. A secret is never compared or shown.
+  const given = exp.condition.expect;
+  if (given?.startsWith('$data.')) {
+    const value = ctx.values?.[given.slice(6)]?.value;
+    const named = `${exp.negated ? 'not ' : ''}${exp.condition.type.toLowerCase()} ${describeTarget(exp.condition.target)} "${given}"`;
+    if (value === undefined)
+      return unproven(exp, 'UNRESOLVED', named, 'the value is not known', 'the value the check compares with was not resolved', ctx.stepOf.get(exp.id));
+    if (typeof value !== 'string')
+      return unproven(exp, 'UNRESOLVED', named, 'the value is a secret', 'a secret is never shown, so it is not compared with the page', ctx.stepOf.get(exp.id));
+    return evaluateExpectation({ ...exp, condition: { ...exp.condition, expect: value } }, ctx);
+  }
   const c = exp.condition;
   const p = pagesFor(exp, ctx);
   const expectedText = `${exp.negated ? 'not ' : ''}${c.type.toLowerCase()} ${describeTarget(c.target)}${c.expect ? ` ${c.expect}` : ''}`;
@@ -273,8 +310,29 @@ export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Eval
       return judgeAuthentication(exp, page);
     case 'URL': {
       const wanted = c.expect ?? '';
+      // "User stays on the Login page": the step did not move the page, which is a comparison with the page before it, not with a name.
+      if (c.check === 'url-unchanged' || wanted === 'UNCHANGED') {
+        const was = page.before?.url;
+        if (!was) return unproven(exp, 'NO_PAGE', 'the address stays the same', 'there is no page before the step to compare with', 'nothing to compare the address with', p.step);
+        const same = pathOf(was) === pathOf(page.after.url);
+        return settled(
+          exp,
+          same !== exp.negated,
+          `address ${exp.negated ? 'changes' : 'stays the same'}`,
+          same ? `address is still ${page.after.url}` : `address went from ${was} to ${page.after.url}`,
+          same ? 'the address did not change' : 'the address changed',
+          true,
+          p.step,
+        );
+      }
       if (!wanted || wanted.startsWith('$ref.')) return unproven(exp, 'UNRESOLVED', 'an address', 'not known', 'the wanted address was not resolved', p.step);
-      const has = c.check === 'equals' || c.check === 'exact-text' ? page.after.url === wanted : page.after.url.includes(wanted);
+      const route = routeOf(wanted, ctx.pages);
+      const has =
+        c.check === 'equals' || c.check === 'exact-text'
+          ? page.after.url === wanted
+          : route !== undefined
+            ? pathOf(page.after.url) === route
+            : compactKey(page.after.url).includes(compactKey(wanted)); // a page name is not a path: "Dashboard" is /dashboard, "Add Employee" is /add-employee
       return settled(
         exp,
         has !== exp.negated,
@@ -394,7 +452,8 @@ export function vacuity(exp: IrExpectation, ctx: JudgeContext): string | undefin
     );
   const isMessage = c.target?.ontology === 'Message' || c.target?.ontology === 'Error';
   if (exp.negated && (c.type === 'VISIBILITY' || c.type === 'TEXT') && !isMessage && name) {
-    if (words.length >= 4 && !everSeen(name)) return `"${name}" is not a name that any page of this run shows: "not visible" cannot fail`;
+    // Whatever its length: a name no page of the run ever showed (a misspelling, a word from another screen) makes "not visible" true for any page.
+    if (words.length >= 1 && !everSeen(name)) return `"${name}" is not a name that any page of this run shows: "not visible" cannot fail`;
     const heads = ['password', 'username', 'button', 'field', 'link'];
     if (words.length >= 3 && heads.some((h) => words.slice(0, -1).includes(h)) && !everSeen(name))
       return `"${name}" reads like a sentence, not the name of an element: "not visible" cannot fail`;

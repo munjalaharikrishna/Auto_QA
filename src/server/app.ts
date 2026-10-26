@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -15,6 +15,7 @@ import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
 import { RULE_KINDS } from '../parser/rules.js';
+import { ruleProblem } from '../parser/rule-check.js';
 import type { TestVerdict } from '../results/verdict.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
@@ -66,7 +67,7 @@ const ProjectPatch = z.object({
   password: z.string().optional(),
   variables: z.record(z.string().regex(/^[A-Za-z_]\w*$/), z.string().nullable()).optional(),
   policy: z.enum(POLICIES).optional(),
-  /** Which engine runs this project's test cases (PD-1). Default: legacy. */
+  /** Which engine runs this project's test cases (PD-1). Default: semantic. */
   engine: z.enum(ENGINES).optional(),
 });
 const MappingBody = z.object({ mapping: z.partialRecord(z.enum(FIELDS), z.string()).default({}) });
@@ -154,6 +155,33 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       await store.audit('project.engine', 'project', project.id, project.id, { engine: body.engine });
     }
     return withEnv(updated);
+  });
+
+  /**
+   * Deletes a project completely: every row in the database and the project's folders on disk (uploads, runs, explorations,
+   * evidence, generated tests). It cannot be undone, so the caller must send the project's id as `confirm`, and a project with a
+   * run still going is refused until the run is cancelled or finished.
+   */
+  app.delete('/api/projects/:id', async (req) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    if ((req.query as { confirm?: string }).confirm !== project.id) throw bad(`To delete the project send confirm=${project.id}.`);
+    const active = await store.activeJobCount(project.id);
+    if (active)
+      throw Object.assign(new Error(`${active} run(s) of this project are still going. Cancel them or wait for them to finish, then delete the project.`), {
+        statusCode: 409,
+      });
+    // A folder is removed only if it lies inside this app's own data or workspace folder, never the folder itself and never elsewhere.
+    const inside = (dir: string, root: string) => {
+      const rel = path.relative(path.resolve(root), path.resolve(dir));
+      return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+    };
+    const folders = [runner.projectDir(project)].filter((d) => inside(d, options.dataDir));
+    const left: string[] = [];
+    if (inside(project.workspace, options.workspacesDir)) folders.push(project.workspace);
+    else left.push(project.workspace);
+    const removed = (await store.deleteProject(project.id))!;
+    for (const dir of folders) await rm(dir, { recursive: true, force: true });
+    return { deleted: project.id, name: removed.name, removed: removed.counts, foldersRemoved: folders, foldersLeft: left };
   });
 
   // Workbook upload, column mapping, batch run (FR-IN-01, FR-IN-02, FR-IN-08)
@@ -309,7 +337,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.post('/api/projects/:id/rules', async (req, reply) => {
     const project = await projectOf((req.params as { id: string }).id);
     const body = RuleBody.parse(req.body);
-    if (body.kind !== 'approved' && !body.meaning) throw bad('Say what it means.');
+    const problem = ruleProblem(body);
+    if (problem) throw bad(problem);
     return reply.status(201).send(await store.upsertRule(project.id, body));
   });
 
@@ -317,6 +346,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const params = req.params as { id: string; ruleId: string };
     const project = await projectOf(params.id);
     const body = z.object({ meaning: z.string().trim().optional(), enabled: z.boolean().optional() }).parse(req.body);
+    if (body.meaning !== undefined) {
+      const current = (await store.rules(project.id)).find((r) => r.id === params.ruleId);
+      const problem = current && ruleProblem({ ...current, meaning: body.meaning });
+      if (problem) throw bad(problem);
+    }
     return (
       (await store.updateRule(project.id, params.ruleId, body)) ??
       (() => {
@@ -351,13 +385,19 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       })
       .parse(req.body);
     let imported = 0;
+    const refused: Array<{ pattern: string; problem: string }> = [];
     for (const r of body.rules) {
       if (r.kind === 'approved') continue;
+      const problem = ruleProblem(r);
+      if (problem) {
+        refused.push({ pattern: r.pattern, problem });
+        continue;
+      }
       const saved = await store.upsertRule(project.id, { ...r, source: 'imported' });
       if (!r.enabled) await store.updateRule(project.id, saved.id, { enabled: false });
       imported++;
     }
-    return { imported };
+    return { imported, refused };
   });
 
   /** The tester looked at learned or assumed values and accepted them (FR-RV-10: Approve all). */

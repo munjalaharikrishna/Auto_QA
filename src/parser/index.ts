@@ -4,6 +4,7 @@ import {
   type RawTestCase,
   RawTestCaseSchema,
   type Step,
+  stepsWithChecks,
   TEST_TYPES,
   type TestModel,
   TestModelSchema,
@@ -13,6 +14,7 @@ import { defaultParserConfig, type ParserConfig } from './config.js';
 import { normalizeText } from './normalize.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
+import { fingerprint } from './secret-check.js';
 import { applyWording } from './rules.js';
 import { parseStepLine } from './steps.js';
 import { parseTestData } from './test-data.js';
@@ -25,7 +27,9 @@ export { defaultParserConfig, loadParserConfig, type ParserConfig } from './conf
  * Pure and deterministic: the same input and vocabulary always give the same model (NFR-02).
  */
 export function parseTestCase(input: RawTestCase, config: ParserConfig = defaultParserConfig()): TestModel {
-  const raw = RawTestCaseSchema.parse(input);
+  const given = RawTestCaseSchema.parse(input);
+  // A step's own expected result comes back as a check right after its step (it is kept beside the steps, not in them).
+  const raw = { ...given, steps: stepsWithChecks(given) };
   const warnings: ModelWarning[] = [];
 
   const testData = parseTestData(raw.testData ?? '', config);
@@ -150,6 +154,7 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
       rawTestData: raw.testData === undefined ? undefined : mask(raw.testData),
     }),
     warnings,
+    secretChecks: testData.secretValues.length ? Object.fromEntries(testData.secretValues.map((s) => [s.env, fingerprint(s.env, s.value)])) : undefined,
   });
   model.warnings.push(...checkQuality(model, config));
   return TestModelSchema.parse(model);

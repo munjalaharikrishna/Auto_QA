@@ -1,0 +1,43 @@
+{
+  "version": "G0.1",
+  "review": null,
+  "cases": [
+    {
+      "id": "TC-DEMO-001",
+      "module": "demo-app",
+      "source": { "file": "examples/demo-app/test-cases.json" },
+      "status": "single",
+      "gold": {
+        "steps": [
+          { "original": "Open Login page", "action": "NAVIGATE", "target": "Login" },
+          { "original": "Enter valid username", "action": "ENTER_VALUE", "target": "Username", "value": { "class": "CREDENTIAL" } },
+          { "original": "Enter valid password", "action": "ENTER_VALUE", "target": "Password", "value": { "class": "CREDENTIAL" } },
+          { "original": "Click the Login button", "action": "CLICK", "target": "Login" }
+        ],
+        "expectations": [
+          { "original": "User is redirected to Dashboard page", "type": "URL", "negated": false },
+          { "original": "Dashboard heading is displayed", "type": "VISIBILITY", "negated": false, "target": "Dashboard" }
+        ]
+      }
+    },
+    {
+      "id": "TC-DEMO-002",
+      "module": "demo-app",
+      "source": { "file": "examples/demo-app/test-cases.json" },
+      "status": "single",
+      "trap": "a page name ('Login page') is a page, not address text",
+      "gold": {
+        "steps": [
+          { "original": "Open Login page", "action": "NAVIGATE", "target": "Login" },
+          { "original": "Enter valid username", "action": "ENTER_VALUE", "target": "Username", "value": { "class": "CREDENTIAL" } },
+          { "original": "Enter wrong password", "action": "ENTER_VALUE", "target": "Password", "value": { "class": "INVALID" } },
+          { "original": "Click Login", "action": "CLICK", "target": "Login" }
+        ],
+        "expectations": [
+          { "original": "Error \"Invalid username or password\" is shown", "type": "TEXT", "negated": false, "text": "Invalid username or password" },
+          { "original": "User stays on the Login page", "type": "URL", "negated": false }
+        ]
+      }
+    }
+  ]
+}

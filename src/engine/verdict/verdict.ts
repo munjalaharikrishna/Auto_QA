@@ -265,7 +265,7 @@ export function judge(input: JudgeInput): Verdict {
   const inPlan = new Set(plan.items.filter((i) => i.kind === 'expect').map((i) => i.ref));
   for (const e of ir.expectations) if (inPlan.has(e.id) && !stepOf.has(e.id)) stepOf.set(e.id, e.afterStep ?? last);
   const seen = everySeen(trace.steps);
-  const ctx = { steps: trace.steps, stepOf, seen, clause: caseClause(compile) };
+  const ctx = { steps: trace.steps, stepOf, seen, clause: caseClause(compile), pages: compile.pages, ...(compile.values ? { values: compile.values } : {}) };
   const evaluations: Evaluation[] = [];
   const learnedUsed: string[] = [];
   let decided: Verdict['decidedByUser'];

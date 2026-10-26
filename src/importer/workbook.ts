@@ -291,7 +291,10 @@ const tagsOf = (text?: string): string[] | undefined => {
   return tags.length ? tags : undefined;
 };
 
-/** One test case from the rows that belong to it: steps numbered in order, a step's own expected result as a check after it (RW-E12). */
+/**
+ * One test case from the rows that belong to it: steps numbered in order. A step's own expected result is kept beside its step
+ * (`stepExpected`, RW-E12) and is still checked right after it, but the steps text holds only the actions.
+ */
 function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: string[] } | { problem: RowProblem } {
   const label = p.id ?? p.title ?? `row ${p.row}`;
   const warnings: string[] = [];
@@ -304,6 +307,7 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
   const lines: string[] = [];
   const stepLine = (text: string) => lines.push(`${lines.length + 1}. ${text}`);
   let finalExpected: string | undefined;
+  const stepExpected: Record<string, string> = {};
   for (const [k, part] of withSteps.entries()) {
     if (part.stepNo !== undefined) {
       // The sheet gives every row its own step number: the row is one step, however many lines its cell has (IN-17).
@@ -318,7 +322,7 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
     const last = k === withSteps.length - 1;
     if (part.expected) {
       if (last || withSteps.length === 1) finalExpected = part.expected;
-      else stepLine(`Verify ${part.expected.replace(/\s*\n\s*/g, ' ').trim()}`);
+      else stepExpected[String(lines.length)] = part.expected.replace(/\s*\n\s*/g, ' ').trim();
     }
   }
   finalExpected ??= [...p.parts].reverse().find((x) => x.expected)?.expected;
@@ -340,6 +344,7 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
       steps: single ? orderNumbered(first.steps as string).text : lines.join('\n'),
       testData: testData || undefined,
       expected: finalExpected as string,
+      ...(Object.keys(stepExpected).length ? { stepExpected } : {}),
       requirementId: p.requirementId,
       priority: p.priority,
       tags: tagsOf(p.tags),
@@ -351,7 +356,11 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
 
 const signature = (c: ImportedCase): string =>
   createHash('sha1')
-    .update(JSON.stringify([c.raw.title, c.raw.steps, c.raw.expected].map((t) => t.toLowerCase().replace(/\s+/g, ' ').trim())))
+    .update(
+      JSON.stringify(
+        [c.raw.title, c.raw.steps, c.raw.expected, JSON.stringify(c.raw.stepExpected ?? {})].map((t) => t.toLowerCase().replace(/\s+/g, ' ').trim()),
+      ),
+    )
     .digest('hex');
 
 /** Different ids, identical content (IN-20). */

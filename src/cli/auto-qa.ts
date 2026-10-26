@@ -35,7 +35,7 @@ if (!file) {
   --workspace dir             where to generate the project (default workspaces/<site>)
   --reexplore                 explore again even when a saved exploration can be reused
   --headed                    show the browser
-  --engine legacy|semantic    legacy (default) or the new semantic engine, which compiles each case to QA-IR with a decision log first
+  --engine legacy|semantic    semantic (default) or the older legacy engine, which compiles each case to QA-IR with a decision log first
 
   Workbooks:
   --sheet name                worksheet (default: the first with test cases)

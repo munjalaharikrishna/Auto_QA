@@ -53,6 +53,18 @@ describe('waits and rows in the grammar', () => {
     assert.equal(plan.chains[1]?.target?.name, 'Edit');
     assert.ok(plan.chains[1]?.ops.some((o) => o.op === 'find-row'));
   });
+  it('keeps the row of "in the row for X", "of the row with X" and "in the X row", which used to be dropped (E6)', async () => {
+    for (const [line, action] of [
+      ['Click Edit in the row for John Smith', 'CLICK'],
+      ['Click the Edit button in the row of John Smith', 'CLICK'],
+      ['Check the checkbox in the row for John Smith', 'CHECK'],
+      ['Select the checkbox in the John Smith row', 'CHECK'],
+    ] as const) {
+      const plan = await compile(['Open http://localhost:3000/x', line]);
+      assert.equal(plan.chains[1]?.action, action, line);
+      assert.deepEqual(plan.chains[1]?.target?.row?.map((r) => r.toLowerCase()), ['john smith'], line);
+    }
+  });
 });
 
 describe('EX-05: the diff', () => {

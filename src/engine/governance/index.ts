@@ -11,6 +11,26 @@ export {
 } from './benchmark.js';
 export { checkGate, type GateBaseline, type GateProblem, type GateResult, gateText, type Measure, measureOf, reviewCountOf } from './gate.js';
 export {
+  type Agreement,
+  type CaseReading,
+  type ClauseOutcome,
+  type ClauseScore,
+  cohenKappa,
+  type GoldCase,
+  GoldCaseSchema,
+  type GoldReport,
+  type GoldSet,
+  GoldSetSchema,
+  goldText,
+  labelAgreement,
+  type Reading,
+  readingOfIr,
+  readingOfLanguage,
+  scoreCase,
+  scoreGold,
+  type Tally,
+} from './gold.js';
+export {
   percent,
   REVIEW_REDUCTION_MINIMUM,
   REVIEW_REDUCTION_TARGET,
@@ -19,3 +39,14 @@ export {
   reviewReduction,
   reviewReductionBy,
 } from './metrics.js';
+export {
+  MUTATION_CASES,
+  MUTATIONS,
+  type Mutation,
+  type MutationCase,
+  mutationKey,
+  mutationScore,
+  runMutationMatrix,
+  startMutant,
+  verdictFor,
+} from './mutation.js';

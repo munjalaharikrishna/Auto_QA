@@ -207,6 +207,12 @@ function parseVerb(verb: Verb, phrase: string, rest: string, ctx: StepContext): 
     case 'fill':
       // "Enter url for Orange Hrm server", "Type the application URL": that is opening the application.
       if (URL_PHRASE.test(clean(rest))) return navigate(rest, ctx);
+      // "Enter BookMarket URL ---> https://shop.example/login": an address after a URL / address / link word is the page to open.
+      // Only separators may stand between the word and the address, and no "in / into / on" before it, so a field stays a field.
+      {
+        const given = ADDRESS_GIVEN.exec(clean(rest))?.[1];
+        if (given) return navigate(given, ctx);
+      }
       return fill(rest, ctx);
     case 'select':
       return select(rest, ctx);
@@ -455,6 +461,9 @@ function noActionAdvice(text: string): string {
   const q = findQuoted(text);
   return `No action word found${q ? ` before "${q.value}"` : ''}. Start the step with an action such as Open, Enter, Click, Select, Check or Verify.`;
 }
+
+/** A URL, address, link or site word, then only separators (`-->`, `:`, `=`), then an address that ends the text. */
+const ADDRESS_GIVEN = /^(?!.*\b(?:in|into|inside|on|at)\b).*?\b(?:url|web\s*address|address|link|web\s*site|site)\b[\s:=\-–—>]*((?:https?:\/\/|www\.)\S+)$/i;
 
 /** "url", "the application URL", "URL for the HR server", "web address": the application's address. */
 const URL_PHRASE =

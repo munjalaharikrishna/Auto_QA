@@ -67,7 +67,7 @@ export interface DomElement {
 }
 
 /** The ways of finding an element, from the one people trust most (LC-01). */
-export const LEVELS = ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'xpath', 'inspection'] as const;
+export const LEVELS = ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'words', 'xpath', 'inspection'] as const;
 export type Level = (typeof LEVELS)[number];
 
 /** The weight of each level: the higher, the more a match there says about the element. Descending, by the order of LC-01. */
@@ -81,6 +81,7 @@ export const WEIGHT: Readonly<Record<Level, number>> = {
   id: 0.7,
   text: 0.65,
   relationship: 0.55,
+  words: 0.5,
   xpath: 0.45,
   inspection: 0.35,
 };

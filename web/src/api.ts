@@ -190,6 +190,8 @@ export const api = {
   project: (id: string) => call<ProjectView>(`/api/projects/${id}`),
   createProject: (p: ProjectInput) => call<ProjectView>('/api/projects', json('POST', p)),
   updateProject: (id: string, p: Partial<ProjectInput>) => call<ProjectView>(`/api/projects/${id}`, json('PATCH', p)),
+  /** Deletes the project, its rows and its folders. `confirm` must be the project's id. */
+  deleteProject: (id: string) => call<{ deleted: string; name: string }>(`/api/projects/${id}?confirm=${encodeURIComponent(id)}`, { method: 'DELETE' }),
   upload: (projectId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);

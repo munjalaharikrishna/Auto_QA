@@ -186,12 +186,12 @@ describe('determinism (GV-05, T3)', () => {
 
 describe('engine switch (PD-1)', () => {
   beforeEach(resetEngineConfig);
-  it('is legacy unless told otherwise, and an unknown value never switches to the new engine', () => {
-    assert.equal(engineConfig().engine, 'legacy');
-    assert.equal(engineFrom(undefined), 'legacy');
-    assert.equal(engineFrom('semantic'), 'semantic');
-    assert.equal(engineFrom('semantik'), 'legacy');
-    setEngine('semantic');
+  it('is the new engine unless told otherwise (E1.0), and an unknown value never picks the other one', () => {
     assert.equal(engineConfig().engine, 'semantic');
+    assert.equal(engineFrom(undefined), 'semantic');
+    assert.equal(engineFrom('legacy'), 'legacy');
+    assert.equal(engineFrom('semantik'), 'semantic');
+    setEngine('legacy');
+    assert.equal(engineConfig().engine, 'legacy');
   });
 });

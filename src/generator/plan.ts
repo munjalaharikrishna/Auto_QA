@@ -357,8 +357,9 @@ export function planProject(inputs: GenerateInput[]): ProjectPlan {
           return [`await expectPath(page, ${path});`];
         }
         case 'text':
+          if (a.negated) helpers.add('expectNoText');
           return a.negated
-            ? [`await expect(page.getByText(${quote(a.expected ?? '')})).toHaveCount(0);`]
+            ? [`await expectNoText(page, ${quote(a.expected ?? '')});`]
             : [`await expect(page.getByText(${quote(a.expected ?? '')}).first()).toBeVisible();`];
         case 'visible':
           return [`await expect(${target()}).${not}toBeVisible(${a.options?.timeoutMs ? `{ timeout: ${a.options.timeoutMs} }` : ''});`];

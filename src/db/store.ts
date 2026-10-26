@@ -313,6 +313,62 @@ export class Store {
     return next;
   }
 
+  /** Jobs of the project that have not ended: a project with one of these is not deleted until it is cancelled or done. */
+  async activeJobCount(projectId: string): Promise<number> {
+    const r = await this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM jobs WHERE project_id = ? AND status IN ('queued', 'running', 'waiting', 'review')", [
+      projectId,
+    ]);
+    return Number(r?.n ?? 0);
+  }
+
+  /**
+   * Deletes a project and everything it owns, in one transaction: test cases and their versions, runs, results, evidence rows,
+   * explorations, jobs and their logs and questions, uploads, releases, rules, environments, page routes, settings and the
+   * project's audit entries. Nothing is kept, except one audit line with no project on it saying that a project was deleted.
+   * Files are not touched here (the caller removes the folders). Returns what was removed, or undefined if there was no such project.
+   */
+  async deleteProject(id: string): Promise<{ name: string; counts: Record<string, number> } | undefined> {
+    const current = await this.db.get<Row>('SELECT name FROM projects WHERE id = ?', [id]);
+    if (!current) return undefined;
+    const of = (table: string, column = 'project_id') => `SELECT id FROM ${table} WHERE ${column} = ?`;
+    // Child tables first. Each statement names its rows through the project's own ids, so nothing of another project can match.
+    const steps: Array<{ table: string; sql: string }> = [
+      { table: 'check_results', sql: `DELETE FROM check_results WHERE test_result_id IN (${of('test_results')})` },
+      { table: 'step_results', sql: `DELETE FROM step_results WHERE test_result_id IN (${of('test_results')})` },
+      { table: 'evidence', sql: `DELETE FROM evidence WHERE test_result_id IN (${of('test_results')})` },
+      { table: 'exploration_items', sql: `DELETE FROM exploration_items WHERE exploration_id IN (${of('explorations')})` },
+      { table: 'explorations', sql: 'DELETE FROM explorations WHERE project_id = ?' },
+      { table: 'generation_snapshots', sql: 'DELETE FROM generation_snapshots WHERE project_id = ?' },
+      { table: 'test_results', sql: 'DELETE FROM test_results WHERE project_id = ?' },
+      { table: 'verdicts_legacy', sql: `DELETE FROM verdicts_legacy WHERE job_id IN (${of('jobs')})` },
+      { table: 'executions', sql: 'DELETE FROM executions WHERE project_id = ?' },
+      { table: 'job_logs', sql: `DELETE FROM job_logs WHERE job_id IN (${of('jobs')})` },
+      { table: 'questions', sql: `DELETE FROM questions WHERE job_id IN (${of('jobs')})` },
+      { table: 'jobs', sql: 'DELETE FROM jobs WHERE project_id = ?' },
+      { table: 'uploads', sql: 'DELETE FROM uploads WHERE project_id = ?' },
+      { table: 'test_case_versions', sql: `DELETE FROM test_case_versions WHERE test_case_id IN (${of('test_cases')})` },
+      { table: 'test_cases', sql: 'DELETE FROM test_cases WHERE project_id = ?' },
+      { table: 'release_changes', sql: `DELETE FROM release_changes WHERE release_id IN (${of('releases')})` },
+      { table: 'release_features', sql: `DELETE FROM release_features WHERE release_id IN (${of('releases')})` },
+      { table: 'releases', sql: 'DELETE FROM releases WHERE project_id = ?' },
+      { table: 'project_rules', sql: 'DELETE FROM project_rules WHERE project_id = ?' },
+      { table: 'page_routes', sql: `DELETE FROM page_routes WHERE environment_id IN (${of('environments')})` },
+      { table: 'environments', sql: 'DELETE FROM environments WHERE project_id = ?' },
+      { table: 'settings', sql: "DELETE FROM settings WHERE scope = 'project' AND scope_id = ?" },
+      { table: 'audit_log', sql: 'DELETE FROM audit_log WHERE project_id = ?' },
+    ];
+    const counts: Record<string, number> = {};
+    await this.transaction(async (s) => {
+      for (const step of steps) {
+        const r = await s.db.run(step.sql, [id]);
+        if (r.changes) counts[step.table] = r.changes;
+      }
+      await s.db.run('DELETE FROM projects WHERE id = ?', [id]);
+      await s.audit('project.delete', 'project', id, undefined, { name: String(current.name), counts });
+    });
+    return { name: String(current.name), counts };
+  }
+
   async project(id: string): Promise<Project | undefined> {
     const r = await this.db.get<Row>(`${PROJECT_SELECT} WHERE p.id = ?`, [id]);
     return r && this.toProject(r);
@@ -846,7 +902,18 @@ export class Store {
   ): Promise<TestCaseRecord> {
     const { row: _row, ...kept } = raw;
     const hash = createHash('sha256')
-      .update(JSON.stringify([kept.title, kept.type, kept.preconditions, kept.steps, kept.testData, kept.expected, kept.requirementId]))
+      .update(
+        JSON.stringify([
+          kept.title,
+          kept.type,
+          kept.preconditions,
+          kept.steps,
+          kept.testData,
+          kept.expected,
+          kept.requirementId,
+          ...(kept.stepExpected ? [kept.stepExpected] : []),
+        ]),
+      )
       .digest('hex')
       .slice(0, 16);
     const at = now();

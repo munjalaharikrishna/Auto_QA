@@ -14,7 +14,7 @@ import type { Policy } from '../model/policy.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { type ParserConfig, withRules } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
-import { rulesFor } from '../parser/rules.js';
+import { rulesFor, ruleKey } from '../parser/rules.js';
 import { runBatch } from '../pipeline/batch.js';
 import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
@@ -254,6 +254,7 @@ export class JobRunner extends EventEmitter {
       engine: engineFrom(await store.setting('project', project.id, 'engine')),
       pages: await this.pagesFor(project),
       nextExecutionId: () => store.nextExecutionId(),
+      approvedAssumptions: new Set((await store.rules(project.id)).filter((r) => r.kind === 'approved' && r.enabled).map((r) => ruleKey(r.pattern))),
       // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
       onExplored: async (model: TestModel, result: ExplorationResult, file: string) => {
         try {

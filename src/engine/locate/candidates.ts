@@ -1,5 +1,5 @@
 import { type LocatorSpec, spec } from '../../locators/locator.js';
-import { labelKey } from '../knowledge/labels.js';
+import { labelKey, nameWords } from '../knowledge/labels.js';
 import { type DomElement, type Ignored, LEVELS, type Level, type LocateQuery, type LocateResult, type Tried, WEIGHT } from './types.js';
 
 /**
@@ -113,6 +113,14 @@ export interface LocateOptions {
   inspection?: (query: LocateQuery) => readonly DomElement[];
 }
 
+/** Whether `have` holds every word of `want` in the same order, with at most three words more than `want` (so a sentence is not a name). */
+function holdsInOrder(have: readonly string[], want: readonly string[]): boolean {
+  if (have.length === 0 || have.length > want.length + 3) return false;
+  let at = 0;
+  for (const w of have) if (w === want[at]) at++;
+  return at === want.length;
+}
+
 /** The elements that match a query at one level. */
 function matchesAt(level: Level, query: LocateQuery, names: ReadonlySet<string>, elements: readonly DomElement[], options: LocateOptions): DomElement[] {
   const hit = (text: string | undefined): boolean => text !== undefined && text !== '' && names.has(labelKey(text));
@@ -136,6 +144,11 @@ function matchesAt(level: Level, query: LocateQuery, names: ReadonlySet<string>,
       return elements.filter((e) => broad(e) && hit(e.text));
     case 'relationship':
       return elements.filter((e) => broad(e) && hit(e.nearbyText));
+    case 'words': {
+      // "Forgot password" is the link "Forgot your password?": the words of the name, in order, with a few more between or after.
+      const wanted = [...new Set([query.name, ...(query.aliases ?? [])])].map(nameWords).filter((w) => w.length >= 2);
+      return elements.filter((e) => broad(e) && wanted.some((w) => [accessibleName(e), e.text].some((t) => holdsInOrder(nameWords(t), w))));
+    }
     case 'xpath':
       return query.xpath ? elements.filter((e) => e.xpath === query.xpath) : [];
     case 'inspection':

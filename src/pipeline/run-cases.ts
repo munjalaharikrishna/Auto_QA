@@ -3,6 +3,9 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
+import { mismatchedSecrets, mismatchText } from '../parser/secret-check.js';
+import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
+import { reconcile } from './shadow.js';
 import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
@@ -11,7 +14,7 @@ import { type GenerateInput, generateProject, workspaceName, writeProject } from
 import { automationId } from '../generator/names.js';
 import { planProject } from '../generator/plan.js';
 import { openSession } from '../locators/session.js';
-import type { TestModel } from '../model/test-model.js';
+import type { RawTestCase, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
@@ -55,6 +58,8 @@ export interface PipelineOptions {
   onRule?: (rule: { kind: 'element'; pattern: string; meaning: string }) => void;
   onProgress?: (message: string) => void;
   onRunEvent?: (event: RunEvent) => void;
+  /** `ruleKey` of each assumption the tester approved; an unapproved one keeps a passing case at NEEDS REVIEW. */
+  approvedAssumptions?: ReadonlySet<string>;
   /** Optional helper for unreadable steps (FR-AI-01). Default: none. */
   assist?: AssistProvider;
   /** `legacy` (default) runs exactly as before. `semantic` first compiles every case to QA-IR with a decision log (E0.1). */
@@ -83,6 +88,8 @@ export interface Prepared {
    * (semantic engine only). Each also has its legacy stop in `early`, which stays the answer unless the new run gives a verdict.
    */
   semantic?: Map<string, SemanticJob>;
+  /** Cases the legacy route will run and the verdict engine can judge: a legacy PASS of each is re-judged by a run of the new engine (S6). */
+  shadow?: Map<string, SemanticJob>;
 }
 
 /** parse → explore → generate → run → verdict. */
@@ -97,40 +104,51 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const exploreDir = options.exploreDir ?? path.join('.auto-qa', 'explore');
   const early = new Map<string, TestVerdict>();
   const semantic = new Map<string, SemanticJob>();
+  const shadow = new Map<string, SemanticJob>();
   const explored: GenerateInput[] = [];
   const pages = options.pages ?? filePageStore(options.baseUrl);
+  // What the application calls things, from what earlier runs saw and what testers said an element means (D1).
+  const knowledge =
+    options.engine === 'semantic'
+      ? await knowledgeFromRuns(workspaceName(options.baseUrl), options.baseUrl, exploreDir, Object.entries(options.config.rules?.element ?? {}).map(([word, means]) => ({ word, means })))
+      : undefined;
   let pageUrls = await pages.load();
 
   /** Complete explorations from this run by case signature: an identical case is not explored twice. */
   const bySignature = new Map<string, ExplorationResult>();
+
+  /** The login case compiled for the new engine, once: a case that starts "logged in" runs it first (E7). */
+  let loginCompiled: Promise<CompileResult | undefined> | undefined;
+  const loginFor = (): Promise<CompileResult | undefined> => {
+    const login = options.login;
+    loginCompiled ??= login
+      ? compileCase(rawOf(login), { config: options.config, pageRoutes: {}, env: options.env, knowledge }).then((c) => (c.ir && c.plan && c.status === 'compiled' ? c : undefined))
+      : Promise.resolve(undefined);
+    return loginCompiled;
+  };
+  const needsLogin = (c: CompileResult): boolean => !!c.ir?.preconditions.some((p) => p.type === 'LOGGED_IN');
 
   const policy = options.policy ?? DEFAULT_POLICY;
   for (const [index, original] of models.entries()) {
     // A check nothing can verify does not stop the test (balanced and lenient); under strict it is asked about.
     const model = policy === 'strict' ? original : observeUnclearChecks(original);
     const at = `[${index + 1}/${models.length}] ${model.id}`;
+    // The sheet's secret and the variable the run reads must be the same value, or the case does not test what it says (S4).
+    const wrongSecret = mismatchedSecrets(original, options.env);
+    if (wrongSecret.length) {
+      early.set(model.id, stopped(model, 'BLOCKED', mismatchText(wrongSecret), undefined, 'Test Data'));
+      progress(`■ ${at}: the Test Data gives ${wrongSecret.join(', ')} a different value than the one set for the project`);
+      continue;
+    }
     let compiledOf: CompileResult | undefined;
     /** The legacy route could not finish this case: offer it to the new run, if the new engine understood it and the verdict engine judges every check. */
     const offerSemantic = (m: TestModel): boolean => {
       if (options.engine !== 'semantic' || !compiledOf || !semanticSupport(compiledOf).ok) return false;
-      semantic.set(m.id, { model: m, compiled: compiledOf, baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
+      semantic.set(m.id, { model: m, knowledge, compiled: withLearnedPages(compiledOf, pageUrls), baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
       return true;
     };
     if (options.engine === 'semantic') {
-      const compiled = await compileCase(
-        {
-          id: original.id,
-          title: original.title,
-          type: original.type,
-          preconditions: original.source.rawPreconditions,
-          steps: original.source.rawSteps,
-          testData: original.source.rawTestData,
-          expected: original.source.rawExpected,
-          requirementId: original.requirementId,
-          row: original.source.row,
-        },
-        { config: options.config, pageRoutes: await pages.load(), env: options.env },
-      );
+      const compiled = await compileCase(rawOf(original), { config: options.config, pageRoutes: await pages.load(), env: options.env, knowledge });
       const dir = path.join(exploreDir, original.id);
       await mkdir(dir, { recursive: true });
       if (compiled.ir)
@@ -285,6 +303,12 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     }
     bySignature.set(signature, result);
     explored.push({ model, exploration: result });
+    // A case that starts logged in can be confirmed only by a run that logs in first: without the login case there is nothing to compare.
+    const login = options.engine === 'semantic' && compiledOf && needsLogin(compiledOf) ? await loginFor() : undefined;
+    // An element the tester picked on the screenshot cannot be picked again by the new engine: that choice is the tester's, and stands.
+    const testerChose = result.items.some((i) => i.resolvedBy === 'tester');
+    if (options.engine === 'semantic' && compiledOf && !testerChose && semanticSupport(compiledOf).ok && (!needsLogin(compiledOf) || login))
+      shadow.set(model.id, { model, knowledge, ...(login ? { login } : {}), compiled: withLearnedPages(compiledOf, pageUrls), baseUrl: options.baseUrl, headless: options.headless, testIdAttribute: options.testIdAttribute });
   }
 
   let workspace: string | undefined;
@@ -301,14 +325,14 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     for (const dir of ['tests', 'pages', 'locators', 'data']) await rm(path.join(workspace, dir), { recursive: true, force: true });
     await writeProject(workspace, files);
   }
-  return { explored, early, workspace, changes, ...(semantic.size ? { semantic } : {}) };
+  return { explored, early, workspace, changes, ...(semantic.size ? { semantic } : {}), ...(shadow.size ? { shadow } : {}) };
 }
 
 /** Runs what `prepareCases` generated and puts every case's verdict in the models' order. */
 export async function executeCases(
   models: TestModel[],
   prepared: Prepared,
-  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent' | 'nextExecutionId'>,
+  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent' | 'nextExecutionId' | 'approvedAssumptions'>,
 ): Promise<PipelineResult> {
   const { explored, early, workspace } = prepared;
   let executionId: string | undefined;
@@ -321,6 +345,7 @@ export async function executeCases(
       runsDir: options.runsDir,
       nextExecutionId: options.nextExecutionId,
       onEvent: options.onRunEvent,
+      approvedAssumptions: options.approvedAssumptions,
     });
     executionId = run.executionId;
     for (const v of run.verdicts) ran.set(v.testId, v);
@@ -332,6 +357,19 @@ export async function executeCases(
     executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
     const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'semantic');
     for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, onProgress: options.onProgress })) fromNewRun.set(id, v);
+  }
+
+  // A legacy PASS stands only when the new engine, running the case itself, agrees (S6).
+  const passed = [...(prepared.shadow ?? [])].filter(([id]) => ran.get(id)?.status === 'PASS').map(([, job]) => job);
+  if (passed.length) {
+    executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
+    const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'shadow');
+    const second = await runSemanticJobs(passed, { screenshotDir, onProgress: options.onProgress });
+    for (const job of passed) {
+      const legacy = ran.get(job.model.id) as TestVerdict;
+      // A case the new engine could not run at all has no answer: the PASS cannot be confirmed, so it is not given.
+      ran.set(job.model.id, reconcile(legacy, second.get(job.model.id) ?? noAnswer(legacy)));
+    }
   }
 
   const verdicts = models.map((m) => ran.get(m.id) ?? fromNewRun.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
@@ -426,5 +464,32 @@ function stopped(
     checks: model.assertions.map((a) => ({ id: a.id, raw: a.raw, expected: a.raw, actual: '', result: a.status === 'unparsed' ? 'not checked' : 'not run' })),
     durationMs: 0,
     evidence: { screenshots: [] },
+  };
+}
+
+/** What the new engine said when it could not run a case that the old one passed. */
+function noAnswer(legacy: TestVerdict): TestVerdict {
+  return { ...legacy, status: 'NEEDS REVIEW', reason: 'the new engine could not run this case in its own browser', actual: legacy.actual };
+}
+
+/** The page addresses the exploration learned are the new run's too: without them it cannot open "the Login page" the old route found. */
+function withLearnedPages(compiled: CompileResult, learned: Record<string, string>): CompileResult {
+  // A page the case names but nobody knew is `null` there: it must not hide the address the exploration found.
+  const known = Object.fromEntries(Object.entries(compiled.pages ?? {}).filter(([, v]) => typeof v === 'string'));
+  return { ...compiled, pages: { ...learned, ...known } };
+}
+
+/** The tester's own text of a case, which the new engine reads again from the beginning. */
+function rawOf(model: TestModel): RawTestCase {
+  return {
+    id: model.id,
+    title: model.title,
+    type: model.type,
+    preconditions: model.source.rawPreconditions,
+    steps: model.source.rawSteps,
+    testData: model.source.rawTestData,
+    expected: model.source.rawExpected,
+    requirementId: model.requirementId,
+    row: model.source.row,
   };
 }

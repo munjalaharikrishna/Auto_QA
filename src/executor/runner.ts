@@ -34,6 +34,8 @@ export interface RunOptions {
   nextExecutionId?: () => Promise<string>;
   /** Called for every reporter event (test-begin, step-end, test-end), for live progress (FR-RUN-02). */
   onEvent?: (event: RunEvent) => void;
+  /** `ruleKey` of each assumption the tester approved; others keep a passing test at NEEDS REVIEW. */
+  approvedAssumptions?: ReadonlySet<string>;
 }
 
 export interface RunEvent {
@@ -94,7 +96,7 @@ export async function runWorkspace(workspace: string, options: RunOptions = {}):
   const verdicts: TestVerdict[] = [];
   for (const t of tests) {
     const r = reported.find((x) => x.testId === t.testId);
-    const v = verdictFor(t, r, { executionId, missingEnv: needs(t), runError: reported.length ? undefined : runErrorOf(output) });
+    const v = verdictFor(t, r, { executionId, missingEnv: needs(t), runError: reported.length ? undefined : runErrorOf(output), approvedAssumptions: options.approvedAssumptions });
     v.evidence.screenshots = await keep(workspace, dir, v.evidence.screenshots);
     if (v.evidence.trace) v.evidence.trace = (await keep(workspace, dir, [v.evidence.trace]))[0];
     if (v.evidence.video) v.evidence.video = (await keep(workspace, dir, [v.evidence.video]))[0];

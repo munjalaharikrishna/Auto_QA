@@ -660,10 +660,17 @@ describe('real wording of the rewritten Employee workbook', () => {
   it('reads "PIM is the default page" as a check on the page PIM, and leaves "as a default page" to the noun phrase', () => {
     assert.deepEqual(conditions('PIM is the default page'), [{ type: 'STATE', target: { ontology: 'Page', name: 'PIM' }, expect: 'DEFAULT_PAGE' }]);
     const old = read('Verify User Should see tabs and PIM as a default page');
-    assert.ok(old.issues.some((i) => i.code === 'AMBIGUOUS' && i.message.includes('as a default page')));
+    // It is kept as written and listed, but it no longer stops the case (D3).
+    assert.ok(old.issues.some((i) => i.code === 'AMBIGUOUS' && i.severity === 'info' && i.message.includes('as a default page')));
   });
-  it('does not pick one of two alternatives: "form or page" is a question for the tester, with no check made', () => {
+  it('reads "form or page" as two words for one thing: one check on the name, and no question', () => {
     const r = read('Verify The Add Employee form or page is displayed');
+    assert.equal(r.expectations.length, 1);
+    assert.equal(r.expectations[0]?.condition.target?.name, 'Add Employee');
+    assert.deepEqual(r.issues, []);
+  });
+  it('does not pick one of two alternatives when one is a message: that is a question for the tester, with no check made', () => {
+    const r = read('Verify The Success message or the Employee List page is displayed');
     assert.equal(r.expectations.length, 0);
     assert.ok(r.issues.some((i) => i.code === 'AMBIGUOUS' && i.message.includes('alternatives')));
   });

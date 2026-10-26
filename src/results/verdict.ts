@@ -1,5 +1,6 @@
 import type { ManifestTest } from '../generator/plan.js';
 import type { AssertionType } from '../model/test-model.js';
+import { ruleKey } from '../parser/rules.js';
 import { passedText } from '../validations/registry.js';
 
 /**
@@ -72,7 +73,7 @@ export interface ReviewReason {
 
 export interface TestVerdict {
   executionId: string;
-  /** Decisions the platform made that the tester did not state (made-up values, learned messages): PASS (with assumptions). */
+  /** Decisions the platform made that the tester did not state (made-up values, learned messages): NEEDS REVIEW until the tester approves them (DEC-05). */
   assumptions?: string[];
   testId: string;
   title: string;
@@ -101,6 +102,8 @@ export interface VerdictContext {
   missingEnv?: string[];
   /** Why no test ran at all, from Playwright's output. */
   runError?: string;
+  /** `ruleKey` of each assumption the tester already approved; any other assumption stops a PASS (DEC-05). */
+  approvedAssumptions?: ReadonlySet<string>;
 }
 
 export function verdictFor(test: ManifestTest, reported: ReportedTest | undefined, ctx: VerdictContext): TestVerdict {
@@ -201,6 +204,7 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
       };
     }
     const assumptions = test.assumptions?.length ? test.assumptions : undefined;
+    const open = (assumptions ?? []).filter((a) => !ctx.approvedAssumptions?.has(ruleKey(a.replace(/^[SA]\d+(?:\.\d+)?:\s*/, ''))));
     const unverified = checks.filter((c) => c.result === 'not verified');
     if (unverified.length) {
       const review: ReviewReason[] = unverified.map((c) => ({
@@ -222,12 +226,20 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
         actual: `${summary(checks)} Not verified: ${unverified.map((c) => `${c.id} "${c.raw}"`).join('; ')}. ${describePage(facts)}`.trim(),
       };
     }
+    if (open.length)
+      return {
+        ...common,
+        status: 'NEEDS REVIEW',
+        assumptions,
+        reason: `Every check passed, but the result rests on ${open.length === 1 ? 'an assumption' : `${open.length} assumptions`} the tester has not approved. Approve ${open.length === 1 ? 'it' : 'them'} to make this a PASS.`,
+        actual: `${summary(checks)} Assumed or learned: ${open.join(' ')}`,
+      };
     return {
       ...common,
       status: 'PASS',
       assumptions,
-      reason: assumptions ? 'Every check passed, with assumptions (listed).' : 'Every check passed.',
-      actual: summary(checks) + (assumptions ? ` Assumed or learned: ${assumptions.join(' ')}` : ''),
+      reason: 'Every check passed.',
+      actual: summary(checks) + (assumptions ? ` Assumed or learned (approved): ${assumptions.join(' ')}` : ''),
     };
   }
 

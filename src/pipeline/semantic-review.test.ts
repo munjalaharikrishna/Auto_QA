@@ -34,7 +34,7 @@ async function prepare(models: ReturnType<typeof model>[], engine: 'semantic' | 
 }
 
 describe('the semantic engine decides what needs review', () => {
-  const alternatives = model('TC-ALT', '1. Open Login page\n2. Click the Add button', 'The Add Employee form or page is displayed');
+  const alternatives = model('TC-ALT', '1. Open Login page\n2. Click the Add button', 'The Success message or the Employee List page is displayed');
   const vague = model('TC-VAGUE', '1. Open Login page\n2. Do the needful', 'System works correctly');
 
   it("gives the new engine's reason, in the tester's words, for a sentence with two alternatives", async () => {
@@ -43,7 +43,7 @@ describe('the semantic engine decides what needs review', () => {
     assert.equal(v?.status, 'NEEDS REVIEW');
     const reason = v?.review?.find((r) => r.why.includes('alternatives'));
     assert.ok(reason, JSON.stringify(v?.review));
-    assert.ok(reason.raw.includes('form or page'));
+    assert.ok(reason.raw.includes('message or'));
     assert.ok(reason.todo[0]?.includes('Name the one'), reason.todo.join());
   });
   it("gives the new engine's reason for an action it does not support, instead of a question about the page", async () => {

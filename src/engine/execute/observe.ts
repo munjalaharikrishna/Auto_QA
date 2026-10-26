@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+import { prepareFrame, visibleFrames } from '../locate/frames.js';
 import { inspectPage } from '../locate/inspector.js';
 import type { DomElement } from '../locate/types.js';
 
@@ -75,7 +76,7 @@ export function observed(url: string, title: string, lines: string[], elements: 
   for (const e of shown) {
     if (!WORTH_NOTING.has(e.role) && !MESSAGE_ROLES.has(e.role)) continue;
     out.push({
-      identity: e.testId ?? e.id ?? e.xpath,
+      identity: `${(e.frame ?? []).join('>')}${e.frame?.length ? '|' : ''}${e.testId ?? e.id ?? e.xpath}`,
       role: e.role,
       name: nameOf(e),
       tag: e.tag,
@@ -116,8 +117,13 @@ export interface ObserveOptions {
 
 /** Reads the page as it is now (EX-04). */
 export async function observe(page: Page, options: ObserveOptions = {}): Promise<Observation> {
-  await page.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)').catch(() => {});
-  const lines = await page.evaluate(readLines);
+  // The text of the page and of every frame a person can see: what is shown in a frame is shown on the page.
+  const lines: string[] = [];
+  for (const { frame } of await visibleFrames(page)) {
+    await prepareFrame(frame);
+    lines.push(...(await frame.evaluate(readLines).catch(() => [] as string[])));
+    if (lines.length >= 500) break;
+  }
   const elements = await inspectPage(page, { testIdAttribute: options.testIdAttribute, includeText: false });
   return observed(page.url(), await page.title(), lines, elements, options.tabs ?? 1);
 }

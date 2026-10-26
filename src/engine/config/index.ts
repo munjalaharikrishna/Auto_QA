@@ -19,7 +19,7 @@ export interface EngineConfig {
 }
 
 const DEFAULTS: EngineConfig = {
-  engine: 'legacy',
+  engine: 'semantic',
   assumptionsBlockPass: true,
   versions: COMPONENT_VERSIONS,
 };
@@ -37,7 +37,7 @@ export function resetEngineConfig(): void {
   current = { ...DEFAULTS };
 }
 
-/** `legacy` unless the value names a known engine. An unknown value never silently switches to the new engine. */
+/** The default engine unless the value names a known engine: an unknown value never silently picks the other one (E1.0: the default is the new engine; `legacy` stays as a choice). */
 export function engineFrom(value: unknown): EngineKind {
   return isEngine(value) ? value : DEFAULTS.engine;
 }

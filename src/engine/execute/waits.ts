@@ -1,4 +1,5 @@
-import type { Page } from 'playwright';
+import type { Page, Request } from 'playwright';
+import { prepareFrame, visibleFrames } from '../locate/frames.js';
 
 /**
  * Layer 35, the wait and synchronization engine (UI-09). Nothing here sleeps. Every wait is for something to happen: the
@@ -20,6 +21,36 @@ export interface Settled {
   settled: boolean;
   /** What was still going on at the limit, for the report. */
   waitingFor: string[];
+}
+
+/**
+ * The navigations a page has started and not yet received: a form that is saved, a link that is followed. While one is
+ * pending the old document stays quiet, so "the page stopped changing" would be true of a page that is about to be
+ * replaced (E3). It is started before a step acts, so the click that begins a navigation is seen.
+ */
+const pendingNavigations = new WeakMap<Page, Set<Request>>();
+export function trackNavigations(page: Page): void {
+  if (pendingNavigations.has(page)) return;
+  const pending = new Set<Request>();
+  pendingNavigations.set(page, pending);
+  page.on('request', (r) => {
+    if (r.isNavigationRequest()) pending.add(r);
+  });
+  const done = (r: Request): void => {
+    pending.delete(r);
+  };
+  page.on('requestfinished', done);
+  page.on('requestfailed', done);
+}
+const navigating = (page: Page): boolean => (pendingNavigations.get(page)?.size ?? 0) > 0;
+
+/** Until every navigation that was started has been answered, or the deadline; it waits for the answers, it does not poll. */
+async function untilAnswered(page: Page, deadline: number): Promise<void> {
+  while (navigating(page)) {
+    const left = deadline - Date.now();
+    if (left <= 0) return;
+    await Promise.race([page.waitForEvent('requestfinished', { timeout: left }), page.waitForEvent('requestfailed', { timeout: left })]).catch(() => undefined);
+  }
 }
 
 export const DEFAULT_MAX_MS = 5000;
@@ -55,8 +86,6 @@ function pageIsQuiet(quiet: number): boolean {
 export async function waitSettled(page: Page, options: SettleOptions = {}): Promise<Settled> {
   const timeout = options.maxMs ?? DEFAULT_MAX_MS;
   const waitingFor: string[] = [];
-  // The tools that compile this file add a helper called `__name` to functions sent into the page; the page lacks it.
-  await page.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)').catch(() => {});
   const attempt = async (what: string, run: () => Promise<unknown>): Promise<void> => {
     try {
       await run();
@@ -66,7 +95,24 @@ export async function waitSettled(page: Page, options: SettleOptions = {}): Prom
   };
   await attempt('the page to load', () => page.waitForLoadState('domcontentloaded', { timeout }));
   await attempt('the network to go quiet', () => page.waitForLoadState('networkidle', { timeout }));
-  await attempt('the page to stop changing', () => page.waitForFunction(pageIsQuiet, options.quietMs ?? DEFAULT_QUIET_MS, { timeout }));
+  // The page and every frame in it: a screen shown in an iframe reloads on its own, after the page itself is quiet (E3).
+  await attempt('the page to stop changing', async () => {
+    const deadline = Date.now() + timeout;
+    for (let round = 0; round < 5; round++) {
+      await untilAnswered(page, deadline);
+      if (navigating(page)) throw new Error('a navigation is still pending');
+      const frames = await visibleFrames(page);
+      for (const { frame } of frames) {
+        if (frame.isDetached()) continue;
+        await prepareFrame(frame);
+        const left = Math.max(1, deadline - Date.now());
+        await frame.waitForLoadState('domcontentloaded', { timeout: left });
+        await frame.waitForFunction(pageIsQuiet, options.quietMs ?? DEFAULT_QUIET_MS, { timeout: Math.max(1, deadline - Date.now()) });
+      }
+      // A frame that appeared while waiting is waited for too.
+      if (!navigating(page) && (await visibleFrames(page)).length === frames.length) return;
+    }
+  });
   return { settled: waitingFor.length === 0, waitingFor };
 }
 
@@ -83,10 +129,11 @@ export async function waitForUrl(page: Page, fragment: string, maxMs = DEFAULT_M
   }
 }
 
-/** Until the text is shown on the page, or at most `maxMs`. */
+/** Until the text is shown on the page or in any frame of it, or at most `maxMs`. */
 export async function waitForText(page: Page, text: string, maxMs = DEFAULT_MAX_MS): Promise<boolean> {
   try {
-    await page.getByText(text, { exact: false }).first().waitFor({ state: 'visible', timeout: maxMs });
+    const frames = await visibleFrames(page);
+    await Promise.any(frames.map(({ frame }) => frame.getByText(text, { exact: false }).first().waitFor({ state: 'visible', timeout: maxMs })));
     return true;
   } catch {
     return false;

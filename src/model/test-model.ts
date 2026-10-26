@@ -18,6 +18,12 @@ export const RawTestCaseSchema = z.object({
   /** `key=value` pairs, one per line or `;`-separated. */
   testData: z.string().optional(),
   expected: z.string().min(1),
+  /**
+   * An expected result a sheet gives to one step rather than to the whole case, kept beside the steps and not inside them: the key is
+   * the number of the step as written in `steps`, the value what should be true right after it. Each is checked in that place
+   * (`stepsWithChecks`); the steps text holds only the actions.
+   */
+  stepExpected: z.record(z.string().regex(/^\d{1,3}$/), z.string().min(1)).optional(),
   requirementId: z.string().optional(),
   /** Optional columns of the sheet (IN-12 to IN-14): kept with the test case, never used to decide a verdict. */
   priority: z.string().optional(),
@@ -27,6 +33,31 @@ export const RawTestCaseSchema = z.object({
   row: z.number().int().positive().optional(),
 });
 export type RawTestCase = z.infer<typeof RawTestCaseSchema>;
+
+const NUMBERED_LINE = /^\s*(?:step\s*)?(\d{1,3})\s*[.):-]\s*(\S.*)$/i;
+
+/**
+ * The steps as the parser reads them: each step's own expected result written as a "Verify …" line right after the step, and
+ * everything numbered 1, 2, 3 again. A test case without `stepExpected` is returned exactly as it is, so nothing that already
+ * works changes. A line without a number counts as the step at its position.
+ */
+export function stepsWithChecks(raw: Pick<RawTestCase, 'steps' | 'stepExpected'>): string {
+  const checks = raw.stepExpected;
+  if (!checks || !Object.keys(checks).length) return raw.steps;
+  const lines = raw.steps
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out: string[] = [];
+  for (const [i, line] of lines.entries()) {
+    const m = NUMBERED_LINE.exec(line);
+    out.push(`${out.length + 1}. ${m ? m[2].trim() : line}`);
+    const after = checks[String(m ? Number(m[1]) : i + 1)];
+    if (after) out.push(`${out.length + 1}. Verify ${after.replace(/\s*\n\s*/g, ' ').trim()}`);
+  }
+  return out.join('\n');
+}
 
 /** Where a step's value comes from (FR-PA-10). Secrets are always `env`, never `literal`. */
 export const ValueRefSchema = z.discriminatedUnion('kind', [
@@ -286,6 +317,8 @@ export const TestModelSchema = z.object({
     rawTestData: z.string().optional(),
   }),
   warnings: z.array(WarningSchema),
+  /** Variable → salted fingerprint of the value the Test Data gave it; the value itself is never kept (S4). */
+  secretChecks: z.record(z.string(), z.string()).optional(),
 });
 export type TestModel = z.infer<typeof TestModelSchema>;
 

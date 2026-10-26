@@ -1,4 +1,5 @@
 import type { IrCondition, IrTarget } from '../ir/schema.js';
+import { DATA_CLASS_CHECK_WORDS, STATE_WORDS } from './lexicon.js';
 import type { Token } from '../text/index.js';
 import { type NounPhrase, parseNounPhrase } from './nounphrase.js';
 import type { Issue } from './types.js';
@@ -78,7 +79,7 @@ const PREDICATES: readonly PredicateDef[] = [
     'application launches',
     'application starts',
   ),
-  p('MASKED', 90, 'masked characters', 'masked', 'asterisks', 'dots', 'obscured'),
+  p('MASKED', 90, ...STATE_WORDS.masked),
   p(
     'LAYOUT',
     85,
@@ -126,12 +127,12 @@ const PREDICATES: readonly PredicateDef[] = [
   p('CONTAINS', 70, 'contains', 'contain', 'containing', 'includes', 'include', 'says', 'reads', 'with text', 'text is'),
   p('EQUALS', 70, 'equals', 'equal to', 'equal', 'exactly'),
   p('HAS_VALUE', 66, 'has value', 'have value', 'has the value', 'shows value'),
-  p('DISABLED', 65, 'disabled', 'greyed out', 'grayed out', 'inactive', 'unclickable', 'read-only', 'readonly'),
-  p('ENABLED', 64, 'enabled', 'clickable', 'active', 'editable'),
-  p('EMPTY', 60, 'empty', 'blank', 'cleared', 'emptied'),
-  p('CHECKED', 58, 'checked', 'ticked', 'selected'),
-  p('UNCHECKED', 58, 'unchecked', 'unticked', 'deselected'),
-  last(p('DATA_CLASS', 62, 'invalid', 'valid', 'incorrect', 'correct', 'wrong')),
+  p('DISABLED', 65, ...STATE_WORDS.disabled),
+  p('ENABLED', 64, ...STATE_WORDS.enabled),
+  p('EMPTY', 60, ...STATE_WORDS.empty),
+  p('CHECKED', 58, ...STATE_WORDS.checked),
+  p('UNCHECKED', 58, ...STATE_WORDS.unchecked),
+  last(p('DATA_CLASS', 62, ...DATA_CLASS_CHECK_WORDS)),
   p('DELETED', 57, 'deleted', 'removed', 'erased'),
   p('CHANGED', 56, 'updated', 'saved', 'saves', 'added', 'created', 'modified', 'changed', 'stored', 'uploaded'),
   p('DEFAULT_PAGE', 68, 'default page', 'default screen', 'landing page', 'home page by default'),
@@ -412,6 +413,18 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       adjectives = skip;
     }
   }
+  // "The entered details are cleared": "entered" sits after "the", so it describes the details; the check is the later predicate, and the
+  // subject is not cut at "entered". Any predicate word right after a determiner and before the one being checked is such a describing word.
+  // (Not for "removed"/"changed": what they say about the entered data is not what the reference check compares.)
+  if (hit && hit.def.kind !== 'DELETED' && hit.def.kind !== 'CHANGED') {
+    const describing = new Set<Kind>(adjectives ?? []);
+    for (let k = 1; k < hit.start; k++) {
+      if (!['the', 'these', 'those', 'all', 'each', 'any', 'a', 'an'].includes(words[k - 1] ?? '')) continue;
+      const inner = findPredicate([words[k] as string]);
+      if (inner && inner.def.kind !== hit.def.kind) describing.add(inner.def.kind);
+    }
+    if (describing.size) adjectives = describing;
+  }
   if (thereNp) {
     const out: CheckResult['expectations'] = [];
     for (const target of thereNp.targets)
@@ -655,6 +668,21 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       const hidden = kind === 'HIDDEN';
       // "the system displays X", "the user should see X": the thing is the object. "X is displayed": the thing is the subject.
       const np = kind === 'SHOWS' ? objectNp() : subjectNp;
+      // "The Personal Details form or page is shown", "The Success message or the Employee List page is shown": either will do.
+      const either = !hidden && !negated ? alternativesIn(line, kind === 'SHOWS' ? after : before) : undefined;
+      if (either) {
+        decisions.push(either.same ? 'the alternatives name one thing in two ways: it is one check' : 'any of the alternatives being shown satisfies the check');
+        out.push(
+          make({
+            type: 'VISIBILITY',
+            target: either.targets[0] as IrTarget,
+            ...(either.targets.length > 1 ? { alternatives: either.targets.slice(1) } : {}),
+            expect: 'VISIBLE',
+            check: 'visible',
+          }),
+        );
+        break;
+      }
       if (!np) {
         issues.push({ code: 'AMBIGUOUS', severity: 'review', message: 'it does not say what should be visible', original: clauseText });
         break;
@@ -690,13 +718,19 @@ const refIssue = (word: string, phrase: string, original: string): Omit<Issue, '
   suggestion: 'Name it: write the field, record or value itself instead of "same", "added", "entered", "it".',
 });
 
-const droppedIssue = (text: string, original: string): Omit<Issue, 'where'> => ({
-  code: 'AMBIGUOUS',
-  severity: 'review',
-  message: `the words "${text}" are not understood and are not checked`,
-  original,
-  suggestion: 'Say it as a check of its own: Verify <what> is <state>.',
-});
+// "… tabs and PIM as a default page": a tail that says how the thing is shown, not what is shown. What is shown is checked; the tail is
+// kept as written and listed, but it does not stop the case (it stopped 17 cases of one workbook).
+const DESCRIBES = ['as a ', 'as an ', 'as the ', 'as default'];
+const droppedIssue = (text: string, original: string): Omit<Issue, 'where'> => {
+  const describes = DESCRIBES.some((d) => `${text.toLowerCase()} `.startsWith(d));
+  return {
+    code: 'AMBIGUOUS',
+    severity: describes ? 'info' : 'review',
+    message: describes ? `the words "${text}" describe what is shown; they are kept as written and nothing verifies them` : `the words "${text}" are not understood and are not checked`,
+    original,
+    suggestion: 'Say it as a check of its own: Verify <what> is <state>.',
+  };
+};
 
 const refineName = (name: string | undefined, cls: string): string => {
   const lower = (name ?? '').toLowerCase();
@@ -786,8 +820,11 @@ function pushVisibility(
     );
     return;
   }
+  // "The added data is displayed on the Personal Information page / in the table": where it is shown is part of the check.
+  const place = !objectIsNp && after.length && ['in', 'on', 'at', 'under', 'within'].includes(lw(after[0])) ? after.slice(1).filter((t, i) => !(i === 0 && lw(t) === 'the')) : [];
+  const where = np.within ?? (place.length ? place.map((t) => t.text).join(' ') : undefined);
   for (const target of np.targets) {
-    out.push(make({ type: 'VISIBILITY', target: { ...target, ...(np.within ? { within: np.within } : {}) }, expect, check: 'visible' }));
+    out.push(make({ type: 'VISIBILITY', target: { ...target, ...(where ? { within: where } : {}) }, expect, check: 'visible' }));
   }
   if (!np.targets.length) issues.push({ code: 'AMBIGUOUS', severity: 'review', message: 'it does not say what should be visible', original: clauseText });
 }
@@ -796,3 +833,29 @@ const literalIn = (line: Line, np: NounPhrase): string | undefined => {
   const t = line.tokens.find((x) => x.kind === 'LITERAL' && np.original.includes(x.text));
   return t?.value;
 };
+
+const ALTERNATIVE_MESSAGES: ReadonlySet<string> = new Set(['Message', 'Error', 'Validation', 'Success', 'Warning', 'Toast', 'Alert']);
+
+/**
+ * "X or Y" in a check of what is shown. When the second part only says another kind of thing ("form or page"), both are
+ * one name written twice and the check is on that name. When both parts have names, the check holds if either is shown.
+ * Messages are left out: what they say is judged by their meaning, which a list of names cannot carry.
+ */
+function alternativesIn(line: Line, tokens: readonly Token[]): { targets: IrTarget[]; same: boolean } | undefined {
+  const at = tokens.findIndex((t) => lw(t) === 'or');
+  if (at <= 0 || at === tokens.length - 1) return undefined;
+  const parts: Token[][] = [[]];
+  for (const t of tokens) {
+    if (lw(t) === 'or') parts.push([]);
+    else (parts[parts.length - 1] as Token[]).push(t);
+  }
+  const nps = parts.map((p) => parseNounPhrase(line, p, 'Element'));
+  if (nps.some((n) => n.headClass && ALTERNATIVE_MESSAGES.has(n.headClass))) return undefined;
+  const first = nps[0]?.targets[0];
+  if (!first?.name) return undefined;
+  const named = nps.map((n) => n.targets[0]).filter((t): t is IrTarget => !!t?.name);
+  // The later parts have no name of their own: "form or page" are two words for the thing the first part names.
+  if (named.length === 1) return { targets: [first], same: true };
+  if (named.length !== nps.length) return undefined;
+  return { targets: named, same: false };
+}

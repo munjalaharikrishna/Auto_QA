@@ -165,6 +165,8 @@ export const IrConditionSchema = z.object({
   type: z.enum(CONDITION_TYPES),
   target: IrTargetSchema.optional(),
   expect: z.string().optional(),
+  /** "A or B is shown": the check holds when any of these is shown as well as `target`. Only for a visibility check that is not negated. */
+  alternatives: z.array(IrTargetSchema).optional(),
   /** What a message must say, in the tester's words ("username is required"): a meaning to look for, not an exact text. */
   text: z.string().optional(),
   /** Where a layout check puts the element: `center`, `top-left`, … */

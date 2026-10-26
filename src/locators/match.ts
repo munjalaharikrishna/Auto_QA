@@ -52,6 +52,8 @@ export const SCORE = {
   onlyOne: 0.7,
   /** Names taken from nearby text or a heading are less certain than a real accessible name. */
   sourceWeight: { name: 1, text: 1, nearby: 0.95, heading: 0.9 } as Record<NameSource, number>,
+  /** Second pass for clicks: an element that is not a control and shows no pointer cursor, so it is only a possible target. */
+  widened: 0.1,
   roleHintMatch: 0.05,
   roleHintMismatch: -0.15,
   inDialog: 0.05,
@@ -108,6 +110,59 @@ export function rolesFor(kind: TargetQuery['kind']): string[] | undefined {
   return ROLES[kind];
 }
 
+/** Steps that act on anything a person can click, not only on controls: a list row, a picture, an icon, a card. */
+const CLICK_KINDS = new Set<TargetQuery['kind']>(['click', 'clickable', 'hover']);
+
+/** Page structure that is a click target only when the page says it reacts to one (a pointer cursor). */
+const CLICKABLE_WHEN_POINTER = new Set(['generic', 'text', 'paragraph', 'group', 'region']);
+
+/** Page structure that is never a click target. */
+const NEVER_A_TARGET = new Set(['main', 'document', 'navigation', 'banner', 'contentinfo', 'form', 'list', 'separator']);
+
+/** Things a person fills or sets, not things a step clicks: "Click Forgot password" must not land on the Password field. */
+const FIELD_ROLES = new Set(['textbox', 'searchbox', 'combobox', 'spinbutton', 'slider', 'listbox', 'scrollbar', 'progressbar', 'meter']);
+
+/**
+ * Whether an element can be offered for a click although its role is not a control: a `listitem` row, an `img`, a heading, a card
+ * that shows a pointer cursor. Apps give buttons the wrong role (`<button role="listitem">`) and make pictures and divs clickable, so
+ * the role says little about whether a click does something. Used by the second pass of the matcher and by the picture the tester points at.
+ */
+export function clickableByAnyRole(node: SnapshotNode): boolean {
+  if (!node.ref || NEVER_A_TARGET.has(node.role) || FIELD_ROLES.has(node.role)) return false;
+  if (CLICKABLE_WHEN_POINTER.has(node.role)) return node.attributes.cursor === 'pointer';
+  return true;
+}
+
+/**
+ * The words an element shows when it has no name of its own: the text of the things inside it (`listitem` > "⚡", "EEE").
+ * An element that holds a control is a container around it, not the thing to click, and long text is a paragraph, not a label.
+ */
+export function contentTextOf(node: SnapshotNode): string | undefined {
+  if (node.name || node.text) return undefined;
+  const inner = flatten(node.children);
+  const control = ROLES.click ?? [];
+  if (inner.some((n) => control.includes(n.role))) return undefined;
+  const text = inner
+    .flatMap((n) => [n.name, n.text])
+    .filter((x): x is string => !!x?.trim())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text && text.length <= 60 ? text : undefined;
+}
+
+/**
+ * Second pass for click steps, only when the first found nothing good enough: the elements the first pass left out because of
+ * their role. They rank below a real control (a small penalty, smaller when the page shows a pointer cursor), so nothing that
+ * matched before can change; a close tie is still left to the tester (D6).
+ */
+function widenedCandidates(query: TargetQuery, nodes: SnapshotNode[], wanted: string[], config: ParserConfig, already: Set<SnapshotNode>): Candidate[] {
+  return flatten(nodes)
+    .filter((n) => !already.has(n) && clickableByAnyRole(n))
+    .map((node) => scoreNode(node, wanted, query, config, true))
+    .filter((c): c is Candidate => !!c);
+}
+
 export function findCandidates(query: TargetQuery, nodes: SnapshotNode[], config: ParserConfig): MatchResult {
   const roles = rolesFor(query.kind);
   // A check that something is shown may point at plain text, e.g. saucedemo's "Products" title is a span.
@@ -130,7 +185,16 @@ export function findCandidates(query: TargetQuery, nodes: SnapshotNode[], config
     .sort((a, b) => b.score - a.score);
   // Stable sort keeps document order for equal scores.
 
-  return decide(candidates, wanted[0]);
+  const first = decide(candidates, wanted[0]);
+  if (first.status === 'needs-review' && first.code === 'NO_MATCH' && CLICK_KINDS.has(query.kind)) {
+    const more = widenedCandidates(query, nodes, wanted, config, new Set(pool));
+    if (more.length)
+      return decide(
+        [...candidates, ...more].sort((a, b) => b.score - a.score),
+        wanted[0],
+      );
+  }
+  return first;
 }
 
 /** Parts of the page a tester names: a form, a section, a table, a dialog (not a single control). */
@@ -266,9 +330,10 @@ function onlyOfRole(query: TargetQuery, pool: SnapshotNode[]): MatchResult {
   };
 }
 
-function scoreNode(node: SnapshotNode, wanted: string[], query: TargetQuery, config: ParserConfig): Candidate | undefined {
+function scoreNode(node: SnapshotNode, wanted: string[], query: TargetQuery, config: ParserConfig, widened = false): Candidate | undefined {
   let best: Omit<Candidate, 'node' | 'notes'> | undefined;
-  for (const [name, source] of namesOf(node)) {
+  const content = widened ? contentTextOf(node) : undefined;
+  for (const [name, source] of [...namesOf(node), ...(content ? ([[content, 'text']] as Array<[string, NameSource]>) : [])]) {
     for (const w of wanted) {
       const m = compare(w, name, !!query.exact, config);
       if (!m) continue;
@@ -281,7 +346,14 @@ function scoreNode(node: SnapshotNode, wanted: string[], query: TargetQuery, con
   const notes: string[] = [];
   let score = best.score;
   if (best.source !== 'name' && best.source !== 'text') notes.push(`named by ${best.source === 'nearby' ? 'nearby text' : 'the heading above it'}`);
-  if (query.roleHint && query.roleHint !== 'page') {
+  if (widened) {
+    // Not a control by its role. With a pointer cursor the page says it reacts to a click, which is what a tester means by "button"
+    // or "link"; without one it is only a possible target, so it is a little lower.
+    const pointer = node.attributes.cursor === 'pointer';
+    if (!pointer) score -= SCORE.widened;
+    else if (query.roleHint === 'button' || query.roleHint === 'link') score += SCORE.roleHintMatch;
+    notes.push(`not a button or link: it is ${/^[aeiou]/.test(node.role) ? 'an' : 'a'} ${node.role}${pointer ? ' that shows a pointer cursor' : ''}`);
+  } else if (query.roleHint && query.roleHint !== 'page') {
     if (query.roleHint === node.role) score += SCORE.roleHintMatch;
     else {
       score += SCORE.roleHintMismatch;

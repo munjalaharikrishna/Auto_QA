@@ -106,9 +106,11 @@ describe('workbook import (FR-IN-01)', () => {
       r.cases.map((c) => c.raw.id),
       ['TC-1', 'TC-2'],
     );
-    assert.equal(r.cases[0].raw.steps, '1. Open Login page\n2. Verify Login page is displayed\n3. Enter username Admin\n4. Click Login');
+    assert.equal(r.cases[0].raw.steps, '1. Open Login page\n2. Enter username Admin\n3. Click Login');
+    assert.deepEqual(r.cases[0].raw.stepExpected, { '1': 'Login page is displayed' });
     assert.equal(r.cases[0].raw.expected, 'User is redirected to Dashboard page');
-    assert.equal(r.cases[1].raw.steps, '1. Open Login page\n2. Verify Page shown\n3. Click Login');
+    assert.equal(r.cases[1].raw.steps, '1. Open Login page\n2. Click Login');
+    assert.deepEqual(r.cases[1].raw.stepExpected, { '1': 'Page shown' });
     assert.equal(r.cases[1].raw.expected, 'Dashboard is displayed');
     assert.ok(r.warnings.some((w) => /LOGIN MODULE.*heading/.test(w)));
     assert.ok(r.warnings.some((w) => /Other sheets.*Other/.test(w)));

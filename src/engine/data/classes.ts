@@ -1,4 +1,5 @@
 import type { DataClass } from '../ir/schema.js';
+import { DATA_WORDS } from '../language/lexicon.js';
 import { compactKey } from '../text/compound.js';
 
 /**
@@ -21,10 +22,10 @@ const d = (cls: DataClass, meaning: string, words: readonly string[], fixed = fa
 
 export const DATA_CLASS_DEFS: readonly DataClassDef[] = [
   d('EXPLICIT', 'a value the test case gives: in the Test Data column or in quotes in the step', []),
-  d('VALID', 'a value the application accepts', ['valid', 'correct', 'right', 'proper', 'good', 'legal', 'acceptable']),
-  d('INVALID', 'a value the application must reject', ['invalid', 'wrong', 'incorrect', 'bad', 'illegal', 'unacceptable', 'improper', 'unintended']),
+  d('VALID', 'a value the application accepts', DATA_WORDS.VALID),
+  d('INVALID', 'a value the application must reject', DATA_WORDS.INVALID),
   d('EMPTY', 'an empty string, typed in on purpose', ['empty string', 'empty value', 'zero length'], true),
-  d('BLANK', 'a field left without a value', ['blank', 'empty', 'nothing', 'no value', 'left blank', 'left empty'], true),
+  d('BLANK', 'a field left without a value', DATA_WORDS.BLANK, true),
   d('MISSING', 'no value at all: the field is not given to the application', ['missing', 'omitted', 'absent', 'not provided', 'not given'], true),
   d('NULL', 'the value null', ['null', 'none'], true),
   d('BOUNDARY', 'a value at the edge of what is allowed', ['boundary', 'edge', 'limit']),
@@ -32,17 +33,9 @@ export const DATA_CLASS_DEFS: readonly DataClassDef[] = [
   d('MINIMUM', 'the shortest or smallest value allowed', ['min', 'minimum', 'min length', 'minimum length', 'shortest', 'smallest', 'lowest']),
   d('BELOW_MINIMUM', 'a value one step under the shortest or smallest allowed (min - 1)', ['below minimum', 'under minimum', 'below min', 'less than minimum']),
   d('WHITESPACE', 'a value of spaces only, including Unicode spaces', ['whitespace', 'unicode space', 'unicode spaces', 'spaces only']),
-  d('EXISTING', 'a value that is already in the application', ['existing', 'already registered', 'already existing', 'registered', 'present']),
-  d('NON_EXISTING', 'a value that is not in the application', [
-    'non-existing',
-    'non existing',
-    'nonexistent',
-    'unregistered',
-    'not registered',
-    'not existing',
-    'unknown',
-  ]),
-  d('DUPLICATE', 'a value that is already in the application and must be refused as a copy', ['duplicate', 'duplicated', 'repeated']),
+  d('EXISTING', 'a value that is already in the application', DATA_WORDS.EXISTING),
+  d('NON_EXISTING', 'a value that is not in the application', DATA_WORDS.NON_EXISTING),
+  d('DUPLICATE', 'a value that is already in the application and must be refused as a copy', DATA_WORDS.DUPLICATE),
   d('GENERATED', 'a value the engine makes, the same way every run', ['generated', 'auto-generated', 'unique']),
   d('RANDOM', 'a value the engine picks, the same way every run for the same seed', ['random', 'arbitrary', 'any']),
   d('CREDENTIAL', 'a secret from the credential store', ['credential']),
@@ -93,3 +86,19 @@ export function fieldKindOf(name: string): FieldKind {
 
 /** Kinds of value that only the application's own users, a secret store or a real file can give: a generated one would be wrong. */
 export const NEEDS_REAL_VALUE: ReadonlySet<FieldKind> = new Set(['username', 'password', 'file']);
+
+const QUALIFYING: ReadonlySet<DataClass> = new Set<DataClass>(['VALID', 'INVALID', 'EXISTING', 'NON_EXISTING']);
+
+/**
+ * "valid username" names the field `username`: a word that says what kind of value goes in is not a part of the field's name.
+ * Only a leading word of a class that qualifies a value is taken off, and never the last word of the name.
+ */
+export function withoutClassWords(name: string): string {
+  const words = name.split(' ').filter(Boolean);
+  while (words.length > 1) {
+    const cls = BY_WORD.get((words[0] as string).toLowerCase());
+    if (!cls || !QUALIFYING.has(cls)) break;
+    words.shift();
+  }
+  return words.join(' ');
+}

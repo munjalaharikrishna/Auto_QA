@@ -3,7 +3,7 @@ import path from 'node:path';
 import { type LocateResult, locate } from '../locators/engine.js';
 import { type Fingerprint, type PageRef, pageOf } from '../locators/ladder.js';
 import { parseLocatorCode, spec, toCode, toLocator } from '../locators/locator.js';
-import { type Candidate, rolesFor, type TargetQuery } from '../locators/match.js';
+import { type Candidate, clickableByAnyRole, contentTextOf, rolesFor, SCORE, type TargetQuery } from '../locators/match.js';
 import type { Session } from '../locators/session.js';
 import type { Action, Assertion, AssertionType, Step, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
@@ -13,6 +13,7 @@ import { errorMessagesInPage } from '../validations/observe.js';
 import { type Explanation, explain, plainError, sentence } from './explain.js';
 import { pageBoxes } from './frame-boxes.js';
 import type { PageState, ToolReply } from './mcp-browser.js';
+import { boxesByMcpRef, refsToMcp } from './ref-map.js';
 import { flatten, nearbyText, parseSnapshot, type SnapshotNode } from './snapshot-parser.js';
 import { masker, resolveValue } from './values.js';
 
@@ -225,7 +226,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
   }
 
   /** Screenshot + element boxes, taken together so the boxes match the picture (FR-RV-02). */
-  async function pageView(query: TargetQuery, candidates: Candidate[], name: string): Promise<PageView | undefined> {
+  async function pageView(query: TargetQuery, candidates: Candidate[], name: string, state: PageState): Promise<PageView | undefined> {
     try {
       const page = browserPage();
       const file = path.join(options.outDir, `${model.id}-${name}.png`);
@@ -235,21 +236,30 @@ export async function explore(model: TestModel, session: Session, options: Explo
       const nodes = flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true })));
       // Elements inside an iframe are measured from the iframe, so they are moved to where the screenshot shows them.
       const boxes = await pageBoxes(page, nodes);
+      // The page snapshot numbers elements by itself. The tester's pick comes back as a ref and is looked up in the MCP's snapshot,
+      // so every box carries the MCP's ref of the same element (an element that cannot be matched is not offered).
+      const toMcp = refsToMcp(flatten(parseSnapshot(state.snapshotYaml)), nodes);
+      // A click or hover can be meant for anything that reacts to one (a list row, a picture, an icon), whatever its role says.
+      const anyRole = query.kind === 'click' || query.kind === 'clickable' || query.kind === 'hover';
       const elements = nodes.flatMap((n) => {
         const box = n.ref ? boxes.get(n.ref) : undefined;
-        if (!n.ref || !box) return [];
-        if (roles && !roles.includes(n.role)) return [];
+        const ref = n.ref ? toMcp.get(n.ref) : undefined;
+        if (!ref || !box || box.width <= 0 || box.height <= 0) return [];
+        if (roles && !roles.includes(n.role)) {
+          // A box over most of the screen is the page around the thing, not the thing.
+          if (!anyRole || !clickableByAnyRole(n) || box.width * box.height > size.width * size.height * 0.5) return [];
+        }
         // A part of the page is exactly what a container question is about.
         const skip = query.container
           ? ['generic', 'text', 'paragraph', 'document', 'row', 'cell']
           : ['generic', 'text', 'paragraph', 'main', 'document', 'region', 'form', 'list', 'group', 'navigation', 'banner', 'contentinfo'];
         if (!roles && skip.includes(n.role)) return [];
-        const candidate = candidates.findIndex((c) => c.node.ref === n.ref);
+        const candidate = candidates.findIndex((c) => c.node.ref === ref);
         return [
           {
-            ref: n.ref,
+            ref,
             role: n.role,
-            name: n.name || nearbyText(n) || n.text || '',
+            name: n.name || nearbyText(n) || n.text || contentTextOf(n) || '',
             box,
             ...(candidate >= 0 ? { candidate } : {}),
           },
@@ -325,15 +335,36 @@ export async function explore(model: TestModel, session: Session, options: Explo
     });
 
   /**
+   * Equally good candidates of which only one is on the screen: a menu that slides in on small screens has a twin of every row, parked
+   * outside the page. An element nobody can see is not the one a step means, so the visible one is used. Nothing is decided when two
+   * or more are visible, or when none can be measured.
+   */
+  async function onlyOneOnScreen(candidates: Candidate[], state: PageState): Promise<Candidate | undefined> {
+    try {
+      const page = browserPage();
+      const width = await page.evaluate(() => document.documentElement.clientWidth);
+      const boxes = await boxesByMcpRef(page, state.snapshotYaml);
+      const close = candidates.filter((c) => candidates[0].score - c.score < SCORE.margin);
+      const shown = close.filter((c) => {
+        const b = c.node.ref ? boxes.get(c.node.ref) : undefined;
+        return !b || (b.x + b.width > 0 && b.x < width);
+      });
+      return close.length > 1 && shown.length === 1 ? shown[0] : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * For a position check on a part of the page: do the candidate parts disagree about the result? Measured on the
    * page as it is now. Returns the candidates to choose from, or nothing when they all give the same answer.
    */
-  async function holdersDisagree(query: TargetQuery, candidates: Candidate[]): Promise<Candidate[] | undefined> {
+  async function holdersDisagree(query: TargetQuery, candidates: Candidate[], state: PageState): Promise<Candidate[] | undefined> {
     if (query.kind !== 'centered' && query.kind !== 'region') return undefined;
     try {
       const page = browserPage();
       const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }));
-      const boxes = await pageBoxes(page, flatten(parseSnapshot(await page.ariaSnapshot({ mode: 'ai', boxes: true }))));
+      const boxes = await boxesByMcpRef(page, state.snapshotYaml);
       const top = candidates.slice(0, 6).filter((c) => c.node.ref && boxes.has(c.node.ref));
       if (top.length < 2) return undefined;
       const tolerance = query.options?.tolerance ?? 0.05;
@@ -374,7 +405,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
     // "The login section" can be the form, or the whole panel around it. If the answer to the check depends on which,
     // the tester says which: guessing would pass or fail the test for the wrong reason (D6).
     if (r.status === 'resolved' && query.container && !rememberedNode) {
-      const differ = await holdersDisagree(query, r.candidates);
+      const differ = await holdersDisagree(query, r.candidates, state);
       if (differ) {
         r = {
           status: 'needs-review',
@@ -384,6 +415,17 @@ export async function explore(model: TestModel, session: Session, options: Explo
           candidates: differ,
           tried: r.tried,
         };
+      }
+    }
+    if (r.status === 'needs-review' && r.code === 'AMBIGUOUS' && !item.assumed) {
+      const one = await onlyOneOnScreen(r.candidates, state);
+      if (one) {
+        const chosen = await locate(query, mcp, probe, locateOptions, { state, node: one.node });
+        if (chosen.status === 'resolved') {
+          r = chosen;
+          item.assumed = `${r.candidates.length} elements matched "${query.target ?? ''}" about equally; only one of them is on the screen, so that one was used.`;
+          item.warnings.push(`Assumed: ${item.assumed}`);
+        }
       }
     }
     let asked = 0;
@@ -407,7 +449,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         item.error = `No usable element after ${asked} answers. ${sentence(item.review)}`;
         return undefined;
       }
-      const view = await pageView(query, r.candidates, `${item.id}-q${++asked}`);
+      const view = await pageView(query, r.candidates, `${item.id}-q${++asked}`, state);
       const answer = await options.resolver.choose({
         item: item.id,
         raw: item.raw,
@@ -448,7 +490,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
       r = again;
       if (partKey && node.ref) partPicks.set(partKey, node.ref);
       // "Remember this for the project": the word the tester used means the name the element has on the screen.
-      const shownName = (again.match.matchedName || node.name || nearbyText(node) || '').replace(/\s*:\s*$/, '').trim();
+      const shownName = (again.match.matchedName || node.name || nearbyText(node) || contentTextOf(node) || '').replace(/\s*:\s*$/, '').trim();
       if (remember && requested.target && shownName && ruleKey(shownName) !== ruleKey(requested.target)) {
         options.onRule?.({ kind: 'element', pattern: requested.target, meaning: shownName });
       }
@@ -691,6 +733,17 @@ export async function explore(model: TestModel, session: Session, options: Explo
         item.locator = { code: toCode(spec('getByText', text, { exact: true })), strategy: 'text', source: 'ladder', validated: false };
         item.element = { role: 'text', name: text };
         item.warnings.push('UNVALIDATED: the element is not on the page now, so this locator could not be checked. Confirm it in review.');
+        // "Not shown" is proven only when nothing hides the element: a page with frames may hold it where this search cannot look.
+        if (browserPage(state.url).frames().length > 1) {
+          item.status = 'failed';
+          item.error = 'Not shown cannot be proven: the page has frames this search cannot look into.';
+          item.review = explain({
+            code: 'CHECK_FAILED',
+            raw: item.raw,
+            text: `${text ? `"${text}"` : 'The element'} was not found, but this page has frames and an element inside a frame is not seen from outside. "Not shown" would pass whether or not it is there.`,
+          });
+          return;
+        }
       }
       return;
     }

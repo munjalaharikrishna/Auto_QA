@@ -36,6 +36,9 @@ const DETERMINERS: ReadonlySet<string> = new Set([
   'required',
 ]);
 
+/** Words for how an element looks: the name starts after them ("the big green Save button"). Colours and sizes only; a word that can be a name stays one. */
+const LOOKS: ReadonlySet<string> = new Set(['big', 'small', 'large', 'little', 'round', 'green', 'red', 'blue', 'yellow', 'grey', 'gray', 'black', 'white']);
+
 /** Prepositions after which the words say where a thing is, not what it is. */
 const PLACE_WORDS: ReadonlySet<string> = new Set(['of', 'in', 'on', 'under', 'at', 'from', 'within', 'inside', 'near', 'below', 'above', 'beside', 'for']);
 
@@ -52,6 +55,8 @@ const REFERENCE_WORDS: ReadonlySet<string> = new Set([
   'uploaded',
   'added',
   'updated',
+  'saved',
+  'created',
 ]);
 const PRONOUNS: ReadonlySet<string> = new Set(['it', 'them', 'this', 'that', 'these', 'those']);
 
@@ -133,8 +138,10 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
   const asAt = bodyAll.findIndex((t, k) => k > 0 && lw(t) === 'as');
   const body = asAt > 0 ? bodyAll.slice(0, asAt) : bodyAll;
   const dropped = asAt > 0 ? originalOf(line, bodyAll.slice(asAt)) : undefined;
-  const referenceWord =
-    body.map((t) => lw(t)).find((w) => REFERENCE_WORDS.has(w)) ?? (body.length === 1 && PRONOUNS.has(lw(body[0])) ? lw(body[0]) : undefined);
+  const bodyWords = body.map((t) => lw(t));
+  // "The newly added employee": "newly" only says how recent; what is pointed at is what was added.
+  const found = bodyWords.find((w, k) => REFERENCE_WORDS.has(w) && !(w === 'newly' && REFERENCE_WORDS.has(bodyWords[k + 1] ?? '')));
+  const referenceWord = found ?? (body.length === 1 && PRONOUNS.has(lw(body[0])) ? lw(body[0]) : undefined);
   const flags = { ...(dropped ? { dropped } : {}), ...(referenceWord ? { reference: referenceWord } : {}) };
   // A place qualifier: everything from the first place word on, when something comes before it.
   let cut = -1;
@@ -151,6 +158,8 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
     const only = parts.length === 1 ? parts[0] : undefined;
     if (only?.kind === 'LITERAL') return only.value ?? '';
     let ps = [...parts];
+    // "the big green Save button": how it looks is not a part of its name.
+    while (ps.length > 1 && LOOKS.has(lw(ps[0]))) ps = ps.slice(1);
     while (ps.length && isSymbol(ps[ps.length - 1], '/', '-', ',', ':')) ps = ps.slice(0, -1);
     return originalOf(line, ps);
   };

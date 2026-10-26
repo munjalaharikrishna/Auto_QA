@@ -8,7 +8,7 @@ import { splitNumbered } from '../parser/text.js';
 
 export interface CaseChange {
   /** `steps` and `expected` are compared line by line; the rest as a whole. */
-  field: 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId';
+  field: 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId' | 'stepExpected';
   kind: 'added' | 'removed' | 'changed';
   /** The step (or expected line) number, for `steps` and `expected`. */
   line?: number;
@@ -41,6 +41,15 @@ export function diffCases(before: RawTestCase, after: RawTestCase): CaseChange[]
     out.push({ field, kind: !a ? 'added' : !b ? 'removed' : 'changed', ...(a ? { before: a } : {}), ...(b ? { after: b } : {}) });
   }
   out.push(...compareLines('steps', itemsOf(before.steps), itemsOf(after.steps)));
+  // The expected results given to single steps, as one text: "3: Text box accepts the values; 5: …".
+  const checks = (c: RawTestCase) =>
+    Object.entries(c.stepExpected ?? {})
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([n, text]) => `${n}: ${norm(text)}`)
+      .join('; ');
+  const [was, now] = [checks(before), checks(after)];
+  if (was !== now)
+    out.push({ field: 'stepExpected', kind: !was ? 'added' : !now ? 'removed' : 'changed', ...(was ? { before: was } : {}), ...(now ? { after: now } : {}) });
   // An expected result is usually one sentence: compare it as one unless it is a numbered or multi-line list.
   const lines = (t: string) => (/\n/.test(t.trim()) ? itemsOf(t) : [norm(t)]);
   out.push(...compareLines('expected', lines(before.expected), lines(after.expected)));

@@ -37,7 +37,7 @@ export interface RefOutput {
 }
 
 const PRONOUNS: ReadonlySet<string> = new Set(['it', 'them', 'this', 'that', 'these', 'those']);
-const SAVED_DATA: ReadonlySet<string> = new Set(['added', 'updated']);
+const SAVED_DATA: ReadonlySet<string> = new Set(['added', 'updated', 'saved', 'created']);
 const OPENED_DATA: ReadonlySet<string> = new Set(['entered', 'uploaded']);
 const NEEDS_THE_PAGE: ReadonlySet<string> = new Set(['above', 'below', 'previous', 'corresponding', 'associated', 'newly']);
 const ENTERS: ReadonlySet<string> = new Set(['ENTER_VALUE', 'SELECT', 'UPLOAD', 'CHECK', 'UNCHECK']);
@@ -105,9 +105,13 @@ export function resolveReferences(input: RefInput): RefOutput {
   const checksOn = (group: readonly EnteredValue[], like: IrExpectation, empty: boolean): IrExpectation[] =>
     group.map((g) => {
       const upload = steps.find((s) => s.id === g.step)?.action === 'UPLOAD';
+      // "… in the table", "… in the list": the data is read where it is shown, as text, not from the field it was typed in.
+      const elsewhere = !empty && !upload && shownElsewhere(like.condition.target?.within);
       const condition: IrCondition = upload
         ? { type: 'STATE', target: g.target, expect: 'UPLOADED', check: 'uploaded' }
-        : { type: 'VALUE', target: g.target, expect: empty ? '' : g.value, check: 'value' };
+        : elsewhere
+          ? { type: 'TEXT', expect: g.value, check: 'contains-text' }
+          : { type: 'VALUE', target: g.target, expect: empty ? '' : g.value, check: 'value' };
       return {
         id: like.id,
         clause: like.clause,
@@ -271,4 +275,15 @@ export function resolveReferences(input: RefInput): RefOutput {
     for (const old of stood) (expectationMap[old] ??= []).push(e.id);
   });
   return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions };
+}
+
+const LISTS: ReadonlySet<string> = new Set(['table', 'list', 'grid', 'results', 'listing', 'records', 'directory']);
+
+/**
+ * Whether the place a check names is a table or a list: data shown there is read as text. A "page" is not decided here: the
+ * screen the data was typed on is often called a page too ("the same records in the Employee Information page"), so the
+ * fields are read as before.
+ */
+function shownElsewhere(place: string | undefined): boolean {
+  return !!place && place.toLowerCase().split(' ').some((w) => LISTS.has(w));
 }

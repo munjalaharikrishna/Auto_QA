@@ -9,7 +9,7 @@ import type { Resolver } from '../explorer/controller.js';
 import type { RawTestCase } from '../model/test-model.js';
 import { withRules } from '../parser/config.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
-import { rulesFor } from '../parser/rules.js';
+import { ruleKey, rulesFor } from '../parser/rules.js';
 import { runCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
 
@@ -62,19 +62,22 @@ describe('real-world login test cases (REAL-WORLD-TEST-CASES.md §9)', { skip: !
     await app?.close();
   });
 
+  // An assumption the tester has not approved keeps a passing case at NEEDS REVIEW (DEC-05).
+  const passesUnlessAssumed = (id: string) => {
+    const v = of(id);
+    assert.equal(v?.status, v?.assumptions?.length ? 'NEEDS REVIEW' : 'PASS', detail(id));
+    assert.ok(v.checks.every((c) => c.result === 'passed'), detail(id));
+  };
+
   const detail = (id: string) =>
     JSON.stringify({ status: of(id)?.status, reason: of(id)?.reason, checks: of(id)?.checks.map((c) => [c.id, c.result, c.actual]) });
 
   // Phase R1: wording and element fixes.
   for (const id of ['TC_LOGIN_001', 'TC_LOGIN_005', 'TC_LOGIN_006', 'TC_LOGIN_007', 'TC_LOGIN_008', 'TC_LOGIN_009']) {
-    it(`${id} runs and passes with no question`, () => {
-      assert.equal(of(id)?.status, 'PASS', detail(id));
-    });
+    it(`${id} runs and passes with no question`, () => passesUnlessAssumed(id));
   }
   for (const id of ['TC_LOGIN_002', 'TC_LOGIN_003', 'TC_LOGIN_004']) {
-    it(`${id} runs and passes with no question`, () => {
-      assert.equal(of(id)?.status, 'PASS', detail(id));
-    });
+    it(`${id} runs and passes with no question`, () => passesUnlessAssumed(id));
   }
 
   // Phase R2: the message the tester left open is the one the application showed, and the report says so (D31).
@@ -109,8 +112,12 @@ describe('real-world login test cases (REAL-WORLD-TEST-CASES.md §9)', { skip: !
     assert.match(v.review?.[0]?.todo.join(' ') ?? '', /Save what was seen/);
   });
 
-  it('all ten cases ran: nine passed and one is not verified, with no question', () => {
-    assert.deepEqual(verdicts.map((v) => v.status).sort(), ['NOT VERIFIED', ...Array(9).fill('PASS')]);
+  it('all ten cases ran: nine passed or await approval of an assumption, and one is not verified', () => {
+    assert.equal(verdicts.length, 10);
+    for (const v of verdicts) {
+      if (v.testId === 'TC_LOGIN_010') assert.equal(v.status, 'NOT VERIFIED');
+      else assert.equal(v.status, v.assumptions?.length ? 'NEEDS REVIEW' : 'PASS', v.testId);
+    }
   });
 
   it('asked nothing for the cases that can run', () => {
@@ -142,7 +149,7 @@ describe('the Strict policy asks first (D30)', { skip: !!process.env.AUTO_QA_SKI
         },
       );
       const by = (id: string) => run.verdicts.find((v) => v.testId === id)!;
-      assert.equal(by('TC_LOGIN_001').status, 'PASS');
+      assert.equal(by('TC_LOGIN_001').status, by('TC_LOGIN_001').assumptions?.length ? 'NEEDS REVIEW' : 'PASS');
       assert.equal(by('TC_LOGIN_002').status, 'NEEDS REVIEW');
       assert.match(by('TC_LOGIN_002').reason, /needs a value|Strict/);
       assert.equal(by('TC_LOGIN_010').status, 'NEEDS REVIEW');
@@ -180,7 +187,7 @@ describe('project rules make a wording run, and are used the next time (R4, FR-R
         expected: 'User is successfully redirected to the home/dashboard page',
       },
     ];
-    const run = async (rules: Parameters<typeof rulesFor>[0], sub: string) => {
+    const run = async (rules: Parameters<typeof rulesFor>[0], sub: string, approve?: ReadonlySet<string>) => {
       const withRules = withRulesConfig(rules);
       return runCases(
         raw.map((c) => parseTestCase(c, withRules)),
@@ -192,6 +199,7 @@ describe('project rules make a wording run, and are used the next time (R4, FR-R
           exploreDir: path.join(base, sub, 'explore'),
           runsDir: path.join(base, sub, 'runs'),
           workspace: path.join(base, sub, 'workspace'),
+          approvedAssumptions: approve,
         },
       );
     };
@@ -215,12 +223,26 @@ describe('project rules make a wording run, and are used the next time (R4, FR-R
         ],
         'after',
       );
+      // The rules are assumptions until the tester approves them (DEC-05).
       assert.deepEqual(
         after.verdicts.map((v) => v.status),
-        ['PASS', 'PASS'],
-        JSON.stringify(after.verdicts.map((v) => [v.reason, v.review?.map((r) => r.headline)])),
+        ['NEEDS REVIEW', 'NEEDS REVIEW'],
       );
-      for (const v of after.verdicts)
+      const approved = new Set(after.verdicts.flatMap((v) => v.assumptions ?? []).map((a) => ruleKey(a.replace(/^[SA]\d+(?:\.\d+)?:\s*/, ''))));
+      const final = await run(
+        [
+          { kind: 'step', pattern: 'Sign me in', meaning: 'Click the Login button', enabled: true },
+          { kind: 'element', pattern: 'Account', meaning: 'Login Name', enabled: true },
+        ],
+        'approved',
+        approved,
+      );
+      assert.deepEqual(
+        final.verdicts.map((v) => v.status),
+        ['PASS', 'PASS'],
+        JSON.stringify(final.verdicts.map((v) => [v.reason, v.review?.map((r) => r.headline)])),
+      );
+      for (const v of final.verdicts)
         assert.ok(
           v.assumptions?.some((a) => /project rule/.test(a)),
           JSON.stringify(v.assumptions),
@@ -280,7 +302,7 @@ describe('picking an element can be remembered for the project (R4, FR-RULE-01)'
           workspace: path.join(base, 'workspace'),
         },
       );
-      assert.equal(run.verdicts[0].status, 'PASS', JSON.stringify(run.verdicts[0].reason));
+      assert.equal(run.verdicts[0].status, run.verdicts[0].assumptions?.length ? 'NEEDS REVIEW' : 'PASS', JSON.stringify(run.verdicts[0].reason));
       assert.deepEqual(remembered, [{ kind: 'element', pattern: 'Account', meaning: 'Login Name' }]);
     } finally {
       await app.close();

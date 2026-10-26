@@ -6,7 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
 import { Store } from '../db/store.js';
-import type { RawTestCase } from '../model/test-model.js';
+import { type RawTestCase, stepsWithChecks } from '../model/test-model.js';
 import { describeChange, diffCases } from './diff.js';
 import { orderNumbered, orderParts } from './numbering.js';
 import { readWorkbook } from './workbook.js';
@@ -88,15 +88,18 @@ describe('layouts (IN-04, IN-05, IN-16 to IN-19)', () => {
     });
     const r = await readWorkbook(file);
     assert.deepEqual(r.problems, []);
-    assert.deepEqual(r.cases.map(fields), [
-      {
-        id: 'T-1',
-        title: 'Login',
-        steps: '1. Open Login page\n2. Verify Login page is displayed\n3. Enter username Admin\n4. Click Login',
-        expected: 'User is redirected to Dashboard page',
-      },
-      { id: 'T-2', title: 'Merged', steps: '1. Open Login page\n2. Verify Page shown\n3. Click Login', expected: 'Dashboard is displayed' },
-    ]);
+    // The steps hold only the actions. A step's own expected result is kept beside it and read back as a check right after the step.
+    assert.deepEqual(
+      r.cases.map((c) => ({ ...fields(c), stepExpected: undefined })).map(({ stepExpected: _s, ...rest }) => rest),
+      [
+        { id: 'T-1', title: 'Login', steps: '1. Open Login page\n2. Enter username Admin\n3. Click Login', expected: 'User is redirected to Dashboard page' },
+        { id: 'T-2', title: 'Merged', steps: '1. Open Login page\n2. Click Login', expected: 'Dashboard is displayed' },
+      ],
+    );
+    assert.deepEqual(r.cases[0].raw.stepExpected, { '1': 'Login page is displayed' });
+    assert.deepEqual(r.cases[1].raw.stepExpected, { '1': 'Page shown' });
+    assert.equal(stepsWithChecks(r.cases[0].raw), '1. Open Login page\n2. Verify Login page is displayed\n3. Enter username Admin\n4. Click Login');
+    assert.equal(stepsWithChecks(r.cases[1].raw), '1. Open Login page\n2. Verify Page shown\n3. Click Login');
   });
 
   it('a multi-line cell gives one step per numbered or bulleted line', async () => {
@@ -131,7 +134,9 @@ describe('layouts (IN-04, IN-05, IN-16 to IN-19)', () => {
       cell.addRow(['O-2', 'One cell', '2. Click Login\n1. Open Login page\n4. Click Logout', 'Ok']);
     });
     const r = await readWorkbook(file, { allSheets: true });
-    assert.equal(r.cases[0].raw.steps, '1. Open Login page\n2. Click Login\n3. Verify Dashboard is displayed\n4. Click Logout');
+    assert.equal(r.cases[0].raw.steps, '1. Open Login page\n2. Click Login\n3. Click Logout');
+    assert.deepEqual(r.cases[0].raw.stepExpected, { '2': 'Dashboard is displayed' });
+    assert.equal(stepsWithChecks(r.cases[0].raw), '1. Open Login page\n2. Click Login\n3. Verify Dashboard is displayed\n4. Click Logout');
     assert.equal(r.cases[1].raw.steps, '1. Open Login page\n2. Click Login\n3. Click Logout');
     assert.ok(
       r.warnings.some((w) => /O-1.*out of order/.test(w)),
@@ -235,7 +240,9 @@ describe('real workbooks', () => {
     // Step rows per case, as the sheet has them: TC01 has 3 (rows 2 to 4), TC04 has 6, and so on. Each step is followed by its own check.
     const stepsOf = (c: (typeof r.cases)[number]) => c.raw.steps.split('\n');
     const first = stepsOf(r.cases[0]);
-    assert.deepEqual(first, [
+    assert.deepEqual(first, ['1. Open Browser', '2. Enter url for Orange Hrm server', '3. Checking the login section at middle of the page']);
+    assert.deepEqual(r.cases[0].raw.stepExpected, { '1': 'User should open browser', '2': 'User should navigate to login section of Oragne Hrm' });
+    assert.deepEqual(stepsWithChecks(r.cases[0].raw).split('\n'), [
       '1. Open Browser',
       '2. Verify User should open browser',
       '3. Enter url for Orange Hrm server',
@@ -246,9 +253,9 @@ describe('real workbooks', () => {
     assert.equal(r.cases[3].raw.expected, 'User should navigate to Add Employee page/popup');
     assert.match(stepsOf(r.cases[3]).at(-1) as string, /^\d+\. Click on the Add Button$/);
     // A multi-line step cell is one step: "Checking the login section at middle of / the page" is not two.
-    assert.ok(stepsOf(r.cases[3]).includes('5. Checking the login section at middle of the page'));
+    assert.ok(stepsOf(r.cases[3]).includes('3. Checking the login section at middle of the page'));
     // Every case repeats the same opening steps and then adds its own, so each has at least as many steps as the one before it plus its own.
-    for (const c of r.cases) assert.match(c.raw.steps, /^1\. Open Browser\n2\. Verify User should open browser\n3\. Enter url/);
+    for (const c of r.cases) assert.match(c.raw.steps, /^1\. Open Browser\n2\. Enter url/);
     // Every step is numbered 1..n without a gap.
     for (const c of r.cases)
       assert.deepEqual(

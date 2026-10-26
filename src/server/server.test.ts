@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -268,6 +268,90 @@ describe('API (M7a)', () => {
     assert.equal(outside.statusCode, 403);
     const sneaky = await app.inject({ url: `/api/files?path=${encodeURIComponent(path.join(dir, 'data', '..', '..', 'x'))}` });
     assert.equal(sneaky.statusCode, 403);
+  });
+});
+
+describe('deleting a project', () => {
+  let dir: string;
+  let app: FastifyInstance;
+  let store: Store;
+  before(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'auto-qa-delete-'));
+    ({ app, store } = await server(dir));
+  });
+  after(async () => {
+    await app.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  /** Every table that names a project, and how many of its rows belong to that project. */
+  async function rowsOf(id: string): Promise<Record<string, number>> {
+    const db = (store as unknown as { db: { all<T>(sql: string, p?: unknown[]): Promise<T[]> } }).db;
+    const out: Record<string, number> = {};
+    const tables = await db.all<{ name: string }>(
+      "SELECT m.name FROM sqlite_master m WHERE m.type = 'table' AND EXISTS (SELECT 1 FROM pragma_table_info(m.name) WHERE name = 'project_id')",
+    );
+    for (const t of tables) out[t.name] = Number((await db.all<{ n: number }>(`SELECT COUNT(*) AS n FROM ${t.name} WHERE project_id = ?`, [id]))[0]?.n);
+    out.environments_page_routes = Number(
+      (await db.all<{ n: number }>('SELECT COUNT(*) AS n FROM page_routes WHERE environment_id IN (SELECT id FROM environments WHERE project_id = ?)', [id]))[0]
+        ?.n,
+    );
+    out.settings = Number((await db.all<{ n: number }>("SELECT COUNT(*) AS n FROM settings WHERE scope = 'project' AND scope_id = ?", [id]))[0]?.n);
+    return out;
+  }
+
+  it('removes every row and folder of the project, and only that project', async () => {
+    const make = async (name: string) => {
+      const res = await app.inject({ method: 'POST', url: '/api/projects', payload: { name, baseUrl: 'http://127.0.0.1:4173', username: 'u', password: 'p' } });
+      assert.equal(res.statusCode, 201);
+      const id = res.json().id as string;
+      await store.upsertTestCase(id, { id: 'TC-1', title: 'T', steps: '1. Open Login page', expected: 'x' }, { kind: 'form' }, 'written');
+      await store.upsertRule(id, { kind: 'step', pattern: 'open the thing', meaning: 'Open Login page', source: 'review' });
+      await store.createRelease(id, { name: 'R1', version: '1', scope: '', teamSize: 1, plannedDate: '2026-12-01' });
+      const job = await store.createJob({ projectId: id, kind: 'single', input: {} });
+      await store.log(job.id, 'hello');
+      await store.createUpload({ projectId: id, file: path.join(dir, 'data', 'projects', id, 'uploads', 'x', 'a.xlsx'), originalName: 'a.xlsx' });
+      await mkdir(path.join(dir, 'data', 'projects', id, 'runs'), { recursive: true });
+      await writeFile(path.join(dir, 'data', 'projects', id, 'runs', 'f.txt'), 'x');
+      return { id, job };
+    };
+    const gone = await make('Gone Project');
+    const kept = await make('Kept Project');
+    const keptBefore = await rowsOf(kept.id);
+    assert.ok(Object.values(await rowsOf(gone.id)).some((n) => n > 0));
+
+    // The project's id has to be sent, and a run that has not ended blocks the delete.
+    assert.equal((await app.inject({ method: 'DELETE', url: `/api/projects/${gone.id}` })).statusCode, 400);
+    assert.equal((await app.inject({ method: 'DELETE', url: `/api/projects/${gone.id}?confirm=other` })).statusCode, 400);
+    const blocked = await app.inject({ method: 'DELETE', url: `/api/projects/${gone.id}?confirm=${gone.id}` });
+    assert.equal(blocked.statusCode, 409);
+    assert.ok((await store.project(gone.id)) !== undefined, 'nothing was deleted');
+
+    await store.updateJob(gone.job.id, { status: 'cancelled' });
+    const res = await app.inject({ method: 'DELETE', url: `/api/projects/${gone.id}?confirm=${gone.id}` });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json().deleted, gone.id);
+
+    assert.equal(await store.project(gone.id), undefined);
+    assert.deepEqual(
+      Object.values(await rowsOf(gone.id)).filter((n) => n > 0),
+      [],
+      'no row of the project is left in any table',
+    );
+    assert.equal(existsSync(path.join(dir, 'data', 'projects', gone.id)), false);
+    assert.equal(existsSync(path.join(dir, 'workspaces', gone.id)), false);
+    assert.equal((await app.inject({ url: `/api/projects/${gone.id}` })).statusCode, 404);
+
+    // The other project is exactly as it was, rows and files.
+    assert.deepEqual(await rowsOf(kept.id), keptBefore);
+    assert.ok(existsSync(path.join(dir, 'data', 'projects', kept.id, 'runs', 'f.txt')));
+    assert.ok(existsSync(path.join(dir, 'workspaces', kept.id)));
+    assert.equal((await app.inject({ url: `/api/projects/${kept.id}` })).statusCode, 200);
+
+    // The only trace is one audit line with no project on it.
+    const trace = await store.auditLog(gone.id);
+    assert.equal(trace.length, 0);
+    assert.equal((await app.inject({ method: 'DELETE', url: `/api/projects/${gone.id}?confirm=${gone.id}` })).statusCode, 404);
   });
 });
 

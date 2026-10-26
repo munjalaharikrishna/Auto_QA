@@ -4,14 +4,15 @@ import type { Page } from 'playwright';
 import type { ResolvedValue } from '../data/resolver.js';
 import { Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
+import { withoutClassWords } from '../data/classes.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
-import { type DomElement, inspectPage, type Level, type LocateQuery, locate, type Tried } from '../locate/index.js';
+import { type DomElement, inspectPage, type Level, type LocateQuery, locate, sameFrame, selectorIn, type Tried } from '../locate/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
 import { type Delta, describe, diff } from './delta.js';
 import { type Observation, observe } from './observe.js';
 import type { Chain, ExecutionPlan } from './planner.js';
 import { findRow, type TableRow } from './tables.js';
-import { type SettleOptions, waitSettled, waitUntilIdle } from './waits.js';
+import { type SettleOptions, trackNavigations, waitSettled, waitUntilIdle } from './waits.js';
 
 /**
  * Layer 37, execution through Playwright MCP (EX-02). Each step of the plan is done by the engine's own decisions: it
@@ -228,6 +229,7 @@ class Runner {
     };
     const keep = this.o.keepObservations ?? true;
     await this.adoptPage();
+    trackNavigations(this.page);
     const tabsBefore = this.tabCount();
     const pagesBefore = new Set(this.realPages());
     const before = await observe(this.page, { testIdAttribute: this.testIdAttribute, tabs: tabsBefore });
@@ -356,10 +358,12 @@ class Runner {
   // ---- finding ----
 
   private query(target: IrTarget | undefined, purpose: 'act' | 'inspect' = 'act'): LocateQuery {
-    const name = target?.name ?? target?.label ?? '';
+    const written = target?.name ?? target?.label ?? '';
+    // "Enter valid username": the field is `username`; "valid" says what is typed in.
+    const name = withoutClassWords(written);
     const found = consolidate(this.o.knowledge, name, { page: target?.page });
     const one = found.status === 'one' ? found.components[0]?.component : undefined;
-    const aliases = [...(one?.aliases ?? []), ...(one ? [one.name] : []), ...(found.core ? [found.core, ...(CORE_LABELS[found.core] ?? [])] : [])];
+    const aliases = [...(name !== written ? [written] : []), ...(one?.aliases ?? []), ...(one ? [one.name] : []), ...(found.core ? [found.core, ...(CORE_LABELS[found.core] ?? [])] : [])];
     const ontology = target?.ontology && target.ontology !== 'Element' ? target.ontology : (one?.ontology ?? target?.ontology);
     return {
       name,
@@ -372,20 +376,20 @@ class Runner {
     };
   }
 
-  private async clickXpath(xpath: string, rec: StepRecord, label: string): Promise<void> {
-    await this.tool('click', { target: `xpath=${xpath}`, element: label }, rec);
+  private async clickXpath(xpath: string, frame: readonly string[], rec: StepRecord, label: string): Promise<void> {
+    await this.tool('click', { target: selectorIn(frame, xpath), element: label }, rec);
   }
 
   /** Finds the one element a target means, or blocks with the reason (LC-01, LA-01). */
   private async find(target: IrTarget | undefined, rec: StepRecord, purpose: 'act' | 'inspect' = 'act'): Promise<{ element: DomElement; selector: string }> {
-    let row: { row: TableRow; label: string; visited: number } | undefined;
+    let row: { row: TableRow; label: string; visited: number; frame: readonly string[] } | undefined;
     if (target?.row?.length) {
       const wanted = target.row.map((r) => {
         const v = this.valueOf(r, 'a row');
         if (v.secret) throw new Block('VALUE_UNRESOLVED', 'a secret cannot name a table row');
         return v.text;
       });
-      const search = await findRow(this.page, wanted, { go: (xpath) => this.clickXpath(xpath, rec, 'page of the table') });
+      const search = await findRow(this.page, wanted, { go: (xpath, frame) => this.clickXpath(xpath, frame, rec, 'page of the table') });
       if (search.status === 'not-found') throw new Block('ROW_NOT_FOUND', search.reason);
       if (search.status === 'ambiguous') {
         throw new Block(
@@ -393,10 +397,10 @@ class Runner {
           `${search.rows.length} rows hold ${wanted.map((w) => `"${w}"`).join(' and ')} on page ${search.pageLabel}: ${search.rows.map((r) => `"${r.cells.join(' | ')}"`).join(' and ')}`,
         );
       }
-      row = { row: search.row, label: search.pageLabel, visited: search.pagesVisited };
+      row = { row: search.row, label: search.pageLabel, visited: search.pagesVisited, frame: search.table.frame };
     }
     let elements = await inspectPage(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
-    if (row) elements = elements.filter((e) => e.xpath.startsWith(`${row.row.xpath}/`));
+    if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
     const query = this.query(target, purpose);
     const result = locate(query, elements);
     const tried = result.tried;
@@ -404,7 +408,7 @@ class Runner {
       throw new Block('LOCATE_NOT_FOUND', `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)`);
     if (result.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', result.reason);
     if (result.status === 'inactive') throw new Block('LOCATE_INACTIVE', result.reason);
-    const selector = `xpath=${result.element.xpath}`;
+    const selector = selectorIn(result.element.frame, result.element.xpath);
     const count = await this.page.locator(selector).count();
     if (count !== 1) throw new Block('LOCATOR_NOT_UNIQUE', `the locator for "${query.name}" finds ${count} elements, not one`);
     rec.located = {
@@ -452,6 +456,13 @@ class Runner {
         await this.page.reload();
         return this.viaPage('reload', {}, rec);
       case 'SCROLL': {
+        // "Scroll down to the Save button": the element is brought into view; without one the page is scrolled.
+        if (target?.name) {
+          const { selector } = await this.find(target, rec, 'inspect');
+          await this.page.locator(selector).scrollIntoViewIfNeeded();
+          this.viaPage('scrollIntoViewIfNeeded', { target: selector }, rec);
+          return;
+        }
         if ((await this.tool('wheel', { deltaX: 0, deltaY: 400 }, rec)) === 'fallback') {
           await this.page.mouse.wheel(0, 400);
           this.viaPage('mouse.wheel', { deltaY: 400 }, rec);
@@ -556,7 +567,7 @@ class Runner {
     const elements = await inspectPage(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
     const choice = locate({ name: option, ontology: 'Element' }, elements);
     if (choice.status !== 'found') throw new Block('LOCATE_NOT_FOUND', `the option "${option}" is not in the list that opened`);
-    await this.tool('click', { target: `xpath=${choice.element.xpath}`, element: option }, rec);
+    await this.tool('click', { target: selectorIn(choice.element.frame, choice.element.xpath), element: option }, rec);
   }
 
   private async upload(chain: Chain, rec: StepRecord): Promise<void> {

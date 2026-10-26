@@ -8,6 +8,8 @@
  * against normalized tokens, so a contraction or an abbreviation is already in its fixed form).
  */
 
+import { DATA_WORDS, STATE_WORDS } from './lexicon.js';
+
 export const CATEGORIES = ['Action', 'Assertion', 'Navigation', 'Authentication', 'Form', 'Error', 'Visibility', 'State', 'Data', 'Negation'] as const;
 export type SynonymCategory = (typeof CATEGORIES)[number];
 
@@ -36,7 +38,7 @@ const ACTION: SynonymSet = {
     e('check', 'tick', 'tick off', 'mark'),
     e('uncheck', 'untick', 'untick off', 'unmark'),
     e('open', 'launch', 'start', 'load'),
-    e('navigate', 'go to', 'visit', 'browse to', 'land on', 'move to', 'switch to'),
+    e('navigate', 'go to', 'visit', 'browse to', 'land on', 'move to', 'switch to', 'return to', 'head to', 'proceed to', 'jump to'),
     e('upload', 'attach', 'browse and upload'),
     e('clear', 'erase', 'wipe', 'empty'),
     e('delete', 'trash'),
@@ -205,13 +207,8 @@ const STATE: SynonymSet = {
   category: 'State',
   version: '1.0.0',
   entries: [
-    e('enabled', 'clickable', 'active', 'usable', 'editable'),
-    e('disabled', 'greyed out', 'grayed out', 'inactive', 'unclickable', 'read-only', 'readonly', 'not clickable', 'not enabled'),
-    e('selected', 'chosen', 'picked'),
-    e('checked', 'ticked'),
-    e('unchecked', 'unticked'),
-    e('empty', 'blank', 'cleared', 'emptied', 'has no value', 'holds nothing', 'contains nothing'),
-    e('masked', 'masked characters', 'hidden characters', 'dots', 'asterisks', 'obscured', 'covered'),
+    // The words of these states are written once, in lexicon.ts, and the predicates are built from the same list.
+    ...Object.values(STATE_WORDS).map(([canonical, ...phrases]) => e(canonical, ...phrases)),
     e('centered', 'middle', 'in the middle', 'at the middle', 'at middle', 'center', 'centre', 'in the center', 'in the centre'),
   ],
 };
@@ -221,11 +218,8 @@ const DATA: SynonymSet = {
   category: 'Data',
   version: '1.0.0',
   entries: [
-    e('valid', 'correct', 'right', 'proper', 'good', 'legal', 'acceptable'),
-    e('invalid', 'wrong', 'incorrect', 'bad', 'illegal', 'unacceptable', 'improper', 'unintended'),
-    e('blank', 'empty', 'nothing', 'no value', 'left empty'),
-    e('existing', 'already registered', 'already existing', 'registered', 'duplicate'),
-    e('non-existing', 'unregistered', 'unknown', 'new', 'not registered', 'nonexistent'),
+    // The words of each kind of data are written once, in lexicon.ts, and the data classes are built from the same list.
+    ...Object.values(DATA_WORDS).map(([canonical, ...phrases]) => e(canonical, ...phrases)),
   ],
 };
 

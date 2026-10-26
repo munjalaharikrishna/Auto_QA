@@ -85,7 +85,7 @@ describe('LC-01, LA-01, DM-01 on the DOM fixture pages', { skip }, () => {
 
   describe('the order of the candidate levels (LC-01)', () => {
     it('lists the eleven levels of the specification, with falling weights', () => {
-      assert.deepEqual([...LEVELS], ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'xpath', 'inspection']);
+      assert.deepEqual([...LEVELS], ['testId', 'role', 'accessibleName', 'label', 'placeholder', 'name', 'id', 'text', 'relationship', 'words', 'xpath', 'inspection']);
       const weights = LEVELS.map((l) => WEIGHT[l]);
       for (let i = 1; i < weights.length; i++) assert.ok((weights[i] as number) < (weights[i - 1] as number), `${LEVELS[i]} weighs less than ${LEVELS[i - 1]}`);
     });
@@ -171,7 +171,7 @@ describe('LC-01, LA-01, DM-01 on the DOM fixture pages', { skip }, () => {
       assert.equal(find(els, { name: 'Fine Action', ontology: 'Button' }).status, 'found');
       const none = find(els, { name: 'Missing Action', ontology: 'Button' });
       assert.equal(none.status, 'not-found');
-      assert.equal(none.status === 'not-found' && none.tried.length, 11, 'every level was tried');
+      assert.equal(none.status === 'not-found' && none.tried.length, LEVELS.length, 'every level was tried');
       assert.equal(none.passAllowed, false);
     });
     it('two equal "Save" buttons are ambiguous: both are shown, none is chosen', async () => {

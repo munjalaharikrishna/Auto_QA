@@ -109,7 +109,22 @@ export function CasePage({ projectId, caseId }: { projectId: string; caseId: str
           )}
           <div>
             <div className="muted">Steps</div>
-            <div style={{ whiteSpace: 'pre-line' }}>{raw.steps}</div>
+            <div style={{ whiteSpace: 'pre-line' }}>
+              {raw.steps.split('\n').map((line, i) => {
+                const after = raw.stepExpected?.[/^\s*(?:step\s*)?(\d{1,3})/i.exec(line)?.[1] ?? String(i + 1)];
+                return (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the lines of a saved text have no id of their own
+                  <div key={i}>
+                    {line}
+                    {after && (
+                      <div className="muted" style={{ paddingLeft: '1.25rem' }}>
+                        ↳ Expected: {after}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
           {raw.testData && (
             <div>

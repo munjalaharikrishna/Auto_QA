@@ -375,6 +375,14 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       if (!rest.length) return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' })], 'GR-01');
       const np = parseNp(rest, 'Page');
       const target = np.targets[0] as IrTarget;
+      const said = compactKey(target.name ?? target.label ?? '');
+      // "Open a web browser", "Launch the browser": the run opens its own browser. There is nothing to do, and no page called "browser".
+      if (BROWSER_NAMES.has(said)) {
+        decisions.push('opening the browser is done by every run: no step is needed');
+        return done([], 'GR-01');
+      }
+      // "Navigate to the application", "Open the app": the address the run starts from, however it is spelled.
+      if (APPLICATION_NAMES.has(said)) return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' })], 'GR-01');
       return done([step('NAVIGATE', { ...target, ontology: 'Page' })], 'GR-01');
     }
     case 'PRESS': {
@@ -448,6 +456,17 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       return done(out, 'GR-02');
     }
     case 'SELECT': {
+      // "Select the checkbox in the row for Anita": ticking the box of that row, not choosing an option.
+      const ofRow = takeRow(rest);
+      if (ofRow.row) {
+        const inRow = parseNp(ofRow.rest, DEFAULT_CLASS.SELECT ?? 'Element');
+        decisions.push(`the row that holds "${ofRow.row}" is meant (UI-06)`);
+        const box = inRow.headClass === 'Checkbox' || inRow.headClass === 'Radio';
+        return done(
+          inRow.targets.map((t) => step(box ? 'CHECK' : 'SELECT', { ...t, row: [ofRow.row as string] })),
+          'GR-01',
+        );
+      }
       const cut = prepIndex(rest, new Set(['from', 'in', 'of', 'on']));
       if (cut > 0) {
         const place = parseNp(rest.slice(cut + 1), 'Dropdown');
@@ -464,6 +483,20 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       );
     }
     case 'UPLOAD': {
+      // "Upload Photo to the Photo field": what is uploaded, and the file field it goes to. The field is not named "Photo to the Photo".
+      const into = by0(rest);
+      if (into > 0 && !rest.some((t) => lw(t) === 'by')) {
+        const field = parseNp(rest.slice(into + 1), 'File');
+        const named = field.targets[0] as IrTarget;
+        const fieldName = named.name ?? named.label ?? 'file';
+        const bound = bindValue(line, rest.slice(0, into), ctx.data, fieldName);
+        if (bound.spec.kind === 'data') decisions.push(...bound.decisions);
+        decisions.push(`"${fieldName}" is the file field the file goes to`);
+        return done(
+          [step('UPLOAD', { ontology: 'File', name: fieldName }, bound.spec.kind === 'data' ? bound.spec : { kind: 'class', dataClass: 'VALID', field: fieldName })],
+          'GR-02',
+        );
+      }
       const by = rest.findIndex((t) => lw(t) === 'by');
       const nested = by >= 0 ? rest.slice(by + 1) : [];
       const what = parseNp(by >= 0 ? rest.slice(0, by) : rest, 'File');
@@ -510,6 +543,16 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     }
     default: {
       if (['on', 'at', 'over'].includes(lw(rest[0]))) rest = rest.slice(1);
+      // "Scroll down to the Save button": the direction is not part of the name; the element is what is scrolled to.
+      if (action === 'SCROLL') while (rest.length > 1 && ['down', 'up', 'to', 'into', 'until'].includes(lw(rest[0]))) rest = rest.slice(1);
+      // "Log out of the application", "Sign out from the site": the whole application is left, there is no element named.
+      if (action === 'LOGOUT' && ['of', 'from'].includes(lw(rest[0]))) rest = [];
+      // "Click Edit in the row for Anita", "Check the box in the Anita row": the row is named, and it is not lost.
+      const ofRow = takeRow(rest);
+      if (ofRow.row) {
+        rest = ofRow.rest;
+        decisions.push(`the row that holds "${ofRow.row}" is meant (UI-06)`);
+      }
       if (action === 'REFRESH' || action === 'BACK' || action === 'FORWARD') return done([step(action)], 'GR-01');
       if (!rest.length) {
         const needs = !['SAVE', 'SUBMIT', 'CANCEL', 'CLOSE', 'LOGOUT', 'SCROLL', 'DOWNLOAD'].includes(action);
@@ -531,7 +574,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       const np = parseNp(rest, DEFAULT_CLASS[action] ?? 'Element', { single: ['CLICK', 'HOVER'].includes(action) });
       if (np.headClass === undefined && action !== 'CLICK') decisions.push(`no kind of element named: read as a ${np.targets[0]?.ontology}`);
       // "Edit for John Smith": the row of a table that holds those values, not a container of the page (UI-06).
-      const inRow = np.placeWord === 'for' && np.within ? [np.within] : undefined;
+      const inRow = ofRow.row ? [ofRow.row] : np.placeWord === 'for' && np.within ? [np.within] : undefined;
       return done(
         np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : t)),
         'GR-01',
@@ -563,6 +606,8 @@ export function understandLine(raw: string, ctx: LineContext): LineResult {
   const clauses = doneBeforeOrder(splitClauses(line));
   const out: LineResult = { steps: [], expectations: [], conditionals: [], sequence: [], notes: [], issues: [], models: [] };
   let subject: Subject | undefined;
+  /** The section a leading "In the X section," names: where the steps after it are done. */
+  let scope: string | undefined;
   /** Whether the last clause emitted an action (an expectation after it belongs to it: GR-04). */
   let lastWasAction = false;
   /** The clause being read, so a trailing condition can tell which expectations came from the clause just before it. */
@@ -605,9 +650,28 @@ export function understandLine(raw: string, ctx: LineContext): LineResult {
     out.issues.push(...r.issues);
     if (r.unsupported !== undefined) return [];
     lastWasAction = true;
-    return r.steps.map((s) => addStep(s, guard !== undefined ? 'GR-03' : r.model, guard));
+    // "In the Employment section, enter Job Title": the section is where the step is done.
+    const placed = scope ? r.steps.map((s) => (s.target && !s.target.within ? { ...s, target: { ...s.target, within: scope } } : s)) : r.steps;
+    const added = placed.map((s) => addStep(s, guard !== undefined ? 'GR-03' : r.model, guard));
+    // "Enter the password (masked)": the aside says how the field shows what is typed. It was dropped; now it is a check of that field.
+    const typed = placed.filter((s) => s.action === 'ENTER_VALUE' && s.target);
+    if (typed.length && asideSays(line.tokens, 'masked')) {
+      for (const s of typed)
+        addExpectation(
+          {
+            clause: `${s.target?.name ?? 'the field'} is masked`,
+            negated: false,
+            condition: { type: 'MASKED', target: s.target, expect: 'MASKED', check: 'masked' },
+            decisions: ['"(masked)" after the step says the field shows what is typed as dots: it is checked'],
+          },
+          'GR-05',
+          guard,
+        );
+    }
+    return added;
   };
-  const either = (clause: Clause, guard?: number): { steps: number[]; expects: number[] } => {
+  const either = (given: Clause, guard?: number): { steps: number[]; expects: number[] } => {
+    let clause = given;
     // A relative clause ("Which should be in PIM page") adds to the sentence before it; it is kept, not checked.
     if (lw(clause.tokens[0]) === 'which') {
       out.notes.push(clause.original);
@@ -619,6 +683,16 @@ export function understandLine(raw: string, ctx: LineContext): LineResult {
         suggestion: 'If it should be checked, write it as a check of its own: Verify …',
       });
       return { steps: [], expects: [] };
+    }
+    // "In the Employment section," is where the rest happens: on its own it is no step and no check, before a command it scopes the command.
+    const lead = scopeOf(clause.tokens);
+    if (lead) {
+      scope = lead.name;
+      if (lead.rest.length === 0) {
+        out.notes.push(clause.original);
+        return { steps: [], expects: [] };
+      }
+      clause = { ...clause, tokens: lead.rest, original: originalOf(line, lead.rest) };
     }
     const kind = kindOf(line, clause, ctx);
     // "… should be empty by clicking Reset": how it is done is an action, done first; the rest is the check.
@@ -856,3 +930,58 @@ function paradoxOf(step: ParsedStep, c: ParsedConditional): PartialIssue | undef
 }
 
 export type { NounPhrase };
+
+const ROW_PLACE: ReadonlySet<string> = new Set(['in', 'on', 'within', 'of', 'at']);
+const ROW_OF: ReadonlySet<string> = new Set(['for', 'of', 'with', 'containing', 'having', 'named', 'called', 'labelled', 'labeled']);
+
+/**
+ * The row a step names, taken out of its words: "in the row for Anita Roy", "of the row with 101", "in the Anita Roy row".
+ * Without it the step would act on the first match on the page, which may be the wrong row.
+ */
+function takeRow(rest: readonly Token[]): { rest: Token[]; row?: string } {
+  const words = rest.map((t) => lw(t));
+  for (let k = 0; k < rest.length; k++) {
+    if (!ROW_PLACE.has(words[k] ?? '')) continue;
+    let at = k + 1;
+    if (words[at] === 'the') at++;
+    if (words[at] === 'row') {
+      // "in the row for Anita Roy"
+      let from = at + 1;
+      if (ROW_OF.has(words[from] ?? '')) from++;
+      const value = rest.slice(from);
+      if (value.length) return { rest: rest.slice(0, k) as Token[], row: value.map((t) => t.text).join(' ') };
+      continue;
+    }
+    // "in the Anita Roy row": the words between "the" and a final "row"
+    const last = rest.length - 1;
+    if (words[last] === 'row' && last > at) return { rest: rest.slice(0, k) as Token[], row: rest.slice(at, last).map((t) => t.text).join(' ') };
+  }
+  return { rest: rest as Token[] };
+}
+
+const SCOPE_PREPS: ReadonlySet<string> = new Set(['in', 'on', 'under', 'within', 'inside']);
+const SCOPE_HEADS: ReadonlySet<string> = new Set(['section', 'tab', 'panel', 'form', 'page', 'screen', 'area', 'block', 'card', 'modal', 'dialog', 'popup', 'pane', 'menu', 'table', 'tile', 'widget']);
+
+/** "In the Employment section" at the start of a clause: the name of the section, and what comes after it (after a comma, if any). */
+function scopeOf(tokens: readonly Token[]): { name: string; rest: Token[] } | undefined {
+  const words = tokens.map((t) => lw(t));
+  if (words.length < 3 || !SCOPE_PREPS.has(words[0] ?? '')) return undefined;
+  const end = words.findIndex((w, k) => k >= 2 && SCOPE_HEADS.has(words[k] ?? '') && (k === words.length - 1 || isSymbol(tokens[k + 1], ',')));
+  if (end < 0) return undefined;
+  const from = words[1] === 'the' ? 2 : 1;
+  const name = tokens.slice(from, end);
+  if (!name.length) return undefined;
+  const after = isSymbol(tokens[end + 1], ',') ? end + 2 : end + 1;
+  return { name: name.map((t) => t.text).join(' '), rest: tokens.slice(after) as Token[] };
+}
+
+/** Whether a word stands alone in brackets in the line: "(masked)". */
+function asideSays(tokens: readonly Token[], word: string): boolean {
+  return tokens.some((t, k) => isSymbol(t, '(') && lw(tokens[k + 1]) === word && isSymbol(tokens[k + 2], ')'));
+}
+
+/** Where "to", "into" or "onto" sits in the words of an upload, after something that is uploaded. */
+const by0 = (rest: readonly Token[]): number => rest.findIndex((t, k) => k > 0 && ['to', 'into', 'onto'].includes(lw(t)));
+
+const BROWSER_NAMES: ReadonlySet<string> = new Set(['browser', 'webbrowser', 'chrome', 'googlechrome', 'firefox', 'edge', 'safari', 'chromebrowser', 'newbrowser', 'newwebbrowser', 'browserwindow']);
+const APPLICATION_NAMES: ReadonlySet<string> = new Set(['application', 'app', 'site', 'website', 'webapp', 'webapplication', 'url', 'applicationurl', 'siteurl', 'systemurl']);

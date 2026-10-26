@@ -22,6 +22,8 @@ export interface ParsedTestData {
   bindings: Map<string, DataBinding>;
   /** Secret values found, so the caller can mask them in the raw text it keeps. */
   secrets: string[];
+  /** The same secrets with the variable each one is read from, to fingerprint (S4). */
+  secretValues: Array<{ env: string; value: string }>;
   warnings: Array<{ code: string; text: string }>;
 }
 
@@ -30,6 +32,7 @@ export function parseTestData(cell: string, config: ParserConfig): ParsedTestDat
   const bindings = new Map<string, DataBinding>();
   const warnings: ParsedTestData['warnings'] = [];
   const secrets: string[] = [];
+  const secretValues: Array<{ env: string; value: string }> = [];
 
   for (const item of splitList(cell, { semicolons: true })) {
     const sep = item.includes('=') ? '=' : item.includes(':') ? ':' : undefined;
@@ -49,7 +52,10 @@ export function parseTestData(cell: string, config: ParserConfig): ParsedTestDat
     let ref = parseValue(value);
     if (ref.kind === 'literal' && isSecret(key, config)) {
       ref = { kind: 'env', name: envNameFor(key) };
-      if (value) secrets.push(value);
+      if (value) {
+        secrets.push(value);
+        secretValues.push({ env: ref.name, value });
+      }
       warnings.push({
         code: 'SECRET_TO_ENV',
         text: `"${key}" looks secret, so its value is not stored. Set ${ref.name} in the environment instead.`,
@@ -60,7 +66,7 @@ export function parseTestData(cell: string, config: ParserConfig): ParsedTestDat
     }
     bindings.set(norm, { key, ref });
   }
-  return { data, bindings, secrets, warnings };
+  return { data, bindings, secrets, secretValues, warnings };
 }
 
 /** `{{unique.email}}` → generator, `{{data.Email}}` → data, `{{env.X}}` → env, anything else → literal. */

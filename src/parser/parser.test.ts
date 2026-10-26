@@ -99,6 +99,18 @@ describe("testers' own wording (real test cases)", () => {
     for (const s of ['Enter url for Orange Hrm server', 'Enter the URL', 'Type the application URL', 'Open the application URL']) {
       assert.deepEqual(pick(step(s), ['action', 'baseUrl']), { action: 'navigate', baseUrl: true }, s);
     }
+    // An address written out after a URL word is the page to open, however it is decorated.
+    for (const s of [
+      'Enter BoookMarket URL--->https://book-market-virid.vercel.app/login',
+      'Enter the site URL: https://shop.example/login',
+      'Type web address = www.shop.example',
+    ]) {
+      assert.deepEqual(pick(step(s), ['action', 'baseUrl']), { action: 'navigate' }, s);
+    }
+    assert.equal(step('Enter BoookMarket URL--->https://book-market-virid.vercel.app/login').url, 'https://book-market-virid.vercel.app/login');
+    // An address typed into a field is still a field.
+    assert.equal(step('Enter https://x.example in the URL field').action, 'fill');
+    assert.equal(step('Enter "a@b.com" in Email address: https://x.example').action, 'fill');
     // An address field is still a field.
     assert.equal(step('Enter "a@b.com" in Email address field').action, 'fill');
   });

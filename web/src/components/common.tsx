@@ -181,6 +181,8 @@ export function CaseForm(props: {
     testData: props.initial?.testData ?? '',
     expected: props.initial?.expected ?? '',
   });
+  /** What should be true right after single steps, one per line as "3: Text box accepts the values". Checked in that place; not part of Steps. */
+  const [checks, setChecks] = useState(() => stepChecksText(props.initial?.stepExpected));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const hintId = useId();
@@ -193,6 +195,9 @@ export function CaseForm(props: {
     const key = `${item.kind}-${item.id}`;
     const current = lines[key] ?? item.raw;
     const field = item.kind === 'step' ? 'steps' : 'expected';
+    // A "Verify …" line that is really a step's own expected result lives in that box, not in Steps.
+    const bare = (text: string) => text.replace(/^Verify\s+/i, '');
+    setChecks((prev) => (!c[field].includes(current) && prev.includes(bare(current)) ? prev.replace(bare(current), () => bare(value)) : prev));
     setC((prev) => (prev[field].includes(current) ? { ...prev, [field]: prev[field].replace(current, () => value) } : prev));
     setLines((prev) => ({ ...prev, [key]: value }));
   };
@@ -203,7 +208,14 @@ export function CaseForm(props: {
     setBusy(true);
     setError(undefined);
     try {
-      await props.onSubmit({ ...c, preconditions: c.preconditions || undefined, testData: c.testData || undefined, type: c.type || undefined });
+      const stepExpected = parseStepChecks(checks);
+      await props.onSubmit({
+        ...c,
+        preconditions: c.preconditions || undefined,
+        testData: c.testData || undefined,
+        type: c.type || undefined,
+        stepExpected,
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -279,6 +291,16 @@ export function CaseForm(props: {
           onChange={set('steps')}
           placeholder={'1. Open Login page\n2. Enter valid username\n3. Enter valid password\n4. Click Login'}
         />
+      </label>
+      <label className="field">
+        <span>Expected result after a step (optional)</span>
+        <textarea
+          value={checks}
+          onChange={(e) => setChecks(e.target.value)}
+          style={{ minHeight: '3rem' }}
+          placeholder={'2: User should navigate to the Home page\n4: Text box should accept the values'}
+        />
+        <small>One per line: the step number, a colon, what should be true right after that step. The number is the one written in Steps.</small>
       </label>
       <div className="field">
         <label className="field">
@@ -370,4 +392,26 @@ export function Explain({ e, id, raw }: { e: Explanation; id?: string; raw?: str
       )}
     </div>
   );
+}
+
+/** The expected results of single steps as text, one per line: "3: Text box accepts the values". */
+export function stepChecksText(checks?: Record<string, string>): string {
+  return Object.entries(checks ?? {})
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([n, text]) => `${n}: ${text}`)
+    .join('\n');
+}
+
+/** The text back into step number → expected result. A line that does not start with a number and a colon is an error, never skipped. */
+export function parseStepChecks(text: string): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const line of text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)) {
+    const m = /^(\d{1,3})\s*[:.)-]\s*(\S.*)$/.exec(line);
+    if (!m) throw new Error(`"${line}" is not a number and a colon followed by what should be true, for example: 3: Text box accepts the values.`);
+    out[String(Number(m[1]))] = m[2].trim();
+  }
+  return Object.keys(out).length ? out : undefined;
 }

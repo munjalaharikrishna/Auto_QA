@@ -72,6 +72,7 @@ export function ProjectPage({ id }: { id: string }) {
           />
         </section>
       )}
+      {tab === 'settings' && <DeleteProject project={project} />}
     </>
   );
 }
@@ -498,6 +499,51 @@ function RunsTab({ project }: { project: ProjectView }) {
           })}
         </tbody>
       </table>
+    </section>
+  );
+}
+
+/** Deleting a project removes everything about it, so the name has to be typed first. */
+function DeleteProject({ project }: { project: ProjectView }) {
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  return (
+    <section className="panel">
+      <h2>Delete this project</h2>
+      <p className="muted">
+        Removes the project completely: its test cases and their versions, every run and result, evidence, explorations, rules, learned pages, releases,
+        settings and credentials, and its generated tests and uploaded workbooks on disk. This cannot be undone. A run that is still going has to be cancelled
+        first.
+      </p>
+      <ErrorNote error={error} />
+      <div className="row">
+        <input
+          className="grow"
+          aria-label="Project name"
+          placeholder={`Type ${project.name} to confirm`}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+        />
+        <button
+          type="button"
+          className="danger"
+          disabled={busy || typed.trim() !== project.name}
+          onClick={async () => {
+            setBusy(true);
+            setError(undefined);
+            try {
+              await api.deleteProject(project.id);
+              navigate('/');
+            } catch (e) {
+              setError((e as Error).message);
+              setBusy(false);
+            }
+          }}
+        >
+          Delete project
+        </button>
+      </div>
     </section>
   );
 }

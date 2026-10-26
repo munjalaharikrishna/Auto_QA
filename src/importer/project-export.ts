@@ -18,6 +18,8 @@ export interface ExportCase {
   steps: string;
   testData?: string;
   expected: string;
+  /** What should be true right after single steps (step number → text); written before the case's own expected result. */
+  stepExpected?: Record<string, string>;
   /** The last run's result; absent when the case has not been run. */
   verdict?: TestVerdict;
   /** Status when there is no verdict (e.g. the job was cancelled). */
@@ -26,6 +28,15 @@ export interface ExportCase {
 }
 
 export const EXPORT_SHEET = 'Test Results';
+
+/** The expected-result cell: what is expected after single steps ("After step 3: …"), then the result of the whole case. */
+const expectedText = (c: ExportCase): string =>
+  [
+    ...Object.entries(c.stepExpected ?? {})
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([n, text]) => `After step ${n}: ${text}`),
+    c.expected,
+  ].join('\n');
 const SHOT_WIDTH = 360;
 
 const HEADERS = [
@@ -77,7 +88,7 @@ export async function buildProjectExport(projectName: string, cases: ExportCase[
       c.preconditions ?? '',
       c.steps,
       c.testData ?? '',
-      c.expected,
+      expectedText(c),
       status,
       actualResult(c),
       v?.failedStep ?? '',

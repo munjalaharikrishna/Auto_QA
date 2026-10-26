@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import { compactKey } from '../text/compound.js';
+import { prepareFrame, visibleFrames } from '../locate/frames.js';
 import { waitSettled } from './waits.js';
 
 /**
@@ -33,6 +34,8 @@ export interface PageControl {
 
 export interface TableModel {
   xpath: string;
+  /** The iframes the table is in, outermost first; empty for the page itself. Every XPath of the table is read in that frame. */
+  frame: string[];
   /** The name of the table: its label or caption. */
   name: string;
   headers: string[];
@@ -148,6 +151,7 @@ export function readTables(): TableModel[] {
     }
     out.push({
       xpath: xpathOf(table),
+      frame: [],
       name: squash(table.getAttribute('aria-label')) || squash(table.querySelector('caption')?.textContent),
       headers,
       rows,
@@ -160,8 +164,16 @@ export function readTables(): TableModel[] {
 }
 
 export const tablesOf = async (page: Page): Promise<TableModel[]> => {
-  await page.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)').catch(() => {});
-  return page.evaluate(readTables);
+  const out: TableModel[] = [];
+  for (const { frame, path } of await visibleFrames(page)) {
+    await prepareFrame(frame);
+    const tables = await frame.evaluate(readTables).catch((e) => {
+      if (path.length === 0) throw e;
+      return [] as TableModel[];
+    });
+    out.push(...tables.map((t) => ({ ...t, frame: path })));
+  }
+  return out;
 };
 
 const wordsOf = (text: string): string[] => {
@@ -200,7 +212,7 @@ export interface FindRowOptions {
   /** The most pages of a table that are looked at. */
   maxPages?: number;
   /** Clicks a control of the page, by its XPath. It is the caller's, so every click is made the same way. */
-  go: (xpath: string) => Promise<void>;
+  go: (xpath: string, frame: readonly string[]) => Promise<void>;
 }
 
 /**
@@ -222,12 +234,12 @@ export async function findRow(page: Page, values: readonly string[], options: Fi
   // To the first page: its number when the table shows numbers, else Previous until it is off.
   const first = table.pages.find((p) => p.label === '1' && !p.current);
   if (first) {
-    await options.go(first.xpath);
+    await options.go(first.xpath, table.frame);
     await settle();
     table = (await read()) ?? table;
   }
   for (let back = 0; back < limit && table.previous && !table.previous.disabled; back++) {
-    await options.go(table.previous.xpath);
+    await options.go(table.previous.xpath, table.frame);
     await settle();
     table = (await read()) ?? table;
   }
@@ -251,7 +263,7 @@ export async function findRow(page: Page, values: readonly string[], options: Fi
         pagesVisited: visited,
       };
     }
-    await options.go(control.xpath);
+    await options.go(control.xpath, table.frame);
     await settle();
     const again = await read();
     if (!again) break;

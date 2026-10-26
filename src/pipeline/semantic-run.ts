@@ -2,6 +2,7 @@ import path from 'node:path';
 import { executePlan, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
 import { planActions } from '../engine/execute/planner.js';
 import type { CompileResult } from '../engine/index.js';
+import type { Application } from '../engine/knowledge/schema.js';
 import type { IrExpectation } from '../engine/ir/schema.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
 import { judge, type Verdict } from '../engine/verdict/index.js';
@@ -25,6 +26,10 @@ export interface SemanticJob {
   baseUrl: string;
   headless?: boolean;
   testIdAttribute?: string;
+  /** The login case, compiled: a case that starts "logged in" runs it first, in the same browser (E7). */
+  login?: CompileResult;
+  /** What the application calls things: the run finds an element by the names the application gives it (D1). */
+  knowledge?: Application;
 }
 
 export type Support = { ok: true } | { ok: false; why: string };
@@ -236,6 +241,22 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
       const startedAt = new Date(started).toISOString();
       try {
         await session.reset();
+        const needsLogin = ir.preconditions.some((p) => p.type === 'LOGGED_IN');
+        if (needsLogin && job.login?.ir && job.login.plan) {
+          const loginPages = Object.fromEntries(Object.entries({ ...job.login.pages, ...compiled.pages }).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]));
+          const signedIn = await executePlan(
+            { plan: planActions(job.login.ir, job.login.plan), values: job.login.values, pages: loginPages },
+            { mcp: session.port, page: session.page, baseUrl: job.baseUrl, testIdAttribute: job.testIdAttribute, ...(job.knowledge ? { knowledge: job.knowledge } : {}) },
+          );
+          if (signedIn.status !== 'completed') {
+            const why = signedIn.stoppedAt ? `${signedIn.stoppedAt.code}: ${signedIn.stoppedAt.reason}` : 'the login did not finish';
+            options.onProgress?.(`? ${model.id}: the login that comes first did not work (${why}); it keeps its review`);
+            continue;
+          }
+        } else if (needsLogin) {
+          options.onProgress?.(`? ${model.id}: starts logged in and no login case is given; it keeps its review`);
+          continue;
+        }
         const trace = await executePlan(
           { plan: planActions(ir, plan), values: compiled.values, pages },
           {
@@ -243,6 +264,7 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
             page: session.page,
             baseUrl: job.baseUrl,
             testIdAttribute: job.testIdAttribute,
+            ...(job.knowledge ? { knowledge: job.knowledge } : {}),
             ...(options.screenshotDir ? { screenshotDir: path.join(options.screenshotDir, model.id) } : {}),
           },
         );

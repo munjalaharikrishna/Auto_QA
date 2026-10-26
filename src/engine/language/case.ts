@@ -1,4 +1,4 @@
-import type { RawTestCase } from '../../model/test-model.js';
+import { type RawTestCase, stepsWithChecks } from '../../model/test-model.js';
 import { resolveReferences } from '../context/references.js';
 import { validateStates } from '../context/states.js';
 import { Secret } from '../data/secret.js';
@@ -82,7 +82,9 @@ const UNIQUE_KEY = (existing: Record<string, unknown>, base: string): string => 
   return `${base}_${n}`;
 };
 
-export function understandCase(raw: RawTestCase, options: CaseOptions = {}): CaseLanguage {
+export function understandCase(given: RawTestCase, options: CaseOptions = {}): CaseLanguage {
+  // A step's own expected result comes back as a check right after its step (it is kept beside the steps, not in them).
+  const raw = { ...given, steps: stepsWithChecks(given) };
   const testId = raw.id ?? 'UNKNOWN';
   const decisions: Decision[] = [];
   const issues: Issue[] = [];
@@ -312,7 +314,7 @@ export function understandCase(raw: RawTestCase, options: CaseOptions = {}): Cas
     if (!name || cls === 'Element' || cls === 'Page') return;
     const key = compactKey(name);
     if (!kindsOf.has(key)) kindsOf.set(key, new Set());
-    kindsOf.get(key)?.add(cls === 'Username' || cls === 'Password' ? 'Field' : cls);
+    kindsOf.get(key)?.add(cls === 'Username' || cls === 'Password' || cls === 'File' || cls === 'Dropdown' ? 'Field' : cls);
   };
   for (const s of steps) note(s.target?.name, s.target?.ontology ?? '');
   for (const e of expectations) note(e.condition.target?.name, e.condition.target?.ontology ?? '');
