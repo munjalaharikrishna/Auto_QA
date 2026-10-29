@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Plan version** | 1.3: 1.1 added the build practices (§0); 1.2 added E0.0 and the current status (§1.5); 1.3 records the owner's decisions PD-0…PD-8 (§8) |
-| **Date** | 2026-10-08 |
+| **Plan version** | 2.0: 1.1 added the build practices (§0); 1.2 added E0.0 and the current status (§1.5); 1.3 records the owner's decisions PD-0…PD-8 (§8); **2.0 adds the flow realignment (§10), versions E0.12–E0.19, from the audit of 25 Oct and the industry research of 28 Oct** |
+| **Date** | 2026-10-28 (v2.0); 2026-10-08 (v1.3) |
 | **Builds** | [ENGINE-SPEC.md](ENGINE-SPEC.md) v1.2: 186 requirements in 8 modules |
 | **Approach** | A clean starting point (E0.0), then 11 engine versions (E0.1 → E1.1). Each version is small, testable on its own, and ends with a fixed set of tests. |
 | **Code changes** | None made with this plan. Building starts only when the owner approves it. |
@@ -19,6 +19,7 @@
 7. [Risks and how the plan handles them](#7-risks-and-how-the-plan-handles-them)
 8. [Owner decisions](#8-owner-decisions-8-oct-2026)
 9. [Minimum engine target](#9-minimum-engine-target)
+10. [Flow realignment: versions E0.12–E0.19 (added in v2.0)](#10-flow-realignment-versions-e012e019)
 
 ---
 
@@ -105,19 +106,16 @@ flowchart LR
 
 ---
 
-### 1.5 Current status (8 Oct 2026)
+### 1.5 Current status (29 Oct 2026)
 
 | Item | Status |
 |---|---|
-| Work since 1 Oct (database M8, exports, frame support, UI) | Committed and pushed: `3ac886f` on `feat/m8-database` |
-| ENGINE-SPEC.md v1.1 and this plan | Committed and pushed: `d6d48b2` |
-| Uncommitted changes | None |
-| Type check | Passes |
-| Tests | 444 of 445 pass. **1 outdated test fails**: `src/locators/locators.test.ts`, "skips anything it cannot represent instead of misreading it". It was written before iframe support and still expects `frameLocator('iframe').getByText('x')` to be skipped; the new iframe support now reads it correctly. (The test runner reports 2 failures because the test's group is counted as failed too.) |
-| `feat/m8-database` merged to the main branch | Not yet |
-| Decisions PD-0…PD-8 (§8) | Decided 8 Oct |
-| Old documents marked as replaced (PD-7) | Done 8 Oct |
-| Employee list test case file (PD-4) | **Missing:** owner to provide before E0.6 |
+| Versions E0.1 to E0.11 | Built. Checked exit test by exit test in [VERIFICATION-E0.0-E0.11.md](VERIFICATION-E0.0-E0.11.md): 63 of 75 rows passed, the gaps are listed there. Found since, and fixed in E0.12: a masked password was typed on the real site. |
+| E0.12 Safety first | **Items 1 to 4 done** (PASS never rests on an unapproved assumption; "not displayed" never passes on what it could not see, with the iframe trap; project rules replaced by validated learned entries; Excel credentials read as written and never replaced, with a mask never typed). **Item 5 (commit, push the tag, pull requests, CI) is not done**: it needs the owner's go-ahead. |
+| Real site (OrangeHRM login workbook, new engine) | 2 PASS, 6 NEEDS REVIEW (with the page's own words), 1 not run, **0 FAIL, 0 wrong PASS**. Review reduction against the baseline is still about 10%; the target is 80% (E0.13 to E0.19). |
+| Git | `main` holds all committed work and is on `origin`. The tag `baseline-before-engine` is local only. Many uncommitted changes since 25 Oct. |
+| Migrations | 0001 to 0009 (0008 learned entries, 0009 review decisions): see DATABASE.md §6.2.1. |
+| Open for the owner | Employee list workbook (PD-4); sign-off of the answer key (`test/benchmark/`); the mail provider (PD-5); the 5 Oct hand-check, which was not found. |
 
 ## 2. Version overview
 
@@ -444,4 +442,204 @@ All decisions were answered by the owner on 8 Oct 2026.
 | E0.10 | GV-06, GV-08, GV-09, GV-13 (measurement and protection; built 13 Oct, `npm run engine:gate`; the answer key is filled in at E1.0) | GV-01 editing screen, GV-02, GV-07, GV-10, GV-11, GV-16 full report |
 
 After the minimum engine passes a T6 measurement of at least 80% on both workbooks, the deferred items are built in version order, and the release check (§6) runs when everything is complete.
+
+---
+
+## 10. Flow realignment: versions E0.12–E0.19
+
+Added in v2.0 (28 Oct 2026). Sources: [AUDIT-2026-10-25.md](AUDIT-2026-10-25.md) (findings U, E, S, P) and [INDUSTRY-PRACTICES.md](INDUSTRY-PRACTICES.md) (techniques from mabl, testRigor, Tosca, Testim, Katalon, Reflect, Playwright and others; deterministic only).
+
+### 10.1 Why the plan changes
+
+The audit found that the engine pieces exist but are **in the wrong order, not connected and frame-blind**:
+- understanding happens **before** the application is seen (U2)
+- the new engine's reading is rarely executed; the legacy route decides most verdicts (U1, S6)
+- iframes and frame reloads are not handled (E1–E3)
+- wrong PASS is still possible (S1–S6)
+- measured review reduction is 5%, against the 80% target
+
+The industry tools follow one flow: **learn the application first, read test cases against it, never guess at run time, ask once and remember**. Versions E0.12–E0.19 rebuild Auto QA around that flow. E1.0 (switch-over) moves after E0.19.
+
+### 10.2 The target flow
+
+```
+Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match to page models (strict)
+   →  Setup blocks + data ledger  →  Plan  →  Run (frame-aware, per-frame waits)
+   →  Honest verdict (PASS / FAIL / INCONCLUSIVE / PASS-HEALED)  →  Review once, remembered
+```
+
+### 10.3 Version overview
+
+| Version | Name | Main content | Fixes | Size |
+|---|---|---|---|---|
+| **E0.12** | Safety first | Close every known wrong-PASS path; save and protect the work | S1–S6, process | M |
+| **E0.13** | Frame-aware execution | Frame paths, all-frames search, per-frame waiting, retry on navigation | E1–E5 | L |
+| **E0.14** | Scan the application | Page models (including iframes) built before understanding; passed into compile | U2, E8 | L |
+| **E0.15** | Grammar and lint | Slot grammar, one vocabulary, pre-run lint with suggestions | U3, U6, U7, U8 | L |
+| **E0.16** | Setup blocks, data ledger, test data | Setup detection, references through the ledger, Excel credentials per case, clean-up | U4, U5, S4, P3, P5 | M |
+| **E0.17** | Locating like a person | Row/section anchors, nested containers, identical-element rule, row actions, fallback fingerprints | E4, E6 | M |
+| **E0.18** | Honest verdicts, review memory | Four statuses, healing only for actions, approval fingerprints, versioned rules, review card in the UI | S2, S3, S5, review volume | L |
+| **E0.19** | Measure honestly | Answer key, broken-app tests, one frozen baseline, run-time KPIs, quarantine | wrong-PASS proof, KPIs | M |
+| E1.0 | Switch-over | As in §4, now after E0.19, preceded by shadow mode in E0.18 | U1, S6 | M |
+| E1.1 | Record once (optional) | Codegen walkthrough aligned to the Excel steps | ambiguity | M |
+| E1.2 | Jira / TestRail | Unchanged, last (DEC-04); was E1.1 | | S |
+
+**Order:** E0.12 first and on its own (safety). E0.13 before E0.14, because scanning OrangeHRM needs frames. E0.15–E0.17 can overlap. E0.18 needs E0.13–E0.17. E0.19 runs alongside from E0.13 (measurement), and is complete before E1.0.
+
+### 10.4 Versions in detail
+
+#### E0.12 Safety first
+**Builds:**
+1. "PASS with assumptions" becomes NEEDS REVIEW in every route; update the tests that require it (S5, DEC-05).
+2. A negated check ("X is not displayed") may pass only if the element was located earlier in the run, or every frame was searched after the page was proven loaded; never with an unvalidated locator (S1, S2).
+3. Project rules: validated before saving (no vacuous or unjudged checks, assertion count may not drop), with history, author and test-case link (S3).
+4. Excel credentials are kept per test case in memory and never replaced by a project-wide value (S4).
+5. Commit and push all work, push the `baseline-before-engine` tag, merge E0.10 and E0.11 through pull requests so CI runs; update §1.5 and the CHANGELOG (BP-6).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Wrong-PASS traps folder `test/traps/` created with the 5 Oct cases, TC_LOGIN_003 (wrong password) and an iframe "not displayed" case | Every trap gives NEEDS REVIEW, FAIL or INCONCLUSIVE, never PASS |
+| Rule validation | A rule like "Appropriate user name … should shown" is rejected when saved |
+| Credentials | TC_LOGIN_003 types the Excel value; a build check fails if it equals the valid password |
+| Git and CI | No uncommitted changes; engine branches pushed; CI green on main |
+
+#### E0.13 Frame-aware execution
+**Status (2026-10-29): done for the new engine** (items 1 to 3, 5 to 7 and the new verdict engine in 4); the legacy route is deliberately not extended. Tests: `frames.test.ts`, `frames-nested.test.ts`, `verdict/frames-judge.test.ts`. Open: the rewritten OrangeHRM workbook for TC12 to TC19 is not in the repository, so the live exit test has not been run on it.
+
+**Builds:**
+1. Every element in both routes carries a **frame path** (name/id → src without query → index as last resort).
+2. New engine: read the DOM, lines, tables and observations in **every frame**; build frame-aware selectors.
+3. When no frame path is known: search all frames; exactly one visible match is accepted and its path recorded; more than one is ambiguous.
+4. Text and catalogue checks search all frames (legacy generator and new verdict engine).
+5. **Settle per frame** after each action: listen for frame navigation before the action; if a frame navigates, wait for it to load, then for requests to finish and its DOM to go quiet; cap per step.
+6. On "execution context destroyed" or "frame detached": settle again, rescan, retry once.
+7. Page identity uses the content frame's URL when the top URL does not change (E8).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| DOM fixture pages with nested iframes | Elements and text inside frames are found by both routes |
+| Demo app page whose frame reloads slowly after Save and Back | The next step finds its target every time over 20 runs |
+| OrangeHRM rewritten workbook (`OrangeHRM_Login_Updated_TestCases_AutoQA.xlsx`) | TC12–TC19 no longer stop with "nothing on this page" or "execution context destroyed" |
+| Iframe "not displayed" trap | Not PASS unless every frame was searched after the page loaded |
+
+#### E0.14 Scan the application
+**Builds:**
+1. A scan step logs in (setup block), visits the configured pages and records a **page model**: every field, button, link, heading, table (headers and rows), message, with role, name, label, placeholder, section, frame path.
+2. Page models are versioned per application; a rescan shows a diff (added, removed, renamed elements).
+3. `compileCase` receives the page models; the knowledge base (AK-01, PK-01) is filled from them and passed into understanding (U2).
+4. Per-application vocabulary: application words (Employee, Supervisor) and aliases live with the page models (PD-3).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Scan of local OrangeHRM | Login, Employee Information, Add Employee and Personal Details pages modelled, including the iframe content |
+| Rescan after a label change on the demo app | The diff shows exactly that change |
+| Understanding with page models | "Employee ID" is matched to the field "Code" through an alias, and "login section" is no longer read as the Login button |
+
+#### E0.15 Grammar and lint
+**Builds:**
+1. A **slot grammar**: patterns with slots (action, target, value, ordinal, relation, anchor), optional words and alternatives; replaces the phrase lists.
+2. **One vocabulary** (merge PREDICATES and synonyms); verb table with word forms (hides → not visible; return to → navigate; enter or update → enter).
+3. Ignore Given/When/Then, "user should", articles and adjectives inside names.
+4. Fix the parser defects of U6 (subject cut at "entered", dropped brackets, upload "to", fronted "In the X section", check-starter words).
+5. **Lint before run**: every step marked understood / matched / ambiguous / not found / vague, with suggestions from the page models, written to the results workbook.
+6. "Understood" is measured against approved readings of real sentences (gold), not "no blocking error" (U8).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Gold readings for the 29 OrangeHRM cases (Login + Add Employee, as written by testers) | At least 90% of sentences read exactly as approved |
+| Earlier failing sentences (audit U3, U6) | All read correctly |
+| Lint on the original OrangeHRM sheet | Every step has a status and the vague ones have a suggestion |
+
+#### E0.16 Setup blocks, data ledger and test data
+**Builds:**
+1. Detect setup lines (open browser, open the application, log in, "see tabs") and turn them into one setup block per suite; executed for "Logged in" preconditions in the new engine (E7).
+2. **Data ledger**: every entered or created value recorded with its entity and step; "the entered details", "the added employee", "the updated record", "previous page" resolve through it, including rows in lists (U5).
+3. Test Data kept per step; expected-only and data-only rows treated as continuation rows (P2).
+4. Unique names for created records; a clean-up list per run; a nightly sweep of records older than a set age (P3).
+5. One account per parallel worker with its own saved login state; negative-login cases start with an empty state (P5).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Add Employee original sheet | Repeated setup lines raise no review; "added data" / "updated records" resolve |
+| Clean-up | After a run, no records created by the run remain |
+| Parallel run with 2 workers | No session conflicts |
+
+#### E0.17 Locating like a person
+**Builds:**
+1. **Container anchors**: an element in a repeated widget is located inside its row, card or section; position inside the anchor only as a logged tie-breaker.
+2. **Nested containers** with the same name: use the innermost that contains the target.
+3. **Identical-element rule**: when tied candidates have the same role, name, handler and container, use the first visible one, record it as an assumption (review-needed status, not PASS), and validate it.
+4. **Row actions**: "in the row for / with / of X" in both understanding and execution; an unnamed control is allowed when it is the only one of its kind in the row; multi-word values across adjacent cells.
+5. **Fallback fingerprints**: an ordered list of unique locators per element plus a weighted fingerprint; a fallback is used only when it finds exactly one element above a set score, and never for checks.
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| OrangeHRM TC01 (3 nested "login" tables) | Resolved without a question |
+| OrangeHRM Job page (5 identical Edit/Save buttons) | Resolved by the identical-element rule, reported as review-needed the first time and remembered after approval |
+| "Check the checkbox in the row for Anita Kumari Rao" | Finds the right checkbox |
+
+#### E0.18 Honest verdicts and review memory
+**Builds:**
+1. Four statuses everywhere: **PASS / FAIL / INCONCLUSIVE / PASS-HEALED (review needed)**; "not found" reported separately from "found but hidden"; a pass on retry is FLAKY, never PASS.
+2. Every expected result must produce at least one executed check; otherwise not PASS.
+3. Healing only for clicks and typing; healed steps saved only after approval and only from passing runs.
+4. **Approval fingerprints**: approvals stored per step fingerprint (locator + action + expected value); unchanged next time means no review; identical pending items grouped and decided once.
+5. Project rules replaced by **versioned rule entries with an example**, conflict check and approval; GV-01 learning wired into runs.
+6. **User review card** in the web UI: expected vs actual, before/after screenshots, PASS/FAIL with who and when (DEC-05).
+7. **Shadow mode**: every legacy PASS is re-judged by the new engine; disagreement gives NEEDS REVIEW (prepares E1.0).
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| All traps | None PASS |
+| Second run of an approved batch | No review for unchanged steps |
+| Review card | A user decision is stored and shown in the report |
+
+#### E0.19 Measure honestly
+Starts alongside E0.13; complete before E1.0.
+
+**Builds:**
+1. **Answer key** for the 29 real OrangeHRM cases (Claude drafts, the owner or a tester confirms each row by hand; OP-8).
+2. **Broken-app tests**: the demo app and fixture pages with deliberate defects (removed button, changed text, 500 error); every generated test must fail against them.
+3. **One frozen baseline** from a live run; KPIs measured at **run time** with fixed denominators: wrong PASS, wrong FAIL, flake rate, reviews per 100 steps, review time.
+4. `engine:gate` fails below the 80% review-reduction target once the minimum engine is declared, and on any wrong PASS; the gate runs in CI.
+5. Quarantine lane for flaky cases with an owner and a time limit.
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Benchmark on the answer key | 0 wrong PASS |
+| Broken-app tests | Every generated test fails against every defect |
+| KPI report | Produced from one baseline with fixed denominators |
+
+### 10.5 Expected effect
+
+| | Today (measured) | After E0.12–E0.13 | After E0.14–E0.19 |
+|---|---|---|---|
+| Known wrong-PASS paths | 6 | 0 | 0, proven by the answer key |
+| 19 OrangeHRM Add Employee cases as written by testers | 19/19 review | about 10 review | about 2–4 review (genuine test case problems only) |
+| Review reduction (one baseline, run time) | 5% | about 40–50% | 80% or more |
+
+### 10.6 Decisions needed
+
+| # | Decision | Proposal |
+|---|---|---|
+| PD-9 | Adopt the flow realignment (E0.12–E0.19) before E1.0 | Yes |
+| PD-10 | E0.12 (safety) first and on its own, before any new feature | Yes |
+| PD-11 | Record once (E1.1) is optional and comes after E1.0 | Yes |
+| PD-12 | Which pages the application scan visits: configured list, or follow links from the start page | Configured list first; link following later |
 

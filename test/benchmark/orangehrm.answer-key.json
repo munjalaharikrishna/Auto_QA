@@ -1,0 +1,179 @@
+{
+  "checkedBy": "DRAFT by Claude from the test case wording: nobody has run these by hand",
+  "checkedOn": "2026-10-28",
+  "signedOff": false,
+  "about": "Answer key for the 29 real OrangeHRM cases. 'expected' is the verdict a correct engine gives, worked out from the written case. A PASS is expected only where the written case has a clear, checkable outcome; a loose or missing outcome is NEEDS_REVIEW, so an engine that PASSes it is a wrong PASS. Not signed off: the owner or a tester confirms each row by running it by hand (OP-8, option c), then sets signedOff to true with their name in checkedBy.",
+  "cases": [
+    {
+      "id": "TC_LOGIN_001",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_002",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "loose wording: 'an appropriate invalid username/password error message'; the application shows 'Invalid Login'. A person confirms the wording once; the engine remembers it"
+    },
+    {
+      "id": "TC_LOGIN_003",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "trap": "S4: the password of the sheet must be used",
+      "note": "loose wording as TC_LOGIN_002. The password must stay 'wrongpassword' (audit S4)"
+    },
+    {
+      "id": "TC_LOGIN_004",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "trap": "5 Oct: a check that cannot fail",
+      "note": "loose wording as TC_LOGIN_002 ('appropriate authentication error message'). 5 Oct trap"
+    },
+    {
+      "id": "TC_LOGIN_005",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS",
+      "trap": "5 Oct: a check that cannot fail",
+      "note": "5 Oct trap; the 'username is required' message is shown by the application"
+    },
+    {
+      "id": "TC_LOGIN_006",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS",
+      "trap": "5 Oct: a check that cannot fail",
+      "note": "5 Oct trap"
+    },
+    {
+      "id": "TC_LOGIN_007",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS",
+      "trap": "5 Oct: a check that cannot fail",
+      "note": "5 Oct trap"
+    },
+    {
+      "id": "TC_LOGIN_008",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_009",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "TC_LOGIN_010",
+      "module": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'handled according to the application's validation rules' has no checkable outcome"
+    },
+    {
+      "id": "21022024_1",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'in the middle of the page' is a layout judgement"
+    },
+    {
+      "id": "21022024_2",
+      "module": "Add_Employee.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "21022024_3",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'should add button' is not a clear check"
+    },
+    {
+      "id": "21022024_4",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'Add Employee page/popup': two outcomes, which one?"
+    },
+    {
+      "id": "21022024_5",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'accept values' has no checkable outcome"
+    },
+    {
+      "id": "21022024_6",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "as TC05"
+    },
+    {
+      "id": "21022024_7",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "as TC05"
+    },
+    {
+      "id": "21022024_8",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "as TC05"
+    },
+    {
+      "id": "21022024_9",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "as TC05"
+    },
+    {
+      "id": "21022024_10",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "needs a photo file; 'accept photo' has no checkable outcome"
+    },
+    {
+      "id": "21022024_11",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'empty text boxes and uploaded photo' mixes two checks and needs earlier data"
+    },
+    {
+      "id": "21022024_12",
+      "module": "Add_Employee.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "21022024_13",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'added data' refers to what an earlier case entered"
+    },
+    {
+      "id": "21022024_14",
+      "module": "Add_Employee.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "21022024_15",
+      "module": "Add_Employee.xlsx",
+      "expected": "PASS"
+    },
+    {
+      "id": "21022024_16",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'respective fields accept the values' has no checkable outcome"
+    },
+    {
+      "id": "21022024_17",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'updated the data' needs the earlier values"
+    },
+    {
+      "id": "21022024_18",
+      "module": "Add_Employee.xlsx",
+      "expected": "NEEDS_REVIEW",
+      "note": "'the same updated records' refers to earlier data"
+    },
+    {
+      "id": "21022024_19",
+      "module": "Add_Employee.xlsx",
+      "expected": "PASS"
+    }
+  ]
+}

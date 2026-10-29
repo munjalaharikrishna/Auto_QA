@@ -4,6 +4,29 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 
 ## Unreleased
 
+### Engine (E0.13 frame-aware execution, new engine only)
+- A screen two frames deep is read and acted on: frame paths of any length, a read that is made again once when the page changed under it (`readSettled`, `isNavigationRace`), and a frame that still cannot be read is listed (`unreadFrames`) instead of being taken as empty.
+- While a frame is unread, a check that is disproven or "not shown" only because something was not found is unproven with doubt NOT_OBSERVABLE, never FAIL or PASS; what was found stays found.
+- The screen is the content frame (the largest visible frame, then the frame inside it that still takes a quarter of its room): "redirected to the Dashboard page" and "stays on the page" look at the address of the frame as well as of the shell, and record ids and page numbers in an address are not a different screen (`pageIdentityOf`).
+- Not done: the legacy parser/explorer route, and the rewritten OrangeHRM workbook for TC12 to TC19 (not in the repository).
+
+### Engine (E0.12 safety, and the packages that closed the gaps of E0.0 to E0.11)
+- **A valid login from the sheet no longer fails.** The parser's masked copy of the Test Data (`Password: ••••`, kept for storage and display) was what the new engine was given, so it typed four bullet characters as the password. The engine now reads the text the tester wrote, kept in memory beside the model (`parser/original.ts`), and a value made only of mask characters is never typed, in the resolver or the executor. Found on the real OrangeHRM; the tests now go through the product's own path (`src/pipeline/engine-input.test.ts`).
+- **"Leave the field blank" works.** The executor empties the field and checks it is empty; an empty value that is not a blank is still refused.
+- **A native alert is a message.** OrangeHRM answers a blank field with `alert "User Name not given!"`, which the page does not show; the judge now treats what a pop-up said as a fresh message, so a different wording is set aside for a person instead of failing the case.
+- **A page name the engine cannot place is not a FAIL.** "OrangeHRM home/dashboard" means either page, each side is looked up among the known addresses, and an address is called wrong only when the engine knows where the named page is, or knows the page it is on is another one.
+- **Safety:** the iframe "not displayed" trap (never a PASS for what a frame shows); a deleted project with learned entries no longer fails on a foreign key.
+- **E0.9 login with a code:** TOTP (RFC 6238 vectors), an email adapter with a local test mailbox, a code only from mail received after the login step, replay protection, ENVIRONMENT_ERROR when no mail comes and TEST_DATA_ERROR when a code is refused, never FAIL (`src/engine/auth/`). No real mail provider yet (PD-5).
+- **E0.10:** the audit trail of every call tied to its step and locator contract (`src/engine/audit/`); caching of what is worked out from text, with the same results on and off and no page evidence ever cached (`src/engine/cache/`, `npm run engine:cache-bench`); learned entries replace the project rules as the only thing a run reads (migration 0008, `npm run rules`), with a reading that turns a sentence into a "not shown" check refused, and four live rules that judged nothing quarantined.
+- **E0.8 review card:** a person's PASS or FAIL on a case the engine could not decide, stored with who and when beside the engine's verdict, which it never changes (migration 0009, `/api/jobs/:id/review-queue`).
+- **E0.7 cards and lists (UI-07):** a step or a check about "the Backpack card" keeps the card, and is done and judged on that card only; twins and a missing card are never guessed. Quoted text is matched as whole words ("$9.99" is not in "$29.99").
+- **Case styles** (`userName`, `user_name`, `user-name`) and tests for the sheet column names (IN-06, IN-07, IN-11, IN-13).
+- Verification of E0.0 to E0.11 against the plan's exit tests: [docs/VERIFICATION-E0.0-E0.11.md](docs/VERIFICATION-E0.0-E0.11.md).
+
+### Engine (E0.11)
+- A note such as "Text box should accept only alphabets" is now a format rule of the field: generated valid, invalid and longest values follow it. Applicant and Expert left the core ontology (PD-3).
+- `engine:gate` now blocks below the 80% review reduction minimum (`--allow-below-minimum` waives it for one run) and when a wrong-PASS trap (`test/traps/`) breaks. Draft answer key for the 29 OrangeHRM cases in `test/benchmark/` (unsigned: the gate refuses it without `--draft`); draft gold readings of the login workbook in `test/gold/`.
+
 ### Fixed
 - **Elements inside iframes** (OrangeHRM shows its whole content in one). The element the tester picked was never accepted, because page locators do not look inside a frame: every locator "matched nothing" and the same question came back. Locators now carry the frame they are in (`frameLocator('iframe[name="rightMenu"]').getByRole(…)`, nested frames too), the generated Page Objects use them, and Playwright MCP's `locator(…).contentFrame()` code is read. The picture of the page also drew frame elements in the wrong place (a button 100px down the page showed at the top): their boxes are now moved by the frame's offset. `src/locators/frames.test.ts`.
 - "Open the application" / "Enter the URL" opened the site root instead of BASE_URL with its path.

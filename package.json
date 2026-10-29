@@ -10,6 +10,7 @@
     "engine:review": "tsx src/cli/engine-review.ts",
     "engine:compare": "tsx src/cli/engine-compare.ts",
     "engine:mutate": "tsx src/cli/engine-mutate.ts",
+    "engine:cache-bench": "tsx src/cli/engine-cache-bench.ts",
     "engine:gold": "tsx src/cli/engine-gold.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "biome check .",
@@ -24,6 +25,7 @@
     "demo:workbook": "tsx examples/demo-app/make-workbook.ts",
     "serve": "tsx src/server/index.ts",
     "db": "tsx src/cli/db.ts",
+    "rules": "tsx src/cli/rules.ts",
     "web:build": "vite build --config web/vite.config.ts",
     "web:dev": "vite --config web/vite.config.ts"
   },

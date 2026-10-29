@@ -7,6 +7,7 @@
  */
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { OTP_PAGES, type OtpDemoOptions, otpApi } from './otp-pages.js';
 import { slowDelayMs, UI_PAGES } from './ui-pages.js';
 
 export const DEMO_USER = { username: 'demo', password: 'demo123' };
@@ -18,6 +19,7 @@ const layout = (title: string, body: string) => `<!doctype html>
 
 const PAGES: Record<string, string> = {
   ...UI_PAGES,
+  ...OTP_PAGES,
   '/': layout(
     'Login',
     `<h1>Sign in to Demo</h1>
@@ -163,9 +165,11 @@ function go() {
   ),
 };
 
-export async function startDemoApp(port = 0): Promise<{ url: string; close(): Promise<void> }> {
+export async function startDemoApp(port = 0, otp: OtpDemoOptions = {}): Promise<{ url: string; close(): Promise<void> }> {
+  const otpRoutes = otpApi(otp);
   const server = http.createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
+    if (otpRoutes(req, res, path)) return;
     if (path === '/api/reports') return res.writeHead(500, { 'content-type': 'application/json' }).end('{"error":"boom"}');
     if (path === '/api/slow') {
       setTimeout(() => res.writeHead(200, { 'content-type': 'application/json' }).end('{"done":true}'), slowDelayMs);

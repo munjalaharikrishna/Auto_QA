@@ -1,0 +1,259 @@
+{
+  "version": "G0.3",
+  "review": null,
+  "cases": [
+    {
+      "id": "TC01",
+      "module": "bookmarket",
+      "source": {
+        "file": "test/fixtures/Book_Market_Search.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter BoookMarket URL--->https://book-market-virid.vercel.app/login",
+            "action": "NAVIGATE",
+            "target": "login",
+            "value": {
+              "class": "EXPLICIT",
+              "value": "https://book-market-virid.vercel.app/login"
+            },
+            "why": "'Enter ... URL' means go to that address, not type into a field"
+          },
+          {
+            "original": "Enter the valid Email address in  Email  Text box Note: student@bookmarket.com",
+            "action": "ENTER_VALUE",
+            "target": "Email",
+            "value": {
+              "class": "EXPLICIT",
+              "value": "student@bookmarket.com"
+            },
+            "why": "the value is written in the Note"
+          },
+          {
+            "original": "Enter The valid password in password Text box Note: password123",
+            "action": "ENTER_VALUE",
+            "target": "password",
+            "value": {
+              "class": "CREDENTIAL"
+            },
+            "why": "a password written in a cell is a secret: it must not be kept as a plain value"
+          },
+          {
+            "original": "Click on the signin Button",
+            "action": "CLICK",
+            "target": "Sign in",
+            "why": "'signin' is a typo for the Sign in button"
+          },
+          {
+            "original": "Click on Explore Now Button",
+            "action": "CLICK",
+            "target": "Explore Now"
+          },
+          {
+            "original": "Click on Browser page",
+            "action": "CLICK",
+            "target": "Browser",
+            "why": "'Browser page' is the Browse link in the menu, written loosely"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Browser should be Opened",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to Book Market Home Page",
+            "type": "URL",
+            "negated": false,
+            "target": "Book Market Home",
+            "why": "a page name, not address text; and it is really the login page"
+          },
+          {
+            "original": "Text box should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Email",
+            "why": "the text box just typed into (first the email, then the password)"
+          },
+          {
+            "original": "Text box should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "password",
+            "why": "the text box just typed into (first the email, then the password)"
+          },
+          {
+            "original": "User should navigates to search functionality Page",
+            "type": "URL",
+            "negated": false,
+            "target": "search functionality",
+            "why": "a page name"
+          },
+          {
+            "original": "User should navigates  to book market browsing Page",
+            "type": "URL",
+            "negated": false,
+            "target": "book market browsing",
+            "why": "a page name"
+          },
+          {
+            "original": "User should able to see education categories",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "education categories"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC04",
+      "module": "bookmarket",
+      "source": {
+        "file": "test/fixtures/Book_Market_Search.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter BoookMarket URL--->https://book-market-virid.vercel.app/login",
+            "action": "NAVIGATE",
+            "target": "login",
+            "value": {
+              "class": "EXPLICIT",
+              "value": "https://book-market-virid.vercel.app/login"
+            },
+            "why": "'Enter ... URL' means go to that address, not type into a field"
+          },
+          {
+            "original": "Enter the valid Email address in  Email  Text box Note: student@bookmarket.com",
+            "action": "ENTER_VALUE",
+            "target": "Email",
+            "value": {
+              "class": "EXPLICIT",
+              "value": "student@bookmarket.com"
+            },
+            "why": "the value is written in the Note"
+          },
+          {
+            "original": "Enter The valid password in password Text box Note: password123",
+            "action": "ENTER_VALUE",
+            "target": "password",
+            "value": {
+              "class": "CREDENTIAL"
+            },
+            "why": "a password written in a cell is a secret: it must not be kept as a plain value"
+          },
+          {
+            "original": "Click on the signin Button",
+            "action": "CLICK",
+            "target": "Sign in",
+            "why": "'signin' is a typo for the Sign in button"
+          },
+          {
+            "original": "Click on Explore Now Button",
+            "action": "CLICK",
+            "target": "Explore Now"
+          },
+          {
+            "original": "Click on Browser page",
+            "action": "CLICK",
+            "target": "Browser",
+            "why": "'Browser page' is the Browse link in the menu, written loosely"
+          },
+          {
+            "original": "Select the preffered stream",
+            "abstain": true,
+            "why": "nothing says which stream to select"
+          },
+          {
+            "original": "Click on the Year Radio Button",
+            "abstain": true,
+            "why": "no year is named: which radio button is not stated"
+          },
+          {
+            "original": "Enter preffered Book Name in Search Bar",
+            "abstain": true,
+            "why": "no book name is given: the value is missing, not blank"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Browser should be Opened",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to Book Market Home Page",
+            "type": "URL",
+            "negated": false,
+            "target": "Book Market Home",
+            "why": "a page name, not address text; and it is really the login page"
+          },
+          {
+            "original": "Text box should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Email",
+            "why": "the text box just typed into (first the email, then the password)"
+          },
+          {
+            "original": "Text box should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "password",
+            "why": "the text box just typed into (first the email, then the password)"
+          },
+          {
+            "original": "User should navigates to search functionality Page",
+            "type": "URL",
+            "negated": false,
+            "target": "search functionality",
+            "why": "a page name"
+          },
+          {
+            "original": "User should navigates  to book market browsing Page",
+            "type": "URL",
+            "negated": false,
+            "target": "book market browsing",
+            "why": "a page name"
+          },
+          {
+            "original": "User should able to see education categories",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "education categories"
+          },
+          {
+            "original": "Preffered stream should be selected",
+            "abstain": true,
+            "why": "which stream? nothing to check the selection against"
+          },
+          {
+            "original": "Select the prefferd Radio button",
+            "abstain": true,
+            "why": "this is an action, not a result; and which radio button is not stated"
+          },
+          {
+            "original": "Preffered book should display",
+            "abstain": true,
+            "why": "which book? the check has nothing to look for"
+          }
+        ]
+      },
+      "trap": "'preffered' stands for a value nobody gave; the engine must ask, never invent a stream, year or book"
+    }
+  ]
+}

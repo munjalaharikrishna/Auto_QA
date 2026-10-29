@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -210,6 +210,55 @@ function manyChanges() {
   const t = setInterval(() => { const li = document.createElement('li'); li.textContent = 'item ' + (++n); items.append(li); if (n === 6) clearInterval(t); }, 100);
 }
 if (location.search.includes('done=1')) area.innerHTML = '<p id="arrived">Arrived after the redirect</p>';
+</script>`,
+  ),
+
+  // Cards (UI-07): each product is an article with a title, a price and a button. Three look alike; one is sold out and has no button.
+  '/ui/cards': layout(
+    'Shop',
+    `<h1>Shop</h1>
+<p id="cart" role="status">Cart: empty</p>
+<section aria-label="Products">
+  <article><h2>Backpack</h2><p>Price: $29.99</p><p class="state"></p><button>Add to cart</button></article>
+  <article><h2>Bike Light</h2><p>Price: $9.99</p><p class="state"></p><button>Add to cart</button></article>
+  <article><h2>Bolt T-Shirt</h2><p>Price: $15.99</p><p class="state"></p><p>Sold out</p></article>
+</section>
+<script>
+for (const card of document.querySelectorAll('article')) {
+  const add = card.querySelector('button');
+  if (!add) continue;
+  add.addEventListener('click', () => {
+    const inCart = card.querySelector('.state').textContent === 'In cart';
+    card.querySelector('.state').textContent = inCart ? '' : 'In cart';
+    add.textContent = inCart ? 'Add to cart' : 'Remove from cart';
+    const names = [...document.querySelectorAll('article')].filter((a) => a.querySelector('.state').textContent === 'In cart').map((a) => a.querySelector('h2').textContent);
+    cart.textContent = names.length ? 'Cart: ' + names.join(', ') : 'Cart: empty';
+  });
+}
+</script>`,
+  ),
+  // Two cards with one title: "the Backpack card" does not say which.
+  '/ui/cards-twins': layout(
+    'Shop twins',
+    `<h1>Shop</h1>
+<p id="cart" role="status">Cart: empty</p>
+<section aria-label="Products">
+  <article><h2>Backpack</h2><p>Price: $29.99</p><p class="state"></p><button>Add to cart</button></article>
+  <article><h2>Backpack</h2><p>Price: $34.99</p><p class="state"></p><button>Add to cart</button></article>
+  <article><h2>Bike Light</h2><p>Price: $9.99</p><p class="state"></p><button>Add to cart</button></article>
+</section>
+<script>
+for (const card of document.querySelectorAll('article')) {
+  const add = card.querySelector('button');
+  if (!add) continue;
+  add.addEventListener('click', () => {
+    const inCart = card.querySelector('.state').textContent === 'In cart';
+    card.querySelector('.state').textContent = inCart ? '' : 'In cart';
+    add.textContent = inCart ? 'Add to cart' : 'Remove from cart';
+    const names = [...document.querySelectorAll('article')].filter((a) => a.querySelector('.state').textContent === 'In cart').map((a) => a.querySelector('h2').textContent);
+    cart.textContent = names.length ? 'Cart: ' + names.join(', ') : 'Cart: empty';
+  });
+}
 </script>`,
   ),
 

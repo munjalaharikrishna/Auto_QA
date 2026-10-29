@@ -1,0 +1,93 @@
+{
+  "about": "Wrong-PASS traps (T5): cases whose correct reading is already known by hand. Each is read by the engine with no browser and must give exactly the reading written here. A trap is never deleted; a new wrong PASS found anywhere is added here first, then fixed.",
+  "traps": [
+    {
+      "id": "5OCT-LOGIN-004",
+      "origin": "5 Oct 2026: the garbled expected result passed because its checks could not fail",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_004" },
+      "expect": {
+        "status": ["compiled"],
+        "expectations": [
+          { "type": "AUTHENTICATION", "negated": true, "expect": "LOGGED_IN" },
+          { "type": "VISIBILITY", "negated": false, "fresh": true }
+        ]
+      }
+    },
+    {
+      "id": "5OCT-LOGIN-005",
+      "origin": "5 Oct 2026: a blank username must be a blank value, and the message must be new",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_005" },
+      "expect": {
+        "status": ["compiled"],
+        "expectations": [
+          { "type": "AUTHENTICATION", "negated": true, "expect": "LOGGED_IN" },
+          { "type": "VISIBILITY", "negated": false, "fresh": true }
+        ],
+        "values": { "Login Name": { "class": "BLANK", "value": "" }, "Password": { "class": "EXPLICIT", "source": "EXCEL" } }
+      }
+    },
+    {
+      "id": "5OCT-LOGIN-006",
+      "origin": "5 Oct 2026",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_006" },
+      "expect": {
+        "status": ["compiled"],
+        "expectations": [
+          { "type": "AUTHENTICATION", "negated": true, "expect": "LOGGED_IN" },
+          { "type": "VISIBILITY", "negated": false, "fresh": true }
+        ]
+      }
+    },
+    {
+      "id": "5OCT-LOGIN-007",
+      "origin": "5 Oct 2026",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_007" },
+      "expect": {
+        "status": ["compiled"],
+        "expectations": [
+          { "type": "AUTHENTICATION", "negated": true, "expect": "LOGGED_IN" },
+          { "type": "VISIBILITY", "negated": false, "fresh": true }
+        ]
+      }
+    },
+    {
+      "id": "S4-LOGIN-003-WRONG-PASSWORD",
+      "origin": "Audit 25 Oct, S4: the password of the sheet was replaced by the project's, so the wrong-password test logged in with the right one and proved nothing",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_003" },
+      "expect": {
+        "status": ["compiled"],
+        "values": { "Password": { "source": "EXCEL", "class": "EXPLICIT", "value": "wrongpassword" }, "Login Name": { "source": "EXCEL", "value": "cypress" } }
+      }
+    },
+    {
+      "id": "LOOSE-OUTCOME-WHITESPACE",
+      "origin": "TC_LOGIN_010: 'handled according to the application's validation rules' says nothing a check can test",
+      "case": { "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx", "id": "TC_LOGIN_010" },
+      "expect": { "status": ["needs-review"] }
+    },
+    {
+      "id": "NOTHING-TO-CHECK",
+      "origin": "An expected result with no checkable outcome is never ready",
+      "case": { "steps": "1. Open the Login page\n2. Click Login", "expected": "Something happens" },
+      "expect": { "status": ["needs-review"], "issueCodes": ["NOT_UNDERSTOOD"] }
+    },
+    {
+      "id": "NOT-DISPLAYED-IS-NEGATED",
+      "origin": "Audit S1: 'not displayed' must stay a negated check of that element (the verdict engine then refuses to PASS it when it cannot see the element)",
+      "case": { "steps": "1. Open the Login page\n2. Click Login", "expected": "Verify the Employee Information is not displayed" },
+      "expect": { "status": ["compiled"], "expectations": [{ "type": "VISIBILITY", "negated": true, "expect": "VISIBLE" }] }
+    },
+    {
+      "id": "LOGIN-NOT-PERFORMED-NO-LOGIN-STEP",
+      "origin": "'Login is not performed' after steps that never try to log in cannot be proved: it must not be ready",
+      "case": { "steps": "1. Open the Login page", "expected": "Login is not performed and a validation message is displayed" },
+      "expect": { "status": ["needs-review"] }
+    },
+    {
+      "id": "RETURN-TO-PAGE-NOT-LOST",
+      "origin": "Audit U8: 'Return to the page and verify the updated record' lost its navigation and still counted as understood",
+      "case": { "steps": "1. Open the Employee page\n2. Return to the page and verify the updated record", "expected": "The record is shown" },
+      "expect": { "status": ["needs-review"] }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "version": "E0.10",
+  "version": "E0.11",
   "modules": {
     "OrangeHRM_Login_Test_Cases_Updated.xlsx": {
       "testCases": 10,
@@ -16,8 +16,8 @@
     },
     "Add_Employee.xlsx": {
       "testCases": 19,
-      "ready": 1,
-      "reviews": 18,
+      "ready": 2,
+      "reviews": 17,
       "steps": {
         "understood": 165,
         "total": 181

@@ -1,0 +1,518 @@
+{
+  "version": "G0.2",
+  "review": null,
+  "about": "DRAFT. What each step and expected result of the OrangeHRM login workbook means, worked out from the tester's words and the page, never from the engine's output. Not reviewed: a person checks it, then fills in `review`. Run: npm run engine:gold -- test/gold/orangehrm-login.gold.json --draft",
+  "cases": [
+    {
+      "id": "TC_LOGIN_001",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User is successfully logged in",
+            "type": "AUTHENTICATION",
+            "negated": false
+          },
+          {
+            "original": "redirected to the OrangeHRM home/dashboard page",
+            "type": "URL",
+            "negated": false,
+            "why": "a page name, not address text"
+          }
+        ]
+      },
+      "trap": "a page name ('home/dashboard page') is a page, not address text"
+    },
+    {
+      "id": "TC_LOGIN_002",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is rejected",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "an appropriate invalid username/password error message is displayed",
+            "type": "VISIBILITY",
+            "negated": false,
+            "why": "'appropriate' says no text: a person confirms what the message says, once"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC_LOGIN_003",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is rejected",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "an appropriate invalid username/password error message is displayed",
+            "type": "VISIBILITY",
+            "negated": false,
+            "why": "'appropriate' says no text: a person confirms what the message says, once"
+          }
+        ]
+      },
+      "trap": "the password is the one of the sheet, never replaced (S4)"
+    },
+    {
+      "id": "TC_LOGIN_004",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is rejected",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "an appropriate authentication error message is displayed",
+            "type": "VISIBILITY",
+            "negated": false,
+            "why": "'appropriate' says no text: a person confirms what the message says, once"
+          }
+        ]
+      },
+      "trap": "5 Oct: a check that cannot fail"
+    },
+    {
+      "id": "TC_LOGIN_005",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Leave the Login Name text box blank",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "BLANK"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is not performed",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "the system displays a validation message indicating that the username is required",
+            "type": "VISIBILITY",
+            "negated": false
+          }
+        ]
+      },
+      "trap": "5 Oct: 'leave blank' is a blank value"
+    },
+    {
+      "id": "TC_LOGIN_006",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Leave the Password text box blank",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "BLANK"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is not performed",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "the system displays a validation message indicating that the password is required",
+            "type": "VISIBILITY",
+            "negated": false
+          }
+        ]
+      },
+      "trap": "5 Oct"
+    },
+    {
+      "id": "TC_LOGIN_007",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Leave the Login Name text box blank",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "BLANK"
+            }
+          },
+          {
+            "original": "Leave the Password text box blank",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "BLANK"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Login is not performed",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "required-field validation messages are displayed for the missing credentials",
+            "type": "VISIBILITY",
+            "negated": false
+          }
+        ]
+      },
+      "trap": "5 Oct"
+    },
+    {
+      "id": "TC_LOGIN_008",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Verify that the password is displayed as masked characters",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expectation below"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "The password is displayed as masked characters",
+            "type": "MASKED",
+            "negated": false
+          },
+          {
+            "original": "the actual password text is not visible",
+            "type": "MASKED",
+            "negated": false,
+            "why": "restates the first clause: the actual text is hidden because the field is masked. A person decides whether it is a second check (the engine reads it as 'not visible', which can never fail on a masked field)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC_LOGIN_009",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Clear' button",
+            "action": "CLICK",
+            "target": "Clear"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "Both username and password fields are cleared",
+            "type": "VALUE",
+            "negated": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC_LOGIN_010",
+      "module": "orangehrm-login",
+      "source": {
+        "file": "test/fixtures/OrangeHRM_Login_Test_Cases_Updated.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open the OrangeHRM login page",
+            "action": "NAVIGATE",
+            "target": "OrangeHRM login"
+          },
+          {
+            "original": "Enter username with leading/trailing spaces in the Login Name text box",
+            "action": "ENTER_VALUE",
+            "target": "Login Name",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Enter password in the Password text box",
+            "action": "ENTER_VALUE",
+            "target": "Password",
+            "value": {
+              "class": "EXPLICIT"
+            }
+          },
+          {
+            "original": "Click the 'Login' button",
+            "action": "CLICK",
+            "target": "Login"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "The system handles the whitespace according to the application's validation rules",
+            "abstain": true,
+            "why": "says nothing a check can test"
+          },
+          {
+            "original": "It should not authenticate an unintended username",
+            "type": "AUTHENTICATION",
+            "negated": true
+          },
+          {
+            "original": "should display an appropriate validation/error message if spaces are not accepted",
+            "abstain": true,
+            "why": "conditional on a rule the sheet does not state"
+          }
+        ]
+      }
+    }
+  ]
+}
