@@ -12,7 +12,7 @@ export async function prepareFrame(frame: Frame): Promise<void> {
 }
 
 /** Runs in the page that holds an iframe: where the iframe is, and whether anyone can see it. */
-function describeIframe(el: Element): { xpath: string; shown: boolean } {
+function describeIframe(el: Element): { xpath: string; shown: boolean; area: number } {
   const steps: string[] = [];
   let node: Element | null = el;
   while (node && node.nodeType === 1) {
@@ -29,7 +29,11 @@ function describeIframe(el: Element): { xpath: string; shown: boolean } {
   const xpath = steps[0]?.startsWith('//') ? steps.join('/') : `/${steps.join('/')}`;
   const rect = el.getBoundingClientRect();
   const style = getComputedStyle(el);
-  return { xpath, shown: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' };
+  return {
+    xpath,
+    shown: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+    area: Math.round(rect.width * rect.height),
+  };
 }
 
 /**
@@ -37,7 +41,13 @@ function describeIframe(el: Element): { xpath: string; shown: boolean } {
  * a tracking frame): such a frame is not part of the page a person uses.
  */
 export async function framePath(frame: Frame): Promise<string[] | undefined> {
+  return (await frameChain(frame))?.path;
+}
+
+/** The iframes around a frame, outermost first, and the area the innermost one takes on its page; undefined for a frame nobody can see. */
+async function frameChain(frame: Frame): Promise<{ path: string[]; area: number } | undefined> {
   const chain: string[] = [];
+  let area = 0;
   for (let f: Frame | null = frame; f?.parentFrame(); f = f.parentFrame()) {
     const parent = f.parentFrame() as Frame;
     try {
@@ -46,24 +56,86 @@ export async function framePath(frame: Frame): Promise<string[] | undefined> {
       const found = await handle.evaluate(describeIframe);
       await handle.dispose();
       if (!found.shown) return undefined;
+      if (chain.length === 0) area = found.area;
       chain.unshift(found.xpath);
     } catch {
       return undefined;
     }
   }
-  return chain;
+  return { path: chain, area };
+}
+
+export interface VisibleFrame {
+  frame: Frame;
+  path: string[];
+  /** The address the frame shows now. */
+  url: string;
+  /** The room the frame takes on the page that holds it: a screen shown in an iframe fills most of the page. */
+  area: number;
 }
 
 /** Every frame a person can see, the page's own first, each with its path. */
-export async function visibleFrames(page: Page): Promise<Array<{ frame: Frame; path: string[] }>> {
+export async function visibleFrames(page: Page): Promise<VisibleFrame[]> {
   const main = page.mainFrame();
-  const out: Array<{ frame: Frame; path: string[] }> = [{ frame: main, path: [] }];
+  const out: VisibleFrame[] = [{ frame: main, path: [], url: main.url(), area: 0 }];
   for (const frame of page.frames()) {
     if (frame === main || frame.isDetached()) continue;
-    const path = await framePath(frame);
-    if (path) out.push({ frame, path });
+    const found = await frameChain(frame);
+    if (found) out.push({ frame, path: found.path, url: frame.url(), area: found.area });
   }
   return out;
+}
+
+/**
+ * The frame that holds the screen a person is on when the page itself is only a shell (E8): the visible frame that takes the most room,
+ * and then, while a frame inside it takes at least a quarter of its room, that one: a menu frame that wraps the content frame is not the
+ * screen. OrangeHRM shows every screen in one frame while the address of the page never changes.
+ */
+export function contentFrameOf(frames: readonly VisibleFrame[]): VisibleFrame | undefined {
+  const usable = frames.filter((f) => f.path.length > 0 && f.area > 0 && f.url !== 'about:blank');
+  const biggest = (list: readonly VisibleFrame[]) => [...list].sort((x, y) => y.area - x.area || y.path.length - x.path.length)[0];
+  let current = biggest(usable);
+  while (current) {
+    const here = current;
+    const inside = biggest(usable.filter((f) => f.path.length > here.path.length && here.path.every((step, i) => f.path[i] === step)));
+    if (!inside || inside.area * 4 < here.area) break;
+    current = inside;
+  }
+  return current;
+}
+
+/**
+ * Whether a failure is a page that changed under a read: the document was replaced, or the frame went away. It is not an error of the
+ * test case or the application; the read is made again once the page has settled. A closed browser is not this.
+ */
+export function isNavigationRace(error: unknown): boolean {
+  const text = String((error as { message?: unknown })?.message ?? error);
+  if (text.includes('has been closed')) return false;
+  return [
+    'Execution context was destroyed',
+    'frame was detached',
+    'Frame was detached',
+    'Cannot find context with specified id',
+    'Frame has been detached',
+  ].some((w) => text.includes(w));
+}
+
+/**
+ * Reads a frame, and reads it again once if the page changed under the first read (E0.13). A frame that still cannot be read is
+ * reported as such, never as an empty frame: a page whose frame could not be read has not shown that something is absent from it.
+ */
+export async function readSettled<T>(frame: Frame, read: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; error: unknown }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return { ok: true, value: await read() };
+    } catch (error) {
+      if (!isNavigationRace(error)) throw error;
+      if (attempt === 1) return { ok: false, error };
+      // The page changed while it was read: wait for the document that replaced it, and read that one.
+      await frame.waitForLoadState('load', { timeout: 5000 }).catch(() => undefined);
+    }
+  }
+  return { ok: false, error: new Error('the frame could not be read') };
 }
 
 export const sameFrame = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);

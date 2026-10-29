@@ -1,6 +1,18 @@
 export { accessibleName, broadFit, type LocateOptions, locate, roleFits, toLocatorSpec } from './candidates.js';
-export { framePath, frameSelector, prepareFrame, sameFrame, selectorIn, visibleFrames } from './frames.js';
-export { type InspectOptions, inspectPage, readDom } from './inspector.js';
+export {
+  contentFrameOf,
+  framePath,
+  frameSelector,
+  isNavigationRace,
+  prepareFrame,
+  readSettled,
+  sameFrame,
+  selectorIn,
+  type VisibleFrame,
+  visibleFrames,
+} from './frames.js';
+export { type InspectOptions, type InspectResult, inspectPage, inspectPageDetailed, readDom } from './inspector.js';
+export { pageIdentityOf } from './page-identity.js';
 export {
   type Box,
   type DomElement,

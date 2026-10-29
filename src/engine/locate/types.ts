@@ -45,6 +45,8 @@ export interface DomElement {
   focusable: boolean;
   /** The nearest ancestors, nearest first: `td`, `tr`, `table#login`. */
   parents: string[];
+  /** The titles of the named containers it is inside, nearest first: the card or list item it belongs to (UI-07). */
+  containers?: string[];
   /** The text next to it that names it: the cell before it in a table row, the text before it in a line. */
   nearbyText: string;
   xpath: string;
@@ -64,6 +66,8 @@ export interface DomElement {
   describedBy?: string;
   /** The iframes it is inside, outermost first. Empty for the main page. */
   frame: string[];
+  /** The address of the frame it is in, when it is in one (E8): the screen it belongs to, when the page is only a shell. */
+  frameUrl?: string;
 }
 
 /** The ways of finding an element, from the one people trust most (LC-01). */

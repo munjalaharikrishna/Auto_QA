@@ -1,5 +1,6 @@
 import type { Frame, Page } from 'playwright';
-import { visibleFrames } from './frames.js';
+import { CONTAINER_SELECTOR, HEADING_SELECTOR } from './containers.js';
+import { readSettled, type VisibleFrame, visibleFrames } from './frames.js';
 import type { DomElement } from './types.js';
 
 /**
@@ -21,7 +22,7 @@ export interface InspectOptions {
 }
 
 /** Runs in the page. Keep it self-contained. */
-export function readDom(opts: { testIdAttribute: string; includeText: boolean }): DomElement[] {
+export function readDom(opts: { testIdAttribute: string; includeText: boolean; containerSelector: string; headingSelector: string }): DomElement[] {
   const squash = (s: string | null | undefined): string => {
     let out = '';
     let space = false;
@@ -93,6 +94,33 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
       if (ref) parts.push(squash(ref.textContent));
     }
     return parts.join(' ');
+  };
+
+  /** The title of a named container: its aria-label, what aria-labelledby points at, or the first heading that is its own. */
+  const titles = new Map<Element, string>();
+  const titleOf = (c: Element): string => {
+    const known = titles.get(c);
+    if (known !== undefined) return known;
+    let t = squash(c.getAttribute('aria-label')) || squash(textOfIds(c.getAttribute('aria-labelledby')));
+    if (!t) {
+      for (const h of Array.from(c.querySelectorAll(opts.headingSelector))) {
+        if (h.closest(opts.containerSelector) !== c) continue;
+        t = squash(h.textContent);
+        if (t) break;
+      }
+    }
+    t = clip(t, 80);
+    titles.set(c, t);
+    return t;
+  };
+  const containersOf = (el: Element): string[] => {
+    const names: string[] = [];
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (!p.matches(opts.containerSelector)) continue;
+      const t = titleOf(p);
+      if (t) names.push(t);
+    }
+    return names;
   };
 
   const describe = (el: Element): string => {
@@ -249,6 +277,7 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
     const ancestors: string[] = [];
     for (let p = el.parentElement; p && ancestors.length < 4; p = p.parentElement)
       if (p !== document.body && p !== document.documentElement) ancestors.push(describe(p));
+    const holders = containersOf(el);
     const formEl = el.closest('form');
     const active = document.activeElement === el;
     out.push({
@@ -274,6 +303,7 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
       focused: active,
       focusable: interactive(el) && (el as HTMLElement).tabIndex >= 0,
       parents: ancestors,
+      ...(holders.length ? { containers: holders } : {}),
       nearbyText: nearby(el),
       xpath: xpathOf(el),
       ...(formEl ? { form: formEl.getAttribute('id') ?? formEl.getAttribute('name') ?? 'form' } : {}),
@@ -293,7 +323,12 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean })
 async function readFrame(frame: Frame, options: InspectOptions): Promise<DomElement[]> {
   // The tools that compile this file add a helper called `__name` to the functions inside `readDom`; the page does not have it.
   await frame.evaluate('globalThis.__name = globalThis.__name || ((fn) => fn)');
-  return frame.evaluate(readDom, { testIdAttribute: options.testIdAttribute ?? 'data-testid', includeText: options.includeText ?? true });
+  return frame.evaluate(readDom, {
+    testIdAttribute: options.testIdAttribute ?? 'data-testid',
+    includeText: options.includeText ?? true,
+    containerSelector: CONTAINER_SELECTOR,
+    headingSelector: HEADING_SELECTOR,
+  });
 }
 
 /**
@@ -301,11 +336,36 @@ async function readFrame(frame: Frame, options: InspectOptions): Promise<DomElem
  * with `frame` telling which iframes an element is in. A frame that changes while it is read is left out, not an error.
  */
 export async function inspectPage(page: Page, options: InspectOptions = {}): Promise<DomElement[]> {
-  const out: DomElement[] = await readFrame(page.mainFrame(), options);
-  for (const { frame, path } of await visibleFrames(page)) {
+  return (await inspectPageDetailed(page, options)).elements;
+}
+
+export interface InspectResult {
+  elements: DomElement[];
+  /** The frames a person can see that could not be read, even after the page settled and the read was made again (E0.13). */
+  unread: string[][];
+  /** Every frame that can be seen, with its address and the room it takes. */
+  frames: VisibleFrame[];
+}
+
+/**
+ * `inspectPage`, and what could not be read. A frame that changes under the read is read again once it has settled; one that still
+ * cannot be read is listed in `unread`, never returned as an empty frame, because nothing can be said to be absent from a frame that
+ * was not read. The page itself that cannot be read is an error.
+ */
+export async function inspectPageDetailed(page: Page, options: InspectOptions = {}): Promise<InspectResult> {
+  const main = await readSettled(page.mainFrame(), () => readFrame(page.mainFrame(), options));
+  if (!main.ok) throw main.error;
+  const elements: DomElement[] = main.value;
+  const unread: string[][] = [];
+  const frames = await visibleFrames(page);
+  for (const { frame, path, url } of frames) {
     if (path.length === 0) continue;
-    const inside = await readFrame(frame, options).catch(() => [] as DomElement[]);
-    for (const e of inside) out.push({ ...e, index: out.length, frame: path });
+    const inside = await readSettled(frame, () => readFrame(frame, options)).catch((error) => ({ ok: false as const, error }));
+    if (!inside.ok) {
+      unread.push(path);
+      continue;
+    }
+    for (const e of inside.value) elements.push({ ...e, index: elements.length, frame: path, frameUrl: url });
   }
-  return out;
+  return { elements, unread, frames };
 }
