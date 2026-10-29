@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
+import type { OtpSource } from '../engine/auth/index.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
@@ -14,6 +15,7 @@ import { planProject } from '../generator/plan.js';
 import { openSession } from '../locators/session.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
+import { engineInputOf } from '../parser/original.js';
 import { mismatchedSecrets, mismatchText } from '../parser/secret-check.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
@@ -44,6 +46,8 @@ export interface PipelineOptions {
   runsDir?: string;
   /** Test case to run first for "Logged in" preconditions. */
   login?: TestModel;
+  /** Where the one-time code of the login comes from when the test runs (email, authenticator, fixed code). Without it, a step that needs one is not run. */
+  otp?: OtpSource;
   /** Explore again even when a complete exploration is already saved. */
   reexplore?: boolean;
   /** How much may be decided without asking (D30). Default: balanced. */
@@ -127,7 +131,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const loginFor = (): Promise<CompileResult | undefined> => {
     const login = options.login;
     loginCompiled ??= login
-      ? compileCase(rawOf(login), { config: options.config, pageRoutes: {}, env: options.env, knowledge }).then((c) =>
+      ? compileCase(rawOf(login), { config: options.config, pageRoutes: {}, env: options.env, knowledge, otpAtRun: !!options.otp }).then((c) =>
           c.ir && c.plan && c.status === 'compiled' ? c : undefined,
         )
       : Promise.resolve(undefined);
@@ -162,7 +166,13 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
       return true;
     };
     if (options.engine === 'semantic') {
-      const compiled = await compileCase(rawOf(original), { config: options.config, pageRoutes: await pages.load(), env: options.env, knowledge });
+      const compiled = await compileCase(rawOf(original), {
+        config: options.config,
+        pageRoutes: await pages.load(),
+        env: options.env,
+        knowledge,
+        otpAtRun: !!options.otp,
+      });
       const dir = path.join(exploreDir, original.id);
       await mkdir(dir, { recursive: true });
       if (compiled.ir)
@@ -318,7 +328,9 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     bySignature.set(signature, result);
     explored.push({ model, exploration: result });
     // A case that starts logged in can be confirmed only by a run that logs in first: without the login case there is nothing to compare.
-    const login = options.engine === 'semantic' && compiledOf && needsLogin(compiledOf) ? await loginFor() : undefined;
+    // The login case itself is not signed in by the shared login first: it logs in once, by its own steps (TC_LOGIN_003).
+    const isLoginCase = options.login?.id === model.id;
+    const login = options.engine === 'semantic' && compiledOf && needsLogin(compiledOf) && !isLoginCase ? await loginFor() : undefined;
     // An element the tester picked on the screenshot cannot be picked again by the new engine: that choice is the tester's, and stands.
     const testerChose = result.items.some((i) => i.resolvedBy === 'tester');
     if (options.engine === 'semantic' && compiledOf && !testerChose && semanticSupport(compiledOf).ok && (!needsLogin(compiledOf) || login))
@@ -326,6 +338,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         model,
         knowledge,
         ...(login ? { login } : {}),
+        ...(options.otp ? { otp: options.otp } : {}),
         compiled: withLearnedPages(compiledOf, pageUrls),
         baseUrl: options.baseUrl,
         headless: options.headless,
@@ -502,16 +515,7 @@ function withLearnedPages(compiled: CompileResult, learned: Record<string, strin
 }
 
 /** The tester's own text of a case, which the new engine reads again from the beginning. */
+/** The test case as the new engine reads it: the text the tester wrote, not the masked copy the model keeps for storage (E0.12, S4). */
 function rawOf(model: TestModel): RawTestCase {
-  return {
-    id: model.id,
-    title: model.title,
-    type: model.type,
-    preconditions: model.source.rawPreconditions,
-    steps: model.source.rawSteps,
-    testData: model.source.rawTestData,
-    expected: model.source.rawExpected,
-    requirementId: model.requirementId,
-    row: model.source.row,
-  };
+  return engineInputOf(model).raw;
 }

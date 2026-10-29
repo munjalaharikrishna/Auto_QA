@@ -1,11 +1,15 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { auditOf, checkTrail } from '../engine/audit/index.js';
+import type { OtpSource } from '../engine/auth/index.js';
+import { isSecret } from '../engine/data/secret.js';
 import { executePlan, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
 import { planActions } from '../engine/execute/planner.js';
 import type { CompileResult } from '../engine/index.js';
 import type { IrExpectation } from '../engine/ir/schema.js';
 import type { Application } from '../engine/knowledge/schema.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
-import { judge, type Verdict } from '../engine/verdict/index.js';
+import { dialogTextOf, judge, type Verdict } from '../engine/verdict/index.js';
 import type { TestModel } from '../model/test-model.js';
 import type { CheckVerdict, ReviewReason, StepVerdict, TestVerdict } from '../results/verdict.js';
 
@@ -30,6 +34,19 @@ export interface SemanticJob {
   login?: CompileResult;
   /** What the application calls things: the run finds an element by the names the application gives it (D1). */
   knowledge?: Application;
+  /** Where the one-time code of the login comes from, for the login case and for a case that has a code step itself (AU-04, AU-05). */
+  otp?: OtpSource;
+}
+
+/**
+ * Does the shared login case run before this case? Only a case that starts "logged in" has it first, and never the login
+ * case itself: a case that tests the login (TC_LOGIN_003, a wrong password) does its own login once, in a clean browser,
+ * and is not signed in by the shared one beforehand.
+ */
+export function loginComesFirst(compiled: CompileResult, login: CompileResult | undefined): boolean {
+  if (!login?.ir || !compiled.ir) return false;
+  if (compiled.ir.testCase.id === login.ir.testCase.id) return false;
+  return compiled.ir.preconditions.some((p) => p.type === 'LOGGED_IN');
 }
 
 export type Support = { ok: true } | { ok: false; why: string };
@@ -84,7 +101,9 @@ function freshText(trace: RunTrace | undefined, step: string | undefined): strin
   if (!record?.after) return [];
   const known = new Set([...(record.before?.messages ?? []), ...(record.before?.fieldErrors.map((f) => f.message) ?? []), ...(record.before?.lines ?? [])]);
   const now = [...record.after.messages, ...record.after.fieldErrors.map((f) => f.message), ...record.after.lines];
-  return [...new Set(now.filter((t) => !known.has(t)))].slice(0, 5).map((t) => (t.length > 120 ? `${t.slice(0, 120)}…` : t));
+  // What a pop-up said came during the step: it is new by definition.
+  const popups = (record.dialogs ?? []).map(dialogTextOf).filter((t): t is string => !!t);
+  return [...new Set([...popups, ...now.filter((t) => !known.has(t))])].slice(0, 5).map((t) => (t.length > 120 ? `${t.slice(0, 120)}…` : t));
 }
 
 /**
@@ -154,6 +173,7 @@ export function toTestVerdict(
   compiled: CompileResult,
   durationMs = 0,
   startedAt?: string,
+  auditFile?: string,
 ): TestVerdict {
   // A run that stopped says nothing about the application: whatever the judge named it, it is set aside with the reason (never a PASS, FAIL or BLOCKED).
   const stoppedEarly = !!trace && trace.status !== 'completed';
@@ -203,8 +223,39 @@ export function toTestVerdict(
       : model.assertions.map((a) => ({ id: a.id, raw: a.raw, expected: a.raw, actual: '', result: 'not run' as const })),
     durationMs,
     ...(startedAt ? { startedAt } : {}),
-    evidence: { screenshots: shots },
+    evidence: { screenshots: shots, ...(auditFile ? { audit: auditFile } : {}) },
   };
+}
+
+/**
+ * Keeps the audit trail of a run next to its pictures (GV-02): every call, the step and locator contract each belongs to. The
+ * values of the test's secrets are masked in it. A trail that does not check out against its own run is still kept, with what is
+ * wrong with it, and said so: it is not evidence of what was done.
+ */
+function writeAudit(
+  dir: string,
+  trace: RunTrace,
+  plan: ReturnType<typeof planActions>,
+  compiled: CompileResult,
+  say?: (message: string) => void,
+): string | undefined {
+  try {
+    const secrets = Object.values(compiled.values ?? {}).flatMap((v) => (isSecret(v.value) ? [v.value.reveal()] : []));
+    const trail = auditOf(trace, plan, { secrets });
+    const problems = checkTrail(trail, trace, plan);
+    if (problems.length)
+      say?.(`? ${trace.testId}: the audit trail does not check out (${problems[0]}${problems.length > 1 ? `, and ${problems.length - 1} more` : ''})`);
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'audit.json');
+    writeFileSync(
+      file,
+      `${JSON.stringify({ trail, problems }, null, 2)}
+`,
+    );
+    return file;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface SemanticRunOptions {
@@ -242,7 +293,7 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
       try {
         await session.reset();
         const needsLogin = ir.preconditions.some((p) => p.type === 'LOGGED_IN');
-        if (needsLogin && job.login?.ir && job.login.plan) {
+        if (loginComesFirst(compiled, job.login) && job.login?.ir && job.login.plan) {
           const loginPages = Object.fromEntries(
             Object.entries({ ...job.login.pages, ...compiled.pages }).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]),
           );
@@ -254,6 +305,7 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
               baseUrl: job.baseUrl,
               testIdAttribute: job.testIdAttribute,
               ...(job.knowledge ? { knowledge: job.knowledge } : {}),
+              ...(job.otp ? { otp: job.otp } : {}),
             },
           );
           if (signedIn.status !== 'completed') {
@@ -265,18 +317,23 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
           options.onProgress?.(`? ${model.id}: starts logged in and no login case is given; it keeps its review`);
           continue;
         }
+        const planned = planActions(ir, plan);
         const trace = await executePlan(
-          { plan: planActions(ir, plan), values: compiled.values, pages },
+          { plan: planned, values: compiled.values, pages },
           {
             mcp: session.port,
             page: session.page,
             baseUrl: job.baseUrl,
             testIdAttribute: job.testIdAttribute,
             ...(job.knowledge ? { knowledge: job.knowledge } : {}),
+            ...(job.otp ? { otp: job.otp } : {}),
             ...(options.screenshotDir ? { screenshotDir: path.join(options.screenshotDir, model.id) } : {}),
           },
         );
-        out.set(model.id, toTestVerdict(model, judge({ compile: compiled, trace }), trace, compiled, Date.now() - started, startedAt));
+        const auditFile = options.screenshotDir
+          ? writeAudit(path.join(options.screenshotDir, model.id), trace, planned, compiled, options.onProgress)
+          : undefined;
+        out.set(model.id, toTestVerdict(model, judge({ compile: compiled, trace }), trace, compiled, Date.now() - started, startedAt, auditFile));
       } catch (e) {
         options.onProgress?.(`? ${model.id}: the new engine could not run it (${(e as Error).message.split('\n')[0]}); it keeps its review`);
       }

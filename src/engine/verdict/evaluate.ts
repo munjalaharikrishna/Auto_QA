@@ -1,6 +1,8 @@
 import type { StepRecord } from '../execute/executor.js';
-import type { Observation, ObservedElement } from '../execute/observe.js';
+import type { Observation, ObservedContainer, ObservedElement } from '../execute/observe.js';
+import { containerRef, matchContainers } from '../ir/container.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
+import { pageIdentityOf } from '../locate/page-identity.js';
 import { compactKey } from '../text/compound.js';
 import { tokenize } from '../text/index.js';
 
@@ -14,7 +16,7 @@ import { tokenize } from '../text/index.js';
 export type Result = 'proven' | 'disproven' | 'unproven';
 
 /** Why an expectation is unproven, so that a verdict and a review card can say it. */
-export type Doubt = 'STALE' | 'VACUOUS' | 'NOT_OBSERVABLE' | 'NOT_FOUND' | 'NO_PAGE' | 'UNRESOLVED';
+export type Doubt = 'STALE' | 'VACUOUS' | 'NOT_OBSERVABLE' | 'NOT_FOUND' | 'NO_PAGE' | 'UNRESOLVED' | 'AMBIGUOUS';
 
 export interface Evaluation {
   expectation: string;
@@ -72,6 +74,12 @@ const wordsOf = (text: string): string[] =>
     .map((t) => t.text.toLowerCase());
 const squash = (text: string): string => wordsOf(text).join(' ');
 
+/** The wanted words are in the text as whole words, in order: "9.99" is not in "29.99", and "cart" is not in "cartoon". */
+const holdsWords = (text: string, wanted: string): boolean => {
+  const w = squash(wanted);
+  return w !== '' && ` ${squash(text)} `.includes(` ${w} `);
+};
+
 /** Words that carry no meaning of their own when two sentences are compared. */
 const FILLER = new Set(['a', 'an', 'the', 'is', 'are', 'be', 'to', 'of', 'should', 'shown', 'show', 'displayed', 'message', 'error', 'please']);
 const meaningOf = (text: string): string[] => wordsOf(text).filter((w) => !FILLER.has(w));
@@ -106,13 +114,20 @@ interface Pages {
   before?: Observation;
   after?: Observation;
   step?: string;
+  /** What each native pop-up (alert, confirm, prompt) of the step said, as the session wrote it. */
+  dialogs?: string[];
 }
 
 function pagesFor(exp: IrExpectation, ctx: JudgeContext): Pages {
   const stepId = ctx.stepOf.get(exp.id);
   const at = stepId ? ctx.steps.find((s) => s.step === stepId) : ctx.steps[0];
   if (!stepId) return { ...(ctx.steps[0]?.before ? { before: ctx.steps[0].before, after: ctx.steps[0].before } : {}) };
-  return { ...(at?.before ? { before: at.before } : {}), ...(at?.after ? { after: at.after } : {}), step: stepId };
+  return {
+    ...(at?.before ? { before: at.before } : {}),
+    ...(at?.after ? { after: at.after } : {}),
+    ...(at?.dialogs?.length ? { dialogs: at.dialogs } : {}),
+    step: stepId,
+  };
 }
 
 const unproven = (exp: IrExpectation, doubt: Doubt, expected: string, actual: string, why: string, step?: string): Evaluation => ({
@@ -139,14 +154,30 @@ const settled = (exp: IrExpectation, holds: boolean, expected: string, actual: s
 });
 
 /** Messages are only evidence when this step produced them (EX-07). */
+/** What a native pop-up said: the session writes `alert "User Name not given!"`. */
+export function dialogTextOf(dialog: string): string | undefined {
+  const open = dialog.indexOf('"');
+  const close = dialog.lastIndexOf('"');
+  return open >= 0 && close > open ? dialog.slice(open + 1, close) : undefined;
+}
+
+const saidBy = (dialogs: readonly string[] | undefined): string[] => (dialogs ?? []).map(dialogTextOf).filter((t): t is string => !!t);
+
+/**
+ * The messages the user was shown: those on the page, and what a pop-up said. A pop-up came during the step, so it cannot be a
+ * message that was already there (EX-07): it is always fresh. An application that answers a blank field with an alert has shown a message.
+ */
 function messageEvidence(
   after: Observation,
   before: Observation | undefined,
   wanted: string | undefined,
-): { shown: string[]; fresh: string[]; stale: string[] } {
-  const all = [...after.messages, ...after.fieldErrors.map((f) => f.message)];
+  dialogs?: readonly string[],
+): { shown: string[]; fresh: string[]; stale: string[]; said: string[] } {
+  const said = saidBy(dialogs);
+  const all = [...after.messages, ...after.fieldErrors.map((f) => f.message), ...said];
   const shown = wanted ? all.filter((m) => saysTheSame(m, wanted)) : all;
-  return { shown, fresh: shown.filter((m) => !wasThere(before, m)), stale: shown.filter((m) => wasThere(before, m)) };
+  const popup = (m: string): boolean => said.includes(m);
+  return { shown, fresh: shown.filter((m) => popup(m) || !wasThere(before, m)), stale: shown.filter((m) => !popup(m) && wasThere(before, m)), said };
 }
 
 const quote = (xs: readonly string[]): string => (xs.length ? xs.map((x) => `"${x}"`).join(', ') : 'nothing');
@@ -167,12 +198,72 @@ function routeOf(name: string, pages: JudgeContext['pages']): string | undefined
   return undefined;
 }
 
+/**
+ * A check that names a card, a list item or a section ("on the Backpack card") is judged on that container and nothing else on the page
+ * (UI-07). When no container has that name, the check cannot be judged: it is not a reason to look at the whole page, where a "not
+ * shown" would hold and a "shown" might be true of another card. When two containers have it, the engine does not pick one.
+ * An area word (section, panel) with no container of that name keeps the page-wide reading, as before: many pages show a section that
+ * no markup names.
+ */
+function scoped(
+  exp: IrExpectation,
+  c: IrCondition,
+  p: Pages & { after: Observation },
+  expected: string,
+): { pages: Pages & { after: Observation } } | { unproven: Evaluation } {
+  const ref = containerRef(c.target?.within);
+  if (!ref) return { pages: p };
+  const view = (o: Observation, inside: ObservedContainer): Observation => ({
+    ...o,
+    lines: inside.lines,
+    elements: o.elements.filter((e) => e.inside?.includes(inside.name)),
+    messages: o.messages.filter((m) => inside.lines.some((l) => squash(l).includes(squash(m)))),
+    fieldErrors: o.fieldErrors.filter((f) => inside.lines.some((l) => squash(l).includes(squash(f.message)))),
+  });
+  const hits = matchContainers(ref, p.after.containers ?? []);
+  if (hits.length === 0) {
+    if (!ref.repeated) return { pages: p };
+    return {
+      unproven: unproven(
+        exp,
+        'NOT_FOUND',
+        expected,
+        `there is no ${ref.noun} named "${ref.text}" on the page`,
+        `the check is about the ${ref.noun} "${ref.text}", and it is not on the page, so nothing in it can be judged`,
+        p.step,
+      ),
+    };
+  }
+  if (hits.length > 1)
+    return {
+      unproven: unproven(
+        exp,
+        'AMBIGUOUS',
+        expected,
+        `${hits.length} containers are named "${ref.text}": ${hits.map((h) => `"${h.name}"`).join(' and ')}`,
+        `more than one ${ref.noun} has that name, so the engine does not pick one to judge the check on`,
+        p.step,
+      ),
+    };
+  const inside = hits[0] as ObservedContainer;
+  const was = p.before ? matchContainers(ref, p.before.containers ?? []) : [];
+  // What was in that container before the step: nothing, when it was not there or there were several.
+  const empty: Observation | undefined = p.before ? { ...p.before, lines: [], elements: [], messages: [], fieldErrors: [] } : undefined;
+  return {
+    pages: {
+      ...p,
+      after: view(p.after, inside),
+      ...(p.before ? { before: was.length === 1 ? view(p.before, was[0] as ObservedContainer) : (empty as Observation) } : {}),
+    },
+  };
+}
+
 function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after: Observation }): Evaluation {
   const wantVisible = (c.expect ?? 'VISIBLE') !== 'HIDDEN';
   const want = wantVisible !== exp.negated;
   const isMessage = c.target?.ontology === 'Message' || c.target?.ontology === 'Error' || c.text !== undefined;
   if (isMessage) {
-    const ev = messageEvidence(p.after, p.before, c.text);
+    const ev = messageEvidence(p.after, p.before, c.text, p.dialogs);
     const expected = `${want ? 'shown' : 'not shown'}: ${c.text ? `"${c.text}"` : 'a message'}`;
     if (want) {
       if (ev.fresh.length)
@@ -190,7 +281,7 @@ function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after:
         exp,
         false,
         expected,
-        `messages on the page: ${quote([...p.after.messages, ...p.after.fieldErrors.map((f) => f.message)])}`,
+        `messages on the page: ${quote([...p.after.messages, ...p.after.fieldErrors.map((f) => f.message), ...ev.said])}`,
         'no message of that meaning appeared',
         true,
         p.step,
@@ -212,7 +303,7 @@ function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after:
   const shown = (t: IrTarget | undefined): boolean => {
     const found = elementsFor(p.after, t);
     const heading = t?.ontology === 'Heading' || found.length > 0 ? found : [];
-    return heading.length > 0 || (t?.name ? p.after.lines.some((l) => squash(l).includes(squash(t.name ?? ''))) : false);
+    return heading.length > 0 || (t?.name ? p.after.lines.some((l) => holdsWords(l, t.name ?? '')) : false);
   };
   const which = targets.filter(shown);
   const visible = which.length > 0;
@@ -228,18 +319,19 @@ function judgeVisibility(exp: IrExpectation, c: IrCondition, p: Pages & { after:
   );
 }
 
-function judgeText(exp: IrExpectation, c: IrCondition, p: Pages & { after: Observation }): Evaluation {
+function judgeText(exp: IrExpectation, c: IrCondition, p: Pages & { after: Observation }, inContainer = false): Evaluation {
   const wanted = c.expect ?? c.text ?? '';
   if (!wanted || wanted.startsWith('$ref.'))
     return unproven(exp, 'UNRESOLVED', `text "${wanted}"`, 'the text is not known', 'the wanted text was not resolved', p.step);
-  const isMessage = c.target?.ontology === 'Message' || c.target?.ontology === 'Error';
-  const pool = isMessage ? [...p.after.messages, ...p.after.fieldErrors.map((f) => f.message)] : p.after.lines;
+  // Said to be in a container, the text is looked for in all of what the container shows, whatever kind of thing it is.
+  const isMessage = !inContainer && (c.target?.ontology === 'Message' || c.target?.ontology === 'Error');
+  const pool = isMessage ? [...p.after.messages, ...p.after.fieldErrors.map((f) => f.message), ...saidBy(p.dialogs)] : p.after.lines;
   const exact = c.check === 'exact-text';
-  const hit = pool.filter((l) =>
-    exact ? squash(l) === squash(wanted) || saysTheSame(l, wanted) : squash(l).includes(squash(wanted)) || saysTheSame(l, wanted),
-  );
+  const hit = pool.filter((l) => (exact ? squash(l) === squash(wanted) || saysTheSame(l, wanted) : holdsWords(l, wanted) || saysTheSame(l, wanted)));
   const expected = `${exp.negated ? 'no ' : ''}text "${wanted}"`;
-  if (isMessage && !exp.negated && hit.length > 0 && hit.every((h) => wasThere(p.before, h))) {
+  const popups = saidBy(p.dialogs);
+  // A pop-up came during the step: it is never a message that was already there.
+  if (isMessage && !exp.negated && hit.length > 0 && hit.every((h) => !popups.includes(h) && wasThere(p.before, h))) {
     return unproven(
       exp,
       'STALE',
@@ -283,8 +375,32 @@ function judgeAuthentication(exp: IrExpectation, p: Pages & { after: Observation
   return unproven(exp, 'NOT_OBSERVABLE', expected, `address ${after.url}`, 'the page does not show whether the login worked', p.step);
 }
 
-/** Judges one expectation on the page its step left (EX-06). */
+/** The kinds of check that conclude something about what a page holds, so that a frame nobody read can hide what they ask about. */
+const ABOUT_CONTENT: ReadonlySet<string> = new Set(['VISIBILITY', 'TEXT', 'ENABLED', 'VALUE', 'COUNT', 'MASKED']);
+
+/**
+ * Judges one expectation on the page its step left (EX-06). While a frame could not be read, nothing can be said to be absent from it
+ * (E0.13): a check that is disproven, or a "not shown" that is proven, only because the thing was not found is not decided. What was
+ * found stays found.
+ */
 export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
+  const ev = judgeExpectation(exp, ctx);
+  if (!ABOUT_CONTENT.has(exp.condition.type)) return ev;
+  const unread = pagesFor(exp, ctx).after?.unreadFrames;
+  if (!unread?.length) return ev;
+  if (ev.result === 'disproven' || (ev.result === 'proven' && exp.negated))
+    return unproven(
+      exp,
+      'NOT_OBSERVABLE',
+      ev.expected,
+      `${ev.actual}; the frame ${unread.map((f) => `"${f}"`).join(', ')} could not be read`,
+      'a frame could not be read after the page changed, so nothing can be said to be absent from it',
+      ev.step,
+    );
+  return ev;
+}
+
+function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
   // A value the check names by its data key ("$data.First_Name") is compared as the value it stands for. A secret is never compared or shown.
   const given = exp.condition.expect;
   if (given?.startsWith('$data.')) {
@@ -309,10 +425,14 @@ export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Eval
   if (!p.after) return unproven(exp, 'NO_PAGE', expectedText, 'the step it is judged on did not leave a page', 'there is no page to judge it on', p.step);
   const page = p as Pages & { after: Observation };
   switch (c.type) {
-    case 'VISIBILITY':
-      return judgeVisibility(exp, c, page);
-    case 'TEXT':
-      return judgeText(exp, c, page);
+    case 'VISIBILITY': {
+      const s = scoped(exp, c, page, expectedText);
+      return 'unproven' in s ? s.unproven : judgeVisibility(exp, c, s.pages);
+    }
+    case 'TEXT': {
+      const s = scoped(exp, c, page, expectedText);
+      return 'unproven' in s ? s.unproven : judgeText(exp, c, s.pages, containerRef(c.target?.within) !== undefined && s.pages !== page);
+    }
     case 'AUTHENTICATION':
       return judgeAuthentication(exp, page);
     case 'URL': {
@@ -329,25 +449,59 @@ export function evaluateExpectation(exp: IrExpectation, ctx: JudgeContext): Eval
             'nothing to compare the address with',
             p.step,
           );
-        const same = pathOf(was) === pathOf(page.after.url);
+        // When the page is only a shell around a frame, the screen is the frame's address: the shell can stay put while the screen changes (E8).
+        const sameShell = pathOf(was) === pathOf(page.after.url);
+        const sameScreen = pageIdentityOf(page.before?.contentUrl ?? '') === pageIdentityOf(page.after.contentUrl ?? '');
+        const same = sameShell && sameScreen;
         return settled(
           exp,
           same !== exp.negated,
           `address ${exp.negated ? 'changes' : 'stays the same'}`,
-          same ? `address is still ${page.after.url}` : `address went from ${was} to ${page.after.url}`,
+          same
+            ? `address is still ${page.after.url}`
+            : sameShell
+              ? `the page stayed at ${page.after.url}, but the screen in it went from ${page.before?.contentUrl ?? 'nothing'} to ${page.after.contentUrl ?? 'nothing'}`
+              : `address went from ${was} to ${page.after.url}`,
           same ? 'the address did not change' : 'the address changed',
           true,
           p.step,
         );
       }
       if (!wanted || wanted.startsWith('$ref.')) return unproven(exp, 'UNRESOLVED', 'an address', 'not known', 'the wanted address was not resolved', p.step);
-      const route = routeOf(wanted, ctx.pages);
-      const has =
-        c.check === 'equals' || c.check === 'exact-text'
-          ? page.after.url === wanted
-          : route !== undefined
-            ? pathOf(page.after.url) === route
-            : compactKey(page.after.url).includes(compactKey(wanted)); // a page name is not a path: "Dashboard" is /dashboard, "Add Employee" is /add-employee
+      // "OrangeHRM home/dashboard" is either page: each side is looked up as a page of its own.
+      const names =
+        wanted.includes('/') && !wanted.includes('://') && !wanted.startsWith('/')
+          ? [
+              wanted,
+              ...wanted
+                .split('/')
+                .map((n) => n.trim())
+                .filter(Boolean),
+            ]
+          : [wanted];
+      const routes = names.map((n) => routeOf(n, ctx.pages)).filter((r): r is string => r !== undefined);
+      const exact = c.check === 'equals' || c.check === 'exact-text';
+      // The address of the page, and when the page is a shell around a frame, the address of the screen in it (E8).
+      const addresses = [page.after.url, ...(page.after.contentUrl ? [page.after.contentUrl] : [])];
+      const has = exact
+        ? addresses.some((a) => a === wanted)
+        : routes.length > 0
+          ? routes.some((r) => addresses.some((a) => pathOf(a) === r))
+          : names.some((n) => addresses.some((a) => compactKey(a).includes(compactKey(n)))); // a page name is not a path: "Dashboard" is /dashboard, "Add Employee" is /add-employee
+      // The address says a page IS the one named when it matches. It says it is NOT only when the engine knows where the named page is,
+      // or knows the page it is on is another one: a name it cannot place is not a reason to call the address wrong.
+      const onAnotherKnownPage = Object.entries(ctx.pages ?? {}).some(
+        ([n, where]) => where && addresses.some((a) => pathOf(a) === pathOf(where)) && !names.some((x) => compactKey(x) === compactKey(n)),
+      );
+      if (!has && !exact && routes.length === 0 && !onAnotherKnownPage)
+        return unproven(
+          exp,
+          'UNRESOLVED',
+          `address ${exp.negated ? 'does not contain' : 'contains'} "${wanted}"`,
+          `address is ${addresses.join(' and the screen in it, ')}`,
+          `"${wanted}" is not a page the run knows the address of, so the address cannot show that this is not that page`,
+          p.step,
+        );
       return settled(
         exp,
         has !== exp.negated,

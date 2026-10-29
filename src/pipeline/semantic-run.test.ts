@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { after, before, describe, it } from 'node:test';
 import { startDemoApp } from '../../examples/demo-app/server.js';
 import type { RunTrace, StepRecord } from '../engine/execute/executor.js';
 import type { Observation } from '../engine/execute/observe.js';
-import { type CompileResult, compileCase } from '../engine/index.js';
+import { type CompileResult, compileCase, Secret } from '../engine/index.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
 import { VERDICTS, type Verdict, type VerdictName } from '../engine/verdict/verdict.js';
 import type { Resolver } from '../explorer/controller.js';
@@ -308,6 +308,33 @@ describe('semantic runs on the demo app', { skip }, () => {
     assert.ok(v?.checks.every((c) => c.result === 'passed'));
     assert.ok(!JSON.stringify(v).includes('nope'), 'the password is not in the verdict');
   });
+  it('keeps the audit trail of the run with its evidence: every call, the contract of each, no secret (GV-02)', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'auto-qa-audit-run-'));
+    try {
+      const r = raw(
+        'T-AUD',
+        login('demo').map((s) => s.replace('URL', app.url)),
+        REJECTED,
+        { testData: 'Password: nope-secret-7' },
+      );
+      const c = await compiled(r, {});
+      const job: SemanticJob = { model: parseTestCase(r, config), compiled: c, baseUrl: app.url, headless: true };
+      const v = (await runSemanticJobs([job], { screenshotDir: dir })).get('T-AUD');
+      assert.ok(v?.evidence.audit, 'the verdict names the audit file');
+      const text = await readFile(v?.evidence.audit as string, 'utf8');
+      const saved = JSON.parse(text) as { trail: { entries: Array<{ seq: number; contract?: string }>; contracts: unknown[] }; problems: string[] };
+      assert.deepEqual(saved.problems, [], 'the trail checks out against its own run');
+      assert.ok(saved.trail.entries.length >= 4 && saved.trail.contracts.length >= 2);
+      assert.deepEqual(
+        saved.trail.entries.map((e) => e.seq),
+        saved.trail.entries.map((_, i) => i + 1),
+      );
+      assert.ok(!text.includes('nope-secret-7'), 'the password is not in the trail');
+      assert.ok(!JSON.stringify(v).includes('nope-secret-7'));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
   it('FAIL: a good login is not a rejection, and nothing was shown', async () => {
     const out = await run(login('demo'), REJECTED, 'demo123');
     const v = out.get('T-SEM');
@@ -351,14 +378,69 @@ describe('semantic runs on the demo app', { skip }, () => {
       await new Promise((resolve) => old.close(resolve));
     }
   });
-  it('NEEDS REVIEW, not BLOCKED: a step the executor cannot do ("leave blank") is set aside with its reason', async () => {
+  it('"Leave the field blank" is done: both fields are emptied, and the rejection this click produced proves the check (E0.12)', async () => {
     const r = raw('T-BLANK', [`Open ${app.url}/`, 'Leave the Username field blank', 'Leave the Password field blank', "Click the 'Login' button"], REJECTED);
     const c = await compiled(r, {});
     assert.ok(semanticSupport(c).ok, JSON.stringify(c.issues.filter((i) => i.severity === 'blocking')));
     const v = (await runSemanticJobs([{ model: parseTestCase(r, config), compiled: c, baseUrl: app.url }], {})).get('T-BLANK');
+    assert.equal(v?.status, 'PASS', JSON.stringify(v?.review ?? v?.reason));
+    assert.deepEqual(
+      v?.steps.map((x) => x.result),
+      ['passed', 'passed', 'passed', 'passed'],
+    );
+  });
+  it('NEEDS REVIEW, not BLOCKED: a step the executor cannot do (a password that arrived as a mask) is set aside with its reason', async () => {
+    const r = raw(
+      'T-MASK',
+      login('demo').map((s) => s.replace('URL', app.url)),
+      REJECTED,
+      { testData: 'Password: nope' },
+    );
+    const c = await compiled(r, {});
+    assert.ok(semanticSupport(c).ok, JSON.stringify(c.issues.filter((i) => i.severity === 'blocking')));
+    // The password reaches the run as four bullet characters: the executor does not type them.
+    for (const v of Object.values(c.values ?? {})) if (v.field.toLowerCase() === 'password') v.value = new Secret('••••');
+    const v = (await runSemanticJobs([{ model: parseTestCase(r, config), compiled: c, baseUrl: app.url }], {})).get('T-MASK');
     assert.equal(v?.status, 'NEEDS REVIEW', JSON.stringify(v?.review ?? v?.reason));
     assert.ok(v?.review?.length);
+    assert.ok(JSON.stringify(v?.review).includes('mask'), 'the reason says why');
   });
+  describe('a page that answers with a native alert, as OrangeHRM does (E0.12)', () => {
+    const blankLogin = (leave: 'Login Name' | 'Password'): string[] =>
+      leave === 'Login Name'
+        ? [`Open ${'URL'}/legacy`, 'Leave the Login Name text box blank', 'Enter password in the Password text box', "Click the 'Login' button"]
+        : [`Open ${'URL'}/legacy`, 'Enter username in the Login Name text box', 'Leave the Password text box blank', "Click the 'Login' button"];
+    const runLegacy = async (leave: 'Login Name' | 'Password', expected: string) => {
+      const r = raw(
+        'T-ALERT',
+        blankLogin(leave).map((x) => x.replace('URL', app.url)),
+        expected,
+        { testData: ['Username: demo', 'Password: demo123'].join(String.fromCharCode(10)) },
+      );
+      const c = await compiled(r, {});
+      assert.ok(semanticSupport(c).ok, JSON.stringify(c.issues.filter((i) => i.severity === 'blocking')));
+      return (await runSemanticJobs([{ model: parseTestCase(r, config), compiled: c, baseUrl: app.url }], {})).get('T-ALERT');
+    };
+
+    it('the alert is the message: the exact words are proven', async () => {
+      const v = await runLegacy('Login Name', 'Error message "User Name not given!" is displayed');
+      assert.equal(v?.status, 'PASS', JSON.stringify(v?.review ?? v?.reason));
+    });
+
+    it('the wording of the sheet ("a validation message indicating that the username is required") is set aside for a person, never failed', async () => {
+      const v = await runLegacy('Login Name', 'The system displays a validation message indicating that the username is required');
+      assert.equal(v?.status, 'NEEDS REVIEW', JSON.stringify(v?.review ?? v?.reason));
+      assert.ok(JSON.stringify(v?.review).includes('User Name not given!'), 'what the alert said is in the reason, so the person can decide');
+    });
+
+    it('a blank password gets its own alert, and the case is not judged on the alert about the username', async () => {
+      const v = await runLegacy('Password', 'Error message "Password not given!" is displayed');
+      assert.equal(v?.status, 'PASS', JSON.stringify(v?.review ?? v?.reason));
+      const wrong = await runLegacy('Password', 'Error message "User Name not given!" is displayed');
+      assert.notEqual(wrong?.status, 'PASS', 'the alert is about the password, not the username');
+    });
+  });
+
   it('gives no verdict for a job whose case did not compile, so the legacy answer stays', async () => {
     const r = raw('T-BAD', ['Open the login page'], REJECTED);
     const c = await compiled(r);

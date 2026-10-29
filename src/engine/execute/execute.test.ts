@@ -106,6 +106,21 @@ describe('execution through Playwright MCP on the demo app', { skip }, () => {
     });
   });
 
+  describe('E0.12: "leave it blank" means an empty field', () => {
+    it('empties a field that holds text, and says nothing is wrong with an empty value', async () => {
+      const { trace, steps } = await run([
+        'Open the Application',
+        `Open ${app.url}/ui/controls`,
+        "Enter 'Asha Rao' in the Full name field",
+        'Leave the Full name field blank',
+      ]);
+      allDone(trace);
+      const field = (s?: { after?: { elements: Array<{ name: string; value?: string }> } }) => s?.after?.elements.find((e) => e.name === 'Full name');
+      assert.equal(field(steps.S3)?.value, 'Asha Rao', 'it held the name');
+      assert.equal(field(steps.S4)?.value, '', 'and is empty after the step');
+    });
+  });
+
   describe('UI-04: forms', () => {
     it('ties a field error to its field, recognises the submit of each form, and sees the dependent field open', async () => {
       const { trace, steps } = await run([

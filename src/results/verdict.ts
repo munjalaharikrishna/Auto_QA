@@ -92,7 +92,13 @@ export interface TestVerdict {
   checks: CheckVerdict[];
   durationMs: number;
   startedAt?: string;
-  evidence: { screenshots: string[]; trace?: string; video?: string; facts?: PageFacts };
+  evidence: {
+    screenshots: string[];
+    trace?: string;
+    video?: string /** The audit trail of a run of the new engine (GV-02). */;
+    audit?: string;
+    facts?: PageFacts;
+  };
   error?: string;
 }
 

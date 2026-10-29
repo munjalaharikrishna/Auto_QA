@@ -12,6 +12,7 @@ import {
 import { type ParsedAssertion, parseAssertions } from './assertions.js';
 import { defaultParserConfig, type ParserConfig } from './config.js';
 import { normalizeText } from './normalize.js';
+import { rememberOriginal } from './original.js';
 import { parsePreconditions } from './preconditions.js';
 import { checkQuality } from './quality.js';
 import { applyWording } from './rules.js';
@@ -157,7 +158,9 @@ export function parseTestCase(input: RawTestCase, config: ParserConfig = default
     secretChecks: testData.secretValues.length ? Object.fromEntries(testData.secretValues.map((s) => [s.env, fingerprint(s.env, s.value)])) : undefined,
   });
   model.warnings.push(...checkQuality(model, config));
-  return TestModelSchema.parse(model);
+  const parsed = TestModelSchema.parse(model);
+  rememberOriginal(parsed, given);
+  return parsed;
 }
 
 /**

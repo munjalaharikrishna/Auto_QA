@@ -1,12 +1,26 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type { Page } from 'playwright';
+import { OtpError, type OtpSource } from '../auth/index.js';
 import { withoutClassWords } from '../data/classes.js';
 import type { ResolvedValue } from '../data/resolver.js';
-import { Secret } from '../data/secret.js';
+import { isMasked, maskDeep, Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
-import { type DomElement, inspectPage, type Level, type LocateQuery, locate, sameFrame, selectorIn, type Tried } from '../locate/index.js';
+import {
+  type DomElement,
+  inspectPage,
+  inspectPageDetailed,
+  type Level,
+  type LocateQuery,
+  locate,
+  pageIdentityOf,
+  sameFrame,
+  selectorIn,
+  type Tried,
+} from '../locate/index.js';
+import { refusesOtp } from '../patterns/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
 import { type Delta, describe, diff } from './delta.js';
 import { type Observation, observe } from './observe.js';
@@ -35,7 +49,11 @@ export type BlockCode =
   | 'FILE_MISSING'
   | 'FILE_NOT_ALLOWED'
   | 'UNSUPPORTED_ACTION'
-  | 'ACTION_FAILED';
+  | 'ACTION_FAILED'
+  /** No mail with the one-time code came within the wait (AU-06): the environment, never a FAIL. */
+  | 'OTP_MAIL_NOT_RECEIVED'
+  /** The application refused a one-time code that was read correctly (AU-06): test data, never a FAIL. */
+  | 'OTP_REJECTED';
 
 class Block extends Error {
   constructor(
@@ -52,6 +70,8 @@ export interface Located {
   weight: number;
   /** The selector the tool was given. */
   selector: string;
+  /** The page, the component and the name this selector is the answer for (GV-02). */
+  contract: LocatorContractRef;
   tried: Tried[];
   element: { tag: string; role: string; id?: string; form?: string };
   /** Other matches that were not used, with why (hidden, covered, …). */
@@ -64,6 +84,28 @@ export interface Call {
   via: 'mcp' | 'page';
   tool: string;
   args: Record<string, unknown>;
+  /** The number of the call in the run, from 1, in the order they were made. A gap in the numbers means a call was lost (GV-02). */
+  seq: number;
+  /** The function of the action planner this call serves (`type`, `click`, …); for a call made through the page, its own name. */
+  fn: string;
+  /** When it started (milliseconds since the epoch) and how long it took. */
+  at: number;
+  ms: number;
+  /** A call that failed is recorded too, with what went wrong. */
+  outcome: 'ok' | 'failed';
+  error?: string;
+}
+
+/** Who a locator was found for and how: the contract of GV-02, from the page down to the selector chain. */
+export interface LocatorContractRef {
+  /** Stable: the same page, name and selector give the same id in every run. */
+  id: string;
+  /** The page the element is on: its name in the application's knowledge, else the address path. */
+  page: string;
+  /** The component of the application's knowledge it matched, when there is one. */
+  component?: string;
+  /** The name the test case used for it. */
+  semantic: string;
 }
 
 export interface StepRecord {
@@ -74,6 +116,7 @@ export interface StepRecord {
   code?: BlockCode;
   reason?: string;
   located?: Located;
+  /** Every call of the step, successful or not, in order. */
   calls: Call[];
   before?: Observation;
   after?: Observation;
@@ -118,11 +161,17 @@ export interface ExecuteOptions {
   settle?: SettleOptions;
   /** A folder to keep a picture of the page before and after every step in (the evidence of a review card). */
   screenshotDir?: string;
+  /** Where the one-time code of a login comes from when the test runs (AU-04, AU-05). Without it, a step that needs one is not run. */
+  otp?: OtpSource;
   /** Keep the observations before and after each step in the trace. On by default. */
   keepObservations?: boolean;
 }
 
 const MASK = '••••';
+
+/** The id of a locator contract: the same page, name and selector give the same id in every run (GV-02). */
+const contractId = (page: string, semantic: string, selector: string): string =>
+  createHash('sha256').update(`${page}|${semantic}|${selector}`).digest('hex').slice(0, 12);
 
 class Runner {
   private page: Page;
@@ -130,6 +179,15 @@ class Runner {
   private readonly values: Record<string, ResolvedValue>;
   private readonly pages: Record<string, string | null>;
   private dismissedDialog = false;
+  /** When the step before this one started: only mail that came after it is for this login (AU-04). */
+  private lastStart: number | undefined;
+  /** The number of the last call of the run (GV-02). */
+  private seq = 0;
+  private since = 0;
+  /** The step that typed a one-time code; the page after it is read for a refusal (AU-06). */
+  private otpStep: string | undefined;
+  /** The values of the secrets typed so far: they are masked wherever the page reads them back (a code typed into a plain field). */
+  private readonly typed = new Set<string>();
   /** Pages the run has been on: a tab it left is not "new" when it comes up again. */
   private readonly known = new Set<Page>();
 
@@ -206,9 +264,9 @@ class Runner {
    * The MCP server works in a page of its own in the shared browser. The engine moves to the page the server says is its
    * current tab, found by its address, the first time it has one, and again when its own page is gone.
    */
-  private async adoptPage(): Promise<void> {
+  private async adoptPage(rec: StepRecord): Promise<void> {
     if (!this.page.isClosed() && this.page.url() !== 'about:blank') return;
-    const current = (await this.mcpTabs()).find((t) => t.current);
+    const current = (await this.mcpTabs(rec)).find((t) => t.current);
     const real = this.realPages();
     const same = current ? real.filter((p) => p.url() === current.url) : [];
     const pick = (same.length ? same : real).at(-1);
@@ -228,14 +286,18 @@ class Runner {
       notes: [],
     };
     const keep = this.o.keepObservations ?? true;
-    await this.adoptPage();
+    await this.adoptPage(rec);
     trackNavigations(this.page);
     const tabsBefore = this.tabCount();
     const pagesBefore = new Set(this.realPages());
     const before = await observe(this.page, { testIdAttribute: this.testIdAttribute, tabs: tabsBefore });
     const beforeShot = await this.shoot(chain.step, 'before');
     this.o.mcp.setDialogPolicy?.(() => ({ accept: chain.dialog !== 'dismiss' }));
+    const startedAt = this.o.otp?.now() ?? Date.now();
+    this.since = this.lastStart ?? startedAt;
+    this.lastStart = startedAt;
     try {
+      await this.fillOtp(chain);
       await this.act(chain, rec);
     } catch (e) {
       if (e instanceof Block) {
@@ -252,6 +314,7 @@ class Runner {
     await this.followTabs(tabsBefore, pagesBefore, rec);
     if (chain.action !== 'WAIT') await waitSettled(this.page, this.o.settle);
     const after = await observe(this.page, { testIdAttribute: this.testIdAttribute, tabs: this.tabCount() });
+    this.checkOtpRefusal(chain, before, after, rec);
     const delta = diff(before, after, rec.dialogs);
     rec.delta = delta;
     rec.changes = describe(delta);
@@ -261,7 +324,7 @@ class Runner {
       rec.before = before;
       rec.after = after;
     }
-    return rec;
+    return this.typed.size ? maskDeep(rec, this.typed) : rec;
   }
 
   private async shoot(step: string, when: 'before' | 'after'): Promise<string | undefined> {
@@ -278,10 +341,12 @@ class Runner {
   }
 
   /** The tabs the MCP server lists: `- 1: [Help centre](http://…)`, the one it works in marked `(current)`. */
-  private async mcpTabs(): Promise<Array<{ index: number; current: boolean; url: string }>> {
+  private async mcpTabs(rec: StepRecord): Promise<Array<{ index: number; current: boolean; url: string }>> {
     const status = this.caps.functions.tabs;
     if (status.status !== 'ok') return [];
-    const reply = await this.o.mcp.callTool(status.tool as string, { action: 'list' });
+    const reply = await this.timed(rec, 'mcp', status.tool as string, 'tabs', { action: 'list' }, () =>
+      this.o.mcp.callTool(status.tool as string, { action: 'list' }),
+    );
     const tabs: Array<{ index: number; current: boolean; url: string }> = [];
     for (const raw of reply.raw.split('\n')) {
       const line = raw.trim();
@@ -297,20 +362,21 @@ class Runner {
 
   /** A step that opens a tab or a window: the run goes to it, and says so (UI-02). */
   private async followTabs(countBefore: number, pagesBefore: Set<Page>, rec: StepRecord): Promise<void> {
-    if (this.page.isClosed()) await this.adoptPage();
+    if (this.page.isClosed()) await this.adoptPage(rec);
     const real = this.realPages();
-    if (real.length <= countBefore || this.page.url() === 'about:blank') return this.adoptPage();
+    if (real.length <= countBefore || this.page.url() === 'about:blank') return this.adoptPage(rec);
     const opened = real.find((p) => !pagesBefore.has(p)) ?? (real[real.length - 1] as Page);
     await opened.waitForLoadState('domcontentloaded').catch(() => {});
-    const listed = await this.mcpTabs();
+    const listed = await this.mcpTabs(rec);
     const mine = listed.find((t) => t.url === opened.url());
     const status = this.caps.functions.tabs;
     if (status.status === 'ok' && mine) {
-      await this.o.mcp.callTool(status.tool as string, { action: 'select', index: mine.index });
-      rec.calls.push({ via: 'mcp', tool: status.tool as string, args: { action: 'select', index: mine.index } });
+      await this.timed(rec, 'mcp', status.tool as string, 'tabs', { action: 'select', index: mine.index }, () =>
+        this.o.mcp.callTool(status.tool as string, { action: 'select', index: mine.index }),
+      );
     } else {
       await opened.bringToFront();
-      rec.calls.push({ via: 'page', tool: 'bringToFront', args: { url: opened.url() } });
+      this.note(rec, { via: 'page', tool: 'bringToFront', fn: 'bringToFront', args: { url: opened.url() }, at: Date.now(), ms: 0, outcome: 'ok' });
     }
     this.known.add(this.page);
     this.page = opened;
@@ -318,6 +384,42 @@ class Runner {
   }
 
   // ---- values ----
+
+  /**
+   * A step that types the one-time code of the login: the code is asked for now, for this login, and kept only in memory.
+   * It is never in the plan or the data table (AU-07). Without a source, or when the mail does not come, the step does not run.
+   */
+  private async fillOtp(chain: Chain): Promise<void> {
+    const key = chain.value?.startsWith('$data.') ? chain.value.slice(6) : undefined;
+    const v = key ? this.values[key] : undefined;
+    if (!key || !v || v.rule !== 'otp.at-run') return;
+    const otp = this.o.otp;
+    if (!otp) throw new Block('VALUE_UNRESOLVED', `the one-time code for "${chain.original}" has no source: set the login type of the application`);
+    try {
+      this.values[key] = { ...v, value: await otp.code({ since: this.since }) };
+      this.otpStep = chain.step;
+    } catch (e) {
+      if (e instanceof OtpError) throw new Block(e.kind === 'NOT_RECEIVED' ? 'OTP_MAIL_NOT_RECEIVED' : 'VALUE_UNRESOLVED', e.message);
+      throw e;
+    }
+  }
+
+  /**
+   * After a one-time code was typed, a message that is new on the page and says the code is wrong or expired means the
+   * application refused it: a problem of the data, not a failure of what the test checks (AU-06).
+   */
+  private checkOtpRefusal(chain: Chain, before: Observation, after: Observation, rec: StepRecord): void {
+    if (!this.otpStep) return;
+    if (chain.step !== this.otpStep) this.otpStep = undefined; // only the typing step and the one after it
+    if (rec.status !== 'done') return;
+    const shown = (o: Observation): string[] => [...o.messages, ...o.fieldErrors.map((f) => f.message)];
+    const known = new Set(shown(before));
+    const refused = shown(after).find((m) => !known.has(m) && refusesOtp(m));
+    if (refused === undefined) return;
+    rec.status = 'blocked';
+    rec.code = 'OTP_REJECTED';
+    rec.reason = `the application refused the one-time code: "${refused}"`;
+  }
 
   private valueOf(text: string | undefined, what: string): { text: string; secret: boolean } {
     if (text === undefined) throw new Block('VALUE_UNRESOLVED', `${what} has no value`);
@@ -329,7 +431,14 @@ class Runner {
         'VALUE_UNRESOLVED',
         `the value "${text.slice(6)}" for ${what} was not resolved: give it in Test Data, an environment variable or the credential store`,
       );
-    return resolved.value instanceof Secret ? { text: resolved.value.reveal(), secret: true } : { text: resolved.value, secret: false };
+    const shown = resolved.value instanceof Secret ? resolved.value.reveal() : resolved.value;
+    // What is left of a secret that was hidden on the way is not the secret: it is never typed (E0.12, S4).
+    if (isMasked(shown))
+      throw new Block('VALUE_UNRESOLVED', `the value for ${what} is a mask (••••), not a value: the real one was hidden before it reached the engine`);
+    if (!(resolved.value instanceof Secret)) return { text: resolved.value, secret: false };
+    const clear = resolved.value.reveal();
+    this.typed.add(clear);
+    return { text: clear, secret: true };
   }
 
   // ---- calls ----
@@ -346,13 +455,29 @@ class Runner {
       fn === 'type' && name === 'browser_fill_form'
         ? { fields: [{ name: args.element ?? 'field', type: 'textbox', target: args.target, value: args.text }] }
         : args;
-    await this.o.mcp.callTool(name, sent);
-    rec.calls.push({ via: 'mcp', tool: name, args: shown });
+    await this.timed(rec, 'mcp', name, fn, shown, () => this.o.mcp.callTool(name, sent));
     return 'used';
   }
 
+  /** Makes a call and records it whether it works or not: what was asked, when, for how long, and what came of it (GV-02). */
+  private async timed<T>(rec: StepRecord, via: Call['via'], tool: string, fn: string, args: Record<string, unknown>, run: () => Promise<T>): Promise<T> {
+    const at = Date.now();
+    try {
+      const result = await run();
+      this.note(rec, { via, tool, fn, args, at, ms: Date.now() - at, outcome: 'ok' });
+      return result;
+    } catch (e) {
+      this.note(rec, { via, tool, fn, args, at, ms: Date.now() - at, outcome: 'failed', error: (e as Error).message });
+      throw e;
+    }
+  }
+
+  private note(rec: StepRecord, call: Omit<Call, 'seq'>): void {
+    rec.calls.push({ seq: ++this.seq, ...call });
+  }
+
   private viaPage(tool: string, args: Record<string, unknown>, rec: StepRecord): void {
-    rec.calls.push({ via: 'page', tool, args });
+    this.note(rec, { via: 'page', tool, fn: tool, args, at: Date.now(), ms: 0, outcome: 'ok' });
   }
 
   // ---- finding ----
@@ -404,23 +529,41 @@ class Runner {
       }
       row = { row: search.row, label: search.pageLabel, visited: search.pagesVisited, frame: search.table.frame };
     }
-    let elements = await inspectPage(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
+    const seen = await inspectPageDetailed(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
+    let elements = seen.elements;
     if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
     const query = this.query(target, purpose);
     const result = locate(query, elements);
     const tried = result.tried;
+    // A frame that could not be read is not a frame without the element: the run says so, and the case is set aside, not failed.
+    const unreadNote = seen.unread.length
+      ? `; a frame could not be read after the page changed (${seen.unread.map((p) => p.join(' > ')).join(', ')}), so it may be there`
+      : '';
     if (result.status === 'not-found')
-      throw new Block('LOCATE_NOT_FOUND', `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)`);
+      throw new Block(
+        'LOCATE_NOT_FOUND',
+        `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`,
+      );
     if (result.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', result.reason);
     if (result.status === 'inactive') throw new Block('LOCATE_INACTIVE', result.reason);
     const selector = selectorIn(result.element.frame, result.element.xpath);
     const count = await this.page.locator(selector).count();
     if (count !== 1) throw new Block('LOCATOR_NOT_UNIQUE', `the locator for "${query.name}" finds ${count} elements, not one`);
+    const home = consolidate(this.o.knowledge, query.name, { page: target?.page });
+    const known = home.status === 'one' ? home.components[0] : undefined;
+    // The screen an element is on: the address of its frame when the page is only a shell around it (E8), else the page's.
+    const pageName = known?.page ?? target?.page ?? pageIdentityOf(result.element.frameUrl ?? this.page.url());
     rec.located = {
       name: query.name,
       level: result.level,
       weight: result.weight,
       selector,
+      contract: {
+        id: contractId(pageName, query.name, selector),
+        page: pageName,
+        ...(known ? { component: known.component.name } : {}),
+        semantic: query.name,
+      },
       tried,
       element: {
         tag: result.element.tag,
@@ -490,7 +633,11 @@ class Runner {
       case 'CLEAR':
       case 'SEARCH': {
         const value = action === 'CLEAR' ? { text: '', secret: false } : this.valueOf(chain.value, `"${target?.name}"`);
-        if (action === 'ENTER_VALUE' && value.text === '')
+        // "Leave Username blank": the test case means an empty field, and the field is emptied. A value that is empty because a secret
+        // written in a step was not kept is a different thing, and stops the run.
+        const key = chain.value?.startsWith('$data.') ? chain.value.slice(6) : undefined;
+        const meansBlank = key !== undefined && (this.values[key]?.class === 'BLANK' || this.values[key]?.class === 'EMPTY');
+        if (action === 'ENTER_VALUE' && value.text === '' && !meansBlank)
           throw new Block(
             'VALUE_UNRESOLVED',
             `the value for "${target?.name}" is empty: a password or secret written inside a step is not kept, so give it in Test Data, an environment variable or the credential store`,
@@ -501,6 +648,18 @@ class Runner {
           text: value.secret ? MASK : value.text,
           element: target?.name,
         });
+        // An empty field is checked, not assumed: a tool that ignores an empty text would leave what was there.
+        if (value.text === '' && action !== 'SEARCH') {
+          const left = await this.page
+            .locator(selector)
+            .inputValue({ timeout: 2000 })
+            .catch(() => '');
+          if (left !== '') {
+            await this.page.locator(selector).fill('');
+            this.viaPage('fill', { target: selector, text: '' }, rec);
+            rec.notes.push('the field still held text after the empty entry, so it was emptied directly');
+          }
+        }
         return;
       }
       case 'SELECT':

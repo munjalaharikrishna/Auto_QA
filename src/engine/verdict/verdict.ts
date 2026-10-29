@@ -116,6 +116,8 @@ const BLOCK_VERDICT: Record<BlockCode, { verdict: VerdictName; cause?: RootCause
   FILE_NOT_ALLOWED: { verdict: 'TEST_DATA_ERROR', cause: 'TEST_DATA' },
   UNSUPPORTED_ACTION: { verdict: 'UNSUPPORTED' },
   ACTION_FAILED: { verdict: 'AUTOMATION_ERROR', cause: 'AUTOMATION' },
+  OTP_MAIL_NOT_RECEIVED: { verdict: 'ENVIRONMENT_ERROR', cause: 'ENVIRONMENT' },
+  OTP_REJECTED: { verdict: 'TEST_DATA_ERROR', cause: 'TEST_DATA' },
 };
 
 function answers(a: Partial<Record<number, { answer: Answer['answer']; detail: string }>>): Answer[] {
@@ -225,7 +227,7 @@ export function judge(input: JudgeInput): Verdict {
   if (trace.status !== 'completed') {
     const stop = trace.stoppedAt;
     const record = trace.steps.find((s) => s.step === stop?.step);
-    const unresolved = stop?.code === 'VALUE_UNRESOLVED';
+    const unresolved = stop?.code === 'VALUE_UNRESOLVED' || stop?.code === 'OTP_REJECTED';
     const detail = `${stop?.step ?? 'the start'}: ${stop?.reason ?? 'the run stopped'}`;
     const a = answers({
       ...base,

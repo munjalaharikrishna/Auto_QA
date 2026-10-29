@@ -1,5 +1,6 @@
 import { type LocatorSpec, spec } from '../../locators/locator.js';
 import { labelKey, nameWords } from '../knowledge/labels.js';
+import { scopeNames } from './containers.js';
 import { type DomElement, type Ignored, LEVELS, type Level, type LocateQuery, type LocateResult, type Tried, WEIGHT } from './types.js';
 
 /**
@@ -156,8 +157,10 @@ function matchesAt(level: Level, query: LocateQuery, names: ReadonlySet<string>,
   }
 }
 
-const inContainer = (e: DomElement, within: string | undefined): boolean => {
+const inContainer = (e: DomElement, within: string | undefined, named: Set<string> | undefined): boolean => {
   if (!within) return true;
+  // The title of a container the element is inside names it: "on the Backpack card" is the card whose title is Backpack (UI-07).
+  if (named && (e.containers ?? []).some((c) => named.has(c))) return true;
   const key = labelKey(within);
   return (e.form !== undefined && labelKey(e.form) === key) || e.parents.some((p) => labelKey(p).includes(key));
 };
@@ -166,7 +169,11 @@ const inContainer = (e: DomElement, within: string | undefined): boolean => {
 export function locate(query: LocateQuery, page: readonly DomElement[], options: LocateOptions = {}): LocateResult {
   const names = new Set([query.name, ...(query.aliases ?? [])].map(labelKey).filter(Boolean));
   const purpose = query.purpose ?? 'act';
-  const elements = page.filter((e) => inContainer(e, query.within));
+  const named = scopeNames(
+    query.within,
+    page.flatMap((e) => e.containers ?? []),
+  )?.names;
+  const elements = page.filter((e) => inContainer(e, query.within, named));
   const tried: Tried[] = [];
 
   for (const level of LEVELS) {

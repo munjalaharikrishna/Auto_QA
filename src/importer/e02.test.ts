@@ -6,7 +6,9 @@ import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
 import { Store } from '../db/store.js';
+import { compileCase } from '../engine/pipeline/compile.js';
 import { type RawTestCase, stepsWithChecks } from '../model/test-model.js';
+import { matchColumns } from './columns.js';
 import { describeChange, diffCases } from './diff.js';
 import { orderNumbered, orderParts } from './numbering.js';
 import { readWorkbook } from './workbook.js';
@@ -337,5 +339,38 @@ describe('versions of a re-imported test case (IN-23)', () => {
     assert.deepEqual(diffCases(base, { ...base, steps: '1. a' }).map(describeChange), ['Step 2 removed: "b"']);
     assert.deepEqual(diffCases(base, { ...base, title: 'T2', expected: 'fine' }).map(describeChange), ['title: "T" → "T2"', 'Expected 1: "ok" → "fine"']);
     assert.deepEqual(diffCases(base, { ...base, preconditions: 'Logged in' }).map(describeChange), ['preconditions added: "Logged in"']);
+  });
+});
+
+describe('column recognition (IN-06, IN-07, IN-11, IN-13)', () => {
+  const columnOf = (header: string, field: 'id' | 'title' | 'expected' | 'priority'): boolean => {
+    const { map } = matchColumns([header, 'Steps']);
+    return map[field] === 1;
+  };
+  it('IN-06 a test case id is found under its usual names, with stray spaces and case', () => {
+    for (const h of ['Testcase ID', 'Test Case Id ', 'TC ID', 'tc id', 'Test Case No', 'TCID']) assert.ok(columnOf(h, 'id'), h);
+  });
+  it('IN-07 a test case name is found under its usual names', () => {
+    for (const h of ['Testcase Name', 'Title', 'Test Case Name', 'test case title']) assert.ok(columnOf(h, 'title'), h);
+  });
+  it('IN-11 an expected result is found under its usual names', () => {
+    for (const h of ['Expected Results', 'Expected Outcome', 'Expected Result', 'expected result(s)']) assert.ok(columnOf(h, 'expected'), h);
+  });
+  it('IN-13 priority and severity are found', () => {
+    for (const h of ['Priority', 'Severity', 'Test Priority']) assert.ok(columnOf(h, 'priority'), h);
+  });
+  it('IN-13 the priority reaches the QA-IR metadata', async () => {
+    const compiled = await compileCase({
+      id: 'T-9',
+      title: 'Login',
+      priority: 'High',
+      steps: '1. Open the Login page',
+      expected: 'The Login page is displayed',
+    });
+    assert.equal(compiled.ir?.testCase.priority, 'High');
+  });
+  it('a header can name only one field', () => {
+    const { map } = matchColumns(['Priority', 'Severity', 'Steps']);
+    assert.equal(map.priority, 1);
   });
 });

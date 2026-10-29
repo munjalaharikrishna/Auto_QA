@@ -58,7 +58,16 @@ function traceOf(c: CompileResult, last: { before: Observation; after: Observati
     before: i === plan.chains.length - 1 ? last.before : blank,
     after: i === plan.chains.length - 1 ? last.after : blank,
     located: ch.target
-      ? { name: ch.target.name ?? '', level: 'role', weight, selector: 'x', tried: [], element: { tag: 'button', role: 'button' }, ignored: [] }
+      ? {
+          name: ch.target.name ?? '',
+          level: 'role',
+          weight,
+          selector: 'x',
+          contract: { id: 'c0', page: '/', semantic: ch.target.name ?? '' },
+          tried: [],
+          element: { tag: 'button', role: 'button' },
+          ignored: [],
+        }
       : undefined,
   }));
   return { testId: 'T1', status: 'completed', capabilities: [], steps };
