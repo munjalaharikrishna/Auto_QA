@@ -66,12 +66,20 @@ export function classOfWords(words: readonly string[]): ClassWords | undefined {
 }
 
 /** What a field is for, judged from its name. The generator makes a different value for each kind. */
-export type FieldKind = 'username' | 'password' | 'email' | 'personName' | 'number' | 'code' | 'phone' | 'date' | 'file' | 'text';
+export type FieldKind = 'username' | 'password' | 'otp' | 'email' | 'personName' | 'number' | 'code' | 'phone' | 'date' | 'file' | 'text';
 
 const HAS = (key: string, ...parts: string[]): boolean => parts.some((p) => key.includes(p));
 
 export function fieldKindOf(name: string): FieldKind {
   const key = compactKey(name);
+  // "otp" as a part of a longer word ("footprint") is not a one-time passcode.
+  if (
+    key === 'otp' ||
+    key.startsWith('otp') ||
+    key.endsWith('otp') ||
+    HAS(key, 'onetime', 'verificationcode', 'authenticationcode', 'securitycode', 'authcode', 'twofactor')
+  )
+    return 'otp';
   if (HAS(key, 'password', 'passcode', 'pin')) return 'password';
   if (HAS(key, 'email')) return 'email';
   if (HAS(key, 'username', 'loginname', 'userid', 'login')) return 'username';
@@ -85,7 +93,7 @@ export function fieldKindOf(name: string): FieldKind {
 }
 
 /** Kinds of value that only the application's own users, a secret store or a real file can give: a generated one would be wrong. */
-export const NEEDS_REAL_VALUE: ReadonlySet<FieldKind> = new Set(['username', 'password', 'file']);
+export const NEEDS_REAL_VALUE: ReadonlySet<FieldKind> = new Set(['username', 'password', 'otp', 'file']);
 
 const QUALIFYING: ReadonlySet<DataClass> = new Set<DataClass>(['VALID', 'INVALID', 'EXISTING', 'NON_EXISTING']);
 

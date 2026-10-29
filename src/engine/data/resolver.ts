@@ -3,8 +3,9 @@ import type { DataEntry } from '../language/data-binding.js';
 import { dataKeyOf, fieldFromKey, isSecretName, upperSnake } from '../patterns/shapes.js';
 import { compactKey } from '../text/compound.js';
 import { dataClassDef, fieldKindOf, NEEDS_REAL_VALUE } from './classes.js';
+import type { FieldFormat } from './formats.js';
 import { DEFAULT_MAX_LENGTH, generate, seedOf } from './generator.js';
-import { Secret } from './secret.js';
+import { isMasked, Secret } from './secret.js';
 import type { CredentialStore } from './store.js';
 
 /**
@@ -23,6 +24,9 @@ import type { CredentialStore } from './store.js';
  * An EXPLICIT value, one the test case itself gives, always wins and is never replaced by anything else. Nothing is
  * made up for a credential: a "valid password" can only come from a source that knows it.
  */
+
+const MASKED_WHY = (field: string): string =>
+  `the value of "${field}" is a mask (••••), not a value: the real one was hidden before it reached the engine, so it is not typed. Run the case from the sheet it was written in, or give the value in an environment variable or the credential store`;
 
 export const SOURCE_ORDER = ['EXCEL', 'ENV', 'CONFIG', 'STORE', 'FILE', 'GENERATOR', 'STEP', 'APPLICATION'] as const;
 
@@ -44,6 +48,13 @@ export interface ResolveContext {
   maxLengths?: Record<string, number>;
   /** The shortest value each field takes (from the application's knowledge); without one, "below the minimum" cannot be made. */
   minLengths?: Record<string, number>;
+  /**
+   * A one-time passcode is read at run time, from the login type of the application (AU-01): the mailbox, the authenticator
+   * secret. Without it, "the valid OTP" has no source and is not resolved; it is never made up.
+   */
+  otpAtRun?: boolean;
+  /** What each field accepts, by the compact key of its name (a format note of the test case). */
+  formats?: Record<string, FieldFormat>;
   steps: readonly IrStep[];
 }
 
@@ -137,6 +148,10 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
       tried.push('EXCEL');
       const entry = ctx.excel.find((e) => dataKeyOf(e.key) === key);
       const value = d.secret || entry?.secret ? (ctx.excelSecrets?.[key]?.reveal() ?? '') : (d.value ?? entry?.value ?? '');
+      if (isMasked(value)) {
+        fail(key, field, d, MASKED_WHY(field), tried);
+        continue;
+      }
       record(key, field, d, { source: 'EXCEL', value: d.class === 'NULL' ? 'null' : value }, tried);
       continue;
     }
@@ -144,6 +159,10 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
     if (d.source === 'EXCEL' && d.secret) {
       tried.push('EXCEL');
       const secretValue = ctx.excelSecrets?.[key];
+      if (secretValue && isMasked(secretValue.reveal())) {
+        fail(key, field, d, MASKED_WHY(field), tried);
+        continue;
+      }
       if (secretValue) {
         record(key, field, d, { source: 'EXCEL', value: secretValue.reveal() }, tried);
         continue;
@@ -244,6 +263,13 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
     }
     // 6. generated: only what a generator can honestly make.
     tried.push('GENERATOR');
+    // The valid one-time passcode comes from the application's login type when the test runs; a wrong one is generated below.
+    if (kind === 'otp' && cls === 'VALID' && ctx.otpAtRun) {
+      tried.push('APPLICATION');
+      record(key, field, d, { source: 'APPLICATION', value: '', rule: 'otp.at-run' }, tried);
+      out[key] = { class: cls, source: 'APPLICATION', value: '***', secret: true, rule: 'otp.at-run' };
+      continue;
+    }
     const needsReal = (cls === 'VALID' || cls === 'EXISTING') && NEEDS_REAL_VALUE.has(kind);
     if (cls === 'EXISTING' || needsReal) {
       tried.push('APPLICATION');
@@ -263,6 +289,7 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
       const g = generate(cls, kind, seedOf(ctx.testId, stepOf(key, ctx.steps), ctx.run ?? 'run-1', key), {
         maxLength: max,
         minLength: ctx.minLengths?.[field] ?? ctx.minLengths?.[fieldKey],
+        format: ctx.formats?.[fieldKey] ?? ctx.formats?.[compactKey(fieldFromKey(key))],
       });
       record(key, field, d, { class: dataClassDef(cls) ? 'GENERATED' : cls, source: 'GENERATOR', value: g.value, rule: g.rule, seed: g.seed }, tried);
       if ((cls === 'MAXIMUM' || cls === 'BOUNDARY') && ctx.maxLengths?.[field] === undefined && ctx.maxLengths?.[fieldKey] === undefined) {

@@ -1,3 +1,5 @@
+import { FORMAT_LABEL, formatRuleOf } from '../data/formats.js';
+import { containerRef } from '../ir/container.js';
 import type { IrAction, IrCondition, IrTarget } from '../ir/schema.js';
 import { keyOf, patterns, waitMs } from '../patterns/index.js';
 import { compactKey } from '../text/compound.js';
@@ -581,8 +583,15 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       if (np.headClass === undefined && action !== 'CLICK') decisions.push(`no kind of element named: read as a ${np.targets[0]?.ontology}`);
       // "Edit for John Smith": the row of a table that holds those values, not a container of the page (UI-06).
       const inRow = ofRow.row ? [ofRow.row] : np.placeWord === 'for' && np.within ? [np.within] : undefined;
+      // "Click Add to cart on the 'Backpack' card": the step is about that card and no other (UI-07). A place that is not a repeated
+      // widget ("on the Login page") is read as it always was.
+      const inCard =
+        !inRow && np.within && np.placeWord && ['on', 'in', 'within', 'inside', 'at'].includes(np.placeWord) && containerRef(np.within)?.repeated
+          ? np.within
+          : undefined;
+      if (inCard) decisions.push(`the step is about the "${containerRef(inCard)?.text}" ${containerRef(inCard)?.noun}, and nothing else on the page (UI-07)`);
       return done(
-        np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : t)),
+        np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : inCard ? { ...t, within: inCard } : t)),
         'GR-01',
       );
     }
@@ -610,7 +619,7 @@ const BRANCH_RELATIONS: ReadonlySet<string> = new Set(['IF', 'WHEN', 'UNLESS']);
 export function understandLine(raw: string, ctx: LineContext): LineResult {
   const line = readLine(raw);
   const clauses = doneBeforeOrder(splitClauses(line));
-  const out: LineResult = { steps: [], expectations: [], conditionals: [], sequence: [], notes: [], issues: [], models: [] };
+  const out: LineResult = { steps: [], expectations: [], conditionals: [], sequence: [], notes: [], formats: [], issues: [], models: [] };
   let subject: Subject | undefined;
   /** The section a leading "In the X section," names: where the steps after it are done. */
   let scope: string | undefined;
@@ -787,10 +796,17 @@ export function understandLine(raw: string, ctx: LineContext): LineResult {
 
     if (clause.relation === 'NOTE') {
       out.notes.push(clause.original);
+      const rule = formatRuleOf(clause.original);
+      const typed = [...out.steps].reverse().find((s) => s.value?.kind === 'class' || s.value?.kind === 'data');
+      const field = rule?.field ?? (typed?.value?.kind === 'class' ? typed.value.field : undefined);
+      if (rule && field) out.formats.push({ field, format: rule.format });
       out.issues.push({
         code: 'NOT_CHECKED',
         severity: 'info',
-        message: 'this note is kept with the test case but is not a step or a check, so nothing verifies it',
+        message:
+          rule && field
+            ? `this note says "${field}" accepts only ${FORMAT_LABEL[rule.format]}: it decides the values made for the field, but nothing verifies that other characters are refused`
+            : 'this note is kept with the test case but is not a step or a check, so nothing verifies it',
         original: clause.original,
         suggestion: 'If it should be checked, write it as a check: Verify …',
       });

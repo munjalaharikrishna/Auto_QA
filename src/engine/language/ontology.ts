@@ -33,8 +33,6 @@ const SEE: readonly AssertionKind[] = ['VISIBILITY', 'LAYOUT'];
 
 export const ONTOLOGY: readonly OntologyClass[] = [
   c('User', 'core', ['LOGIN', 'LOGOUT'], ['AUTHENTICATION', 'URL', 'STATE']),
-  c('Applicant', 'core', ['LOGIN', 'LOGOUT'], ['AUTHENTICATION', 'URL', 'STATE']),
-  c('Expert', 'core', ['LOGIN', 'LOGOUT'], ['AUTHENTICATION', 'URL', 'STATE']),
   c('Admin', 'core', ['LOGIN', 'LOGOUT'], ['AUTHENTICATION', 'URL', 'STATE']),
   c('Username', 'core', [], [], 'Field'),
   c('Password', 'core', [], [], 'Field'),

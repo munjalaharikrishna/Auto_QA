@@ -18,9 +18,10 @@ import { LocalArtifactStore } from '../db/artifacts.js';
 import { Store } from '../db/store.js';
 import { CATEGORY, compileCase, preflightOf } from '../engine/index.js';
 import { readWorkbook } from '../importer/workbook.js';
+import { learnedForRun } from '../learning/adapter.js';
 import { withRules } from '../parser/config.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
-import { rulesFor } from '../parser/rules.js';
+import { engineInputOf } from '../parser/original.js';
 import { type CompareRow, compareRow, compareTable } from '../pipeline/compare.js';
 import { runCases } from '../pipeline/run-cases.js';
 import { runSemanticJobs, type SemanticJob, semanticSupport } from '../pipeline/semantic-run.js';
@@ -65,7 +66,7 @@ const store = await Store.open(snapshot, { artifacts: new LocalArtifactStore({ l
 try {
   const project = await store.project(projectId);
   if (!project) throw new Error(`There is no project "${projectId}".`);
-  const config = withRules(defaultParserConfig(), rulesFor(await store.rules(project.id)));
+  const config = withRules(defaultParserConfig(), (await learnedForRun(store, project.id)).rules);
   const envId = await store.defaultEnvironmentId(project.id);
   const routes = envId ? await store.pageRoutes(envId) : {};
   const env = { ...process.env, ...readEnvFile(project.workspace) };
@@ -109,20 +110,7 @@ try {
   const compileOf = new Map<string, string>();
   const newIssues = new Map<string, string[]>();
   for (const model of models) {
-    const compiled = await compileCase(
-      {
-        id: model.id,
-        title: model.title,
-        type: model.type,
-        preconditions: model.source.rawPreconditions,
-        steps: model.source.rawSteps,
-        testData: model.source.rawTestData,
-        expected: model.source.rawExpected,
-        requirementId: model.requirementId,
-        row: model.source.row,
-      },
-      { config, pageRoutes: routes, env },
-    );
+    const compiled = await compileCase(engineInputOf(model).raw, { config, pageRoutes: routes, env });
     compileOf.set(model.id, `${compiled.status}, ${preflightOf(model.title, compiled).status}`);
     newIssues.set(
       model.id,

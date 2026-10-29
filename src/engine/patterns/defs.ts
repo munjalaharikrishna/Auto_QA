@@ -291,6 +291,37 @@ export const EXTRACT_PATTERNS: PatternDef[] = [
   ),
 ];
 
+/** One-time passcodes (AU-04, AU-06): the code in a mail, and the message an application shows for a refused one. */
+export const AUTH_PATTERNS: PatternDef[] = [
+  def('otpCode', 'AU-04', 50, /(?<=\b(?:code|otp|passcode|pin|token)\b[^\d\n]{0,30})(?<![\d.])\d{4,8}(?!\d)|(?<![\d.,:/@-])\d{6}(?![\d.,@-])/i, {
+    match: [
+      ['Your verification code is 482913', '482913'],
+      ['OTP: 1234', '1234'],
+      ['Use passcode 55667788 to sign in', '55667788'],
+      ['123456 is your login number', '123456'],
+      ['Your PIN is 9081. It expires in 10 minutes.', '9081'],
+      ['Code: 000123', '000123'],
+    ],
+    noMatch: ['No digits here', 'Call 555-1234 now', 'Order 12345678901', 'Visit 2026-10-29', 'version 1.2.3456', 'Your code has expired'],
+  }),
+  def(
+    'otpRejected',
+    'AU-06',
+    50,
+    /\b(?:invalid|incorrect|wrong|expired|not valid)\b[^.\n]{0,40}\b(?:otp|code|passcode|token)\b|\b(?:otp|code|passcode|token)\b[^.\n]{0,40}\b(?:invalid|incorrect|wrong|expired|not valid|is not correct)\b/i,
+    {
+      match: [
+        ['Invalid OTP', 'Invalid OTP'],
+        ['The code you entered is incorrect', 'code you entered is incorrect'],
+        ['Verification code expired', 'code expired'],
+        ['Wrong passcode, try again', 'Wrong passcode'],
+        ['Incorrect verification code', 'Incorrect verification code'],
+      ],
+      noMatch: ['Invalid username or password', 'Enter your code', 'Login successful', 'Employee code saved', 'Dashboard', 'Required'],
+    },
+  ),
+];
+
 /** Patterns the normalizer and the tokenizer use (NM-11, NM-12, NM-13, NM-16, TK-04 to TK-10). */
 export const TEXT_PATTERNS: PatternDef[] = [
   def('identifier', 'NM-16', 65, /\b[A-Za-z]{1,10}(?:[-_][A-Za-z0-9]+)*[-_]\d+[A-Za-z0-9_-]*\b/, {
@@ -374,4 +405,4 @@ export const TEXT_PATTERNS: PatternDef[] = [
   }),
 ];
 
-export const BUILTIN_PATTERNS: PatternDef[] = [...VALUE_PATTERNS, ...EXTRACT_PATTERNS, ...TEXT_PATTERNS];
+export const BUILTIN_PATTERNS: PatternDef[] = [...VALUE_PATTERNS, ...EXTRACT_PATTERNS, ...AUTH_PATTERNS, ...TEXT_PATTERNS];

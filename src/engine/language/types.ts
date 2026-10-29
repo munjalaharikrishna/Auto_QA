@@ -1,3 +1,4 @@
+import type { FieldFormat } from '../data/formats.js';
 import type { DataClass, IrAction, IrCondition, IrTarget } from '../ir/schema.js';
 
 /**
@@ -112,6 +113,8 @@ export interface LineResult {
   /** What the line emits, in order: an expectation belongs after the last step before it (GR-04, GR-09, GR-10). */
   sequence: Array<{ kind: 'step' | 'expect'; index: number; clause: number }>;
   notes: string[];
+  /** What a field accepts, from a note: "Text box should accept only alphabets" (the field is the one of the step before). */
+  formats: Array<{ field: string; format: FieldFormat }>;
   issues: Array<Omit<Issue, 'where'>>;
   models: GrammarModel[];
 }

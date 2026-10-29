@@ -171,6 +171,7 @@ export function mutationKey(
   return {
     checkedBy,
     checkedOn,
+    signedOff: true,
     cases: [
       ...cases.map((c) => ({ id: c.id, module: 'app:untouched', expected: c.baseline })),
       ...mutations.flatMap((m) =>

@@ -72,7 +72,7 @@ export const ApplicationSchema = z.object({
       passwordField: z.string().optional(),
       loginButton: z.string().optional(),
       successPage: z.string().optional(),
-      mfa: z.enum(['none', 'totp', 'email-otp']).default('none'),
+      mfa: z.enum(['none', 'totp', 'email-otp', 'fixed-otp', 'sms-otp']).default('none'),
     })
     .default({ mfa: 'none' }),
   /**

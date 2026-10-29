@@ -9,6 +9,12 @@ import { inspect } from 'node:util';
 
 export const MASK = '••••';
 
+/**
+ * A text made only of mask characters is a mask, not a value: it is what is left of a secret that was hidden before it reached the
+ * engine (E0.12, S4). It is never typed, compared or used as data; the engine says the real value did not arrive.
+ */
+export const isMasked = (text: string): boolean => text.length >= 3 && [...text].every((c) => c === '•' || c === '●' || c === '*');
+
 export class Secret {
   readonly #value: string;
 
@@ -41,6 +47,23 @@ export function maskSecrets(text: string, secrets: Iterable<string>, mask = MASK
   let out = text;
   for (const s of [...secrets].filter((x) => x.length > 0).sort((a, b) => b.length - a.length)) out = out.split(s).join(mask);
   return out;
+}
+
+/**
+ * Masks the secrets in every text of a value, however deep: the strings of an object or list are masked, and its keys, numbers
+ * and shape are left as they are. For a record of a run, where a value typed into a field that is not a password field (a
+ * one-time code) is read back with the page.
+ */
+export function maskDeep<T>(value: T, secrets: Iterable<string>, mask = MASK): T {
+  const list = [...secrets].filter((s) => s.length >= 3);
+  if (list.length === 0) return value;
+  const walk = (v: unknown): unknown => {
+    if (typeof v === 'string') return maskSecrets(v, list, mask);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return walk(value) as T;
 }
 
 export interface SecretFinding {

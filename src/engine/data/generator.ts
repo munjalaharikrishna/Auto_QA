@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { DataClass } from '../ir/schema.js';
 import type { FieldKind } from './classes.js';
+import { type FieldFormat, FORMAT_APPLIES } from './formats.js';
 
 /**
  * Layer 18, the test data generator (DG-01). Every generated value is reproducible: it depends on a seed made from the
@@ -22,6 +23,8 @@ export interface GenerateOptions {
   maxLength?: number;
   /** The shortest value a field takes. Without it a value just under the minimum cannot be made: it is asked for, never guessed. */
   minLength?: number;
+  /** What the field accepts, from a note such as "should accept only alphabets": a valid value is made of it, an invalid one is not. */
+  format?: FieldFormat;
   /** The day dates are counted from. Fixed, so a date never depends on today. */
   referenceDate?: string;
 }
@@ -60,6 +63,11 @@ const word = (next: () => number, syllables: number): string => {
 
 /** A valid value of a kind (what the application should accept, as far as the kind of the field tells). */
 function valid(kind: FieldKind, next: () => number, options: GenerateOptions): { value: string; rule: string; secret?: boolean } {
+  if (options.format && FORMAT_APPLIES.has(kind)) {
+    if (options.format === 'ALPHA') return { value: word(next, 3), rule: 'format.alpha' };
+    if (options.format === 'NUMERIC') return { value: `${pick(next, '123456789')}${run(next, DIGITS, 4)}`, rule: 'format.numeric' };
+    return { value: `${word(next, 2)}${run(next, DIGITS, 3)}`, rule: 'format.alphanumeric' };
+  }
   switch (kind) {
     case 'email':
       return { value: `qa.${run(next, `${LOWER}${DIGITS}`, 8)}@example.test`, rule: 'unique.email' };
@@ -92,7 +100,12 @@ function valid(kind: FieldKind, next: () => number, options: GenerateOptions): {
 }
 
 /** A value of a kind that the application should reject. */
-function invalid(kind: FieldKind, next: () => number): { value: string; rule: string } {
+function invalid(kind: FieldKind, next: () => number, format?: FieldFormat): { value: string; rule: string } {
+  if (format && FORMAT_APPLIES.has(kind)) {
+    if (format === 'ALPHA') return { value: run(next, DIGITS, 5), rule: 'invalid.format.alpha' };
+    if (format === 'NUMERIC') return { value: `abc${run(next, UPPER, 3)}`, rule: 'invalid.format.numeric' };
+    return { value: `@@@###${run(next, DIGITS, 3)}`, rule: 'invalid.format.alphanumeric' };
+  }
   switch (kind) {
     case 'email':
       return { value: `not-an-email-${run(next, LOWER, 4)}`, rule: 'invalid.email' };
@@ -100,6 +113,8 @@ function invalid(kind: FieldKind, next: () => number): { value: string; rule: st
       return { value: `inv@lid user ${run(next, DIGITS, 3)}!`, rule: 'invalid.username' };
     case 'password':
       return { value: run(next, LOWER, 1), rule: 'invalid.password' };
+    case 'otp':
+      return { value: run(next, DIGITS, 6), rule: 'invalid.otp' };
     case 'personName':
       return { value: run(next, DIGITS, 5), rule: 'invalid.name' };
     case 'number':
@@ -115,7 +130,8 @@ function invalid(kind: FieldKind, next: () => number): { value: string; rule: st
 }
 
 /** A string of `length` characters that suits the kind: digits for a number, letters for a name. */
-function long(kind: FieldKind, next: () => number, length: number): string {
+function long(kind: FieldKind, next: () => number, length: number, format?: FieldFormat): string {
+  if (format && FORMAT_APPLIES.has(kind)) return run(next, format === 'ALPHA' ? LOWER : format === 'NUMERIC' ? DIGITS : `${LOWER}${DIGITS}`, length);
   const chars = kind === 'number' || kind === 'code' || kind === 'phone' ? DIGITS : kind === 'personName' ? LOWER : `${LOWER}${DIGITS}`;
   return run(next, chars, length);
 }
@@ -135,7 +151,7 @@ export function generate(cls: DataClass, kind: FieldKind, seed: string, options:
       return make(v.value, v.rule, v.secret ?? kind === 'password');
     }
     case 'INVALID': {
-      const v = invalid(kind, next);
+      const v = invalid(kind, next, options.format);
       return make(v.value, v.rule, kind === 'password');
     }
     case 'RANDOM':
@@ -143,17 +159,17 @@ export function generate(cls: DataClass, kind: FieldKind, seed: string, options:
     case 'NON_EXISTING':
       return make(`nonexistent_${run(next, `${LOWER}${DIGITS}`, 8)}`, 'nonexistent.name');
     case 'MAXIMUM':
-      return make(long(kind, next, max), `long.string(${max})`, kind === 'password');
+      return make(long(kind, next, max, options.format), `long.string(${max})`, kind === 'password');
     case 'BOUNDARY':
-      return make(long(kind, next, max + 1), `boundary.max+1(${max})`, kind === 'password');
+      return make(long(kind, next, max + 1, options.format), `boundary.max+1(${max})`, kind === 'password');
     case 'MINIMUM': {
       const min = Math.max(1, options.minLength ?? 1);
-      return make(long(kind, next, min), `short.string(${min})`, kind === 'password');
+      return make(long(kind, next, min, options.format), `short.string(${min})`, kind === 'password');
     }
     case 'BELOW_MINIMUM': {
       if (options.minLength === undefined)
         throw new Error('the shortest value of this field is not known, so one just under it cannot be made: give the minimum in the application knowledge');
-      return make(long(kind, next, Math.max(0, options.minLength - 1)), `boundary.min-1(${options.minLength})`, kind === 'password');
+      return make(long(kind, next, Math.max(0, options.minLength - 1), options.format), `boundary.min-1(${options.minLength})`, kind === 'password');
     }
     case 'WHITESPACE':
       // A no-break space, an em space, a thin space and an ideographic space: they look empty and are not.

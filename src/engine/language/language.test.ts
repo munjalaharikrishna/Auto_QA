@@ -23,6 +23,7 @@ import {
   headNounOf,
   type LineResult,
   ONTOLOGY,
+  ontologyClass,
   parseTestData,
   preflightOf,
   preflightReport,
@@ -203,8 +204,6 @@ describe('SY-01, SY-02: the synonym engine', () => {
 describe('ON-01: the ontology', () => {
   const CORE = [
     'User',
-    'Applicant',
-    'Expert',
     'Admin',
     'Username',
     'Password',
@@ -229,11 +228,12 @@ describe('ON-01: the ontology', () => {
     'Record',
     'ApiResponseStatus',
   ];
-  it('has the 26 core classes of the specification', () => {
+  it('has the core classes of the specification and no application word (PD-3: Applicant and Expert belong to their application)', () => {
     assert.deepEqual(
       ONTOLOGY.filter((c) => c.origin === 'core').map((c) => c.name),
       CORE,
     );
+    for (const word of ['Applicant', 'Expert', 'Employee', 'Supervisor']) assert.equal(ontologyClass(word), undefined, word);
   });
   it('gives every class its allowed actions and assertions, inherited through its parent', () => {
     assert.ok(allowsAction('Button', 'CLICK'));

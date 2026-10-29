@@ -1,3 +1,4 @@
+import { containerRef } from '../ir/container.js';
 import type { IrCondition, IrTarget } from '../ir/schema.js';
 import type { Token } from '../text/index.js';
 import { DATA_CLASS_CHECK_WORDS, STATE_WORDS } from './lexicon.js';
@@ -613,6 +614,19 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       const text = originalText(line, after);
       const cls = subjectNp?.headClass;
       const type = cls === 'URL' ? 'URL' : 'TEXT';
+      // "The Backpack card contains '$29.99'": the text is looked for inside that card, and the card is not itself an element to find (UI-07).
+      if (subjectNp && type === 'TEXT' && containerRef(subjectNp.original)) {
+        decisions.push(`the text is looked for in "${subjectNp.original}", and nowhere else on the page (UI-07)`);
+        out.push(
+          make({
+            type: 'TEXT',
+            target: { ontology: 'Element', label: 'text', within: subjectNp.original },
+            expect: text,
+            check: kind === 'CONTAINS' ? 'contains-text' : 'exact-text',
+          }),
+        );
+        break;
+      }
       forTargets(subjectNp, (target) => ({ type, ...(target ? { target } : {}), expect: text, check: kind === 'CONTAINS' ? 'contains-text' : 'exact-text' }));
       break;
     }
@@ -667,7 +681,12 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'SHOWS': {
       const hidden = kind === 'HIDDEN';
       // "the system displays X", "the user should see X": the thing is the object. "X is displayed": the thing is the subject.
-      const np = kind === 'SHOWS' ? objectNp() : subjectNp;
+      // "The Backpack card shows the Remove from cart button": the thing is shown in that card, and a word like "from" is part of its name (UI-07).
+      const holder = kind === 'SHOWS' && subjectNp && containerRef(subjectNp.original) ? subjectNp.original : undefined;
+      const asWritten = kind === 'SHOWS' ? objectNp() : subjectNp;
+      const ownPlace = !!asWritten?.within && !!containerRef(asWritten.within);
+      const np = holder && !ownPlace && after.length ? { ...parseNounPhrase(line, after, 'Element', { whole: true }), within: holder } : asWritten;
+      if (holder && !ownPlace) decisions.push(`what is shown is checked in "${holder}", and nowhere else on the page (UI-07)`);
       // "The Personal Details form or page is shown", "The Success message or the Employee List page is shown": either will do.
       const either = !hidden && !negated ? alternativesIn(line, kind === 'SHOWS' ? after : before) : undefined;
       if (either) {
@@ -813,13 +832,24 @@ function pushVisibility(
   }
   const quoted = literalIn(line, np);
   if (quoted !== undefined) {
+    // "'$29.99' is displayed on the Backpack card": the text is looked for in that card (UI-07).
+    const sayPlace =
+      !objectIsNp && after.length && ['in', 'on', 'at', 'within', 'inside'].includes(lw(after[0]))
+        ? after
+            .slice(1)
+            .filter((t, i) => !(i === 0 && lw(t) === 'the'))
+            .map((t) => t.text)
+            .join(' ')
+        : '';
+    const inside = [np.within, sayPlace].find((w) => w && containerRef(w));
     out.push(
       make({
         type: 'TEXT',
-        target: { ontology: np.headClass ?? 'Message', label: np.headClass ? undefined : 'message' },
+        target: { ontology: np.headClass ?? 'Message', label: np.headClass ? undefined : 'message', ...(inside ? { within: inside } : {}) },
         expect: quoted,
         fresh: !hidden,
-        check: 'exact-text',
+        // Said to be in a card, the text is somewhere in what the card shows ("Price: $29.99" holds "$29.99"); a message is the exact words.
+        check: inside ? 'contains-text' : 'exact-text',
       }),
     );
     return;

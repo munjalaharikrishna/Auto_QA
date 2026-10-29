@@ -17,6 +17,9 @@ export const AnswerKeySchema = z
     /** Who checked the key by hand, and when: a key nobody checked is not a key. */
     checkedBy: z.string().min(1),
     checkedOn: z.string().min(1),
+    /** True only when a person has run each row by hand and signed the key. A draft is shown, never trusted. */
+    signedOff: z.boolean().default(false),
+    about: z.string().optional(),
     cases: z
       .array(
         z.object({
@@ -26,6 +29,8 @@ export const AnswerKeySchema = z
           expected: z.enum(VERDICTS),
           /** A known tricky case (a trap, T5): kept so the wrong PASS it once caused cannot come back. */
           trap: z.string().optional(),
+          /** Why the key says this: above all why a case is NEEDS_REVIEW. */
+          note: z.string().optional(),
         }),
       )
       .min(1),

@@ -1,6 +1,7 @@
 import { type RawTestCase, stepsWithChecks } from '../../model/test-model.js';
 import { resolveReferences } from '../context/references.js';
 import { validateStates } from '../context/states.js';
+import { type FieldFormat, formatKeyOf } from '../data/formats.js';
 import { Secret } from '../data/secret.js';
 import type { IrData, IrStep, QaIr } from '../ir/schema.js';
 import { validateIr } from '../ir/validate.js';
@@ -53,6 +54,8 @@ export interface CaseLanguage {
   excel: DataEntry[];
   /** The secrets of the Test Data by data key. A `Secret` is written as `***` by anything that turns it into text. */
   excelSecrets: Record<string, Secret>;
+  /** What a field accepts, by the compact key of its name, from the notes of the test case ("should accept only alphabets"). */
+  formats: Record<string, FieldFormat>;
 }
 
 export interface CaseOptions {
@@ -175,6 +178,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const expectations: QaIr['expectations'] = [];
   const conditionals: QaIr['conditionals'] = [];
   const stepIds = { last: undefined as string | undefined };
+  const formats: Record<string, FieldFormat> = {};
 
   // ---- the lines: steps first, then the expected result ----
   const stepLines = nonBlankLines(raw.steps).map((l) => splitStepLine(l));
@@ -184,6 +188,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     const first = issues.length;
     const stepsBefore = steps.length;
     const expectationsBefore = expectations.length;
+    for (const f of result.formats) formats[formatKeyOf(f.field)] = f.format;
     for (const note of result.notes) decisions.push({ kind: 'info', message: `note kept, not verified: ${note}`, data: { where } });
     for (const i of result.issues) issues.push({ ...i, where });
 
@@ -377,7 +382,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
 
   const excel = dataEntries.map((e) => (e.secret ? { ...e, value: '' } : e));
   const excelSecrets = Object.fromEntries(dataEntries.filter((e) => e.secret && !e.blank).map((e) => [dataKeyOf(e.key), new Secret(e.value)]));
-  if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models, excel, excelSecrets };
+  if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models, excel, excelSecrets, formats };
   // The tester's own words keep their quotes around a value; the value is taken out of them.
   const scrub = (text: string): string => {
     let out = text;
@@ -393,5 +398,5 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     return out;
   };
   const clean = <T>(value: T): T => JSON.parse(scrub(JSON.stringify(value))) as T;
-  return { ...clean({ testId, ir, irProblems, issues, units, decisions, models, excel }), excelSecrets };
+  return { ...clean({ testId, ir, irProblems, issues, units, decisions, models, excel }), excelSecrets, formats };
 }

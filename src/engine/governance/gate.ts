@@ -1,7 +1,7 @@
 import type { Coverage } from '../language/coverage.js';
 import type { PreflightStatus } from '../language/preflight.js';
 import type { BenchmarkReport } from './benchmark.js';
-import type { ReviewCount } from './metrics.js';
+import { percent, type ReviewCount, type ReviewReduction } from './metrics.js';
 
 /**
  * The automated protection gate (GV-13). Any change to the grammar, vocabulary, ontology, patterns or registries is
@@ -49,7 +49,18 @@ export interface GateResult {
 const rateOf = (r: { understood: number; total: number }): number => (r.total === 0 ? 1 : r.understood / r.total);
 const pct = (r: number): string => `${(r * 100).toFixed(1)}%`;
 
-export function checkGate(baseline: GateBaseline, current: Record<string, Measure>, benchmark?: BenchmarkReport): GateResult {
+export interface ReductionBar {
+  /** The review reduction of all modules against the legacy baseline (GV-08). */
+  total: ReviewReduction;
+  /** The least reduction that lets the gate pass: the owner's minimum, 80%. */
+  minimum: number;
+}
+
+/**
+ * The gate measures against the last accepted numbers, and also against the owner's bar: a review reduction below the minimum
+ * blocks, even when nothing got worse. An undefined reduction (a baseline with no reviews) cannot show the bar is met, so it blocks too.
+ */
+export function checkGate(baseline: GateBaseline, current: Record<string, Measure>, benchmark?: BenchmarkReport, bar?: ReductionBar): GateResult {
   const problems: GateProblem[] = [];
   const improvements: GateProblem[] = [];
   const compare = (module: string, what: string, before: number, after: number, show: (n: number) => string): void => {
@@ -65,6 +76,14 @@ export function checkGate(baseline: GateBaseline, current: Record<string, Measur
     compare(module, 'steps understood', rateOf(was.steps), rateOf(now.steps), pct);
     compare(module, 'checks understood', rateOf(was.expectations), rateOf(now.expectations), pct);
     compare(module, 'test cases ready', was.ready, now.ready, String);
+  }
+  if (bar) {
+    const r = bar.total.reduction;
+    if (r === undefined || r < bar.minimum)
+      problems.push({
+        module: 'all',
+        what: `review reduction is ${percent(r)}, below the minimum of ${percent(bar.minimum)} (${bar.total.current.reviews} reviews now, ${bar.total.baseline.reviews} before)`,
+      });
   }
   if (benchmark && benchmark.wrongPass > 0) {
     for (const o of benchmark.outcomes.filter((x) => x.status === 'wrong-pass')) {

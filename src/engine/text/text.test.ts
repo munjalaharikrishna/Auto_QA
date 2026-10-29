@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { findCompounds, normalize, originalSpan, originalText, quotedValues, sameCompound, tokenize, touchesData } from './index.js';
+import { findCompounds, normalize, originalSpan, originalText, quotedValues, sameCompound, spaced, splitIdentifier, tokenize, touchesData } from './index.js';
 
 /** E0.3 exit tests for the text layers: normalization (NM), tokenization (TK) and their data-protection rules. */
 
@@ -287,6 +287,31 @@ describe('TK-14 and TK-15: flat and compound words', () => {
       found.map((f) => f.term),
       ['login name'],
     );
+  });
+});
+
+describe('TK-11 to TK-13: case styles', () => {
+  it('TK-11 camelCase and PascalCase are cut at the capitals', () => {
+    assert.deepEqual(splitIdentifier('userName'), { style: 'camel', words: ['user', 'name'] });
+    assert.deepEqual(splitIdentifier('UserName'), { style: 'pascal', words: ['user', 'name'] });
+    assert.deepEqual(splitIdentifier('employeeIdNumber').words, ['employee', 'id', 'number']);
+  });
+  it('TK-11 an acronym stays together', () => {
+    assert.deepEqual(splitIdentifier('userID').words, ['user', 'id']);
+    assert.deepEqual(splitIdentifier('HTMLParser').words, ['html', 'parser']);
+  });
+  it('TK-12 snake_case', () => {
+    assert.deepEqual(splitIdentifier('user_name'), { style: 'snake', words: ['user', 'name'] });
+    assert.deepEqual(splitIdentifier('__first_name_').words, ['first', 'name']);
+  });
+  it('TK-13 kebab-case', () => assert.deepEqual(splitIdentifier('user-name'), { style: 'kebab', words: ['user', 'name'] }));
+  it('every style of one name reads as the same words', () => {
+    for (const text of ['userName', 'UserName', 'user_name', 'user-name', 'User Name', 'USER NAME']) assert.equal(spaced(text), 'user name', text);
+  });
+  it('a single word, an empty text and digits are not cut wrongly', () => {
+    assert.deepEqual(splitIdentifier('username'), { style: 'plain', words: ['username'] });
+    assert.deepEqual(splitIdentifier(''), { style: 'plain', words: [] });
+    assert.deepEqual(splitIdentifier('address2'), { style: 'plain', words: ['address2'] });
   });
 });
 

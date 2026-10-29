@@ -1,3 +1,4 @@
+import { containerRef } from '../ir/container.js';
 import type { IrTarget } from '../ir/schema.js';
 import type { Token } from '../text/index.js';
 import { headNounOf, refineField } from './ontology.js';
@@ -124,6 +125,8 @@ export interface NounPhraseOptions {
   field?: boolean;
   /** The phrase is one thing ("Click Terms and Conditions"): an "and" is part of its name, not a list. */
   single?: boolean;
+  /** A word like "from" or "in" in the phrase is a part of its name ("the Remove from cart button"), not the start of a place. */
+  whole?: boolean;
 }
 
 export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackClass = 'Element', options: NounPhraseOptions = {}): NounPhrase {
@@ -145,11 +148,38 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
   const flags = { ...(dropped ? { dropped } : {}), ...(referenceWord ? { reference: referenceWord } : {}) };
   // A place qualifier: everything from the first place word on, when something comes before it.
   let cut = -1;
-  for (let i = 1; i < body.length; i++)
+  for (let i = 1; i < body.length && !options.whole; i++)
     if (PLACE_WORDS.has(lw(body[i])) && body[i]?.kind === 'WORD') {
       cut = i;
       break;
     }
+  // "Add to cart on the Backpack card": a place that ends in a card, a tile or a list item is the place, whatever words come before it,
+  // so a "from" inside the name ("Remove from cart on the Backpack card") is not mistaken for the start of the place (UI-07).
+  for (let i = body.length - 2; i >= 1 && !options.whole; i--) {
+    if (
+      ['on', 'in', 'within', 'inside', 'at'].includes(lw(body[i])) &&
+      body[i]?.kind === 'WORD' &&
+      containerRef(originalOf(line, body.slice(i + 1)))?.repeated
+    ) {
+      cut = i;
+      break;
+    }
+  }
+  // "the Remove from cart button": "from" is a word of the button's name when the phrase ends in a kind of element and what comes before
+  // "from" is not one ("tabs from Admin" ends in a name, so it is still a place). Otherwise the name would be cut to "Remove".
+  if (
+    cut > 0 &&
+    lw(body[cut]) === 'from' &&
+    !headNounOf(
+      body.slice(0, cut).map((t) => lw(t)),
+      exclude,
+    ) &&
+    headNounOf(
+      body.map((t) => lw(t)),
+      exclude,
+    )
+  )
+    cut = -1;
   const main = cut < 0 ? body : body.slice(0, cut);
   const place = cut < 0 ? [] : body.slice(cut + 1);
   const words = main.map((t) => lw(t));

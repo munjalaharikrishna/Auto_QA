@@ -156,6 +156,25 @@ describe('GV-13: the protection gate', () => {
     assert.ok(!r.ok);
     assert.ok(r.problems.some((p) => p.what.includes('wrong PASS on a') && p.what.includes('locator')));
   });
+  it('blocks a review reduction below the owner minimum even when nothing got worse, and passes at it', () => {
+    const base = { reviews: 10, testCases: 10 };
+    const low = checkGate(baseline(), { 'login.xlsx': measure() }, undefined, { total: reviewReduction(base, { reviews: 9, testCases: 10 }), minimum: 0.8 });
+    assert.ok(!low.ok);
+    assert.ok(
+      low.problems.some((p) => p.what.includes('below the minimum of 80.0%')),
+      JSON.stringify(low.problems),
+    );
+    const met = checkGate(baseline(), { 'login.xlsx': measure() }, undefined, { total: reviewReduction(base, { reviews: 2, testCases: 10 }), minimum: 0.8 });
+    assert.ok(met.ok, gateText(met));
+  });
+  it('a baseline with no reviews cannot show the bar is met, so it blocks', () => {
+    const r = checkGate(baseline(), { 'login.xlsx': measure() }, undefined, {
+      total: reviewReduction({ reviews: 0, testCases: 10 }, { reviews: 0, testCases: 10 }),
+      minimum: 0.8,
+    });
+    assert.ok(!r.ok);
+    assert.ok(r.problems.some((p) => p.what.includes('not defined')));
+  });
   it('the numbers recorded in test/baseline/gate.json hold on the real workbooks: a vocabulary or grammar change that makes them worse is blocked', async () => {
     const recorded = JSON.parse(readFileSync(path.join(root, 'test/baseline/gate.json'), 'utf8')) as GateBaseline;
     const now = await measureWorkbooks(['OrangeHRM_Login_Test_Cases_Updated.xlsx', 'Add_Employee.xlsx'].map((f) => path.join(root, 'test/fixtures', f)));

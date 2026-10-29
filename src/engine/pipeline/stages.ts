@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { type RawTestCase, RawTestCaseSchema } from '../../model/test-model.js';
 import type { ParserConfig } from '../../parser/index.js';
+import { cacheEnabled, cacheKeyOf, copyOf, memo, readingVersions } from '../cache/index.js';
 import { buildContexts } from '../context/context.js';
 import { type ResolvedValue, resolveData as resolveDataValues } from '../data/resolver.js';
 import type { CredentialStore } from '../data/store.js';
@@ -45,6 +46,25 @@ export interface CompileOptions {
   knowledge?: Application;
   /** Patterns for production identifiers (a real customer number): they are taken out of every output (DS-01). */
   productionPatterns?: ProductionPattern[];
+  /** The application logs in with a one-time code that is read when the test runs (email or authenticator): "the valid OTP" has a source (AU-01). */
+  otpAtRun?: boolean;
+  /** Reuse what was worked out from the same text before (GV-11). Default: on, unless `AUTO_QA_CACHE=off`. The result is the same either way. */
+  cache?: boolean;
+}
+
+/**
+ * The understanding of a test case is a function of its text, its source and the components that read it, so it is worked out once
+ * per process (GV-11). What the data of the test needs from the environment is not part of it and is resolved on every compile.
+ */
+function understood(raw: RawTestCase, options: CompileOptions): CaseLanguage {
+  if (!cacheEnabled(options.cache)) return understandCase(raw, { source: options.source });
+  const cache = memo<CaseLanguage>('understand', 2000);
+  const key = cacheKeyOf({ raw, source: options.source ?? null, reads: readingVersions() });
+  const hit = cache.get(key);
+  if (hit) return copyOf(hit);
+  const language = understandCase(raw, { source: options.source });
+  cache.set(key, copyOf(language));
+  return language;
 }
 
 const PlanItem = z.object({ seq: z.number().int().positive(), kind: z.enum(['step', 'expect']), ref: z.string() });
@@ -95,6 +115,8 @@ export async function settleData(
     files: options.dataFiles,
     maxLengths: options.maxLengths,
     minLengths: options.minLengths,
+    otpAtRun: options.otpAtRun,
+    formats: language.formats,
     steps: ir.steps,
   });
   // What was settled is no longer a question; what was not says why.
@@ -136,7 +158,7 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     name: 'Understand',
     output: Read,
     run: (raw, ctx) => {
-      const language = understandCase(raw, { source: options.source });
+      const language = understood(raw, options);
       const steps = language.units.filter((u) => u.kind === 'step').length;
       const checks = language.units.filter((u) => u.kind === 'expectation').length;
       ctx.log.add('Understand', 'info', 'text turned into steps and checks', {

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { cacheEnabled, cacheKeyOf, copyOf, memo } from '../cache/index.js';
 import type { Application, Component, Page } from './schema.js';
 
 /**
@@ -40,13 +41,43 @@ interface SavedExploration {
   items?: SavedItem[];
 }
 
-/** The application as the explorations in `dir` saw it, with the testers' words for its elements added as aliases. */
+/**
+ * The application as the explorations in `dir` saw it, with the testers' words for its elements added as aliases.
+ *
+ * Reading every saved exploration is the slow part (a folder of them is tens of megabytes), so the result is kept for as long as the
+ * explorations are the same (GV-11): the key holds the name, the address, the words, and the size and times of every exploration
+ * file, so a changed, added or removed exploration is a miss. A hit is a copy.
+ */
 export async function knowledgeFromRuns(
   name: string,
   baseUrl: string | undefined,
   dir: string,
   words: readonly ElementWord[] = [],
+  options: { cache?: boolean } = {},
 ): Promise<Application | undefined> {
+  if (!cacheEnabled(options.cache)) return buildKnowledge(name, baseUrl, dir, words);
+  const cache = memo<{ app: Application | undefined }>('knowledge', 50);
+  const key = cacheKeyOf({ name, baseUrl: baseUrl ?? null, dir: path.resolve(dir), words, files: await fingerprintOf(dir) });
+  const hit = cache.get(key);
+  if (hit) return copyOf(hit.app);
+  const app = await buildKnowledge(name, baseUrl, dir, words);
+  cache.set(key, { app: copyOf(app) });
+  return app;
+}
+
+/** The name, size and times of every exploration file in the folder: the same list means the same explorations. */
+async function fingerprintOf(dir: string): Promise<string[]> {
+  if (!existsSync(dir)) return [];
+  const out: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const s = await stat(path.join(dir, entry.name, 'exploration.json')).catch(() => undefined);
+    if (s) out.push(`${entry.name}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`);
+  }
+  return out.sort();
+}
+
+async function buildKnowledge(name: string, baseUrl: string | undefined, dir: string, words: readonly ElementWord[]): Promise<Application | undefined> {
   const pages = new Map<string, Map<string, Component>>();
   if (existsSync(dir)) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
