@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type BatchSummary, fileUrl, type JobDetail, type Question, type RawTestCase, type Review, resultsUrl, type TestVerdict } from '../api';
+import {
+  api,
+  type BatchSummary,
+  fileUrl,
+  type JobDetail,
+  type Question,
+  type RawTestCase,
+  type Review,
+  type ReviewDecision,
+  resultsUrl,
+  type TestVerdict,
+} from '../api';
 import { CaseForm, Diff, duration, ErrorNote, Explain, type Explanation, JobBadge, StatusBadge, when } from '../components/common';
 import { PickElement, type ViewElement } from '../components/PickElement';
+import { ReviewCards } from '../components/ReviewCards';
 import { GroupedReview } from '../components/Rules';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
@@ -88,7 +100,7 @@ export function JobPage({ id }: { id: string }) {
         <QuestionPanel key={q.id} question={q} />
       ))}
       {job.status === 'review' && job.output.review ? <ReviewPanel job={job} review={job.output.review as Review} /> : null}
-      {job.status === 'done' && <ResultsPanel job={job} summary={summary} />}
+      {job.status === 'done' && <ResultsPanel job={job} summary={summary} reload={load} />}
       {job.status === 'done' && job.kind === 'workbook' && (
         <GroupedReview
           jobId={job.id}
@@ -381,7 +393,7 @@ function ZoomDialog({ file, onClose }: { file: string; onClose: () => void }) {
 }
 
 /** PASS / FAIL with expected vs actual for every case (FR-HI-01, FR-VAL-01). */
-function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary }) {
+function ResultsPanel({ job, summary, reload }: { job: JobDetail; summary?: BatchSummary; reload: () => void }) {
   // A single test case shows its details straight away; a workbook opens one case at a time.
   const [expanded, setExpanded] = useState<string | undefined>(job.verdicts.length === 1 ? job.verdicts[0].testId : undefined);
   const [zoom, setZoom] = useState<string>();
@@ -426,6 +438,7 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
           ))}
         </div>
       )}
+      <ReviewCards jobId={job.id} onChanged={reload} zoom={setZoom} />
       <div className="table-wrap">
         <table>
           <thead>
@@ -438,9 +451,10 @@ function ResultsPanel({ job, summary }: { job: JobDetail; summary?: BatchSummary
             </tr>
           </thead>
           <tbody>
-            {job.verdicts.map(({ testId, row, status, verdict: v }) => (
+            {job.verdicts.map(({ testId, row, status, verdict: v, decision }) => (
               <VerdictRow
                 key={`${row}-${testId}`}
+                decision={decision}
                 testId={testId}
                 row={job.kind === 'workbook' ? row : undefined}
                 status={status}
@@ -469,6 +483,8 @@ function VerdictRow(props: {
   row?: number;
   status: string;
   v: TestVerdict & { problem?: string };
+  /** What a person decided on this case, beside the engine's verdict. */
+  decision?: ReviewDecision;
   open: boolean;
   toggle: () => void;
   zoom: (file: string) => void;
@@ -505,6 +521,11 @@ function VerdictRow(props: {
           <StatusBadge status={props.status} />
           {props.status === 'PASS' && !!v.assumptions?.length && <div className="muted">with assumptions</div>}
           {v.category && <div className="muted">{v.category}</div>}
+          {props.decision && (
+            <div className="muted">
+              decided by {props.decision.reviewer}: <strong>{props.decision.decision}</strong>
+            </div>
+          )}
         </td>
         <td>
           {v.review?.length ? (

@@ -54,13 +54,13 @@ async function legacyDatabase(target: string) {
 describe('migrations (D26)', () => {
   it('builds a fresh database to the latest version and records every step', async () => {
     const db = await SqliteDriver.open(':memory:');
-    assert.deepEqual(await migrate(db, MIGRATIONS), [1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(await migrate(db, MIGRATIONS), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
     const s = await status(db, MIGRATIONS);
-    assert.equal(s.current, 7);
+    assert.equal(s.current, 9);
     assert.equal(s.pending.length, 0);
     assert.deepEqual(
       s.applied.map((a) => a.name),
-      ['baseline', 'environments', 'job_log_ids', 'test_cases', 'project_rules', 'executions', 'automation_releases'],
+      ['baseline', 'environments', 'job_log_ids', 'test_cases', 'project_rules', 'executions', 'automation_releases', 'learned_entries', 'review_decisions'],
     );
     assert.deepEqual(await migrate(db, MIGRATIONS), [], 'a second start applies nothing');
     await db.close();
@@ -107,7 +107,7 @@ describe('migrations (D26)', () => {
     await migrate(db, MIGRATIONS);
     await db.run("INSERT INTO schema_migrations (version, name, checksum, applied_at) VALUES (99, 'from_the_future', 'x', '2030-01-01T00:00:00.000Z')");
     await assert.rejects(migrate(db, MIGRATIONS), (e: Error) => e instanceof MigrationError && /newer Auto QA/.test(e.message));
-    assert.equal((await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM schema_migrations'))?.n, 8);
+    assert.equal((await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM schema_migrations'))?.n, 10);
     await db.close();
   });
 
@@ -122,10 +122,10 @@ describe('migrations (D26)', () => {
   it('applies a migration fully or not at all', async () => {
     const db = await SqliteDriver.open(':memory:');
     await migrate(db, MIGRATIONS);
-    const broken: Migration = { version: 8, name: 'broken', statements: () => ['CREATE TABLE half_done (id INTEGER)', 'CREATE TABLE half_done (id INTEGER)'] };
+    const broken: Migration = { version: 10, name: 'broken', statements: () => ['CREATE TABLE half_done (id INTEGER)', 'CREATE TABLE half_done (id INTEGER)'] };
     await assert.rejects(migrate(db, [...MIGRATIONS, broken]));
     assert.equal(await db.get("SELECT name FROM sqlite_master WHERE name = 'half_done'"), undefined, 'the first statement was rolled back');
-    assert.equal((await status(db, MIGRATIONS)).current, 7);
+    assert.equal((await status(db, MIGRATIONS)).current, 9);
     await db.close();
   });
 

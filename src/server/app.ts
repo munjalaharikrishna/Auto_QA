@@ -11,12 +11,15 @@ import { FIELDS, type Field } from '../importer/columns.js';
 import { describeChange, diffCases } from '../importer/diff.js';
 import { buildProjectExport, type ExportCase } from '../importer/project-export.js';
 import { readWorkbook } from '../importer/workbook.js';
+import { learnedForRun } from '../learning/adapter.js';
+import { toRuleView } from '../learning/rule-shape.js';
+import { EntryRefused, LearningService } from '../learning/service.js';
 import { POLICIES } from '../model/policy.js';
 import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
-import { ruleProblem } from '../parser/rule-check.js';
-import { RULE_KINDS } from '../parser/rules.js';
+import { RULE_KINDS, ruleKey } from '../parser/rules.js';
 import type { TestVerdict } from '../results/verdict.js';
+import { ReviewRefused, ReviewService } from '../review/service.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
 import { reviewGroups } from './review-groups.js';
@@ -323,54 +326,68 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return { ok: true };
   });
 
-  // Project rules: the answers given in review, kept for the project (FR-RULE-01…03)
+  // What the engine learned from people: the answers given in review, kept for the project (FR-RULE-01…03, GV-01).
+  // The rules screen reads and writes learned entries (migration 0008); the old project rules table is not read by a run.
 
+  const learning = new LearningService(store);
   const RuleBody = z.object({
     kind: z.enum(RULE_KINDS),
     pattern: z.string().trim().min(1),
     meaning: z.string().trim().default(''),
     source: z.string().default('written by hand'),
   });
+  const refused = (e: unknown): never => {
+    if (e instanceof EntryRefused) throw bad(e.message);
+    throw e;
+  };
+  const viewsOf = async (projectId: string) =>
+    (await store.learnedEntries(projectId))
+      .filter((e) => e.status !== 'removed')
+      .map(toRuleView)
+      .filter((v): v is NonNullable<typeof v> => v !== undefined);
+  /** Saves one rule of the screen's shape as the entry it is, after the checks of its kind. */
+  const saveRule = async (projectId: string, r: z.infer<typeof RuleBody>, source: string) => {
+    if (r.kind === 'approved') return learning.approve(projectId, r.pattern, source, 'tester');
+    if (r.kind === 'element') return learning.saveLabel(projectId, { label: r.pattern, means: r.meaning }, source, 'tester');
+    return learning.saveReading(projectId, { readingKind: r.kind, from: r.pattern, to: r.meaning }, source, 'tester');
+  };
 
-  app.get('/api/projects/:id/rules', async (req) => store.rules((await projectOf((req.params as { id: string }).id)).id));
+  app.get('/api/projects/:id/rules', async (req) => viewsOf((await projectOf((req.params as { id: string }).id)).id));
 
   app.post('/api/projects/:id/rules', async (req, reply) => {
     const project = await projectOf((req.params as { id: string }).id);
     const body = RuleBody.parse(req.body);
-    const problem = ruleProblem(body);
-    if (problem) throw bad(problem);
-    return reply.status(201).send(await store.upsertRule(project.id, body));
+    const entry = await saveRule(project.id, body, body.source).catch(refused);
+    return reply.status(201).send(toRuleView(entry));
   });
 
   app.patch('/api/projects/:id/rules/:ruleId', async (req) => {
     const params = req.params as { id: string; ruleId: string };
     const project = await projectOf(params.id);
     const body = z.object({ meaning: z.string().trim().optional(), enabled: z.boolean().optional() }).parse(req.body);
-    if (body.meaning !== undefined) {
-      const current = (await store.rules(project.id)).find((r) => r.id === params.ruleId);
-      const problem = current && ruleProblem({ ...current, meaning: body.meaning });
-      if (problem) throw bad(problem);
-    }
-    return (
-      (await store.updateRule(project.id, params.ruleId, body)) ??
-      (() => {
-        throw notFound('Rule');
-      })()
-    );
+    const current = (await viewsOf(project.id)).find((r) => r.id === params.ruleId);
+    if (!current) throw notFound('Rule');
+    if (body.meaning !== undefined && body.meaning !== current.meaning)
+      await saveRule(project.id, { ...current, meaning: body.meaning }, current.source).catch(refused);
+    const id = (await store.learnedEntries(project.id)).find((e) => e.id === params.ruleId)?.id ?? params.ruleId;
+    if (body.enabled === true) await learning.activate(project.id, id, 'tester', 'switched on on the rules screen').catch(refused);
+    if (body.enabled === false) await learning.disable(project.id, id, 'tester', 'switched off on the rules screen').catch(refused);
+    return (await viewsOf(project.id)).find((r) => r.id === params.ruleId) ?? current;
   });
 
+  /** A rule is never deleted: it is switched off, and its history stays (GV-01). */
   app.delete('/api/projects/:id/rules/:ruleId', async (req) => {
     const params = req.params as { id: string; ruleId: string };
     const project = await projectOf(params.id);
-    if (!(await store.deleteRule(project.id, params.ruleId))) throw notFound('Rule');
+    await learning.remove(project.id, params.ruleId, 'tester', 'removed on the rules screen').catch(refused);
     return { ok: true };
   });
 
   /** Rules as a file, to move between projects (FR-RULE-03). Approvals are not exported: they belong to what one run showed. */
   app.get('/api/projects/:id/rules/export', async (req, reply) => {
     const project = await projectOf((req.params as { id: string }).id);
-    const rules = (await store.rules(project.id))
-      .filter((r) => r.kind !== 'approved')
+    const rules = (await viewsOf(project.id))
+      .filter((r) => r.kind !== 'approved' && r.status !== 'quarantined')
       .map(({ kind, pattern, meaning, enabled }) => ({ kind, pattern, meaning, enabled }));
     return reply.header('content-disposition', `attachment; filename="${project.id}-rules.json"`).type('application/json').send({ version: 1, rules });
   });
@@ -385,27 +402,37 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       })
       .parse(req.body);
     let imported = 0;
-    const refused: Array<{ pattern: string; problem: string }> = [];
+    const refusedRules: Array<{ pattern: string; problem: string }> = [];
     for (const r of body.rules) {
       if (r.kind === 'approved') continue;
-      const problem = ruleProblem(r);
-      if (problem) {
-        refused.push({ pattern: r.pattern, problem });
-        continue;
+      try {
+        const saved = await saveRule(project.id, { ...r, source: 'imported' }, 'imported');
+        if (!r.enabled) await learning.disable(project.id, saved.id, 'tester', 'imported switched off');
+        imported++;
+      } catch (e) {
+        if (!(e instanceof EntryRefused)) throw e;
+        refusedRules.push({ pattern: r.pattern, problem: e.message });
       }
-      const saved = await store.upsertRule(project.id, { ...r, source: 'imported' });
-      if (!r.enabled) await store.updateRule(project.id, saved.id, { enabled: false });
-      imported++;
     }
-    return { imported, refused };
+    return { imported, refused: refusedRules };
   });
 
-  /** The tester looked at learned or assumed values and accepted them (FR-RV-10: Approve all). */
+  /** The tester looked at learned or assumed values and accepted them (FR-RV-10: Approve all). Accepting an assumption is not evidence of a PASS. */
   app.post('/api/projects/:id/rules/approve', async (req) => {
     const project = await projectOf((req.params as { id: string }).id);
     const { texts } = z.object({ texts: z.array(z.string().min(1)).min(1) }).parse(req.body);
-    for (const text of texts) await store.upsertRule(project.id, { kind: 'approved', pattern: text, source: 'approved in review' });
-    return { approved: texts.length };
+    const refusedTexts: Array<{ text: string; problem: string }> = [];
+    let approved = 0;
+    for (const text of texts) {
+      try {
+        await learning.approve(project.id, text, 'approved in review', 'tester');
+        approved++;
+      } catch (e) {
+        if (!(e instanceof EntryRefused)) throw e;
+        refusedTexts.push({ text, problem: e.message });
+      }
+    }
+    return { approved, refused: refusedTexts };
   });
 
   /** The questions of a whole batch, grouped by wording, with the learned values to approve (FR-RV-09, FR-RV-10). */
@@ -415,12 +442,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       (() => {
         throw notFound('Job');
       })();
-    const rules = await store.rules(job.projectId);
-    const approved = new Set(rules.filter((r) => r.kind === 'approved').map((r) => r.pattern));
+    const learned = await learnedForRun(store, job.projectId);
     const rows = (await store.verdicts(job.id)).map((v) => ({ testId: v.testId, status: v.status, verdict: v.verdict as never }));
-    const groups = reviewGroups(rows, approved);
-    // A question already answered by a rule says so (the batch has to be run again to use it).
-    const answered = new Map(rules.filter((r) => r.kind === 'step' || r.kind === 'check').map((r) => [`${r.kind}|${r.pattern}`, r]));
+    const groups = reviewGroups(rows, learned.approvedAssumptions);
+    // A question already answered by a reading says so (the batch has to be run again to use it).
+    const answered = new Map(
+      (await viewsOf(job.projectId)).filter((r) => (r.kind === 'step' || r.kind === 'check') && r.enabled).map((r) => [`${r.kind}|${ruleKey(r.pattern)}`, r]),
+    );
     return { ...groups, questions: groups.questions.map((q) => ({ ...q, rule: answered.get(q.key) })) };
   });
 
@@ -496,7 +524,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       (() => {
         throw notFound('Job');
       })();
-    return { ...job, logs: await store.logs(job.id), questions: await store.openQuestions(job.id), verdicts: await store.verdicts(job.id) };
+    // A person's decision on a case is shown beside the engine's own verdict, which it does not replace (DEC-05).
+    const decided = new Map<string, Awaited<ReturnType<typeof store.reviewDecisions>>[number]>();
+    for (const d of await store.reviewDecisions(job.id)) decided.set(d.testId, d);
+    const verdicts = (await store.verdicts(job.id)).map((v) => ({ ...v, ...(decided.has(v.testId) ? { decision: decided.get(v.testId) } : {}) }));
+    return { ...job, logs: await store.logs(job.id), questions: await store.openQuestions(job.id), verdicts };
   });
 
   const decide = (action: Decision['action']) => async (req: { params: unknown; body: unknown }) => {
@@ -525,6 +557,19 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     const next = await store.createJob({ projectId: job.projectId, kind: 'workbook', input: { ...job.input, onlyReview: true } });
     runner.enqueue(next);
     return reply.status(202).send(next);
+  });
+
+  // The review queue of a job: the cases the engine could not decide, as cards a person says PASS or FAIL on (VD-11, DEC-05).
+  const review = new ReviewService(store);
+  const reviewFailed = (e: unknown): never => {
+    if (e instanceof ReviewRefused) throw e.status === 404 ? notFound(e.message.includes('card') ? 'Card' : 'Job') : bad(e.message);
+    throw e;
+  };
+  app.get('/api/jobs/:id/review-queue', async (req) => ({ cards: await review.cards((req.params as { id: string }).id).catch(reviewFailed) }));
+  app.get('/api/jobs/:id/review-queue/history', async (req) => ({ decisions: await review.history((req.params as { id: string }).id).catch(reviewFailed) }));
+  app.post('/api/jobs/:id/review-queue/decisions', async (req) => {
+    const body = z.object({ cardId: z.string().min(1), decision: z.unknown(), who: z.unknown().optional(), note: z.unknown().optional() }).parse(req.body);
+    return review.decide((req.params as { id: string }).id, body.cardId, { decision: body.decision, who: body.who, note: body.note }).catch(reviewFailed);
   });
 
   app.post('/api/questions/:id/answer', async (req) => {

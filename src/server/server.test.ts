@@ -155,6 +155,104 @@ describe('API (M7a)', () => {
     assert.deepEqual((await app.inject({ url: base })).json(), []);
   });
 
+  it('refuses the rewrite of 5 Oct, and an approval that rests on a reading that is not active (GV-01, S3)', async () => {
+    const base = '/api/projects/demo-app/rules';
+    const sentence = 'login is rejected and an appropriate authentication error message is displayed';
+    const rewrite = await app.inject({
+      method: 'POST',
+      url: base,
+      payload: { kind: 'check', pattern: sentence, meaning: 'Appropriate user name  Password not given should shown' },
+    });
+    assert.equal(rewrite.statusCode, 400);
+    assert.ok(String(rewrite.json().message ?? rewrite.body).includes('NOT shown'), rewrite.body);
+    const approval = await app.inject({
+      method: 'POST',
+      url: `${base}/approve`,
+      payload: { texts: [`${sentence}. is read as appropriate user name password not given should shown (a project rule)`] },
+    });
+    assert.equal(approval.json().approved, 0);
+    assert.equal(approval.json().refused.length, 1);
+    const listed = (await app.inject({ url: base })).json() as Array<{ pattern: string }>;
+    assert.ok(!listed.some((r) => r.pattern.includes('appropriate authentication')), 'nothing was saved');
+  });
+
+  it('shows the review cards of a job and takes a PASS or FAIL from a person on them, once, with a reason to change it (VD-11, DEC-05)', async () => {
+    const job = await store.createJob({ projectId: 'demo-app', kind: 'workbook', input: {} });
+    const unproven = (testId: string, extra: Record<string, unknown> = {}) => ({
+      testId,
+      title: testId,
+      status: 'NEEDS REVIEW',
+      reason: 'The page showed a message, but not the one expected.',
+      expected: 'Error "Invalid credentials" is shown',
+      actual: 'the page showed "Account locked"',
+      steps: [{ id: 'S1', raw: 'Click Login', result: 'passed' }],
+      checks: [
+        {
+          id: 'A1',
+          raw: 'Error "Invalid credentials" is shown',
+          expected: 'Error "Invalid credentials" is shown',
+          actual: 'the page showed "Account locked"',
+          result: 'not verified',
+        },
+      ],
+      evidence: { screenshots: ['/runs/before.png', '/runs/after.png'] },
+      ...extra,
+    });
+    await store.saveVerdicts(job.id, [
+      { testId: 'TC-1', row: 2, status: 'NEEDS REVIEW', verdict: unproven('TC-1') },
+      { testId: 'TC-2', row: 3, status: 'NEEDS REVIEW', verdict: unproven('TC-2') },
+      { testId: 'TC-3', row: 4, status: 'FAIL', verdict: unproven('TC-3', { status: 'FAIL' }) },
+    ]);
+    const base = `/api/jobs/${job.id}/review-queue`;
+    const queue = (await app.inject({ url: base })).json();
+    assert.equal(queue.cards.length, 1, 'the two cases that share one cause are one card; the FAIL has none');
+    const card = queue.cards[0];
+    assert.deepEqual(
+      card.cases.map((c: { testId: string }) => c.testId),
+      ['TC-1', 'TC-2'],
+    );
+
+    const decide = (payload: Record<string, unknown>) => app.inject({ method: 'POST', url: `${base}/decisions`, payload: { cardId: card.id, ...payload } });
+    assert.equal((await decide({ decision: 'MAYBE' })).statusCode, 400);
+    assert.equal((await decide({ decision: 'PASS', who: '   ' })).statusCode, 400);
+    assert.equal((await app.inject({ method: 'POST', url: `${base}/decisions`, payload: { cardId: 'nope', decision: 'PASS' } })).statusCode, 404);
+    assert.equal(
+      (await app.inject({ method: 'POST', url: '/api/jobs/JOB-none/review-queue/decisions', payload: { cardId: card.id, decision: 'PASS' } })).statusCode,
+      404,
+    );
+
+    const first = await decide({ decision: 'PASS', who: 'Asha', note: 'it is the locked-account message, right for this account' });
+    assert.equal(first.statusCode, 200);
+    assert.deepEqual(
+      first.json().results.map((r: { outcome: string }) => r.outcome),
+      ['recorded', 'recorded'],
+    );
+    assert.deepEqual(
+      (await decide({ decision: 'PASS', who: 'Ben' })).json().results.map((r: { outcome: string }) => r.outcome),
+      ['duplicate', 'duplicate'],
+    );
+    assert.equal((await decide({ decision: 'FAIL' })).json().results[0].outcome, 'refused', 'a change needs a reason');
+    assert.equal((await decide({ decision: 'FAIL', who: 'Ben', note: 'on the second look this is a bug' })).json().results[0].outcome, 'replaced');
+
+    // The engine's verdict is untouched; the decision is shown beside it.
+    const detail = (await app.inject({ url: `/api/jobs/${job.id}` })).json();
+    const tc1 = detail.verdicts.find((v: { testId: string }) => v.testId === 'TC-1');
+    assert.equal(tc1.status, 'NEEDS REVIEW');
+    assert.deepEqual([tc1.decision.decision, tc1.decision.reviewer], ['FAIL', 'Ben']);
+    assert.equal(detail.verdicts.find((v: { testId: string }) => v.testId === 'TC-3').decision, undefined);
+    const history = (await app.inject({ url: `${base}/history` })).json().decisions;
+    assert.deepEqual(
+      history.map((d: { decision: string; status: string }) => [d.decision, d.status]),
+      [
+        ['PASS', 'superseded'],
+        ['PASS', 'superseded'],
+        ['FAIL', 'current'],
+        ['FAIL', 'current'],
+      ],
+    );
+    assert.equal((await app.inject({ url: base })).json().cards[0].decided, true);
+  });
+
   it('groups the questions of a batch by wording and lets learned values be approved once (FR-RV-09, FR-RV-10)', async () => {
     const job = await store.createJob({ projectId: 'demo-app', kind: 'workbook', input: {} });
     const reason = (id: string, raw: string) => ({

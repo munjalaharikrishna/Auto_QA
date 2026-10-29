@@ -120,10 +120,46 @@ export interface Review {
   changes: Array<{ path: string; added: boolean; patch: string }>;
 }
 
+/** A person's PASS or FAIL on a case the engine could not decide (VD-11, DEC-05). It sits beside the engine's own verdict and does not replace it. */
+export interface ReviewDecision {
+  id: string;
+  decision: 'PASS' | 'FAIL';
+  reviewer: string;
+  note: string;
+  decidedAt: string;
+  engineStatus: string;
+  supersedes?: string;
+}
+
+export interface ReviewCardCase {
+  testId: string;
+  row?: number;
+  status: string;
+  eligibility: { decidable: boolean; canPass: boolean; refusal?: string; passRefusal?: string };
+  decision?: ReviewDecision;
+}
+
+export interface ReviewCard {
+  id: string;
+  why: string;
+  clause: string;
+  expected: string;
+  actual: string;
+  before?: string;
+  after?: string;
+  cases: ReviewCardCase[];
+  decided: boolean;
+}
+
+export interface DecideResult {
+  cardId: string;
+  results: Array<{ testId: string; outcome: 'recorded' | 'duplicate' | 'replaced' | 'refused'; reason?: string }>;
+}
+
 export interface JobDetail extends Job {
   logs: Array<{ at: string; message: string }>;
   questions: Question[];
-  verdicts: Array<{ testId: string; row?: number; status: string; verdict: TestVerdict & { problem?: string } }>;
+  verdicts: Array<{ testId: string; row?: number; status: string; verdict: TestVerdict & { problem?: string }; decision?: ReviewDecision }>;
 }
 
 export type ScriptState = 'none' | 'ready' | 'out-of-date';
@@ -209,6 +245,9 @@ export const api = {
   edit: (id: string, c: Omit<RawTestCase, 'row'>) => call(`/api/jobs/${id}/edit`, json('POST', { case: c })),
   cancel: (id: string) => call(`/api/jobs/${id}/cancel`, json('POST', {})),
   reviewQueue: (id: string) => call<Job>(`/api/jobs/${id}/review-queue`, json('POST', {})),
+  reviewCards: (id: string) => call<{ cards: ReviewCard[] }>(`/api/jobs/${id}/review-queue`),
+  decideCard: (id: string, body: { cardId: string; decision: 'PASS' | 'FAIL'; who?: string; note?: string }) =>
+    call<DecideResult>(`/api/jobs/${id}/review-queue/decisions`, json('POST', body)),
   testCases: (projectId: string) => call<TestCaseRecord[]>(`/api/projects/${projectId}/test-cases`),
   testCase: (projectId: string, id: string) =>
     call<

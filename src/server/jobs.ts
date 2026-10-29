@@ -10,11 +10,12 @@ import { explain, sentence } from '../explorer/explain.js';
 import type { PageStore } from '../explorer/page-store.js';
 import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
+import { learnedForRun } from '../learning/adapter.js';
+import { LearningService } from '../learning/service.js';
 import type { Policy } from '../model/policy.js';
 import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { type ParserConfig, withRules } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
-import { ruleKey, rulesFor } from '../parser/rules.js';
 import { runBatch } from '../pipeline/batch.js';
 import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
@@ -124,6 +125,7 @@ export class JobRunner extends EventEmitter {
         ...v.evidence.screenshots.map((file) => ({ kind: 'screenshot', file })),
         ...(v.evidence.trace ? [{ kind: 'trace', file: v.evidence.trace }] : []),
         ...(v.evidence.video ? [{ kind: 'video', file: v.evidence.video }] : []),
+        ...(v.evidence.audit ? [{ kind: 'audit', file: v.evidence.audit }] : []),
         ...v.steps.flatMap((s) => (s.screenshot ? [{ kind: 'screenshot', file: s.screenshot, stepId: s.id }] : [])),
       ];
       for (const w of wanted) {
@@ -231,7 +233,7 @@ export class JobRunner extends EventEmitter {
 
   /** The parser's vocabulary with this project's rules added (FR-RULE-01). */
   private async configFor(project: Project) {
-    return withRules(this.options.config, rulesFor(await this.options.store.rules(project.id)));
+    return withRules(this.options.config, (await learnedForRun(this.options.store, project.id)).rules);
   }
 
   /** Learned page URLs are the default environment's page routes (D19, FR-DB-08). */
@@ -254,7 +256,7 @@ export class JobRunner extends EventEmitter {
       engine: engineFrom(await store.setting('project', project.id, 'engine')),
       pages: await this.pagesFor(project),
       nextExecutionId: () => store.nextExecutionId(),
-      approvedAssumptions: new Set((await store.rules(project.id)).filter((r) => r.kind === 'approved' && r.enabled).map((r) => ruleKey(r.pattern))),
+      approvedAssumptions: (await learnedForRun(store, project.id)).approvedAssumptions,
       // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
       onExplored: async (model: TestModel, result: ExplorationResult, file: string) => {
         try {
@@ -288,7 +290,9 @@ export class JobRunner extends EventEmitter {
       },
       // A word the tester names an element for in review is remembered for the project (FR-RULE-01).
       onRule: (rule: { kind: 'element'; pattern: string; meaning: string }) =>
-        void this.options.store.upsertRule(project.id, { ...rule, source: 'picked on the screenshot' }).catch(() => undefined),
+        void new LearningService(this.options.store)
+          .saveLabel(project.id, { label: rule.pattern, means: rule.meaning }, 'picked on the screenshot', 'tester', { seenOnScreen: true })
+          .catch(() => undefined),
       baseUrl: project.baseUrl,
       env: { ...process.env, ...readEnvFile(project.workspace) },
       testIdAttribute: project.testIdAttribute,

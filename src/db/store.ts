@@ -1,8 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { EntryHistory, EntryKind, EntryStatus, LearnedEntry, NewEntry } from '../learning/entries.js';
 import { DEFAULT_POLICY, isPolicy, type Policy } from '../model/policy.js';
 import type { RawTestCase } from '../model/test-model.js';
 import { type ProjectRule, type RuleKind, ruleKey } from '../parser/rules.js';
 import type { ReleaseStatus } from '../releases/impact.js';
+import type { DecisionView } from '../review/cards.js';
 import { type ArtifactStore, type FileFacts, isRef } from './artifacts.js';
 import type { Driver, Queryable } from './driver.js';
 import { migrate } from './migrate.js';
@@ -339,6 +341,7 @@ export class Store {
       { table: 'exploration_items', sql: `DELETE FROM exploration_items WHERE exploration_id IN (${of('explorations')})` },
       { table: 'explorations', sql: 'DELETE FROM explorations WHERE project_id = ?' },
       { table: 'generation_snapshots', sql: 'DELETE FROM generation_snapshots WHERE project_id = ?' },
+      { table: 'review_decisions', sql: 'DELETE FROM review_decisions WHERE project_id = ?' },
       { table: 'test_results', sql: 'DELETE FROM test_results WHERE project_id = ?' },
       { table: 'verdicts_legacy', sql: `DELETE FROM verdicts_legacy WHERE job_id IN (${of('jobs')})` },
       { table: 'executions', sql: 'DELETE FROM executions WHERE project_id = ?' },
@@ -352,6 +355,8 @@ export class Store {
       { table: 'release_features', sql: `DELETE FROM release_features WHERE release_id IN (${of('releases')})` },
       { table: 'releases', sql: 'DELETE FROM releases WHERE project_id = ?' },
       { table: 'project_rules', sql: 'DELETE FROM project_rules WHERE project_id = ?' },
+      { table: 'learned_entry_history', sql: 'DELETE FROM learned_entry_history WHERE entry_id IN (SELECT id FROM learned_entries WHERE project_id = ?)' },
+      { table: 'learned_entries', sql: 'DELETE FROM learned_entries WHERE project_id = ?' },
       { table: 'page_routes', sql: `DELETE FROM page_routes WHERE environment_id IN (${of('environments')})` },
       { table: 'environments', sql: 'DELETE FROM environments WHERE project_id = ?' },
       { table: 'settings', sql: "DELETE FROM settings WHERE scope = 'project' AND scope_id = ?" },
@@ -1297,6 +1302,228 @@ export class Store {
     return r.changes > 0;
   }
 
+  // Learned entries (GV-01, migration 0008): the only source a run reads a tester's earlier answers from
+
+  async learnedEntries(projectId: string, filter: { kind?: EntryKind; status?: EntryStatus } = {}): Promise<LearnedEntry[]> {
+    const where = ['project_id = ?'];
+    const args: string[] = [projectId];
+    if (filter.kind) {
+      where.push('kind = ?');
+      args.push(filter.kind);
+    }
+    if (filter.status) {
+      where.push('status = ?');
+      args.push(filter.status);
+    }
+    const rows = await this.db.all<Row>(`SELECT * FROM learned_entries WHERE ${where.join(' AND ')} ORDER BY kind, created_at, id`, args);
+    return rows.map(toEntry);
+  }
+
+  async learnedEntry(projectId: string, id: string): Promise<LearnedEntry | undefined> {
+    const r = await this.db.get<Row>('SELECT * FROM learned_entries WHERE id = ? AND project_id = ?', [id, projectId]);
+    return r ? toEntry(r) : undefined;
+  }
+
+  /**
+   * Saves an entry. A new answer for the same thing (the same kind and key) replaces the earlier one, and the earlier content is kept
+   * in the history. Every save is a row in the history and in the audit log, with who and why. The status is what the caller computed
+   * from the checks: `LearningService` is the one that does, and no run reads an entry that is not `active`.
+   */
+  async saveLearnedEntry(projectId: string, entry: NewEntry, actor: string, action = 'save'): Promise<LearnedEntry> {
+    return this.transaction(async (s) => {
+      const at = now();
+      const found = await s.db.get<Row>('SELECT * FROM learned_entries WHERE project_id = ? AND kind = ? AND entry_key = ?', [
+        projectId,
+        entry.kind,
+        entry.key,
+      ]);
+      let id: string;
+      if (found) {
+        id = String(found.id);
+        await s.db.run(
+          `UPDATE learned_entries SET status = ?, payload = ?, source = ?, author = ?, validation = ?, validated_at = ?, legacy_rule_id = COALESCE(?, legacy_rule_id), updated_at = ? WHERE id = ?`,
+          [entry.status, JSON.stringify(entry.payload), entry.source, entry.author, JSON.stringify(entry.validation), at, entry.legacyRuleId ?? null, at, id],
+        );
+      } else {
+        id = newId('LE');
+        await s.db.run(
+          `INSERT INTO learned_entries (id, project_id, kind, status, entry_key, payload, source, author, legacy_rule_id, validation, validated_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            projectId,
+            entry.kind,
+            entry.status,
+            entry.key,
+            JSON.stringify(entry.payload),
+            entry.source,
+            entry.author,
+            entry.legacyRuleId ?? null,
+            JSON.stringify(entry.validation),
+            at,
+            at,
+            at,
+          ],
+        );
+      }
+      await s.db.run('INSERT INTO learned_entry_history (entry_id, at, action, actor, status_before, status_after, detail) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+        id,
+        at,
+        found ? 'replace' : action,
+        actor,
+        found ? String(found.status) : null,
+        entry.status,
+        JSON.stringify({ source: entry.source, validation: entry.validation, ...(found ? { before: JSON.parse(String(found.payload)) } : {}) }),
+      ]);
+      await s.audit(`learning.${found ? 'replace' : action}`, 'learned_entry', id, projectId, { kind: entry.kind, status: entry.status, actor });
+      return toEntry((await s.db.get<Row>('SELECT * FROM learned_entries WHERE id = ?', [id])) as Row);
+    });
+  }
+
+  /** Changes the status of an entry, keeping who did it and why. Switching one on is `LearningService.activate`, which checks it first. */
+  async setLearnedStatus(projectId: string, id: string, status: EntryStatus, actor: string, reason: string): Promise<LearnedEntry | undefined> {
+    return this.transaction(async (s) => {
+      const current = await s.db.get<Row>('SELECT * FROM learned_entries WHERE id = ? AND project_id = ?', [id, projectId]);
+      if (!current) return undefined;
+      const at = now();
+      await s.db.run('UPDATE learned_entries SET status = ?, updated_at = ? WHERE id = ?', [status, at, id]);
+      await s.db.run('INSERT INTO learned_entry_history (entry_id, at, action, actor, status_before, status_after, detail) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+        id,
+        at,
+        'status',
+        actor,
+        String(current.status),
+        status,
+        JSON.stringify({ reason }),
+      ]);
+      await s.audit('learning.status', 'learned_entry', id, projectId, { from: String(current.status), to: status, actor, reason });
+      return toEntry((await s.db.get<Row>('SELECT * FROM learned_entries WHERE id = ?', [id])) as Row);
+    });
+  }
+
+  async learnedHistory(entryId: string): Promise<EntryHistory[]> {
+    const rows = await this.db.all<Row>('SELECT * FROM learned_entry_history WHERE entry_id = ? ORDER BY id', [entryId]);
+    return rows.map((r) => ({
+      id: Number(r.id),
+      entryId: String(r.entry_id),
+      at: String(r.at),
+      action: String(r.action),
+      actor: String(r.actor),
+      ...(r.status_before === null ? {} : { statusBefore: String(r.status_before) as EntryStatus }),
+      ...(r.status_after === null ? {} : { statusAfter: String(r.status_after) as EntryStatus }),
+      detail: JSON.parse(String(r.detail)),
+    }));
+  }
+
+  // Review decisions (VD-11, DEC-05, migration 0009): a person's PASS or FAIL on a case the engine could not decide
+
+  /** The result a decision is about: its row, the verdict as it was stored, and the run it belongs to. */
+  async resultOf(jobId: string, extId: string): Promise<{ id: string; projectId: string; executionId?: string; status: string; verdict: unknown } | undefined> {
+    const r = await this.db.get<Row>('SELECT id, project_id, execution_id, status, verdict FROM test_results WHERE job_id = ? AND ext_id = ?', [jobId, extId]);
+    return r
+      ? {
+          id: String(r.id),
+          projectId: String(r.project_id),
+          ...(r.execution_id === null ? {} : { executionId: String(r.execution_id) }),
+          status: String(r.status),
+          verdict: JSON.parse(String(r.verdict)),
+        }
+      : undefined;
+  }
+
+  /** The name of the person the platform runs as: the one user of V1 (SPEC §3). */
+  async currentUserName(): Promise<string> {
+    const r = await this.db.get<Row>('SELECT name FROM users WHERE id = 1');
+    return r ? String(r.name) : 'Owner';
+  }
+
+  async reviewDecisions(
+    jobId: string,
+    options: { history?: boolean } = {},
+  ): Promise<Array<DecisionView & { testId: string; cardId: string; status: 'current' | 'superseded'; evidenceSha256: string }>> {
+    const rows = await this.db.all<Row>(
+      `SELECT * FROM review_decisions WHERE job_id = ? ${options.history ? '' : "AND status = 'current'"} ORDER BY decided_at, id`,
+      [jobId],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      testId: String(r.ext_id),
+      cardId: String(r.card_id),
+      decision: r.decision as 'PASS' | 'FAIL',
+      reviewer: String(r.reviewer),
+      note: String(r.note),
+      decidedAt: String(r.decided_at),
+      engineStatus: String(r.engine_status),
+      status: r.status as 'current' | 'superseded',
+      evidenceSha256: String(r.evidence_sha256),
+      ...(r.supersedes === null ? {} : { supersedes: String(r.supersedes) }),
+    }));
+  }
+
+  /**
+   * Records a decision in one transaction. The same decision again changes nothing (`duplicate`). A different one supersedes the
+   * current one, which stays as history (`replaced`). The result the decision is about is never touched.
+   */
+  async recordReviewDecision(input: {
+    projectId: string;
+    jobId: string;
+    testResultId: string;
+    executionId?: string;
+    extId: string;
+    cardId: string;
+    decision: 'PASS' | 'FAIL';
+    engineStatus: string;
+    engineReason: string;
+    reviewer: string;
+    note: string;
+    evidence: unknown;
+    evidenceSha256: string;
+  }): Promise<{ outcome: 'recorded' | 'duplicate' | 'replaced'; id: string; previous?: string } | { outcome: 'refused'; id: string; reason: string }> {
+    return this.transaction(async (s) => {
+      const current = await s.db.get<Row>("SELECT * FROM review_decisions WHERE test_result_id = ? AND card_id = ? AND status = 'current'", [
+        input.testResultId,
+        input.cardId,
+      ]);
+      if (current && current.decision === input.decision) return { outcome: 'duplicate' as const, id: String(current.id) };
+      // Checked here, in the transaction that replaces, so two clicks at once cannot change a decision without saying why.
+      if (current && input.note.trim().length < 3)
+        return { outcome: 'refused' as const, id: String(current.id), reason: 'A change of decision needs a reason in the note.' };
+      const id = newId('RD');
+      const at = now();
+      if (current) await s.db.run("UPDATE review_decisions SET status = 'superseded' WHERE id = ?", [String(current.id)]);
+      await s.db.run(
+        `INSERT INTO review_decisions (id, project_id, job_id, test_result_id, execution_id, ext_id, card_id, decision, engine_status, engine_reason, reviewer, note, evidence, evidence_sha256, status, supersedes, decided_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'current', ?, ?)`,
+        [
+          id,
+          input.projectId,
+          input.jobId,
+          input.testResultId,
+          input.executionId ?? null,
+          input.extId,
+          input.cardId,
+          input.decision,
+          input.engineStatus,
+          input.engineReason,
+          input.reviewer,
+          input.note,
+          JSON.stringify(input.evidence),
+          input.evidenceSha256,
+          current ? String(current.id) : null,
+          at,
+        ],
+      );
+      await s.audit(current ? 'review.replace' : 'review.decide', 'test_result', input.testResultId, input.projectId, {
+        decision: input.decision,
+        reviewer: input.reviewer,
+        job: input.jobId,
+        test: input.extId,
+        ...(current ? { replaced: String(current.id), was: String(current.decision) } : {}),
+      });
+      return current ? { outcome: 'replaced' as const, id, previous: String(current.id) } : { outcome: 'recorded' as const, id };
+    });
+  }
+
   // Settings (the small per-project choices)
 
   async setting(scope: 'global' | 'project' | 'user', scopeId: string, key: string): Promise<unknown> {
@@ -1419,6 +1646,24 @@ function toExecution(r: Row): ExecutionRecord {
     startedAt: r.started_at === null ? undefined : String(r.started_at),
     finishedAt: r.finished_at === null ? undefined : String(r.finished_at),
     durationMs: r.duration_ms === null ? undefined : Number(r.duration_ms),
+  };
+}
+
+function toEntry(r: Row): LearnedEntry {
+  return {
+    id: String(r.id),
+    projectId: String(r.project_id),
+    kind: r.kind as EntryKind,
+    status: r.status as EntryStatus,
+    key: String(r.entry_key),
+    payload: JSON.parse(String(r.payload)),
+    source: String(r.source),
+    author: String(r.author),
+    ...(r.legacy_rule_id === null ? {} : { legacyRuleId: String(r.legacy_rule_id) }),
+    validation: JSON.parse(String(r.validation)),
+    ...(r.validated_at === null ? {} : { validatedAt: String(r.validated_at) }),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
   };
 }
 

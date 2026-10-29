@@ -2,6 +2,7 @@
 
 Part of [SPEC.md](SPEC.md) (requirements FR-DB-…, decisions D24–D28) and [ARCHITECTURE.md](ARCHITECTURE.md) §9. Diagrams are Mermaid.
 **Status (2026-10-05):** M8 is built for SQLite. The driver and migration runner, migrations 0001–0006, the store in `src/db/`, page routes, test cases with versions, explorations, executions, results, evidence and storage references are in use, and `npm run db -- status | backup | verify | restore | export | import` work. What is **not** done: the PostgreSQL driver and the SQLite-vs-PostgreSQL schema comparison in CI (no PostgreSQL here to compare against); see §10 and §10.1 for each deviation from the plan below.
+**Migrations as built (2026-10-29):** 0001–0009 are applied by the code; the numbering in §6.2 is the original plan, and the table in §6.2.1 is what exists. 0008 `learned_entries` (§5.12) and 0009 `review_decisions` (§5.13) are new. Numbers are given out in order, one per migration, and a released migration is never edited.
 
 **Contents**
 1. [Goals](#1-goals)
@@ -368,6 +369,38 @@ The chain `REQ → SC → TC → AUTO → EXEC → result → BUG` (FR-EN-01) th
 
 Indexes are added with the table that needs them. A new index is its own migration (cheap, reversible by a later migration).
 
+### 5.12 Learned entries (migration 0008, GV-01)
+
+What a tester told the engine once, kept so it is not asked again, and **the only source a run reads it from**. An entry changes a run only while it is `active`.
+
+**`learned_entries`**: `id TEXT PK`, `project_id → projects`, `kind` (`label`, `reading`, `approval`, `pick`, `decision`), `status` (`active`, `pending`, `quarantined`, `disabled`, `removed`), `entry_key TEXT` (what makes two entries the same thing), `payload JSON`, `source`, `author`, `legacy_rule_id` (the project rule it was made from), `validation JSON` (the checks made and what they found), `validated_at`, `created_at`, `updated_at`. `UNIQUE (project_id, kind, entry_key)`.
+
+**`learned_entry_history`**: `id`, `entry_id → learned_entries`, `at`, `action` (`save`, `replace`, `migrate`, `status`), `actor`, `status_before`, `status_after`, `detail JSON`. A change is a new row here and a line in `audit_log`; nothing is deleted.
+
+| Status | Meaning | Changes a run? |
+|---|---|---|
+| `active` | Passed every check, and nobody switched it off. | **Yes** |
+| `pending` | Passed the format checks but could not be shown true (a label for a name the application was never seen to show). Waits for a person. | No |
+| `quarantined` | Failed a check (a rewrite that judges nothing, or turns a sentence into a "not shown" check; a label that renames an action; an approval of a reading that is not active). Kept with the reason. | No |
+| `disabled` | Switched off by a person. | No |
+| `removed` | Taken out of the list by a person. The row and history stay. | No |
+
+An entry is checked when it is saved and again each time a run reads it (`src/learning/adapter.ts`), so a row changed by hand does not get past the checks. An **approval** accepts an assumption; it is never evidence that a test passed and never replaces the result of a run (`results/verdict.ts`).
+
+Moving the old project rules in: `npm run rules -- inventory | migrate [--apply] | rollback | activate <id> <reason>`. The project rules are never changed; a rollback switches off the entries the migration made and nobody has changed since.
+
+### 5.13 Review decisions (migration 0009, VD-11, DEC-05)
+
+What a person decided on a case the engine could not decide (status `NEEDS REVIEW` or `NOT VERIFIED`), kept **beside** the engine's result. A decision never changes `test_results`: the engine's status, reason and evidence stay exactly as they were.
+
+**`review_decisions`**: `id TEXT PK`, `project_id`, `job_id`, `test_result_id → test_results`, `execution_id`, `ext_id` (the test case), `card_id` (the cause: cases that share one are one card), `decision` (`PASS` or `FAIL`), `engine_status` and `engine_reason` (what the engine had said), `reviewer` (a checked name, 1–80 characters), `note`, `evidence JSON` (what the person was shown: expected, actual, the checks, the pictures) with `evidence_sha256`, `status` (`current` or `superseded`), `supersedes` (the decision this one replaced), `decided_at` (the server's time; a time sent by a client is ignored), `created_by`.
+
+`UNIQUE (test_result_id, card_id) WHERE status = 'current'`: at most one decision is current for a case. The same decision again is not a second row. A different one needs a reason in the note; it makes the earlier row `superseded` and a new `current` row that says which one it replaced, so the whole history stays. A PASS is refused when a step did not finish, a check failed, or the run left nothing to look at. Each change also writes an `audit_log` line (`review.decide`, `review.replace`).
+
+A decision is not an approval and not a learned entry (§5.12): it makes nothing the engine reads on a later run.
+
+The review queue API (`/api/jobs/:id/review-queue`): `GET` the cards, `POST …/decisions` a decision on a card, `GET …/history` every decision including the replaced ones; `POST` on the queue itself, which starts a re-run for the wording questions, is unchanged.
+
 ## 6. Versioning and migrations
 
 ### 6.1 Rules
@@ -396,7 +429,21 @@ flowchart TD
   run --> ok[Ready]
 ```
 
-Then M8 migrations: `0002` environments and `page_routes` (copy `projects.base_url`, import `pages.json`), `0003` test cases and model versions, `0004` explorations, `0005` executions and results (copy `verdicts`), `0006` evidence, `0007` counters/settings/audit, `0008` convert absolute paths to storage references.
+Then M8 migrations: `0002` environments and `page_routes` (copy `projects.base_url`, import `pages.json`), `0003` test cases and model versions, `0004` explorations, `0005` executions and results (copy `verdicts`), `0006` evidence, `0007` counters/settings/audit, `0008` convert absolute paths to storage references. **This list is the plan of 5 Oct and was renumbered when the migrations were written: see §6.2.1. The conversion of absolute paths to storage references is not scheduled under a number yet.**
+
+### 6.2.1 Migrations as built
+
+| # | Name | What it adds |
+|---|---|---|
+| 0001 | `baseline` | The M7a database: users, projects, uploads, jobs, job logs, questions, verdicts. Adopts an existing install. |
+| 0002 | `environments` | Environments, page routes, settings, counters and the audit log. |
+| 0003 | `job_log_ids` | Job log lines get a real id (the table is rebuilt). |
+| 0004 | `test_cases` | Test cases and their versions. |
+| 0005 | `project_rules` | The rules testers gave in review (kind step, check, element, approved). **No run reads this table since 0008**; it is kept, unread, until a later release drops it (§6.3). |
+| 0006 | `executions` | Executions, results, step and check results, evidence, explorations, generation snapshots. `verdicts` becomes a view for one release. |
+| 0007 | `automation_releases` | Test case approval and recorded scripts; releases, features and change history. |
+| 0008 | `learned_entries` | What the engine learned from people: entries and their history (§5.12). |
+| 0009 | `review_decisions` | The PASS or FAIL a person gave a case the engine could not decide, with who, when and the evidence shown (§5.13). |
 
 ### 6.3 Expand and contract (how a column or table changes without breaking an older build)
 
