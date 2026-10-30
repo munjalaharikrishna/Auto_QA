@@ -113,7 +113,7 @@ flowchart LR
 | Versions E0.1 to E0.11 | Built. Checked exit test by exit test in [VERIFICATION-E0.0-E0.11.md](VERIFICATION-E0.0-E0.11.md): 63 of 75 rows passed, the gaps are listed there. Found since, and fixed in E0.12: a masked password was typed on the real site. |
 | E0.12 Safety first | **Items 1 to 4 done** (PASS never rests on an unapproved assumption; "not displayed" never passes on what it could not see, with the iframe trap; project rules replaced by validated learned entries; Excel credentials read as written and never replaced, with a mask never typed). **Item 5 (commit, push the tag, pull requests, CI) is not done**: it needs the owner's go-ahead. |
 | Real site (OrangeHRM login workbook, new engine) | 2 PASS, 6 NEEDS REVIEW (with the page's own words), 1 not run, **0 FAIL, 0 wrong PASS**. Review reduction against the baseline is still about 10%; the target is 80% (E0.13 to E0.19). |
-| Git | `main` holds all committed work and is on `origin`. The tag `baseline-before-engine` is local only. Many uncommitted changes since 25 Oct. |
+| Git | `main` holds all work up to E0.14 and is on `origin` (30 Oct); the tag `baseline-before-engine` is on GitHub. E0.12 to E0.14 went to `main` without pull requests. |
 | Migrations | 0001 to 0009 (0008 learned entries, 0009 review decisions): see DATABASE.md §6.2.1. |
 | E0.13 Frame-aware execution | Done for the new engine (29 Oct). |
 | E0.14 Learn the application | **Done (30 Oct)**: run capture (E0.14a) and the guided walkthrough (E0.14b), PD-13 approved. Spike on local OrangeHRM: GO. Exit tests in §10.4; on local OrangeHRM the walkthrough reached Add Employee, a vague step was answered by a pick, nothing was saved without a yes, and a second case on that screen ran without the question. |
