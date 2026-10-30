@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Plan version** | 2.0: 1.1 added the build practices (§0); 1.2 added E0.0 and the current status (§1.5); 1.3 records the owner's decisions PD-0…PD-8 (§8); **2.0 adds the flow realignment (§10), versions E0.12–E0.19, from the audit of 25 Oct and the industry research of 28 Oct** |
+| **Plan version** | 2.1: 1.1 added the build practices (§0); 1.2 added E0.0 and the current status (§1.5); 1.3 records the owner's decisions PD-0…PD-8 (§8); **2.0 adds the flow realignment (§10), versions E0.12–E0.19, from the audit of 25 Oct and the industry research of 28 Oct**; **2.1 replaces the E0.14 scan with learning from runs and a guided walkthrough (§10.4, PD-13)** |
 | **Date** | 2026-10-28 (v2.0); 2026-10-08 (v1.3) |
 | **Builds** | [ENGINE-SPEC.md](ENGINE-SPEC.md) v1.2: 186 requirements in 8 modules |
 | **Approach** | A clean starting point (E0.0), then 11 engine versions (E0.1 → E1.1). Each version is small, testable on its own, and ends with a fixed set of tests. |
@@ -106,7 +106,7 @@ flowchart LR
 
 ---
 
-### 1.5 Current status (29 Oct 2026)
+### 1.5 Current status (30 Oct 2026)
 
 | Item | Status |
 |---|---|
@@ -115,7 +115,9 @@ flowchart LR
 | Real site (OrangeHRM login workbook, new engine) | 2 PASS, 6 NEEDS REVIEW (with the page's own words), 1 not run, **0 FAIL, 0 wrong PASS**. Review reduction against the baseline is still about 10%; the target is 80% (E0.13 to E0.19). |
 | Git | `main` holds all committed work and is on `origin`. The tag `baseline-before-engine` is local only. Many uncommitted changes since 25 Oct. |
 | Migrations | 0001 to 0009 (0008 learned entries, 0009 review decisions): see DATABASE.md §6.2.1. |
-| Open for the owner | Employee list workbook (PD-4); sign-off of the answer key (`test/benchmark/`); the mail provider (PD-5); the 5 Oct hand-check, which was not found. |
+| E0.13 Frame-aware execution | Done for the new engine (29 Oct). |
+| E0.14 Learn the application | **Done (30 Oct)**: run capture (E0.14a) and the guided walkthrough (E0.14b), PD-13 approved. Spike on local OrangeHRM: GO. Exit tests in §10.4; on local OrangeHRM the walkthrough reached Add Employee, a vague step was answered by a pick, nothing was saved without a yes, and a second case on that screen ran without the question. |
+| Open for the owner | Approval of PD-13; employee list workbook (PD-4); sign-off of the answer key (`test/benchmark/`); the mail provider (PD-5); the 5 Oct hand-check, which was not found. |
 
 ## 2. Version overview
 
@@ -463,7 +465,7 @@ The industry tools follow one flow: **learn the application first, read test cas
 ### 10.2 The target flow
 
 ```
-Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match to page models (strict)
+Learn app from runs + walkthrough (screen models, iframes)  →  Lint sheet  →  Slot grammar  →  Match to screen models (strict)
    →  Setup blocks + data ledger  →  Plan  →  Run (frame-aware, per-frame waits)
    →  Honest verdict (PASS / FAIL / INCONCLUSIVE / PASS-HEALED)  →  Review once, remembered
 ```
@@ -474,17 +476,18 @@ Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match 
 |---|---|---|---|---|
 | **E0.12** | Safety first | Close every known wrong-PASS path; save and protect the work | S1–S6, process | M |
 | **E0.13** | Frame-aware execution | Frame paths, all-frames search, per-frame waiting, retry on navigation | E1–E5 | L |
-| **E0.14** | Scan the application | Page models (including iframes) built before understanding; passed into compile | U2, E8 | L |
+| **E0.14a** | Learn the application: capture | Screen key, screen models (including iframes) captured from runs, stable element identity, step hook; passed into compile | U2, E8 | L |
+| **E0.14b** | Learn the application: walkthrough | Guided walkthrough from the review queue: pick elements, add checks, remembered per screen | ambiguity, review volume | M |
 | **E0.15** | Grammar and lint | Slot grammar, one vocabulary, pre-run lint with suggestions | U3, U6, U7, U8 | L |
 | **E0.16** | Setup blocks, data ledger, test data | Setup detection, references through the ledger, Excel credentials per case, clean-up | U4, U5, S4, P3, P5 | M |
 | **E0.17** | Locating like a person | Row/section anchors, nested containers, identical-element rule, row actions, fallback fingerprints | E4, E6 | M |
 | **E0.18** | Honest verdicts, review memory | Four statuses, healing only for actions, approval fingerprints, versioned rules, review card in the UI | S2, S3, S5, review volume | L |
 | **E0.19** | Measure honestly | Answer key, broken-app tests, one frozen baseline, run-time KPIs, quarantine | wrong-PASS proof, KPIs | M |
 | E1.0 | Switch-over | As in §4, now after E0.19, preceded by shadow mode in E0.18 | U1, S6 | M |
-| E1.1 | Record once (optional) | Codegen walkthrough aligned to the Excel steps | ambiguity | M |
+| E1.1 | ~~Record once~~ | Replaced by the E0.14 walkthrough (PD-13) | | |
 | E1.2 | Jira / TestRail | Unchanged, last (DEC-04); was E1.1 | | S |
 
-**Order:** E0.12 first and on its own (safety). E0.13 before E0.14, because scanning OrangeHRM needs frames. E0.15–E0.17 can overlap. E0.18 needs E0.13–E0.17. E0.19 runs alongside from E0.13 (measurement), and is complete before E1.0.
+**Order:** E0.12 first and on its own (safety). E0.13 before E0.14, because capturing OrangeHRM screens needs frames; E0.14a before E0.14b. E0.15–E0.17 can overlap. E0.18 needs E0.13–E0.17. E0.19 runs alongside from E0.13 (measurement), and is complete before E1.0.
 
 ### 10.4 Versions in detail
 
@@ -526,20 +529,64 @@ Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match 
 | OrangeHRM rewritten workbook (`OrangeHRM_Login_Updated_TestCases_AutoQA.xlsx`) | TC12–TC19 no longer stop with "nothing on this page" or "execution context destroyed" |
 | Iframe "not displayed" trap | Not PASS unless every frame was searched after the page loaded |
 
-#### E0.14 Scan the application
+#### E0.14 Learn the application: run capture and walkthrough
+**Status (2026-10-30): done.** Spike GO; E0.14a and E0.14b built with their exit tests (`walk.test.ts`, `screens.test.ts`, `from-runs.test.ts`, `semantic-run.test.ts`, `walkthrough.test.ts`, `walkthrough.e2e.test.ts`) and run on local OrangeHRM. Decisions taken while building:
+- The screens a run reached are kept apart from the names a test case is matched against (`Application.screens`, not `pages`): putting every element seen into the matching vocabulary would make "Save" on many screens a new ambiguity, and add reviews.
+- The screen key keeps the query parameters that choose a screen (OrangeHRM 2.5 routes by `reqcode` and `capturemode`), as `pageIdentityOf` already did.
+- A pick is remembered by the element (its frame and place on that screen) as well as by the word: two buttons both named "Details" cannot be told apart by name.
+- Found, not fixed here: a link in a hover menu ("Add Employee" under PIM) is outside the viewport and its click times out; OrangeHRM 2.5 labels are not tied to their fields, so "First Name" is captured as `txtEmpFirstName`. Both are for E0.17.
+
+**Decision (PD-13, 30 Oct 2026, proposed):** no scan step and no crawl. The engine learns each screen from the runs it already makes, and a person teaches it the rest in a **guided walkthrough** opened from the review queue.
+- Why not a scan of listed pages: real sheets rarely name the screen (`Add_Employee.xlsx` names a page in about 2 of 13 steps and never the Add form), so a page list cannot be derived from them.
+- Why not a crawl: it clicks Save or Delete on its own, visits pages no test uses, and cannot reach forms behind buttons.
+- The industry tools scan the screen that is open or record once ([INDUSTRY-PRACTICES.md](INDUSTRY-PRACTICES.md)); this does both, on the tests' own path.
+- Cost: a person is needed where the engine is stuck. Knowledge is kept per screen, so one walkthrough serves every case that uses that screen.
+
+**Reused, not rebuilt:** the new-engine executor already keeps an observation and a screenshot before and after every step (`observe.ts`, `screenshotDir`); `contentUrl` identifies the screen on frame-shell applications such as OrangeHRM (E8); `AssertionSchema` (check types, `step` anchor); the edit route that saves a new case version from the raw text (`/api/jobs/:id/edit`, D23); learned entries with validation, author and case link (E0.12); review cards (DEC-05); pick-element on a screenshot (`PickElement`). The legacy route is not extended, as in E0.13.
+
+**Split:** built in two parts. **E0.14a** is the engine (capture, screen key, step hook); **E0.14b** is the walkthrough (server session and web window) and needs E0.14a.
+
+**Before building:** a spike on local OrangeHRM: step through Login → PIM → Add → Add Employee with a temporary hook, capture the three screens, stop before Save; report what was captured, whether the screens got their own keys, and that the database did not change. Go or no-go before E0.14a.
+
+**Not in E0.14:** a live video of the browser (a screenshot after each step instead), crawling, AI matching, applying a check to similar cases, the legacy route.
+
+##### E0.14a Run capture and step-through (engine)
 **Builds:**
-1. A scan step logs in (setup block), visits the configured pages and records a **page model**: every field, button, link, heading, table (headers and rows), message, with role, name, label, placeholder, section, frame path.
-2. Page models are versioned per application; a rescan shows a diff (added, removed, renamed elements).
-3. `compileCase` receives the page models; the knowledge base (AK-01, PK-01) is filled from them and passed into understanding (U2).
-4. Per-application vocabulary: application words (Employee, Supervisor) and aliases live with the page models (PD-3).
+1. **Screen identity.** A screen key made of the content address with ids replaced (`/pim/viewPersonalDetails/empNumber/{id}`), the frame path, and the title of an open dialog. It replaces the single "Application" page of `knowledgeFromRuns`.
+2. **Run capture.** Observed elements gain label, placeholder, input type, frame path and their box on the screenshot; observations gain headings and table headers (optional fields, `Application` version bump). Knowledge is built per screen from the new engine's run traces, from every element seen, not only from the elements a step acted on and not only from legacy `exploration.json`.
+3. **Stable element identity** across captures (test id, else id, else role + label + container + frame path), so a changed label is a rename, not a removal and an addition; a capture diff lists added, removed and renamed elements.
+4. **Step-through execution.** `executePlan` takes an optional hook called before and after each step that can pause, ask or stop. With a hook, a step that cannot be located asks (pick on the screenshot) instead of stopping; without one, batch runs behave exactly as today.
+5. `compileCase` receives the screen models, and the knowledge base (AK-01, PK-01) is filled from them before understanding (U2). Application words and aliases live with the screen models (PD-3).
 
 **Exit tests:**
 
 | Test | Pass when |
 |---|---|
-| Scan of local OrangeHRM | Login, Employee Information, Add Employee and Personal Details pages modelled, including the iframe content |
-| Rescan after a label change on the demo app | The diff shows exactly that change |
-| Understanding with page models | "Employee ID" is matched to the field "Code" through an alias, and "login section" is no longer read as the Login button |
+| Run capture on local OrangeHRM (Login, Employee List, Add Employee) | Each screen has its own key and its elements, including those inside the frame, with label and frame path |
+| Label renamed on the demo app, run again | The diff shows exactly one rename |
+| Step hook on a fixture page | The hook pauses before and after each step, can stop the run, and is asked for a pick when a step cannot be located |
+| Batch run without a hook | Same traces as before; the full test suite stays green |
+| Understanding with screen models | "Employee ID" is matched to the field "Code" through an alias, and "login section" is no longer read as the Login button |
+
+##### E0.14b Walkthrough (server and web)
+**Builds:**
+1. **Walkthrough session (server).** A walkthrough is a job: the case is compiled by the new engine and run in its own browser with the E0.14a hook; questions go through the existing job question flow with a new `step` kind. The browser closes after 15 minutes without an answer; one walkthrough at a time per project.
+2. **Safety.** Before a step that saves, submits or deletes, the walkthrough asks "This step will change data. Continue?". On a target marked production it refuses such steps unless the project allows them. "Back to step N" replays from the start and asks again at every data-changing step on the way. Secrets are typed and shown masked, as in runs.
+3. **Walkthrough window (web).** A Walkthrough button per test case inside a review card (a card can hold several cases). Steps on the left (done, current, to do); on the right, the screenshot after the latest step with the element boxes. Buttons: Next, Back to step, Pick element, Add check, Edit step, Stop.
+4. **Add check.** Day-one types are the ones the verdict engine judges: visible, not visible, text contains, value, enabled, disabled, URL contains. ("Text exact" was dropped when built: the engine's text check always matches as "contains", so offering "exact" would promise a check it does not make.) The check is tried on the current screen first. It is written as a sentence under the step or in Expected Result, parsed again, and saved only when the parse gives exactly that check; it is saved as a new case version with the reason "walkthrough", and the workbook is not changed.
+5. **Remember.** A picked element becomes a learned entry (validated, with author, case and screen key) that applies only on that screen. Precedence: a person (walkthrough or review) > run capture > older run-learned entries. E0.17 and E0.18 reuse these entries.
+6. **Card state.** After a walkthrough save, the card shows "test case changed since this run" and offers a re-run; the verdict of the earlier run is not changed.
+7. Each walkthrough is recorded with who, which case, when and how long, for the review KPIs of E0.19.
+
+**Exit tests:**
+
+| Test | Pass when |
+|---|---|
+| Walkthrough of Add Employee on local OrangeHRM | Reaches the form; an unclear step is answered by a pick; the employee table is unchanged until Save is confirmed |
+| A second case on the Add Employee screen | Runs without a question about the picked element |
+| Add check round trip | Each of the seven day-one types parses back to the same check; a sentence that does not is refused |
+| Target marked production | Data-changing steps are refused without the project's permission |
+| Idle walkthrough | The browser is closed after 15 minutes without an answer, and the job says so |
 
 #### E0.15 Grammar and lint
 **Builds:**
@@ -547,8 +594,9 @@ Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match 
 2. **One vocabulary** (merge PREDICATES and synonyms); verb table with word forms (hides → not visible; return to → navigate; enter or update → enter).
 3. Ignore Given/When/Then, "user should", articles and adjectives inside names.
 4. Fix the parser defects of U6 (subject cut at "entered", dropped brackets, upload "to", fronted "In the X section", check-starter words).
-5. **Lint before run**: every step marked understood / matched / ambiguous / not found / vague, with suggestions from the page models, written to the results workbook.
+5. **Lint before run**: every step marked understood / matched / ambiguous / not found / vague, with suggestions from the screen models, written to the results workbook.
 6. "Understood" is measured against approved readings of real sentences (gold), not "no blocking error" (U8).
+7. A step on a screen that no run or walkthrough has reached yet is marked **screen not learned yet**, not "not found", and points to the walkthrough (E0.14b).
 
 **Exit tests:**
 
@@ -578,7 +626,7 @@ Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match 
 **Builds:**
 1. **Container anchors**: an element in a repeated widget is located inside its row, card or section; position inside the anchor only as a logged tie-breaker.
 2. **Nested containers** with the same name: use the innermost that contains the target.
-3. **Identical-element rule**: when tied candidates have the same role, name, handler and container, use the first visible one, record it as an assumption (review-needed status, not PASS), and validate it.
+3. **Identical-element rule**: when tied candidates have the same role, name, handler and container, use the first visible one, record it as an assumption (review-needed status, not PASS), and validate it. An approval is kept as an E0.14b learned entry for that screen.
 4. **Row actions**: "in the row for / with / of X" in both understanding and execution; an unnamed control is allowed when it is the only one of its kind in the row; multi-word values across adjacent cells.
 5. **Fallback fingerprints**: an ordered list of unique locators per element plus a weighted fingerprint; a fallback is used only when it finds exactly one element above a set score, and never for checks.
 
@@ -595,9 +643,9 @@ Scan app (page models, iframes)  →  Lint sheet  →  Slot grammar  →  Match 
 1. Four statuses everywhere: **PASS / FAIL / INCONCLUSIVE / PASS-HEALED (review needed)**; "not found" reported separately from "found but hidden"; a pass on retry is FLAKY, never PASS.
 2. Every expected result must produce at least one executed check; otherwise not PASS.
 3. Healing only for clicks and typing; healed steps saved only after approval and only from passing runs.
-4. **Approval fingerprints**: approvals stored per step fingerprint (locator + action + expected value); unchanged next time means no review; identical pending items grouped and decided once.
+4. **Approval fingerprints**: approvals stored per step fingerprint (locator + action + expected value); unchanged next time means no review; identical pending items grouped and decided once. Approvals are stored with the E0.14b learned entries (per screen), not in a second store.
 5. Project rules replaced by **versioned rule entries with an example**, conflict check and approval; GV-01 learning wired into runs.
-6. **User review card** in the web UI: expected vs actual, before/after screenshots, PASS/FAIL with who and when (DEC-05).
+6. **User review card** in the web UI: expected vs actual, before/after screenshots, PASS/FAIL with who and when (DEC-05). The card exists already; E0.18 completes it, and E0.14b adds the Walkthrough button to it.
 7. **Shadow mode**: every legacy PASS is re-judged by the new engine; disagreement gives NEEDS REVIEW (prepares E1.0).
 
 **Exit tests:**
@@ -614,7 +662,7 @@ Starts alongside E0.13; complete before E1.0.
 **Builds:**
 1. **Answer key** for the 29 real OrangeHRM cases (Claude drafts, the owner or a tester confirms each row by hand; OP-8).
 2. **Broken-app tests**: the demo app and fixture pages with deliberate defects (removed button, changed text, 500 error); every generated test must fail against them.
-3. **One frozen baseline** from a live run; KPIs measured at **run time** with fixed denominators: wrong PASS, wrong FAIL, flake rate, reviews per 100 steps, review time.
+3. **One frozen baseline** from a live run; KPIs measured at **run time** with fixed denominators: wrong PASS, wrong FAIL, flake rate, reviews per 100 steps, review time. Walkthroughs count as review: their number and time are part of the review KPIs.
 4. `engine:gate` fails below the 80% review-reduction target once the minimum engine is declared, and on any wrong PASS; the gate runs in CI.
 5. Quarantine lane for flaky cases with an owner and a time limit.
 
@@ -640,6 +688,7 @@ Starts alongside E0.13; complete before E1.0.
 |---|---|---|
 | PD-9 | Adopt the flow realignment (E0.12–E0.19) before E1.0 | Yes |
 | PD-10 | E0.12 (safety) first and on its own, before any new feature | Yes |
-| PD-11 | Record once (E1.1) is optional and comes after E1.0 | Yes |
-| PD-12 | Which pages the application scan visits: configured list, or follow links from the start page | Configured list first; link following later |
+| PD-11 | Record once (E1.1) is optional and comes after E1.0 | Superseded by PD-13: the walkthrough replaces it in E0.14 |
+| PD-12 | Which pages the application scan visits: configured list, or follow links from the start page | Superseded by PD-13: no page list, no link following |
+| PD-13 | E0.14 learns screens from runs and a guided walkthrough instead of a scan or crawl; screenshot after each step (no live video); seven day-one check types (see E0.14b item 4); checks apply to one case; built as E0.14a (engine) then E0.14b (walkthrough) | **Approved by the owner, 30 Oct 2026** |
 
