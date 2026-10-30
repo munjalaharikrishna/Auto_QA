@@ -137,6 +137,8 @@ export interface ReviewCardCase {
   status: string;
   eligibility: { decidable: boolean; canPass: boolean; refusal?: string; passRefusal?: string };
   decision?: ReviewDecision;
+  /** The test case was changed after this run (E0.14b): the result here is the earlier version's. */
+  changedSince?: { version: number; reason: string; at: string };
 }
 
 export interface ReviewCard {
@@ -262,6 +264,9 @@ export const api = {
   saveObservation: (projectId: string, id: string, body: { check: string; facts: unknown }) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/accept-observation`, json('POST', body)),
   runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
+  /** A guided walkthrough of a saved test case (E0.14b), opened from a review card of `fromJob`. */
+  walkthrough: (projectId: string, id: string, body: { who?: string; fromJob?: string } = {}) =>
+    call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/walkthrough`, json('POST', body)),
   setApproval: (projectId: string, id: string, approval: 'draft' | 'approved') =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/approval`, json('PUT', { approval })),
   automation: () => call<AutomationCase[]>('/api/automation'),

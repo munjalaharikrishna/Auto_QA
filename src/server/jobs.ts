@@ -4,10 +4,12 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createTwoFilesPatch } from 'diff';
 import { describeFile, type FileFacts } from '../db/artifacts.js';
-import { engineFrom } from '../engine/index.js';
+import { compileCase, engineFrom, executePlan, keepScreens, openExecutionSession, planActions, type StepHook, type StepRecord } from '../engine/index.js';
+import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import type { ExplorationResult, Resolver } from '../explorer/controller.js';
 import { explain, sentence } from '../explorer/explain.js';
 import type { PageStore } from '../explorer/page-store.js';
+import { workspaceName } from '../generator/index.js';
 import type { Field } from '../importer/columns.js';
 import { defaultResultsFile } from '../importer/results.js';
 import { learnedForRun } from '../learning/adapter.js';
@@ -21,6 +23,7 @@ import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases
 import type { TestVerdict } from '../results/verdict.js';
 import { readEnvFile } from './credentials.js';
 import type { Job, Project, Question, Store } from './store.js';
+import { addCheck, changesData, editStep, finalCase, type Pending, tryOnScreen, type WalkCheck } from './walkthrough.js';
 
 /**
  * Job runner (M7a): the command line flows as background jobs, one at a time because each drives a
@@ -45,6 +48,36 @@ export interface RunnerOptions {
 }
 
 class Cancelled extends Error {}
+/** Nobody answered a walkthrough for too long (E0.14b): its browser is closed. */
+class Idle extends Error {}
+const IDLE = Symbol('idle');
+/** A walkthrough left without an answer this long is closed (E0.14b, PD-13). */
+export const WALKTHROUGH_IDLE_MS = 15 * 60 * 1000;
+
+/** What the walkthrough window shows of the step a person is on: the screen after it, with a box for each element on it. */
+function stepView(rec: StepRecord, size: { width: number; height: number } | null) {
+  const page = rec.after;
+  return {
+    step: rec.step,
+    original: rec.original,
+    status: rec.status,
+    ...(rec.reason ? { reason: rec.reason } : {}),
+    changes: rec.changes.slice(0, 20),
+    ...(rec.located?.picked ? { picked: true } : {}),
+    view: {
+      ...(rec.screenshots?.after ? { screenshot: rec.screenshots.after } : {}),
+      width: size?.width ?? 1280,
+      height: size?.height ?? 720,
+      elements: (page?.elements ?? []).flatMap((e) =>
+        e.box && e.box.width > 0 && e.box.height > 0 ? [{ ref: e.identity, role: e.role, name: e.name, box: e.box }] : [],
+      ),
+    },
+    ...(page ? { screen: page.screen, url: page.contentUrl ?? page.url } : {}),
+  };
+}
+
+const pendingView = (p: Pending) =>
+  p.kind === 'check' ? { kind: 'check', sentence: p.sentence, afterStep: p.check.afterStep ?? 'end' } : { kind: 'edit', step: p.step, text: p.text };
 
 export class JobRunner extends EventEmitter {
   private readonly queue: string[] = [];
@@ -166,6 +199,7 @@ export class JobRunner extends EventEmitter {
       if (!job) return;
       await this.update(id, { status: 'running', startedAt: new Date().toISOString() });
       if (job.kind === 'workbook') await this.runWorkbook(job);
+      else if (job.kind === 'walkthrough') await this.runWalkthrough(job);
       else await this.runSingle(job);
     } catch (e) {
       if (e instanceof Cancelled || this.cancelled.has(id)) {
@@ -257,6 +291,7 @@ export class JobRunner extends EventEmitter {
       pages: await this.pagesFor(project),
       nextExecutionId: () => store.nextExecutionId(),
       approvedAssumptions: (await learnedForRun(store, project.id)).approvedAssumptions,
+      screenWords: (await learnedForRun(store, project.id)).screenLabels,
       // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
       onExplored: async (model: TestModel, result: ExplorationResult, file: string) => {
         try {
@@ -364,6 +399,278 @@ export class JobRunner extends EventEmitter {
       output: { summary: batch.summary, resultsFile: batch.out, originalName: upload.originalName, loginCase: batch.loginCase, workspace: batch.workspace },
       finishedAt: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Asks the person and waits (D6), at most `idleMs`: a walkthrough holds a browser open, so one left alone is closed (E0.14b). The
+   * question is then answered as `timeout`, so the list of questions does not show it as still open.
+   */
+  private async waitFor(job: Job, kind: Question['kind'], payload: Record<string, unknown>, idleMs: number): Promise<unknown> {
+    if (this.cancelled.has(job.id)) throw new Cancelled();
+    const q = await this.options.store.ask(job.id, kind, payload);
+    await this.update(job.id, { status: 'waiting' });
+    this.emit('event', { type: 'question', question: q } satisfies ServerEvent);
+    let timer: NodeJS.Timeout | undefined;
+    const answer = await Promise.race([
+      new Promise<unknown>((resolve) => this.answers.set(q.id, resolve)),
+      new Promise<unknown>((resolve) => {
+        timer = setTimeout(() => resolve(IDLE), idleMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
+    if (answer === IDLE) {
+      await this.answer(q.id, 'timeout');
+      throw new Idle();
+    }
+    if (this.cancelled.has(job.id)) throw new Cancelled();
+    await this.update(job.id, { status: 'running' });
+    return answer;
+  }
+
+  /**
+   * A guided walkthrough of one saved test case (E0.14b, PD-13). The new engine runs the steps in a browser, one at a time: after
+   * each step the person sees the screen and goes on, adds a check, changes the step's words, or stops. A step that cannot find its
+   * element asks for a pick on the screenshot, and the pick can be remembered for that screen. Before a step that changes data the
+   * person is asked; on a production environment such a step is refused unless the project allows it. What the person added is saved
+   * as a new version of the test case only when they say so, and only when every check reads back as itself. The screens reached are
+   * kept as the person's, for the next compile.
+   */
+  private async runWalkthrough(job: Job): Promise<void> {
+    const { store } = this.options;
+    const project = await store.project(job.projectId);
+    if (!project) throw new Error('The project is gone.');
+    const caseId = String(job.input.caseId ?? '');
+    const record = await store.testCase(project.id, caseId);
+    if (!record) throw new Error(`There is no test case ${caseId} in this project.`);
+    const started = Date.now();
+    const who = typeof job.input.who === 'string' && job.input.who.trim() ? job.input.who.trim() : await store.currentUserName();
+    const idleMs = typeof job.input.idleMs === 'number' && job.input.idleMs > 0 ? job.input.idleMs : WALKTHROUGH_IDLE_MS;
+    const learned = await learnedForRun(store, project.id);
+    const exploreDir = this.projectDir(project, 'explore');
+    const env = { ...process.env, ...readEnvFile(project.workspace) };
+    const knowledge = await knowledgeFromRuns(workspaceName(project.baseUrl), project.baseUrl, exploreDir, [...learned.labels, ...learned.screenLabels], {
+      cache: false,
+    });
+    const compileOptions = {
+      config: await this.configFor(project),
+      pageRoutes: await (await this.pagesFor(project)).load(),
+      env,
+      ...(knowledge ? { knowledge } : {}),
+    };
+    const compiled = await compileCase(record.raw, compileOptions);
+    if (!compiled.ir || !compiled.plan) {
+      const why = compiled.issues.find((i) => i.severity === 'blocking');
+      throw new Error(`The test case cannot be walked through yet: ${why ? `${why.where}: ${why.message}` : compiled.status}. Edit it first.`);
+    }
+    const environment = (await store.environments(project.id)).find((e) => e.isDefault);
+    const production = !!environment?.isProduction;
+    const allowed = (await store.setting('project', project.id, 'walkthroughOnProduction')) === 'allow';
+    const plan = planActions(compiled.ir, compiled.plan);
+    const origin = new URL(project.baseUrl).origin;
+    const pages = Object.fromEntries(Object.entries(compiled.pages ?? {}).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]));
+    const shots = this.projectDir(project, 'walkthroughs', job.id);
+    const steps = plan.chains.map((c) => ({ step: c.step, original: c.original, status: 'to do' as string }));
+    const pending: Pending[] = [];
+    const walk = () => ({ caseId, version: record.version, who, steps, pending: pending.map(pendingView), production });
+    await this.update(job.id, { status: 'running', output: { walk: walk() } });
+    await this.log(job.id, `Walkthrough of ${caseId} (version ${record.version}) by ${who}`);
+
+    const session = await openExecutionSession({ headless: this.options.headless ?? true, testIdAttribute: project.testIdAttribute });
+    let trace: Awaited<ReturnType<typeof executePlan>> | undefined;
+    let ended: 'finished' | 'stopped' | 'idle' = 'finished';
+    try {
+      // A case that starts logged in is logged in first by the login case of the workbook it came from, without stopping (E7).
+      if (compiled.ir.preconditions.some((p) => p.type === 'LOGGED_IN')) await this.loginFirst(job, project, compileOptions, session, pages);
+      const hook: StepHook = {
+        before: async (chain, i) => {
+          steps[i] = { ...(steps[i] as (typeof steps)[number]), status: 'running' };
+          if (!changesData(chain)) return 'go';
+          if (production && !allowed) {
+            await this.log(
+              job.id,
+              `■ ${chain.step} "${chain.original}" would change data on a production environment: not run (the project does not allow it)`,
+            );
+            return 'stop';
+          }
+          const yes = await this.waitFor(
+            job,
+            'confirm',
+            {
+              walkthrough: true,
+              item: chain.step,
+              raw: chain.original,
+              code: 'CHANGES_DATA',
+              text: `This step will change data: "${chain.original}". Continue?`,
+            },
+            idleMs,
+          );
+          return yes === true ? 'go' : 'stop';
+        },
+        after: async (rec, i) => {
+          steps[i] = { ...(steps[i] as (typeof steps)[number]), status: rec.status };
+          let last: Record<string, unknown> | undefined;
+          for (;;) {
+            await this.update(job.id, { output: { walk: walk() } });
+            const a = await this.waitFor(
+              job,
+              'step',
+              { walkthrough: true, ...stepView(rec, session.page.viewportSize()), steps, pending: pending.map(pendingView), ...(last ? { last } : {}) },
+              idleMs,
+            );
+            if (a === 'next') return 'go';
+            if (a === 'stop' || a === 'abort') return 'stop';
+            const asked = (a ?? {}) as { check?: WalkCheck; edit?: { text?: unknown } };
+            if (asked.check) {
+              const check: WalkCheck = { ...asked.check, ...(asked.check.afterStep === 'end' ? { afterStep: undefined } : { afterStep: rec.step }) };
+              const placed = await addCheck(record.raw, check, compileOptions);
+              if (!placed.ok) {
+                last = { ok: false, sentence: placed.sentence, message: placed.why };
+                continue;
+              }
+              pending.push({ kind: 'check', check, sentence: placed.sentence });
+              const tried = check.afterStep ? tryOnScreen(placed.expectation, rec) : undefined;
+              last = {
+                ok: true,
+                sentence: placed.sentence,
+                ...(tried ? { result: tried.result, message: tried.why } : { message: 'It is judged after the last step.' }),
+              };
+              await this.log(
+                job.id,
+                `+ check after ${check.afterStep ?? 'the last step'}: ${placed.sentence}${tried ? ` (on this screen now: ${tried.result})` : ''}`,
+              );
+              continue;
+            }
+            if (asked.edit && typeof asked.edit.text === 'string') {
+              try {
+                editStep(record.raw, rec.step, asked.edit.text);
+                pending.push({ kind: 'edit', step: rec.step, text: asked.edit.text });
+                last = { ok: true, message: `${rec.step} will read "${asked.edit.text.trim()}" once saved. This walkthrough goes on with the step as it was.` };
+              } catch (e) {
+                last = { ok: false, message: (e as Error).message };
+              }
+              continue;
+            }
+            last = { ok: false, message: 'That answer is not understood.' };
+          }
+        },
+        pick: async (request) => {
+          const a = await this.waitFor(
+            job,
+            'choose',
+            { walkthrough: true, item: request.step, raw: request.original, code: request.code, text: request.reason, view: request.view },
+            idleMs,
+          );
+          if (!a || typeof a !== 'object' || !('ref' in a)) return undefined;
+          const { ref, remember } = a as { ref: string; remember?: boolean };
+          const element = request.view.elements.find((e) => e.ref === ref);
+          if (!element) return undefined;
+          if (remember && element.name)
+            await new LearningService(store, { exploreDir })
+              .saveLabel(project.id, { label: request.name, means: element.name, screen: request.screen, element: ref }, `walkthrough ${job.id}`, who, {
+                seenOnScreen: true,
+              })
+              .then(() => this.log(job.id, `Remembered: on this screen "${request.name}" is "${element.name}"`))
+              .catch((e) => this.log(job.id, `Not remembered: ${(e as Error).message}`));
+          return { ref };
+        },
+      };
+      trace = await executePlan(
+        { plan, values: compiled.values, pages },
+        {
+          mcp: session.port,
+          page: session.page,
+          baseUrl: project.baseUrl,
+          testIdAttribute: project.testIdAttribute,
+          screenshotDir: shots,
+          ...(knowledge ? { knowledge } : {}),
+          hook,
+        },
+      );
+      if (trace.stoppedAt?.code === 'STOPPED') ended = 'stopped';
+      for (const [i, s] of trace.steps.entries()) steps[i] = { ...(steps[i] as (typeof steps)[number]), status: s.status };
+    } catch (e) {
+      if (!(e instanceof Idle)) throw e;
+      ended = 'idle';
+      await this.log(job.id, `The walkthrough was closed after ${Math.round(idleMs / 60000)} minutes without an answer.`);
+    } finally {
+      await session.close();
+    }
+    if (trace) {
+      // The screens reached are kept as the person's (E0.14a, b): they go into the next compile's knowledge.
+      const kept = await keepScreens(path.join(exploreDir, caseId), trace, { source: 'walkthrough' }).catch(() => undefined);
+      for (const c of kept?.changes ?? []) await this.log(job.id, `~ on ${c.screen}, ${c.change}: ${c.what}`);
+    }
+
+    let saved: number | undefined;
+    if (pending.length && ended !== 'idle') {
+      const save = await this.waitFor(
+        job,
+        'confirm',
+        {
+          walkthrough: true,
+          item: caseId,
+          code: 'SAVE_WALKTHROUGH',
+          text: `Save ${pending.length} change(s) as a new version of ${caseId}? The workbook itself is not changed.`,
+          pending: pending.map(pendingView),
+        },
+        idleMs,
+      ).catch((e) => {
+        if (e instanceof Idle) return false;
+        throw e;
+      });
+      if (save === true) {
+        const final = await finalCase(record.raw, pending, compileOptions);
+        if (!final.ok) await this.log(job.id, `Not saved: ${final.why}`);
+        else {
+          // The reason starts with "edited", so this version wins when the workbook is run again (D23).
+          const next = await store.upsertTestCase(
+            project.id,
+            { ...final.raw, id: caseId },
+            { kind: record.sourceKind, ref: record.sourceRef, row: record.sourceRow },
+            `edited in a walkthrough by ${who}: ${pending.map((p) => (p.kind === 'check' ? `+ ${p.sentence}` : `${p.step} reworded`)).join('; ')}`,
+          );
+          saved = next.version;
+          await this.log(job.id, `Saved as version ${next.version} of ${caseId}. Run it again to see the result.`);
+        }
+      } else await this.log(job.id, 'The changes were not saved.');
+    }
+    await this.update(job.id, {
+      status: ended === 'idle' ? 'cancelled' : 'done',
+      output: { walk: { ...walk(), ended, ...(saved ? { savedVersion: saved } : {}), durationMs: Date.now() - started } },
+      finishedAt: new Date().toISOString(),
+    });
+  }
+
+  /** Logs in with the login case of the workbook the walkthrough came from, before its first step, without asking anything. */
+  private async loginFirst(
+    job: Job,
+    project: Project,
+    compileOptions: Parameters<typeof compileCase>[1],
+    session: Awaited<ReturnType<typeof openExecutionSession>>,
+    pages: Record<string, string | null>,
+  ): Promise<void> {
+    const from = typeof job.input.fromJob === 'string' ? await this.options.store.job(job.input.fromJob) : undefined;
+    const loginId =
+      typeof job.input.loginCase === 'string' ? job.input.loginCase : typeof from?.output.loginCase === 'string' ? from.output.loginCase : undefined;
+    const login = loginId ? await this.options.store.testCase(project.id, loginId) : undefined;
+    if (!login) {
+      await this.log(job.id, 'This test case starts logged in, and no login case is known for it: its own steps are run as they are.');
+      return;
+    }
+    const c = await compileCase(login.raw, compileOptions);
+    if (!c.ir || !c.plan) {
+      await this.log(job.id, `The login case ${login.extId} could not be read; the steps are run without it.`);
+      return;
+    }
+    const t = await executePlan(
+      { plan: planActions(c.ir, c.plan), values: c.values, pages: { ...pages, ...c.pages } },
+      { mcp: session.port, page: session.page, baseUrl: project.baseUrl },
+    );
+    await this.log(
+      job.id,
+      t.status === 'completed'
+        ? `Logged in first with ${login.extId}`
+        : `The login case ${login.extId} stopped at ${t.stoppedAt?.step}: ${t.stoppedAt?.reason}`,
+    );
   }
 
   /** One test case from the form: explore and generate, wait in review, then run (FR-RV-01, FR-RV-03). */

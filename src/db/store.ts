@@ -29,7 +29,7 @@ export interface Project {
   createdAt: string;
 }
 
-export type JobKind = 'workbook' | 'single';
+export type JobKind = 'workbook' | 'single' | 'walkthrough';
 export type JobStatus = 'queued' | 'running' | 'waiting' | 'review' | 'done' | 'failed' | 'cancelled';
 
 export interface Job {
@@ -51,7 +51,7 @@ export interface Job {
 export interface Question {
   id: number;
   jobId: string;
-  kind: 'choose' | 'pageUrl' | 'confirm';
+  kind: 'choose' | 'pageUrl' | 'confirm' | 'step';
   payload: Record<string, unknown>;
   answer?: unknown;
   createdAt: string;

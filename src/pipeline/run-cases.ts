@@ -58,6 +58,8 @@ export interface PipelineOptions {
   onExplored?: (model: TestModel, result: ExplorationResult, file: string) => void | Promise<void>;
   /** The next `EXEC-…` id. Default: a counter file in the runs folder; the server uses the database. */
   nextExecutionId?: () => Promise<string>;
+  /** Words a person gave for an element on one screen in a walkthrough (E0.14b): the knowledge keeps them with that screen. */
+  screenWords?: Array<{ word: string; means: string; screen: string; element?: string }>;
   /** A word the tester just named an element for, to keep as a project rule (FR-RULE-01). */
   onRule?: (rule: { kind: 'element'; pattern: string; meaning: string }) => void;
   onProgress?: (message: string) => void;
@@ -114,12 +116,10 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   // What the application calls things, from what earlier runs saw and what testers said an element means (D1).
   const knowledge =
     options.engine === 'semantic'
-      ? await knowledgeFromRuns(
-          workspaceName(options.baseUrl),
-          options.baseUrl,
-          exploreDir,
-          Object.entries(options.config.rules?.element ?? {}).map(([word, means]) => ({ word, means })),
-        )
+      ? await knowledgeFromRuns(workspaceName(options.baseUrl), options.baseUrl, exploreDir, [
+          ...Object.entries(options.config.rules?.element ?? {}).map(([word, means]) => ({ word, means })),
+          ...(options.screenWords ?? []),
+        ])
       : undefined;
   let pageUrls = await pages.load();
 
@@ -367,7 +367,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
 export async function executeCases(
   models: TestModel[],
   prepared: Prepared,
-  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'onProgress' | 'onRunEvent' | 'nextExecutionId' | 'approvedAssumptions'>,
+  options: Pick<PipelineOptions, 'env' | 'runsDir' | 'exploreDir' | 'onProgress' | 'onRunEvent' | 'nextExecutionId' | 'approvedAssumptions'>,
 ): Promise<PipelineResult> {
   const { explored, early, workspace } = prepared;
   let executionId: string | undefined;
@@ -388,10 +388,13 @@ export async function executeCases(
 
   // Cases the legacy route could not finish and the new engine can judge: a verdict from the new run replaces the legacy stop.
   const fromNewRun = new Map<string, TestVerdict>();
+  // The screens the new engine's runs reach are kept with each case, as the knowledge the next compile reads (E0.14a).
+  const exploreDir = options.exploreDir ?? path.join('.auto-qa', 'explore');
   if (prepared.semantic?.size) {
     executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
     const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'semantic');
-    for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, onProgress: options.onProgress })) fromNewRun.set(id, v);
+    for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, exploreDir, onProgress: options.onProgress }))
+      fromNewRun.set(id, v);
   }
 
   // A legacy PASS stands only when the new engine, running the case itself, agrees (S6).
@@ -399,7 +402,7 @@ export async function executeCases(
   if (passed.length) {
     executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
     const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'shadow');
-    const second = await runSemanticJobs(passed, { screenshotDir, onProgress: options.onProgress });
+    const second = await runSemanticJobs(passed, { screenshotDir, exploreDir, onProgress: options.onProgress });
     for (const job of passed) {
       const legacy = ran.get(job.model.id) as TestVerdict;
       // A case the new engine could not run at all has no answer: the PASS cannot be confirmed, so it is not given.

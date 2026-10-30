@@ -87,6 +87,23 @@ export async function visibleFrames(page: Page): Promise<VisibleFrame[]> {
 }
 
 /**
+ * Where each visible frame is on the page, by its path joined with `>` (the page itself is `''`): a box read inside a frame is moved by
+ * this much to land on a picture of the whole page (E0.14). A frame whose place cannot be read is left out.
+ */
+export async function frameOffsets(page: Page, frames?: readonly VisibleFrame[]): Promise<Record<string, { x: number; y: number }>> {
+  const out: Record<string, { x: number; y: number }> = { '': { x: 0, y: 0 } };
+  for (const { frame, path } of frames ?? (await visibleFrames(page))) {
+    if (!path.length) continue;
+    const at = await frame
+      .frameElement()
+      .then((el) => el.boundingBox())
+      .catch(() => null);
+    if (at) out[path.join('>')] = { x: Math.round(at.x), y: Math.round(at.y) };
+  }
+  return out;
+}
+
+/**
  * The frame that holds the screen a person is on when the page itself is only a shell (E8): the visible frame that takes the most room,
  * and then, while a frame inside it takes at least a quarter of its room, that one: a menu frame that wraps the content frame is not the
  * screen. OrangeHRM shows every screen in one frame while the address of the page never changes.

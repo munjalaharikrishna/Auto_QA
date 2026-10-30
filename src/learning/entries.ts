@@ -22,6 +22,13 @@ export interface LabelPayload {
   label: string;
   means: string;
   page?: string;
+  /** The screen key the word was given on, in a walkthrough (E0.14b): the word means this element on that screen only. */
+  screen?: string;
+  /**
+   * The element that was picked there, by its frame and its place in the page (`frame>path|xpath`): what tells it from another element
+   * with the same name, such as the second of two Details buttons.
+   */
+  element?: string;
 }
 
 /** A sentence that is read as another sentence: a step or an expected result (the old project rules of kind step and check). */

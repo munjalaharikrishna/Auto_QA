@@ -48,7 +48,9 @@ export class LearningService {
     const given = { ...payload, label: ruleKey(payload.label) };
     const outcome = validateLabel(given, known);
     if (outcome.status === 'quarantined') throw new EntryRefused(outcome.validation.problem);
-    return this.keep(projectId, 'label', `${norm(given.label)}|${norm(given.page ?? '')}`, given, outcome, source, actor);
+    // A word given on one screen (E0.14b) is its own entry: the same word may mean another element on another screen.
+    const where = given.screen ? `screen:${given.screen}` : norm(given.page ?? '');
+    return this.keep(projectId, 'label', `${norm(given.label)}|${where}`, given, outcome, source, actor);
   }
 
   /** A sentence read as another one. Refused when it does not read as a real step or a check that judges something. */

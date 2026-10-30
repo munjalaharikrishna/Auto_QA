@@ -15,6 +15,7 @@ import { CaseForm, Diff, duration, ErrorNote, Explain, type Explanation, JobBadg
 import { PickElement, type ViewElement } from '../components/PickElement';
 import { ReviewCards } from '../components/ReviewCards';
 import { GroupedReview } from '../components/Rules';
+import { Walkthrough } from '../components/Walkthrough';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
 
@@ -50,10 +51,13 @@ export function JobPage({ id }: { id: string }) {
     review: 'while it was waiting for your review',
   };
   const summary = job.output.summary as BatchSummary | undefined;
+  const walkthrough = job.kind === 'walkthrough';
   const title =
     job.kind === 'workbook'
       ? `Workbook: ${String(job.input.originalName ?? '')}${job.input.onlyReview ? ' — review queue' : ''}`
-      : String((job.input.case as RawTestCase | undefined)?.title ?? 'Test case');
+      : walkthrough
+        ? `Walkthrough: ${String(job.input.caseId ?? '')}`
+        : String((job.input.case as RawTestCase | undefined)?.title ?? 'Test case');
 
   return (
     <>
@@ -84,7 +88,7 @@ export function JobPage({ id }: { id: string }) {
         )}
       </div>
       {job.status === 'failed' && <ErrorNote error={job.error} />}
-      {job.status === 'cancelled' && (
+      {job.status === 'cancelled' && !walkthrough && (
         <p className="notice warn">
           Cancelled {stoppedAt ? (STOPPED[stoppedAt] ?? '') : ''}. No test was run, so there is no result.
           {theCase?.id && ' Press Run again to start it again.'}
@@ -96,11 +100,10 @@ export function JobPage({ id }: { id: string }) {
         </p>
       )}
 
-      {job.questions.map((q) => (
-        <QuestionPanel key={q.id} question={q} />
-      ))}
+      {walkthrough && <Walkthrough job={job} />}
+      {!walkthrough && job.questions.map((q) => <QuestionPanel key={q.id} question={q} />)}
       {job.status === 'review' && job.output.review ? <ReviewPanel job={job} review={job.output.review as Review} /> : null}
-      {job.status === 'done' && <ResultsPanel job={job} summary={summary} reload={load} />}
+      {job.status === 'done' && !walkthrough && <ResultsPanel job={job} summary={summary} reload={load} />}
       {job.status === 'done' && job.kind === 'workbook' && (
         <GroupedReview
           jobId={job.id}
@@ -438,7 +441,7 @@ function ResultsPanel({ job, summary, reload }: { job: JobDetail; summary?: Batc
           ))}
         </div>
       )}
-      <ReviewCards jobId={job.id} onChanged={reload} zoom={setZoom} />
+      <ReviewCards jobId={job.id} projectId={job.projectId} onChanged={reload} zoom={setZoom} />
       <div className="table-wrap">
         <table>
           <thead>

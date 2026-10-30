@@ -12,7 +12,7 @@ export {
   visibleFrames,
 } from './frames.js';
 export { type InspectOptions, type InspectResult, inspectPage, inspectPageDetailed, readDom } from './inspector.js';
-export { pageIdentityOf } from './page-identity.js';
+export { pageIdentityOf, screenKeyOf } from './page-identity.js';
 export {
   type Box,
   type DomElement,

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { auditOf, checkTrail } from '../engine/audit/index.js';
 import type { OtpSource } from '../engine/auth/index.js';
 import { isSecret } from '../engine/data/secret.js';
-import { executePlan, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
+import { executePlan, keepScreens, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
 import { planActions } from '../engine/execute/planner.js';
 import type { CompileResult } from '../engine/index.js';
 import type { IrExpectation } from '../engine/ir/schema.js';
@@ -261,6 +261,8 @@ function writeAudit(
 export interface SemanticRunOptions {
   /** Where the pictures of each case are kept: one folder per case. */
   screenshotDir?: string;
+  /** Where each case's folder is kept: the screens a run reached are saved there, for the application's knowledge (E0.14a). */
+  exploreDir?: string;
   onProgress?: (message: string) => void;
 }
 
@@ -330,6 +332,11 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
             ...(options.screenshotDir ? { screenshotDir: path.join(options.screenshotDir, model.id) } : {}),
           },
         );
+        if (options.exploreDir) {
+          // Run capture (E0.14a): the screens this run reached, from what it observed anyway; and what changed on them since last time.
+          const kept = await keepScreens(path.join(options.exploreDir, model.id), trace).catch(() => undefined);
+          for (const c of kept?.changes ?? []) options.onProgress?.(`~ ${model.id}: on ${c.screen}, ${c.change}: ${c.what}`);
+        }
         const auditFile = options.screenshotDir
           ? writeAudit(path.join(options.screenshotDir, model.id), trace, planned, compiled, options.onProgress)
           : undefined;

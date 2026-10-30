@@ -105,6 +105,11 @@ export interface CardCase {
   eligibility: Eligibility;
   evidence: CardEvidence;
   decision?: DecisionView;
+  /**
+   * The test case was changed after this run (E0.14b): a walkthrough or an edit saved a newer version. The result on the card is the
+   * earlier version's, and is not changed; running the case again gives the new one's.
+   */
+  changedSince?: { version: number; reason: string; at: string };
 }
 
 export interface ReviewCardView {

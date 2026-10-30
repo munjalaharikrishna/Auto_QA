@@ -591,3 +591,40 @@ button.chip {
   padding: 0.2rem 0.6rem;
   border-radius: 99px;
 }
+
+/* Walkthrough (E0.14b): the steps on the left, the screen on the right */
+.walk {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.walk ol.steps {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+.walk ol.steps li {
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+}
+.walk ol.steps li.current {
+  background: var(--review-bg);
+  color: var(--review-ink);
+  font-weight: 600;
+}
+.walk ol.steps li.done {
+  color: var(--muted);
+}
+.walk ol.steps li.blocked,
+.walk ol.steps li.failed {
+  color: var(--fail-ink);
+}
+.walk .state {
+  font-size: 0.75rem;
+  margin-left: 0.35rem;
+}
+@media (max-width: 760px) {
+  .walk {
+    grid-template-columns: 1fr;
+  }
+}

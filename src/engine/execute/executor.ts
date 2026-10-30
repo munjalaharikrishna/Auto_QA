@@ -8,18 +8,24 @@ import type { ResolvedValue } from '../data/resolver.js';
 import { isMasked, maskDeep, Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
+import { labelKey } from '../knowledge/labels.js';
+import { screenWord } from '../knowledge/screens.js';
+import { contentFrameOf, frameOffsets } from '../locate/frames.js';
 import {
   type DomElement,
   inspectPage,
   inspectPageDetailed,
   type Level,
   type LocateQuery,
+  type LocateResult,
   locate,
   pageIdentityOf,
   sameFrame,
   selectorIn,
   type Tried,
+  WEIGHT,
 } from '../locate/index.js';
+import { screenKeyOf } from '../locate/page-identity.js';
 import { refusesOtp } from '../patterns/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
 import { type Delta, describe, diff } from './delta.js';
@@ -53,7 +59,9 @@ export type BlockCode =
   /** No mail with the one-time code came within the wait (AU-06): the environment, never a FAIL. */
   | 'OTP_MAIL_NOT_RECEIVED'
   /** The application refused a one-time code that was read correctly (AU-06): test data, never a FAIL. */
-  | 'OTP_REJECTED';
+  | 'OTP_REJECTED'
+  /** A person stepping through the run stopped it there (E0.14a). */
+  | 'STOPPED';
 
 class Block extends Error {
   constructor(
@@ -78,6 +86,8 @@ export interface Located {
   ignored: string[];
   /** For a target in a table row: where the row was found. */
   row?: { page: string; cells: string[]; pagesVisited: number };
+  /** A person picked the element on the screenshot, because the levels found none or several (E0.14a). */
+  picked?: true;
 }
 
 export interface Call {
@@ -165,9 +175,71 @@ export interface ExecuteOptions {
   otp?: OtpSource;
   /** Keep the observations before and after each step in the trace. On by default. */
   keepObservations?: boolean;
+  /** A person stepping through the run (E0.14a). Without it the run goes from the first step to the last, as always. */
+  hook?: StepHook;
+}
+
+/** One element on the screenshot a person is asked to pick from: `ref` names it in the answer. */
+export interface PickElement {
+  ref: string;
+  role: string;
+  name: string;
+  /** On the screenshot, with the place of its frames added. */
+  box: { x: number; y: number; width: number; height: number };
+  /** Its number among the elements the levels found, when it is one of them. */
+  candidate?: number;
+}
+
+/** What a person is shown when a step cannot find its element: why, the page as a picture, and every element a click could mean. */
+export interface PickRequest {
+  step: string;
+  original: string;
+  /** The name the step looked for. */
+  name: string;
+  code: BlockCode;
+  reason: string;
+  /** The screen key of the page (E0.14): where a word the person gives for the element holds. */
+  screen: string;
+  view: { screenshot?: string; width: number; height: number; elements: PickElement[] };
+}
+
+/**
+ * A person stepping through the run, as in the walkthrough (E0.14a, PD-13). Asked before and after every step; a step that cannot find
+ * its element asks for a pick instead of stopping. Each answer is awaited: the run waits for the person.
+ */
+export interface StepHook {
+  /** Before the step: go on, or stop here (this step and every later one are not run). */
+  before?(chain: Chain, index: number): Promise<'go' | 'stop'>;
+  /** After the step, with what it did: go on, or stop. */
+  after?(record: StepRecord, index: number): Promise<'go' | 'stop'>;
+  /** The element the step means, by its `ref`; nothing leaves the step blocked as it would be without a person. */
+  pick?(request: PickRequest): Promise<{ ref: string } | undefined>;
 }
 
 const MASK = '••••';
+
+/** What a person can pick on the screenshot: what a step can act on, and what a check can look at. */
+const PICKABLE: ReadonlySet<string> = new Set([
+  'button',
+  'link',
+  'textbox',
+  'searchbox',
+  'combobox',
+  'listbox',
+  'checkbox',
+  'radio',
+  'switch',
+  'spinbutton',
+  'slider',
+  'tab',
+  'menuitem',
+  'option',
+  'heading',
+  'img',
+  'alert',
+  'status',
+  'cell',
+]);
 
 /** The id of a locator contract: the same page, name and selector give the same id in every run (GV-02). */
 const contractId = (page: string, semantic: string, selector: string): string =>
@@ -219,7 +291,13 @@ class Runner {
       };
     }
     let stopped: RunTrace['stoppedAt'];
-    for (const chain of plan.chains) {
+    const hook = this.o.hook;
+    const byPerson = (step: string): RunTrace['stoppedAt'] => ({ step, code: 'STOPPED', reason: 'stopped by the person stepping through the run' });
+    for (const [index, chain] of plan.chains.entries()) {
+      if (!stopped && hook?.before && (await hook.before(chain, index)) === 'stop') {
+        stopped = byPerson(chain.step);
+        base.status = 'blocked';
+      }
       if (stopped) {
         base.steps.push(this.skipped(chain));
         continue;
@@ -229,6 +307,9 @@ class Runner {
       if (rec.status === 'blocked' || rec.status === 'failed') {
         stopped = { step: chain.step, code: rec.code ?? 'ACTION_FAILED', reason: rec.reason ?? '' };
         base.status = rec.status;
+      } else if (hook?.after && (await hook.after(rec, index)) === 'stop' && index < plan.chains.length - 1) {
+        stopped = byPerson(plan.chains[index + 1]?.step ?? chain.step);
+        base.status = 'blocked';
       }
     }
     return stopped ? { ...base, stoppedAt: stopped } : base;
@@ -533,30 +614,63 @@ class Runner {
     let elements = seen.elements;
     if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
     const query = this.query(target, purpose);
-    const result = locate(query, elements);
+    // The screen this is on (E0.14), and what a person said the step's word means on it in a walkthrough: that is tried first.
+    const screen = screenKeyOf(
+      contentFrameOf(seen.frames)?.url ?? this.page.url(),
+      seen.elements.find((e) => e.role === 'dialog' && e.visible)?.ariaName || undefined,
+    );
+    const said = screenWord(
+      this.o.knowledge?.screens?.find((s) => s.key === screen),
+      query.name,
+    );
+    // The element a person picked here before, when it is still there and still the element of that name; else the name they gave.
+    const shown = said?.element ? elements.find((e) => e.visible && `${e.frame.join('>')}|${e.xpath}` === said.element) : undefined;
+    const pickedBefore =
+      shown && labelKey(shown.ariaName || shown.labels[0] || shown.text || shown.placeholder || shown.nameAttr || '') === labelKey(said?.means ?? '')
+        ? shown
+        : undefined;
+    const bySaid: LocateResult | undefined = pickedBefore
+      ? { status: 'found', element: pickedBefore, level: 'inspection', weight: WEIGHT.inspection, tried: [], ignored: [], passAllowed: true }
+      : said
+        ? locate({ ...query, name: said.means, aliases: [] }, elements)
+        : undefined;
+    if (said)
+      rec.notes.push(
+        `on this screen a person said "${query.name}" is ${pickedBefore ? 'the element they picked' : `"${said.means}"`}${bySaid?.status === 'found' ? '' : ', which is not on the page now: found as usual'}`,
+      );
+    const result = bySaid?.status === 'found' ? bySaid : locate(query, elements);
     const tried = result.tried;
     // A frame that could not be read is not a frame without the element: the run says so, and the case is set aside, not failed.
     const unreadNote = seen.unread.length
       ? `; a frame could not be read after the page changed (${seen.unread.map((p) => p.join(' > ')).join(', ')}), so it may be there`
       : '';
-    if (result.status === 'not-found')
-      throw new Block(
-        'LOCATE_NOT_FOUND',
-        `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`,
-      );
-    if (result.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', result.reason);
-    if (result.status === 'inactive') throw new Block('LOCATE_INACTIVE', result.reason);
-    const selector = selectorIn(result.element.frame, result.element.xpath);
+    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true };
+    if (result.status === 'found')
+      found = { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) };
+    else {
+      const code: BlockCode = result.status === 'not-found' ? 'LOCATE_NOT_FOUND' : result.status === 'ambiguous' ? 'LOCATE_AMBIGUOUS' : 'LOCATE_INACTIVE';
+      const reason =
+        result.status === 'not-found'
+          ? `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`
+          : result.reason;
+      // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
+      const candidates = result.status === 'ambiguous' ? result.candidates : [];
+      const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
+      if (!picked) throw new Block(code, reason);
+      found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
+      rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+    }
+    const selector = selectorIn(found.element.frame, found.element.xpath);
     const count = await this.page.locator(selector).count();
     if (count !== 1) throw new Block('LOCATOR_NOT_UNIQUE', `the locator for "${query.name}" finds ${count} elements, not one`);
     const home = consolidate(this.o.knowledge, query.name, { page: target?.page });
     const known = home.status === 'one' ? home.components[0] : undefined;
     // The screen an element is on: the address of its frame when the page is only a shell around it (E8), else the page's.
-    const pageName = known?.page ?? target?.page ?? pageIdentityOf(result.element.frameUrl ?? this.page.url());
+    const pageName = known?.page ?? target?.page ?? pageIdentityOf(found.element.frameUrl ?? this.page.url());
     rec.located = {
       name: query.name,
-      level: result.level,
-      weight: result.weight,
+      level: found.level,
+      weight: found.weight,
       selector,
       contract: {
         id: contractId(pageName, query.name, selector),
@@ -566,15 +680,63 @@ class Runner {
       },
       tried,
       element: {
-        tag: result.element.tag,
-        role: result.element.role,
-        ...(result.element.id ? { id: result.element.id } : {}),
-        ...(result.element.form ? { form: result.element.form } : {}),
+        tag: found.element.tag,
+        role: found.element.role,
+        ...(found.element.id ? { id: found.element.id } : {}),
+        ...(found.element.form ? { form: found.element.form } : {}),
       },
-      ignored: result.ignored.map((i) => i.reason),
+      ignored: found.ignored,
       ...(row ? { row: { page: row.label, cells: row.row.cells, pagesVisited: row.visited } } : {}),
+      ...(found.picked ? { picked: true as const } : {}),
     };
-    return { element: result.element, selector };
+    return { element: found.element, selector };
+  }
+
+  /**
+   * Asks the person stepping through the run which element the step means (E0.14a): the page as a picture, with a box for every
+   * visible element a click could mean, the ones the levels found numbered. Undefined when nobody is asked or nobody picks.
+   */
+  private async askPick(
+    rec: StepRecord,
+    name: string,
+    code: BlockCode,
+    reason: string,
+    elements: readonly DomElement[],
+    candidates: readonly DomElement[],
+    screen: string,
+  ): Promise<DomElement | undefined> {
+    const pick = this.o.hook?.pick;
+    if (!pick) return undefined;
+    const offsets = await frameOffsets(this.page);
+    const refOf = (e: DomElement): string => `${e.frame.join('>')}|${e.xpath}`;
+    const byRef = new Map<string, DomElement>();
+    const shown: PickElement[] = [];
+    for (const e of elements) {
+      const at = offsets[e.frame.join('>')];
+      if (!e.visible || !at || e.box.width === 0 || e.box.height === 0 || !PICKABLE.has(e.role)) continue;
+      const ref = refOf(e);
+      byRef.set(ref, e);
+      const n = candidates.findIndex((c) => refOf(c) === ref);
+      shown.push({
+        ref,
+        role: e.role,
+        name: e.ariaName || e.labels[0] || e.text || e.placeholder || e.nameAttr || '',
+        box: { x: e.box.x + at.x, y: e.box.y + at.y, width: e.box.width, height: e.box.height },
+        ...(n >= 0 ? { candidate: n } : {}),
+      });
+    }
+    const size = this.page.viewportSize() ?? { width: 1280, height: 720 };
+    const screenshot = await this.shoot(`${rec.step}-pick`, 'before');
+    const answer = await pick({
+      step: rec.step,
+      original: rec.original,
+      name,
+      code,
+      reason,
+      screen,
+      view: { ...(screenshot ? { screenshot } : {}), width: size.width, height: size.height, elements: shown },
+    });
+    return answer ? byRef.get(answer.ref) : undefined;
   }
 
   // ---- doing ----

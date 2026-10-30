@@ -74,7 +74,10 @@ export function labelProblem(p: LabelPayload): string | undefined {
   const means = norm(p.means);
   if (!label) return 'The words the tester writes are empty.';
   if (!means) return 'The name on the screen is empty.';
-  if (label === means) return 'The label says the same thing as the name it is for.';
+  // A pick on one screen (E0.14b) says which of several elements a word means: "Details" is the second Details button there.
+  if (p.screen !== undefined && !p.screen.trim()) return 'The screen the word was given on is empty.';
+  if (p.screen && p.element !== undefined && !p.element.trim()) return 'The element that was picked is empty.';
+  if (label === means && !(p.screen && p.element)) return 'The label says the same thing as the name it is for.';
   if (p.means.length > 80 || means.split(' ').length > MAX_MEANS_WORDS) return `"${p.means}" is too long to be the name of one element.`;
   if (ACTION_WORDS.has(label) && ACTION_WORDS.has(means)) return `"${p.label}" is an action; it cannot be the name of a different action, "${p.means}".`;
   return undefined;

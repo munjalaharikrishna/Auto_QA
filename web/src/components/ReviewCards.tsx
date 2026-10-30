@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type DecideResult, fileUrl, type ReviewCard } from '../api';
+import { navigate } from '../router';
 import { ErrorNote, StatusBadge, when } from './common';
 
 const REVIEWER_KEY = 'auto-qa.reviewer';
@@ -17,7 +18,18 @@ const remembered = (): string => {
  * FAIL. Cases with one cause are one card, so you decide once. What you decide is kept with your name and the time, beside the engine's
  * own verdict, which it does not change. A PASS is offered only when the run finished and there is something to look at.
  */
-export function ReviewCards({ jobId, onChanged, zoom }: { jobId: string; onChanged: () => void; zoom: (file: string) => void }) {
+export function ReviewCards({
+  jobId,
+  projectId,
+  onChanged,
+  zoom,
+}: {
+  jobId: string;
+  /** The project of the job: with it, each case of a card offers a walkthrough (E0.14b). */
+  projectId?: string;
+  onChanged: () => void;
+  zoom: (file: string) => void;
+}) {
   const [cards, setCards] = useState<ReviewCard[]>();
   const [error, setError] = useState<string>();
   const load = useCallback(() => {
@@ -41,6 +53,7 @@ export function ReviewCards({ jobId, onChanged, zoom }: { jobId: string; onChang
         <Card
           key={card.id}
           jobId={jobId}
+          projectId={projectId}
           card={card}
           zoom={zoom}
           changed={() => {
@@ -53,7 +66,19 @@ export function ReviewCards({ jobId, onChanged, zoom }: { jobId: string; onChang
   );
 }
 
-function Card({ jobId, card, zoom, changed }: { jobId: string; card: ReviewCard; zoom: (file: string) => void; changed: () => void }) {
+function Card({
+  jobId,
+  projectId,
+  card,
+  zoom,
+  changed,
+}: {
+  jobId: string;
+  projectId?: string;
+  card: ReviewCard;
+  zoom: (file: string) => void;
+  changed: () => void;
+}) {
   const [who, setWho] = useState(remembered);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -119,6 +144,39 @@ function Card({ jobId, card, zoom, changed }: { jobId: string; card: ReviewCard;
           </figure>
         )}
       </div>
+      {projectId && (
+        <ul className="plain" style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }} aria-label="Walk through a case">
+          {card.cases.map((c) => (
+            <li key={c.testId} className="row">
+              <span className="grow">
+                {c.testId}
+                {c.changedSince && (
+                  <span className="muted">
+                    {' '}
+                    · changed since this run: version {c.changedSince.version} ({c.changedSince.reason}, {when(c.changedSince.at)}). The result here is the
+                    earlier version's; run it again for the new one.
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                disabled={busy}
+                title="Run the steps one at a time in a browser: pick elements, add checks, reword steps"
+                onClick={async () => {
+                  try {
+                    const job = await api.walkthrough(projectId, c.testId, { fromJob: jobId, ...(who.trim() ? { who: who.trim() } : {}) });
+                    navigate(`/jobs/${job.id}`);
+                  } catch (e) {
+                    setError((e as Error).message);
+                  }
+                }}
+              >
+                Walkthrough
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {decided.length > 0 && (
         <ul className="muted" style={{ margin: 0 }}>
           {decided.map((c) => (

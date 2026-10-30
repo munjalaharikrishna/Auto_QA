@@ -21,3 +21,12 @@ export function pageIdentityOf(url: string): string {
   }
   return keep.length ? `${path}?${keep.sort().join('&')}` : path;
 }
+
+/**
+ * The screen a person is on (E0.14): the identity of the address that shows it (the content frame's on a shell page), and the dialog
+ * that is open over it, which is a screen of its own. The same screen gives the same key in every run.
+ */
+export function screenKeyOf(url: string, dialog?: string): string {
+  const page = pageIdentityOf(url);
+  return dialog ? `${page} [dialog: ${dialog}]` : page;
+}

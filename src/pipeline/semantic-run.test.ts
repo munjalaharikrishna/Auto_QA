@@ -9,6 +9,7 @@ import { startDemoApp } from '../../examples/demo-app/server.js';
 import type { RunTrace, StepRecord } from '../engine/execute/executor.js';
 import type { Observation } from '../engine/execute/observe.js';
 import { type CompileResult, compileCase, Secret } from '../engine/index.js';
+import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
 import { VERDICTS, type Verdict, type VerdictName } from '../engine/verdict/verdict.js';
 import type { Resolver } from '../explorer/controller.js';
@@ -467,9 +468,23 @@ describe('semantic runs on the demo app', { skip }, () => {
       changes: [],
       semantic: new Map([['T-SEM', { model, compiled: c, baseUrl: app.url }]]),
     };
-    const result = await executeCases([model, other], prepared, { env: {} });
-    assert.equal(result.verdicts.find((v) => v.testId === 'T-SEM')?.status, 'PASS');
-    assert.equal(result.verdicts.find((v) => v.testId === 'T-OTHER')?.reason, 'legacy stop');
+    const dir = await mkdtemp(path.join(tmpdir(), 'auto-qa-sem-'));
+    try {
+      const exploreDir = path.join(dir, 'explore');
+      const result = await executeCases([model, other], prepared, { env: {}, exploreDir, runsDir: path.join(dir, 'runs') });
+      assert.equal(result.verdicts.find((v) => v.testId === 'T-SEM')?.status, 'PASS');
+      assert.equal(result.verdicts.find((v) => v.testId === 'T-OTHER')?.reason, 'legacy stop');
+      // E0.14a: the screens the run reached are kept with the case, and the next compile's knowledge has them.
+      const screens = JSON.parse(await readFile(path.join(exploreDir, 'T-SEM', 'screens.json'), 'utf8')) as Array<{ key: string; elements: unknown[] }>;
+      assert.ok(screens.length >= 1 && screens.every((s) => s.key && s.elements.length), JSON.stringify(screens.map((s) => s.key)));
+      const kb = await knowledgeFromRuns('demo', app.url, exploreDir, [], { cache: false });
+      assert.deepEqual(
+        kb?.screens?.map((s) => s.key),
+        screens.map((s) => s.key),
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
   it('executeCases without semantic jobs returns exactly the legacy verdicts', async () => {
     const model = parseTestCase(raw('T-L', ['Open the login page'], 'x'), config);

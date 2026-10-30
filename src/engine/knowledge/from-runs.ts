@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { z } from 'zod';
 import { cacheEnabled, cacheKeyOf, copyOf, memo } from '../cache/index.js';
 import type { Application, Component, Page } from './schema.js';
+import { mergeScreens, type Screen, ScreenSchema } from './screens.js';
 
 /**
  * Where an application's own words come from before anyone has written them down (D1, U2). Every exploration of a test
@@ -28,6 +30,10 @@ const ONTOLOGY_OF_ROLE: Readonly<Record<string, string>> = {
 export interface ElementWord {
   word: string;
   means: string;
+  /** Given on this screen only, in a walkthrough (E0.14b): kept with that screen, never an alias everywhere. */
+  screen?: string;
+  /** The element picked there (`frame|xpath`), when the name alone does not tell it from another. */
+  element?: string;
 }
 
 interface SavedItem {
@@ -71,17 +77,37 @@ async function fingerprintOf(dir: string): Promise<string[]> {
   const out: string[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const s = await stat(path.join(dir, entry.name, 'exploration.json')).catch(() => undefined);
-    if (s) out.push(`${entry.name}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`);
+    for (const file of ['exploration.json', SCREENS_FILE]) {
+      const s = await stat(path.join(dir, entry.name, file)).catch(() => undefined);
+      if (s) out.push(`${entry.name}/${file}:${s.size}:${s.mtimeMs}:${s.ctimeMs}`);
+    }
   }
   return out.sort();
 }
 
+/** The screens one case's last run reached (E0.14a), kept beside its exploration. */
+export const SCREENS_FILE = 'screens.json';
+
+/** The screens saved for one case, or none when the file is missing or not a list of screens. */
+export async function readScreens(file: string): Promise<Screen[]> {
+  if (!existsSync(file)) return [];
+  try {
+    const parsed = z.array(ScreenSchema).safeParse(JSON.parse(await readFile(file, 'utf8')));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
+
 async function buildKnowledge(name: string, baseUrl: string | undefined, dir: string, words: readonly ElementWord[]): Promise<Application | undefined> {
   const pages = new Map<string, Map<string, Component>>();
+  let screens: Screen[] = [];
   if (existsSync(dir)) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
+      // The screens the new engine's runs reached (E0.14a); a case of another application keeps its own.
+      const seen = await readScreens(path.join(dir, entry.name, SCREENS_FILE));
+      if (seen.length && !(baseUrl && (await otherApplication(path.join(dir, entry.name), baseUrl)))) screens = mergeScreens(screens, seen);
       const file = path.join(dir, entry.name, 'exploration.json');
       if (!existsSync(file)) continue;
       let saved: SavedExploration;
@@ -107,12 +133,17 @@ async function buildKnowledge(name: string, baseUrl: string | undefined, dir: st
     }
   }
   const all = [...pages.values()].flatMap((m) => [...m.values()]);
-  for (const w of words) {
+  // A word a person gave on one screen holds there only (E0.14b): it goes with that screen, and is not an alias of the whole application.
+  for (const w of words.filter((x) => x.screen)) {
+    const screen = { key: w.screen as string, words: [{ word: w.word, means: w.means, ...(w.element ? { element: w.element } : {}) }] };
+    screens = mergeScreens(screens, [ScreenSchema.parse(screen)]);
+  }
+  for (const w of words.filter((x) => !x.screen)) {
     // A word is an alias of the one component it means; a name that fits two components is not guessed.
     const meant = all.filter((c) => c.name.toLowerCase() === w.means.trim().toLowerCase());
     if (meant.length === 1 && !meant[0]?.aliases.includes(w.word)) meant[0]?.aliases.push(w.word);
   }
-  if (!pages.size) return undefined;
+  if (!pages.size && !screens.length) return undefined;
   const list: Page[] = [...pages.entries()].map(([pageName, components]) => ({
     name: pageName,
     aliases: [],
@@ -134,7 +165,20 @@ async function buildKnowledge(name: string, baseUrl: string | undefined, dir: st
     navigation: [],
     authentication: { mfa: 'none' },
     vocabulary: [],
+    ...(screens.length ? { screens } : {}),
   };
+}
+
+/** The case folder holds an exploration of another application: its screens are not this application's. */
+async function otherApplication(caseDir: string, baseUrl: string): Promise<boolean> {
+  const file = path.join(caseDir, 'exploration.json');
+  if (!existsSync(file)) return false;
+  try {
+    const saved = JSON.parse(await readFile(file, 'utf8')) as SavedExploration;
+    return !!saved.baseUrl && originOf(saved.baseUrl) !== originOf(baseUrl);
+  } catch {
+    return false;
+  }
 }
 
 function originOf(url: string): string {

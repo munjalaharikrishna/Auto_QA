@@ -63,10 +63,23 @@ export class ReviewService {
 
   /** The cards of a job, with the decision each case has now. */
   async cards(jobId: string): Promise<ReviewCardView[]> {
-    if (!(await this.store.job(jobId))) throw new ReviewRefused('There is no such job.', 404);
+    const job = await this.store.job(jobId);
+    if (!job) throw new ReviewRefused('There is no such job.', 404);
     const current = new Map<string, DecisionView>();
     for (const d of await this.store.reviewDecisions(jobId)) current.set(`${d.testId}|${d.cardId}`, d);
-    return buildReviewCards(await this.rows(jobId), current);
+    const cards = buildReviewCards(await this.rows(jobId), current);
+    // A case changed after the run finished says so on its card (E0.14b); the run's own result stays as it was.
+    if (job.finishedAt) {
+      const changed = new Map<string, CardCase['changedSince']>();
+      for (const id of new Set(cards.flatMap((c) => c.cases.map((x) => x.testId)))) {
+        const record = await this.store.testCase(job.projectId, id);
+        if (!record || record.updatedAt <= job.finishedAt) continue;
+        const newer = (await this.store.testCaseVersions(record.id)).find((v) => v.createdAt > (job.finishedAt as string));
+        if (newer) changed.set(id, { version: record.version, reason: newer.reason, at: newer.createdAt });
+      }
+      for (const card of cards) for (const c of card.cases) if (changed.get(c.testId)) c.changedSince = changed.get(c.testId);
+    }
+    return cards;
   }
 
   /** Everything that was decided, the replaced decisions too, oldest first. */

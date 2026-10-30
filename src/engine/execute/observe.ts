@@ -1,8 +1,9 @@
 import type { Page } from 'playwright';
 import { CONTAINER_SELECTOR, HEADING_SELECTOR } from '../locate/containers.js';
-import { contentFrameOf, prepareFrame, readSettled, visibleFrames } from '../locate/frames.js';
+import { contentFrameOf, frameOffsets, prepareFrame, readSettled, visibleFrames } from '../locate/frames.js';
 import { inspectPageDetailed } from '../locate/inspector.js';
-import type { DomElement } from '../locate/types.js';
+import { screenKeyOf } from '../locate/page-identity.js';
+import type { Box, DomElement } from '../locate/types.js';
 
 /**
  * Layer 39, the observation engine (EX-04). What the page looks like at one moment, as facts: its address and title, the
@@ -24,6 +25,18 @@ export interface ObservedElement {
   invalid: boolean;
   /** The titles of the named containers it is inside, nearest first (UI-07). */
   inside?: string[];
+  /** What a screen model keeps of it (E0.14): the text of its `<label>`, its placeholder and `type`. */
+  label?: string;
+  placeholder?: string;
+  type?: string;
+  /** The attributes that stay when its label changes, so a renamed element is still the same element (E0.14). */
+  testId?: string;
+  htmlId?: string;
+  nameAttr?: string;
+  /** The iframes it is inside, outermost first. Missing for the main page. */
+  frame?: string[];
+  /** Where it is on a picture of the page, with the place of its frames added: what a pick on the screenshot hits (E0.14). */
+  box?: Box;
 }
 
 /** A named container on the page and the text it shows: what a check on "the Backpack card" is judged on (UI-07). */
@@ -63,6 +76,14 @@ export interface Observation {
   focus?: string;
   /** The number of tabs open. */
   tabs: number;
+  /** The screen a person is on (E0.14): the address that chooses it, and the open dialog. See `screenKeyOf`. */
+  screen?: string;
+  /** The headings shown, in order. */
+  headings?: string[];
+  /** The column headers of each table shown. */
+  tables?: string[][];
+  /** The title of the dialog that is open. */
+  dialog?: string;
 }
 
 const MESSAGE_ROLES: ReadonlySet<string> = new Set(['alert', 'status', 'alertdialog', 'log']);
@@ -98,12 +119,19 @@ export function observed(
   elements: readonly DomElement[],
   tabs = 1,
   containers: ObservedContainer[] = [],
-  frames: { contentUrl?: string; unread?: string[] } = {},
+  frames: {
+    contentUrl?: string;
+    unread?: string[];
+    /** Where each frame is on the page, by its path joined with `>`: a box inside a frame is moved by it. */
+    offsets?: Readonly<Record<string, { x: number; y: number }>>;
+    tables?: string[][];
+  } = {},
 ): Observation {
   const shown = elements.filter((e) => e.visible);
   const out: ObservedElement[] = [];
   for (const e of shown) {
     if (!WORTH_NOTING.has(e.role) && !MESSAGE_ROLES.has(e.role)) continue;
+    const at = frames.offsets?.[(e.frame ?? []).join('>')];
     out.push({
       identity: `${(e.frame ?? []).join('>')}${e.frame?.length ? '|' : ''}${e.testId ?? e.id ?? e.xpath}`,
       role: e.role,
@@ -114,9 +142,19 @@ export function observed(
       disabled: e.disabled,
       invalid: e.invalid,
       ...(e.containers?.length ? { inside: e.containers } : {}),
+      ...(e.labels[0] ? { label: e.labels[0] } : {}),
+      ...(e.placeholder ? { placeholder: e.placeholder } : {}),
+      ...(e.type ? { type: e.type } : {}),
+      ...(e.testId ? { testId: e.testId } : {}),
+      ...(e.id ? { htmlId: e.id } : {}),
+      ...(e.nameAttr ? { nameAttr: e.nameAttr } : {}),
+      ...(e.frame?.length ? { frame: [...e.frame] } : {}),
+      ...(e.frame?.length && !at ? {} : { box: at ? { ...e.box, x: e.box.x + at.x, y: e.box.y + at.y } : { ...e.box } }),
     });
   }
   const focused = shown.find((e) => e.focused);
+  const dialog = out.find((e) => e.role === 'dialog' && e.name)?.name;
+  const headings = out.filter((e) => e.role === 'heading' && e.name).map((e) => e.name);
   return {
     url,
     ...(frames.contentUrl ? { contentUrl: frames.contentUrl } : {}),
@@ -129,7 +167,27 @@ export function observed(
     fieldErrors: shown.filter((e) => e.invalid && e.describedBy).map((e) => ({ field: nameOf(e), message: e.describedBy as string })),
     ...(focused ? { focus: nameOf(focused) } : {}),
     tabs,
+    screen: screenKeyOf(frames.contentUrl ?? url, dialog),
+    ...(headings.length ? { headings } : {}),
+    ...(frames.tables?.length ? { tables: frames.tables } : {}),
+    ...(dialog ? { dialog } : {}),
   };
+}
+
+/** The column headers of every table that is shown. Runs in the page. */
+function readTableHeaders(): string[][] {
+  const out: string[][] = [];
+  for (const table of Array.from(document.querySelectorAll('table'))) {
+    const box = table.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) continue;
+    const headers = Array.from(table.querySelectorAll('th'))
+      .filter((th) => th.closest('table') === table)
+      .map((th) => ((th as HTMLElement).innerText ?? '').trim())
+      .filter((t) => t && t.length <= 80);
+    if (headers.length) out.push(headers.slice(0, 30));
+    if (out.length >= 20) break;
+  }
+  return out;
 }
 
 /** The visible text lines of the page. Runs in the page. */
@@ -199,6 +257,7 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
   // The text of the page and of every frame a person can see: what is shown in a frame is shown on the page.
   const lines: string[] = [];
   const containers: ObservedContainer[] = [];
+  const tables: string[][] = [];
   const unread = new Set<string>();
   const frames = await visibleFrames(page);
   for (const { frame, path } of frames) {
@@ -210,13 +269,19 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
     const boxes = await readSettled(frame, () => frame.evaluate(readContainers, { containerSelector: CONTAINER_SELECTOR, headingSelector: HEADING_SELECTOR }));
     if (boxes.ok) containers.push(...boxes.value);
     else unread.add(path.join(' > ') || 'the page');
+    const headers = await readSettled(frame, () => frame.evaluate(readTableHeaders)).catch(() => undefined);
+    if (headers?.ok) tables.push(...headers.value);
     if (lines.length >= 500) break;
   }
+  // The place of each frame on the page, so a box inside it can be drawn on a picture of the whole page (E0.14).
+  const offsets = await frameOffsets(page, frames);
   const seen = await inspectPageDetailed(page, { testIdAttribute: options.testIdAttribute, includeText: false });
   for (const path of seen.unread) unread.add(path.join(' > '));
   const content = contentFrameOf(seen.frames);
   return observed(page.url(), await page.title(), lines, seen.elements, options.tabs ?? 1, containers, {
     ...(content ? { contentUrl: content.url } : {}),
     unread: [...unread],
+    offsets,
+    tables,
   });
 }

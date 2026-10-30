@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ScreenSchema } from './screens.js';
 
 /**
  * Layers 20 and 21, the application and page knowledge bases (AK-01, PK-01). What the engine knows about one
@@ -80,5 +81,10 @@ export const ApplicationSchema = z.object({
    * ontology, and they mean nothing to another application's knowledge.
    */
   vocabulary: z.array(z.object({ term: z.string().min(1), ontology: z.string().min(1), aliases: z.array(z.string()).default([]) })).default([]),
+  /**
+   * The screens the runs and walkthroughs reached, with everything on them (E0.14). Kept apart from `pages`, which people write and
+   * which names are matched against: a name seen on a screen is not, by that alone, a name a test case may mean.
+   */
+  screens: z.array(ScreenSchema).optional(),
 });
 export type Application = z.infer<typeof ApplicationSchema>;

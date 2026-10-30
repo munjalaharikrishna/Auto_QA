@@ -322,7 +322,7 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
       ctx.log.add(
         'ResolveTarget',
         'decision',
-        `${toLocate} element(s) are located on the real page, by the candidate levels${kb ? ` ("${kb.name}" knowledge, version ${kb.version})` : ''}`,
+        `${toLocate} element(s) are located on the real page, by the candidate levels${kb ? ` ("${kb.name}" knowledge, version ${kb.version})` : ''}${kb?.screens?.length ? `; ${kb.screens.length} screen(s) are known from runs and walkthroughs (E0.14)` : ''}`,
       );
       return { ...input, ir: { ...ir, steps, expectations }, language: { ...input.language, issues } };
     },

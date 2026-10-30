@@ -63,6 +63,34 @@ describe('D1: the application vocabulary from runs and rules', () => {
     assert.equal(c.status, 'compiled', JSON.stringify(c.issues.map((i) => i.message)));
   });
 
+  it('E0.14a: adds the screens the runs reached, merged across cases, and leaves the names that are matched as they were', async () => {
+    const shot = (key: string, names: string[], caseId: string) =>
+      JSON.stringify([{ key, elements: names.map((n) => ({ id: `id=${n}`, role: 'button', name: n })), cases: [caseId] }]);
+    await mkdir(path.join(dir, 'TC4'), { recursive: true });
+    await writeFile(path.join(dir, 'TC4', 'screens.json'), shot('/add', ['Save', 'Cancel'], 'TC4'));
+    await mkdir(path.join(dir, 'TC5'), { recursive: true });
+    await writeFile(path.join(dir, 'TC5', 'screens.json'), shot('/add', ['Save', 'Reset'], 'TC5'));
+    // A case of another application keeps its screens out.
+    await writeFile(path.join(dir, 'TC2', 'screens.json'), shot('/foreign', ['Foreign'], 'TC2'));
+    try {
+      const kb = await knowledgeFromRuns('app', 'http://app.test/', dir);
+      assert.deepEqual(
+        kb?.screens?.map((s) => [s.key, s.elements.map((e) => e.name), s.cases]),
+        [['/add', ['Save', 'Cancel', 'Reset'], ['TC4', 'TC5']]],
+      );
+      // A name seen on a screen is not a component a test case is matched against: Cancel and Reset are not in the vocabulary.
+      assert.deepEqual(kb?.pages.flatMap((p) => p.components.map((c) => c.name)).sort(), ['Code', 'Other app field', 'Save']);
+      const c = await compileCase(
+        { id: 'T', title: 'T', steps: '1. Open the Add Employee page\n2. Click the Save button', expected: 'The Save button is displayed' },
+        { env: {}, knowledge: kb },
+      );
+      assert.ok(c.log.some((l) => l.message.includes('1 screen(s) are known')));
+    } finally {
+      for (const f of ['TC4', 'TC5']) await rm(path.join(dir, f), { recursive: true, force: true });
+      await rm(path.join(dir, 'TC2', 'screens.json'), { force: true });
+    }
+  });
+
   it('reads "Employee ID" as the field the application calls Code', async () => {
     const kb = await knowledgeFromRuns('app', 'http://app.test/', dir, [{ word: 'employee id', means: 'Code' }]);
     const raw = {

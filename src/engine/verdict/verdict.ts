@@ -118,6 +118,8 @@ const BLOCK_VERDICT: Record<BlockCode, { verdict: VerdictName; cause?: RootCause
   ACTION_FAILED: { verdict: 'AUTOMATION_ERROR', cause: 'AUTOMATION' },
   OTP_MAIL_NOT_RECEIVED: { verdict: 'ENVIRONMENT_ERROR', cause: 'ENVIRONMENT' },
   OTP_REJECTED: { verdict: 'TEST_DATA_ERROR', cause: 'TEST_DATA' },
+  // A person stopped a walkthrough there: what was not run is not judged.
+  STOPPED: { verdict: 'NOT_VERIFIED' },
 };
 
 function answers(a: Partial<Record<number, { answer: Answer['answer']; detail: string }>>): Answer[] {

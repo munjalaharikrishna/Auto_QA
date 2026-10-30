@@ -498,6 +498,27 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return reply.status(202).send(job);
   });
 
+  /**
+   * A guided walkthrough of a saved test case (E0.14b, PD-13): its steps run one at a time with a person, who can pick elements, add
+   * checks and reword steps. `fromJob` is the run whose review card it was opened from: its login case logs in first.
+   */
+  app.post('/api/projects/:id/test-cases/:caseId/walkthrough', async (req, reply) => {
+    const params = req.params as { id: string; caseId: string };
+    const project = await projectOf(params.id);
+    const record = await caseOf(project.id, params.caseId);
+    const body = (req.body ?? {}) as { who?: unknown; fromJob?: unknown };
+    const who = typeof body.who === 'string' && body.who.trim() ? body.who.trim().slice(0, 80) : undefined;
+    const fromJob = typeof body.fromJob === 'string' ? await store.job(body.fromJob) : undefined;
+    if (fromJob && fromJob.projectId !== project.id) throw bad('That job belongs to another project.');
+    const job = await store.createJob({
+      projectId: project.id,
+      kind: 'walkthrough',
+      input: { caseId: record.extId, ...(who ? { who } : {}), ...(fromJob ? { fromJob: fromJob.id } : {}) },
+    });
+    runner.enqueue(job);
+    return reply.status(202).send(job);
+  });
+
   registerAutomationRoutes({ app, store, runner, projectOf, caseOf, notFound, bad });
 
   // Jobs, questions, results (FR-RV-02, FR-HI-01, FR-HI-06)

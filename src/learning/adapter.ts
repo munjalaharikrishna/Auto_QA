@@ -20,13 +20,18 @@ export interface LearnedForRun {
   approvedAssumptions: Set<string>;
   /** The words testers use for elements, for the application's vocabulary (D1). */
   labels: Array<{ word: string; means: string }>;
+  /**
+   * Words a person gave for an element on one screen, in a walkthrough (E0.14b): they hold on that screen only, so they are not in
+   * `rules` or `labels`, which hold everywhere.
+   */
+  screenLabels: Array<{ word: string; means: string; screen: string; element?: string }>;
   /** Active entries that did not pass their check at read time, and why. They are not used. */
   rejected: Array<{ id: string; kind: EntryKind; why: string }>;
 }
 
 export async function learnedForRun(reader: EntryReader, projectId: string): Promise<LearnedForRun> {
   const active = await reader.learnedEntries(projectId, { status: 'active' });
-  const out: LearnedForRun = { rules: { step: {}, check: {}, element: {} }, approvedAssumptions: new Set(), labels: [], rejected: [] };
+  const out: LearnedForRun = { rules: { step: {}, check: {}, element: {} }, approvedAssumptions: new Set(), labels: [], screenLabels: [], rejected: [] };
   const reject = (e: LearnedEntry, why: string): void => void out.rejected.push({ id: e.id, kind: e.kind, why });
   const readings: Array<{ from: string; to: string }> = [];
 
@@ -45,6 +50,10 @@ export async function learnedForRun(reader: EntryReader, projectId: string): Pro
     const problem = labelProblem(p);
     if (problem) {
       reject(e, problem);
+      continue;
+    }
+    if (p.screen) {
+      out.screenLabels.push({ word: ruleKey(p.label), means: p.means, screen: p.screen, ...(p.element ? { element: p.element } : {}) });
       continue;
     }
     out.rules.element[ruleKey(p.label)] = p.means;
