@@ -112,10 +112,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           }
         ]
       }
@@ -185,10 +185,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -270,10 +270,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -371,10 +371,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -488,10 +488,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -621,10 +621,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -770,10 +770,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -935,10 +935,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -1113,10 +1113,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -1304,10 +1304,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -1543,10 +1543,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -1794,10 +1794,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -2057,10 +2057,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -2333,10 +2333,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -2648,10 +2648,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -2990,10 +2990,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -3342,10 +3342,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",
@@ -3712,10 +3712,10 @@
           },
           {
             "original": "User Should see tabs and PIM as a default page",
-            "type": "URL",
+            "type": "STATE",
             "negated": false,
             "target": "PIM",
-            "why": "the page shown after login is PIM: a page name"
+            "why": "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'"
           },
           {
             "original": "User should add  button in employee information section",

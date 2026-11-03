@@ -493,7 +493,7 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   const subjectNp = subject?.kind === 'np' ? subject.np : undefined;
   const flagNp = (np: NounPhrase | undefined): void => {
     if (np?.reference) issues.push(refIssue(np.reference, np.original, clauseText));
-    if (np?.dropped) issues.push(droppedIssue(np.dropped, clauseText));
+    if (np?.dropped && !isDefaultPage(np.dropped)) issues.push(droppedIssue(np.dropped, clauseText));
   };
   flagNp(subjectNp);
   const make = (condition: IrCondition, flip = false): CheckResult['expectations'][number] => ({
@@ -744,6 +744,18 @@ const refIssue = (word: string, phrase: string, original: string): Omit<Issue, '
 // "… tabs and PIM as a default page": a tail that says how the thing is shown, not what is shown. What is shown is checked; the tail is
 // kept as written and listed, but it does not stop the case (it stopped 17 cases of one workbook).
 const DESCRIBES = ['as a ', 'as an ', 'as the ', 'as default'];
+
+/** "as a default page", "as the landing page": the words say the thing before them is the page shown first (E0.15). */
+const DEFAULT_PAGE_WORDS: ReadonlySet<string> = new Set([
+  'as a default page',
+  'as the default page',
+  'as default page',
+  'as a default screen',
+  'as the default screen',
+  'as the landing page',
+  'as a landing page',
+]);
+const isDefaultPage = (dropped: string): boolean => DEFAULT_PAGE_WORDS.has(dropped.toLowerCase().split(' ').filter(Boolean).join(' '));
 const droppedIssue = (text: string, original: string): Omit<Issue, 'where'> => {
   const describes = DESCRIBES.some((d) => `${text.toLowerCase()} `.startsWith(d));
   return {
@@ -805,6 +817,14 @@ function pushVisibility(
   issues: CheckResult['issues'],
 ): void {
   const expect = hidden ? 'HIDDEN' : 'VISIBLE';
+  // "User should see tabs and PIM as a default page": two checks in one sentence. The last thing named is the page shown first (the
+  // same check as "PIM is the default page"); the things before it are shown (E0.15).
+  if (!hidden && np.dropped && isDefaultPage(np.dropped) && np.targets.length) {
+    const last = np.targets[np.targets.length - 1] as IrTarget;
+    for (const target of np.targets.slice(0, -1)) out.push(make({ type: 'VISIBILITY', target, expect, check: 'visible' }));
+    out.push(make({ type: 'STATE', target: { ontology: 'Page', name: last.name ?? last.label ?? '' }, expect: 'DEFAULT_PAGE' }));
+    return;
+  }
   // "The Add Employee form or page is displayed": two alternatives. Which one is checked is the tester's to say; none is picked.
   if (np.words.includes('or')) {
     issues.push({

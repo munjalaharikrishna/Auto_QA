@@ -129,7 +129,7 @@ const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
       target: 'tabs',
       why: 'the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help',
     },
-    { type: 'URL', negated: false, target: 'PIM', why: 'the page shown after login is PIM: a page name' },
+    { type: 'STATE', negated: false, target: 'PIM', why: "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'" },
   ],
   'User should add  button in employee information section': [
     {

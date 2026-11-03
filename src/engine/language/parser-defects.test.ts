@@ -79,10 +79,10 @@ describe('D3: setup lines and sentence shapes', () => {
     );
   });
 
-  it('"… PIM as a default page" does not stop the case: what is shown is checked, the tail is kept as written', async () => {
+  it('"… PIM as a default page" does not stop the case: the tabs are checked, and PIM as the default page (E0.15)', async () => {
     const c = await compile([...base, 'Click the Save button'], 'User should see tabs and PIM as a default page');
     assert.equal(c.status, 'compiled', JSON.stringify(c.issues.map((i) => i.message)));
-    assert.ok(c.issues.some((i) => i.severity === 'info' && i.message.includes('as a default page')));
+    assert.ok(c.ir?.expectations.some((e) => e.condition.type === 'STATE' && e.condition.expect === 'DEFAULT_PAGE'));
   });
 
   it('"The Personal Details form or page is displayed" is one check on one name', async () => {

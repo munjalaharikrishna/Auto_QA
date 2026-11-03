@@ -657,11 +657,12 @@ describe('real wording of the rewritten Employee workbook', () => {
     assert.equal(r.expectations.length, 1);
     assert.equal(r.expectations[0]?.condition.target?.name, 'Reset');
   });
-  it('reads "PIM is the default page" as a check on the page PIM, and leaves "as a default page" to the noun phrase', () => {
+  it('reads "PIM is the default page" as a check on the page PIM, and "… PIM as a default page" as the same check (E0.15)', () => {
     assert.deepEqual(conditions('PIM is the default page'), [{ type: 'STATE', target: { ontology: 'Page', name: 'PIM' }, expect: 'DEFAULT_PAGE' }]);
     const old = read('Verify User Should see tabs and PIM as a default page');
-    // It is kept as written and listed, but it no longer stops the case (D3).
-    assert.ok(old.issues.some((i) => i.code === 'AMBIGUOUS' && i.severity === 'info' && i.message.includes('as a default page')));
+    // It no longer stops the case (D3), and since E0.15 the words are read, not set aside.
+    assert.ok(!old.issues.some((i) => i.message.includes('as a default page')));
+    assert.ok(old.expectations.some((e) => e.condition.type === 'STATE' && e.condition.expect === 'DEFAULT_PAGE' && e.condition.target?.name === 'PIM'));
   });
   it('reads "form or page" as two words for one thing: one check on the name, and no question', () => {
     const r = read('Verify The Add Employee form or page is displayed');

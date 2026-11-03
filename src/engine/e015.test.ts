@@ -111,3 +111,18 @@ describe('E0.15: a known typo is not part of a name', () => {
     assert.equal(lang.ir?.steps[0]?.target?.name, 'Employement');
   });
 });
+
+describe('E0.15: one sentence, two checks', () => {
+  it('"see tabs and PIM as a default page": the tabs are shown, and PIM is the page shown first', () => {
+    const lang = understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the PIM page', expected: 'User Should see tabs and PIM as a default page' });
+    const checks = (lang.ir?.expectations ?? []).map((e) => [e.condition.type, e.condition.target?.name ?? e.condition.target?.label, e.condition.expect]);
+    assert.deepEqual(checks, [
+      ['VISIBILITY', 'tabs', 'VISIBLE'],
+      ['STATE', 'PIM', 'DEFAULT_PAGE'],
+    ]);
+    assert.ok(!lang.issues.some((i) => i.message.includes('as a default page')), 'the words are read, not set aside');
+  });
+  it('a list item that is only a kind of thing is kept: "tabs and PIM" names two things', () => {
+    assert.deepEqual(checksOf('The tabs and the PIM link are displayed').length, 2);
+  });
+});

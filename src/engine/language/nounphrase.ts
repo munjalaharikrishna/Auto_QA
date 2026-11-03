@@ -235,6 +235,12 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
     listItems.forEach((item, k) => {
       const h = heads[k];
       const nameTokens = h && (k === listItems.length - 1 || !shared) ? item.slice(0, item.length - h.length) : item;
+      // "tabs and PIM": an item that is only a kind of thing is still one of the things named, as it is alone ("the tabs") (E0.15).
+      if (!nameTokens.length && h) {
+        targets.push({ ontology: h.cls, label: nameOf(item) });
+        tokensOfTargets.push(item);
+        return;
+      }
       if (!nameTokens.length) return;
       const cls = shared && lastHead ? lastHead.cls : (h?.cls ?? fallbackClass);
       const name = nameOf(nameTokens);
