@@ -465,7 +465,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       issues: [
         {
           code: 'NOT_UNDERSTOOD',
-          severity: 'blocking',
+          // An expected result is not a step: the case can still run without it, and a person decides this one check (E0.15).
+          // The verdict never gives PASS while it is unread.
+          severity: 'review',
           message: 'no check could be read: no word says what should be true',
           original: clauseText,
           suggestion: 'Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.',
