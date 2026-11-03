@@ -6,6 +6,14 @@ DRAFT by Claude, 3 Nov 2026. The E0.15 exit test measures the engine against the
 
 Readings follow the earlier gold sets: a browser-opening line is set aside; a check written as a step ("Checking…") is set aside as a step, and its reading is the expected result that goes with it; a page name ("navigate to … page") is a URL check on that page.
 
+**Your answers so far (3 Nov 2026):** "User Should see tabs" is one check per tab named in the step (9 checks). The engine does not guess that "User should add button…" means "should see the Add button": that sentence is set aside, and the check is read from the step "Under Employee Information Section there should be add button" instead (below).
+
+## Checks read from a step
+
+| The tester wrote (a step) | Reading | Why | Your verdict |
+|---|---|---|---|
+| Under Employee Information Section there should be add button | VISIBILITY **Add** | the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026) | |
+
 ## Steps
 
 | # | The tester wrote | Reading | Why | Your verdict |
@@ -42,9 +50,17 @@ Readings follow the earlier gold sets: a browser-opening line is set aside; a ch
 | 1 | User should open browser | **a person decides** | an environment fact (the test's own browser), not something the application shows | |
 | 2 | User should navigate to login section of Oragne Hrm | URL **login** | a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt) | |
 | 3 | Login section should be middle of the page | LAYOUT **login** | where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name | |
-| 4 | User Should see tabs and PIM as a default page | VISIBILITY **tabs** | the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help | |
+| 4 | User Should see tabs and PIM as a default page | VISIBILITY **Admin** | one check for each tab named in the step it belongs to (owner, 3 Nov 2026) | |
+|  | 〃 | VISIBILITY **PIM** |  | |
+|  | 〃 | VISIBILITY **Leave** |  | |
+|  | 〃 | VISIBILITY **Time** |  | |
+|  | 〃 | VISIBILITY **Benefits** |  | |
+|  | 〃 | VISIBILITY **Recruitment** |  | |
+|  | 〃 | VISIBILITY **Reports** |  | |
+|  | 〃 | VISIBILITY **Bug Tracker** |  | |
+|  | 〃 | VISIBILITY **Help** |  | |
 |  | 〃 | STATE **PIM** | PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page' | |
-| 5 | User should add button in employee information section | VISIBILITY **Add** | 'should add button' is a slip for 'should see the Add button', in the Employee Information section | |
+| 5 | User should add button in employee information section | **a person decides** | 'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step | |
 | 6 | User should navigate to Add Employee page/popup | URL **Add Employee** | a screen name ('page/popup': whichever it is) | |
 | 7 | Text box should accept values | VALUE **the field of its step** | the field of the step it belongs to holds the value typed | |
 | 8 | Upload button should accept photo | VALUE **Photograph** | the photo file input holds the chosen file | |

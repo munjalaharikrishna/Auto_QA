@@ -107,8 +107,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -158,6 +206,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -180,8 +235,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -192,10 +295,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           }
         ]
       }
@@ -243,6 +344,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -265,8 +373,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -277,10 +433,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -344,6 +498,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -366,8 +527,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -378,10 +587,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -461,6 +668,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -483,8 +697,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -495,10 +757,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -594,6 +854,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -616,8 +883,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -628,10 +943,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -743,6 +1056,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -765,8 +1085,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -777,10 +1145,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -908,6 +1274,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -930,8 +1303,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -942,10 +1363,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -1086,6 +1505,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -1108,8 +1534,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1120,10 +1594,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -1277,6 +1749,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -1299,8 +1778,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1311,10 +1838,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -1516,6 +2041,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -1538,8 +2070,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1550,10 +2130,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -1767,6 +2345,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -1789,8 +2374,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1801,10 +2434,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -2030,6 +2661,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -2052,8 +2690,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2064,10 +2750,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -2306,6 +2990,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -2328,8 +3019,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2340,10 +3079,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -2621,6 +3358,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -2643,8 +3387,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2655,10 +3447,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -2963,6 +3753,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -2985,8 +3782,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2997,10 +3842,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -3315,6 +4158,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -3337,8 +4187,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -3349,10 +4247,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",
@@ -3685,6 +4581,13 @@
         ],
         "expectations": [
           {
+            "original": "Under Employee Information Section there should be add button",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)"
+          },
+          {
             "original": "User should open browser",
             "abstain": true,
             "why": "an environment fact (the test's own browser), not something the application shows"
@@ -3707,8 +4610,56 @@
             "original": "User Should see tabs and PIM as a default page",
             "type": "VISIBILITY",
             "negated": false,
-            "target": "tabs",
-            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+            "target": "Admin",
+            "why": "one check for each tab named in the step it belongs to (owner, 3 Nov 2026)"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "PIM"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Leave"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Time"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Benefits"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Recruitment"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Reports"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Bug Tracker"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Help"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -3719,10 +4670,8 @@
           },
           {
             "original": "User should add  button in employee information section",
-            "type": "VISIBILITY",
-            "negated": false,
-            "target": "Add",
-            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+            "abstain": true,
+            "why": "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step"
           },
           {
             "original": "User should navigate to Add Employee page/popup",

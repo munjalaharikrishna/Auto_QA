@@ -34,3 +34,13 @@ The 198 left, all waiting on the owner's gold decisions:
   162  "Checking the tabs of Admin, PIM, ... are visible or not" (18 cases x 9 tabs): the engine checks each named tab; the gold reads the expected result "see tabs" as one check on "tabs".
    17  "Under Employee Information Section there should be add button": the only reading of the Add button check, because the expected result "User should add button ..." is set aside.
    19  update cases: one sentence ("Respective fileds should accept the values", "User should updated the data", "User should see the same updated records") read as one check per field (incl. Supervisor); the gold has one clause, or none for Supervisor.
+
+## Owner's answers on the extra checks (3 Nov 2026)
+- "User Should see tabs" is one check per tab named in the step (9). Gold changed; engine: a check that names only a kind of thing ("tabs") is the things of that kind named at the same point.
+- No guess that "User should add button" means "should see the Add button": that sentence is set aside in the gold, and the Add button check is read from the step "Under Employee Information Section there should be add button" (new STEP_CHECKS in the generator).
+
+### orangehrm-add-employee (701 clauses now: 161 more gold checks)
+Gold set (DRAFT: nobody has checked it yet): 701 clauses, confident-mistake rate 12% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 409 of 460 right, 44 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 87%, recall 89%, F1 88%)
+Login and BookMarket unchanged. Left extra: 19 update-case field checks (one per field incl. Supervisor).

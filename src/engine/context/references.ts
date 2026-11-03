@@ -290,6 +290,30 @@ export function resolveReferences(input: RefInput): RefOutput {
       e.guard ?? '',
     ]);
   };
+  // "User should see tabs" right after a step that named the tabs: the check is on those tabs, one each, not on the word "tabs"
+  // (owner, 3 Nov 2026). Only a check that names a kind of thing and no thing, and only when things of that kind were named at the
+  // same point; otherwise it stays as it is.
+  for (const e of [...expectations]) {
+    const t = e.condition.target;
+    if (e.condition.type !== 'VISIBILITY' || e.negated || !t?.ontology || t.name || e.condition.alternatives?.length) continue;
+    const named = expectations.filter(
+      (x) =>
+        x !== e &&
+        x.condition.type === 'VISIBILITY' &&
+        !x.negated &&
+        x.afterStep === e.afterStep &&
+        x.guard === e.guard &&
+        x.condition.target?.ontology === t.ontology &&
+        !!x.condition.target.name,
+    );
+    if (named.length < 2) continue;
+    replaceRun(
+      [e],
+      named.map((x) => ({ ...x, id: e.id, clause: e.clause })),
+    );
+    decisions.push(`"${e.clause}": the ${t.label ?? t.ontology} are the ones named before it: ${named.map((x) => nameOf(x.condition.target)).join(', ')}`);
+  }
+
   for (const e of [...expectations]) {
     if (!fromStep(e)) continue;
     const twin = expectations.find((x) => x !== e && !fromStep(x) && sameCheck(x) === sameCheck(e));

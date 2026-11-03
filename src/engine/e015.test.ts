@@ -170,3 +170,36 @@ describe('E0.15: a check written as a step and again as its expected result is c
     assert.equal(layout(c).length, 2);
   });
 });
+
+describe('E0.15: "see tabs" after a step that named the tabs is a check on each of them (owner, 3 Nov 2026)', () => {
+  const raw = (step: string) => ({
+    id: 'T-E015-TABS',
+    title: 'tabs',
+    steps: `1. Open the PIM page\n2. ${step}`,
+    stepExpected: { '2': 'User should see tabs' },
+    expected: 'The PIM heading is displayed',
+  });
+  const tabChecks = (c: ReturnType<typeof understandCase>) =>
+    (c.ir?.expectations ?? []).filter((e) => e.condition.type === 'VISIBILITY' && e.condition.target?.ontology === 'Tab');
+
+  it("one check per named tab, under the expected result, and the step's own checks are not run twice", () => {
+    // The sentence of the Add Employee workbook, as written.
+    const c = understandCase(
+      raw(
+        'Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.',
+      ),
+    );
+    const tabs = tabChecks(c);
+    assert.deepEqual(
+      tabs.map((e) => e.condition.target?.name),
+      ['Admin', 'PIM', 'Leave', 'Time', 'Benefits', 'Recruitment', 'Reports', 'Bug Tracker', 'Help'],
+    );
+    assert.ok(tabs.every((e) => e.clause === 'Verify User should see tabs'));
+  });
+
+  it('with no tabs named before it, "see tabs" stays one check', () => {
+    const c = understandCase(raw('Click the PIM menu'));
+    assert.equal(tabChecks(c).length, 1);
+    assert.equal(tabChecks(c)[0]?.condition.target?.name, undefined);
+  });
+});

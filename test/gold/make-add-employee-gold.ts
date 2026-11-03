@@ -26,6 +26,23 @@ type Reading<T> = Array<Omit<T, 'original'>>;
 const FIELD_OF_STEP = '<field of its step>';
 const FIELDS_BEFORE = '<every field filled in before>';
 const CHECK_AS_STEP = 'a check written as a step: its reading is the expected result that goes with it';
+const TABS = ['Admin', 'PIM', 'Leave', 'Time', 'Benefits', 'Recruitment', 'Reports', 'Bug Tracker', 'Help'];
+
+/**
+ * Checks written as a step whose expected result does not say the same thing readably: the step's own words are the check. Keyed by
+ * the step line; each reading names the clause it comes from (`original`).
+ */
+const STEP_CHECKS: Record<string, GoldExpectation[]> = {
+  'Under Employee Information Section there should be add button. Which should be in PIM page': [
+    {
+      original: 'Under Employee Information Section there should be add button',
+      type: 'VISIBILITY',
+      negated: false,
+      target: 'Add',
+      why: "the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026)",
+    },
+  ],
+};
 
 /** Steps: one entry per action the sentence holds, in order. */
 const STEPS: Record<string, Reading<GoldStep>> = {
@@ -122,29 +139,26 @@ const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
   'Login section should be middle of the page': [
     { type: 'LAYOUT', negated: false, target: 'login', why: "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name" },
   ],
+  // Owner, 3 Nov 2026: one check per tab named in the step, not one check on "tabs".
   'User Should see tabs and PIM as a default page': [
-    {
-      type: 'VISIBILITY',
+    ...TABS.map((target, i) => ({
+      type: 'VISIBILITY' as const,
       negated: false,
-      target: 'tabs',
-      why: 'the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help',
-    },
+      target,
+      ...(i === 0 ? { why: 'one check for each tab named in the step it belongs to (owner, 3 Nov 2026)' } : {}),
+    })),
     { type: 'STATE', negated: false, target: 'PIM', why: "PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page'" },
   ],
   'User should add  button in employee information section': [
     {
-      type: 'VISIBILITY',
-      negated: false,
-      target: 'Add',
-      why: "'should add button' is a slip for 'should see the Add button', in the Employee Information section",
+      abstain: true,
+      why: "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step",
     },
   ],
   'User should add button in employee information section': [
     {
-      type: 'VISIBILITY',
-      negated: false,
-      target: 'Add',
-      why: "'should add button' is a slip for 'should see the Add button', in the Employee Information section",
+      abstain: true,
+      why: "'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step",
     },
   ],
   'User should navigate to Add Employee page/popup': [
@@ -244,9 +258,10 @@ const set: GoldSet = {
       .map(([n, text]) => [Number(n) - 1, text]);
     const expected = (c.raw.expected ?? '').trim();
     const all: Array<[number, string]> = expected ? [...perStep, [lines.length - 1, expected]] : perStep;
-    const expectations: GoldExpectation[] = all.flatMap(([at, original]) =>
+    const fromSteps = lines.flatMap((l) => Object.entries(STEP_CHECKS).find(([k]) => key(k) === key(l))?.[1] ?? []);
+    const expectations: GoldExpectation[] = [...fromSteps, ...all.flatMap(([at, original]) =>
       lookup(EXPECTATIONS, original).flatMap((r) => inContext(r, perLine[at] ?? [], perLine.slice(0, at).flat()).map((x) => ({ original, ...x }))),
-    );
+    )];
     return { id: c.raw.id, module: 'orangehrm-add-employee', source: { file: SOURCE }, status: 'single' as const, gold: { steps, expectations } };
   }),
 };
@@ -276,6 +291,17 @@ DRAFT by Claude, 3 Nov 2026. The E0.15 exit test measures the engine against the
 **How to review:** for each row, write OK in the last column, or what it should be. "A person decides" means the engine must not guess: it asks. When you are done, the readings are corrected and \`review\` is filled in with your name.
 
 Readings follow the earlier gold sets: a browser-opening line is set aside; a check written as a step ("Checking…") is set aside as a step, and its reading is the expected result that goes with it; a page name ("navigate to … page") is a URL check on that page.
+
+**Your answers so far (3 Nov 2026):** "User Should see tabs" is one check per tab named in the step (9 checks). The engine does not guess that "User should add button…" means "should see the Add button": that sentence is set aside, and the check is read from the step "Under Employee Information Section there should be add button" instead (below).
+
+## Checks read from a step
+
+| The tester wrote (a step) | Reading | Why | Your verdict |
+|---|---|---|---|
+${Object.values(STEP_CHECKS)
+  .flat()
+  .map((r) => `| ${cell(r.original)} | ${expRow(r)} | ${cell(r.why)} | |`)
+  .join('\n')}
 
 ## Steps
 
