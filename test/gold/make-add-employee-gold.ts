@@ -117,10 +117,10 @@ const STEPS: Record<string, Reading<GoldStep>> = {
 const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
   'User should open browser': [{ abstain: true, why: "an environment fact (the test's own browser), not something the application shows" }],
   'User should navigate to login section of Oragne Hrm': [
-    { type: 'URL', negated: false, target: 'OrangeHRM login', why: 'a page name, not address text' },
+    { type: 'URL', negated: false, target: 'login', why: "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)" },
   ],
   'Login section should be middle of the page': [
-    { type: 'LAYOUT', negated: false, target: 'login section', why: "where the login box sits on the page ('middle'): a layout check" },
+    { type: 'LAYOUT', negated: false, target: 'login', why: "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name" },
   ],
   'User Should see tabs and PIM as a default page': [
     {

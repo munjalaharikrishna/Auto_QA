@@ -39,15 +39,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           }
         ]
       }
@@ -93,15 +93,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -166,15 +166,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -251,15 +251,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -352,15 +352,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -469,15 +469,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -602,15 +602,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -751,15 +751,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -916,15 +916,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1094,15 +1094,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1285,15 +1285,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1524,15 +1524,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -1775,15 +1775,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2038,15 +2038,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2314,15 +2314,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2629,15 +2629,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -2971,15 +2971,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -3323,15 +3323,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",
@@ -3693,15 +3693,15 @@
             "original": "User should navigate to login section of Oragne Hrm",
             "type": "URL",
             "negated": false,
-            "target": "OrangeHRM login",
-            "why": "a page name, not address text"
+            "target": "login",
+            "why": "a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt)"
           },
           {
             "original": "Login section should be middle of the page",
             "type": "LAYOUT",
             "negated": false,
-            "target": "login section",
-            "why": "where the login box sits on the page ('middle'): a layout check"
+            "target": "login",
+            "why": "where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name"
           },
           {
             "original": "User Should see tabs and PIM as a default page",

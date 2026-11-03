@@ -2,6 +2,7 @@ import { containerRef } from '../ir/container.js';
 import type { IrTarget } from '../ir/schema.js';
 import type { Token } from '../text/index.js';
 import { headNounOf, refineField } from './ontology.js';
+import { fixTyposIn } from './synonyms.js';
 import { isSymbol, type Line, lw, originalOf } from './view.js';
 
 /**
@@ -191,7 +192,9 @@ export function parseNounPhrase(line: Line, tokens: readonly Token[], fallbackCl
     // "the big green Save button": how it looks is not a part of its name.
     while (ps.length > 1 && LOOKS.has(lw(ps[0]))) ps = ps.slice(1);
     while (ps.length && isSymbol(ps[ps.length - 1], '/', '-', ',', ':')) ps = ps.slice(0, -1);
-    return originalOf(line, ps);
+    // "Employement Status" is the Employment Status field: a known typo is not part of the name (E0.15). Quoted words stay exact.
+    const text = originalOf(line, ps);
+    return ps.some((t) => t.kind === 'LITERAL') ? text : fixTyposIn(text);
   };
 
   const head = headNounOf(

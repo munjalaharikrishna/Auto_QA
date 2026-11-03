@@ -769,12 +769,25 @@ const originalText = (line: Line, tokens: readonly Token[]): string => {
   return lit ? (lit.value ?? '') : originalOf(line, tokens);
 };
 
-/** The page named after "to" or "on": the words minus the articles and a trailing "page". */
+/** Words that say what kind of screen it is, not which one: "the Add Employee page/popup" is the Add Employee screen (E0.15). */
+const SCREEN_WORDS: ReadonlySet<string> = new Set(['page', 'screen', 'popup', 'pop-up', 'dialog', 'modal', 'section', 'window']);
+
+/**
+ * The page named after "to" or "on": the words minus the articles and the screen words after the name, alone or joined ("page/popup",
+ * "page or popup"). After a screen word, "of …" names the application, not the page: "login section of Orange HRM" is "login".
+ */
 function pageOf(line: Line, tokens: readonly Token[]): string | undefined {
-  const body = tokens.filter((t, i) => !(i === 0 && ['the', 'a', 'an'].includes(lw(t))));
-  const last = body[body.length - 1];
-  const trimmed = last && ['page', 'screen'].includes(lw(last)) && body.length > 1 ? body.slice(0, -1) : body;
-  const text = originalOf(line, trimmed);
+  let body = tokens.filter((t, i) => !(i === 0 && ['the', 'a', 'an'].includes(lw(t))));
+  const of = body.findIndex((t, i) => i > 0 && SCREEN_WORDS.has(lw(t)) && lw(body[i + 1]) === 'of');
+  if (of > 0) body = body.slice(0, of);
+  // Trailing screen words, and the "/" or "or" between two of them; never the whole name.
+  for (;;) {
+    const last = lw(body[body.length - 1]);
+    const joiner = (last === '/' || last === 'or') && SCREEN_WORDS.has(lw(body[body.length - 2]));
+    if (body.length > 1 && (SCREEN_WORDS.has(last) || joiner)) body = body.slice(0, -1);
+    else break;
+  }
+  const text = originalOf(line, body);
   return text || undefined;
 }
 

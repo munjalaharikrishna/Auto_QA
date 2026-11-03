@@ -421,7 +421,7 @@ describe('RF-01: reference resolution', () => {
     assert.equal(checks.length, 4, 'one check for each field');
     assert.deepEqual(
       checks.map((c) => c.condition.target?.name),
-      ['Job Title', 'Employement Status', 'Sub-Division', 'Supervisor'],
+      ['Job Title', 'Employment Status', 'Sub-Division', 'Supervisor'],
     );
     for (const c of checks) assert.ok(c.condition.expect?.startsWith('$data.'), 'each field holds what was entered');
     assert.ok(!l.issues.some((i) => i.code === 'NEEDS_REFERENCE' && i.original.includes('same updated records')));

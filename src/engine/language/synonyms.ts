@@ -344,3 +344,28 @@ const TYPOS: Readonly<Record<string, string>> = {
 };
 
 export const fixTypo = (word: string): string => TYPOS[word] ?? word;
+
+/**
+ * The known typos in a name corrected, each word keeping how it was capitalised: "Employement Status" is "Employment Status" (E0.15).
+ * Only for names the tester did not quote: a quoted name is exact text.
+ */
+export function fixTyposIn(text: string): string {
+  const isLetter = (c: string) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  const fix = (w: string): string => {
+    const fixed = TYPOS[w.toLowerCase()];
+    if (!fixed) return w;
+    if (w.length > 1 && w === w.toUpperCase()) return fixed.toUpperCase();
+    return w[0] === w[0]?.toUpperCase() ? `${fixed[0]?.toUpperCase() ?? ''}${fixed.slice(1)}` : fixed;
+  };
+  // Word by word, without a regular expression (RX-01): runs of letters are words, everything else is kept as it is.
+  let out = '';
+  let word = '';
+  for (const c of text) {
+    if (isLetter(c)) word += c;
+    else {
+      out += fix(word) + c;
+      word = '';
+    }
+  }
+  return out + fix(word);
+}

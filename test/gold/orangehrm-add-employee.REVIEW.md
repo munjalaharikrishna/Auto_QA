@@ -40,8 +40,8 @@ Readings follow the earlier gold sets: a browser-opening line is set aside; a ch
 | # | The tester wrote | Reading | Why | Your verdict |
 |---|---|---|---|---|
 | 1 | User should open browser | **a person decides** | an environment fact (the test's own browser), not something the application shows | |
-| 2 | User should navigate to login section of Oragne Hrm | URL **OrangeHRM login** | a page name, not address text | |
-| 3 | Login section should be middle of the page | LAYOUT **login section** | where the login box sits on the page ('middle'): a layout check | |
+| 2 | User should navigate to login section of Oragne Hrm | URL **login** | a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt) | |
+| 3 | Login section should be middle of the page | LAYOUT **login** | where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name | |
 | 4 | User Should see tabs and PIM as a default page | VISIBILITY **tabs** | the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help | |
 |  | 〃 | URL **PIM** | the page shown after login is PIM: a page name | |
 | 5 | User should add button in employee information section | VISIBILITY **Add** | 'should add button' is a slip for 'should see the Add button', in the Employee Information section | |
