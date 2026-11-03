@@ -1,0 +1,11 @@
+E0.15 baseline, 3 Nov 2026, before any grammar change (branch engine/e0.15-grammar at 3cf3331). Gold readings are DRAFT until the owner approves them.
+
+## OrangeHRM Login (test/gold/orangehrm-login.gold.json)
+Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 2% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 19 of 20 right, 1 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 83%, recall 95%, F1 88%)
+
+## OrangeHRM Add Employee (test/gold/orangehrm-add-employee.gold.json)
+Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 43% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 132 of 299 right, 125 wrong, 42 set aside that a person could read, 0 missed, 225 extra (precision 27%, recall 44%, F1 34%)

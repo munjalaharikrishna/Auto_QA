@@ -1,0 +1,3890 @@
+{
+  "version": "G0.2",
+  "review": null,
+  "about": "DRAFT by Claude (3 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM Add Employee workbook means, worked out from the tester's words and the OrangeHRM 2.5 screens, never from the engine's output. Not reviewed: the owner checks each reading (above all the abstains and the \"why\"), corrects it, then fills in `review`. Built by test/gold/make-add-employee-gold.ts. Run: npm run engine:gold -- test/gold/orangehrm-add-employee.gold.json --draft",
+  "cases": [
+    {
+      "id": "21022024_1",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_2",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_3",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_4",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_5",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_6",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_7",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_8",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_9",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_10",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_11",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded\nphoto",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_12",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_13",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_14",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_15",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          },
+          {
+            "original": "Click on Employee Name",
+            "action": "CLICK",
+            "target": "Employee Name",
+            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          },
+          {
+            "original": "User should naviagte to Employment section",
+            "type": "URL",
+            "negated": false,
+            "target": "Employment",
+            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_16",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          },
+          {
+            "original": "Click on Employee Name",
+            "action": "CLICK",
+            "target": "Employee Name",
+            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Job Title",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown on the employee's Job page; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Employment Status",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Sub Division",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "abstain": true,
+            "why": "OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          },
+          {
+            "original": "User should naviagte to Employment section",
+            "type": "URL",
+            "negated": false,
+            "target": "Employment",
+            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Job Title",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Employment Status",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Sub Division",
+            "why": "each field of the step holds the value chosen"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_17",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          },
+          {
+            "original": "Click on Employee Name",
+            "action": "CLICK",
+            "target": "Employee Name",
+            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Job Title",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown on the employee's Job page; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Employment Status",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Sub Division",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "abstain": true,
+            "why": "OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          },
+          {
+            "original": "User should naviagte to Employment section",
+            "type": "URL",
+            "negated": false,
+            "target": "Employment",
+            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Job Title",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Employment Status",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Sub Division",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "User should updated the data",
+            "abstain": true,
+            "why": "says the data was updated without saying what shows it (a message? the values kept after Save?): a person must say what to check"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_18",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          },
+          {
+            "original": "Click on Employee Name",
+            "action": "CLICK",
+            "target": "Employee Name",
+            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Job Title",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown on the employee's Job page; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Employment Status",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Sub Division",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "abstain": true,
+            "why": "OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "checking the same updated records in Employee information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          },
+          {
+            "original": "User should naviagte to Employment section",
+            "type": "URL",
+            "negated": false,
+            "target": "Employment",
+            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Job Title",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Employment Status",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Sub Division",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "User should updated the data",
+            "abstain": true,
+            "why": "says the data was updated without saying what shows it (a message? the values kept after Save?): a person must say what to check"
+          },
+          {
+            "original": "User should see the same updated records",
+            "type": "TEXT",
+            "negated": false,
+            "target": "the employee's row",
+            "why": "the list row of the employee shows the values updated earlier (E0.16 ledger, a row: E0.17). 'same' points back to them"
+          }
+        ]
+      }
+    },
+    {
+      "id": "21022024_19",
+      "module": "orangehrm-add-employee",
+      "source": {
+        "file": "test/fixtures/Add_Employee.xlsx"
+      },
+      "status": "single",
+      "gold": {
+        "steps": [
+          {
+            "original": "Open Browser",
+            "abstain": true,
+            "why": "opening a browser is the test setup, not something the application does"
+          },
+          {
+            "original": "Enter url for Orange Hrm server",
+            "action": "NAVIGATE",
+            "target": "application",
+            "why": "'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written"
+          },
+          {
+            "original": "Checking the login section at middle of the page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block)"
+          },
+          {
+            "original": "Under Employee Information Section there should be add button. Which should be in PIM page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on the Add Button",
+            "action": "CLICK",
+            "target": "Add"
+          },
+          {
+            "original": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+            "action": "ENTER_VALUE",
+            "target": "Code",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (digits only), not the value to type"
+          },
+          {
+            "original": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Last Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "First Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Middle Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+            "action": "ENTER_VALUE",
+            "target": "Nick Name",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "the Note is a rule of the field (letters only), not the value"
+          },
+          {
+            "original": "upload a photo by clicking upload button",
+            "action": "UPLOAD",
+            "target": "Photograph",
+            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+          },
+          {
+            "original": "Entered text boxes and uploaded photo should empty by clicking reset",
+            "action": "CLICK",
+            "target": "Reset",
+            "why": "the action inside a sentence written as a check; the check is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "To checking the added data in personal information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Click on Back Button",
+            "action": "CLICK",
+            "target": "Back"
+          },
+          {
+            "original": "Click on Employee Name",
+            "action": "CLICK",
+            "target": "Employee Name",
+            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Job Title",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown on the employee's Job page; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Employment Status",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "action": "SELECT",
+            "target": "Sub Division",
+            "value": {
+              "class": "VALID"
+            },
+            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+          },
+          {
+            "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+            "abstain": true,
+            "why": "OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant"
+          },
+          {
+            "original": "Click on Save",
+            "action": "CLICK",
+            "target": "Save",
+            "why": "TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save"
+          },
+          {
+            "original": "checking the same updated records in Employee information page",
+            "abstain": true,
+            "why": "a check written as a step: its reading is the expected result that goes with it"
+          },
+          {
+            "original": "Select preferred Enployee/Employees and Click on Delete Button",
+            "action": "CHECK",
+            "target": "the added employee",
+            "why": "'preferred employee' is the one this case added: its row's checkbox in the list (E0.16 ledger). Never any other employee"
+          },
+          {
+            "original": "Select preferred Enployee/Employees and Click on Delete Button",
+            "action": "CLICK",
+            "target": "Delete"
+          }
+        ],
+        "expectations": [
+          {
+            "original": "User should open browser",
+            "abstain": true,
+            "why": "an environment fact (the test's own browser), not something the application shows"
+          },
+          {
+            "original": "User should navigate to login section of Oragne Hrm",
+            "type": "URL",
+            "negated": false,
+            "target": "OrangeHRM login",
+            "why": "a page name, not address text"
+          },
+          {
+            "original": "Login section should be middle of the page",
+            "type": "LAYOUT",
+            "negated": false,
+            "target": "login section",
+            "why": "where the login box sits on the page ('middle'): a layout check"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "tabs",
+            "why": "the tabs named in the step: Admin, PIM, Leave, Time, Benefits, Recruitment, Reports, Bug Tracker, Help"
+          },
+          {
+            "original": "User Should see tabs and PIM as a default page",
+            "type": "URL",
+            "negated": false,
+            "target": "PIM",
+            "why": "the page shown after login is PIM: a page name"
+          },
+          {
+            "original": "User should add  button in employee information section",
+            "type": "VISIBILITY",
+            "negated": false,
+            "target": "Add",
+            "why": "'should add button' is a slip for 'should see the Add button', in the Employee Information section"
+          },
+          {
+            "original": "User should navigate to Add Employee page/popup",
+            "type": "URL",
+            "negated": false,
+            "target": "Add Employee",
+            "why": "a screen name ('page/popup': whichever it is)"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Text box should accept values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "the field of the step it belongs to holds the value typed"
+          },
+          {
+            "original": "Upload button should accept photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "the photo file input holds the chosen file"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Code",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should see the empty text boxes and uploaded photo",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Photograph",
+            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+          },
+          {
+            "original": "User should naviagte to Personal Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "a page name ('naviagte' is a typo)"
+          },
+          {
+            "original": "User should see added data",
+            "type": "TEXT",
+            "negated": false,
+            "target": "Personal Information",
+            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+          },
+          {
+            "original": "User should navigate to Employee Information page",
+            "type": "URL",
+            "negated": false,
+            "target": "Employee Information",
+            "why": "a page name"
+          },
+          {
+            "original": "User should naviagte to Employment section",
+            "type": "URL",
+            "negated": false,
+            "target": "Employment",
+            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Job Title",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Employment Status",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "Respective fileds should accept the values",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Sub Division",
+            "why": "each field of the step holds the value chosen"
+          },
+          {
+            "original": "User should updated the data",
+            "abstain": true,
+            "why": "says the data was updated without saying what shows it (a message? the values kept after Save?): a person must say what to check"
+          },
+          {
+            "original": "User should see the same updated records",
+            "type": "TEXT",
+            "negated": false,
+            "target": "the employee's row",
+            "why": "the list row of the employee shows the values updated earlier (E0.16 ledger, a row: E0.17). 'same' points back to them"
+          },
+          {
+            "original": "User Should succesfully Deleted Employee Data",
+            "type": "VISIBILITY",
+            "negated": true,
+            "target": "the deleted employee's row",
+            "why": "the employee is no longer in the list. OrangeHRM asks to confirm the delete first"
+          }
+        ]
+      }
+    }
+  ]
+}
