@@ -126,3 +126,18 @@ describe('E0.15: one sentence, two checks', () => {
     assert.deepEqual(checksOf('The tabs and the PIM link are displayed').length, 2);
   });
 });
+
+describe('E0.15: the parser defects of the audit (U6)', () => {
+  it('"(masked)" right after a check is a second check on the same thing, not dropped', () => {
+    assert.deepEqual(checksOf('The password is shown (masked)'), ['VISIBILITY password', 'MASKED password']);
+  });
+  it('words in brackets it cannot read are said to be unread, never dropped silently', () => {
+    const lang = understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the login page', expected: 'The password is displayed (as dots)' });
+    assert.ok(lang.issues.some((i) => i.severity === 'review' && i.message.includes('(as dots)')));
+  });
+  it('"The Job Title field shows "Engineer"" checks the field\'s value, not a message', () => {
+    assert.deepEqual(checksOf('The Job Title field shows "Engineer"'), ['VALUE Job Title']);
+    assert.deepEqual(checksOf('The Country dropdown shows "India"'), ['VALUE Country']);
+    assert.deepEqual(checksOf('The page shows "Saved"'), ['TEXT ']);
+  });
+});

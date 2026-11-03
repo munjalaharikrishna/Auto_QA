@@ -9,3 +9,17 @@ Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 
 Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 43% (target 0%)
   steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
   expectations: 132 of 299 right, 125 wrong, 42 set aside that a person could read, 0 missed, 225 extra (precision 27%, recall 44%, F1 34%)
+
+## After the review-free fixes (3 Nov 2026, branch engine/e0.15-grammar)
+Fixes: unreadable check no longer blocks the case; page names without screen words; names without known typos; 'tabs and PIM as a default page' is two checks; '(masked)' is a check; 'field shows "x"' is a value check.
+Draft gold changes in the same commits (flagged on the review page): login page named 'login'; default page is the STATE check.
+
+### orangehrm-login
+Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 2% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 19 of 20 right, 1 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 83%, recall 95%, F1 88%)
+
+### orangehrm-add-employee
+Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 18% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 231 of 299 right, 44 wrong, 24 set aside that a person could read, 0 missed, 225 extra (precision 46%, recall 77%, F1 58%)

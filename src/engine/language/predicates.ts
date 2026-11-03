@@ -682,6 +682,15 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'VISIBLE':
     case 'SHOWS': {
       const hidden = kind === 'HIDDEN';
+      // "The Job Title field shows "Engineer"": a field that shows a value holds it. It is a check of the field, not a message (E0.15).
+      const shownValue =
+        kind === 'SHOWS' && subjectNp?.headClass && VALUE_HOLDERS.has(subjectNp.headClass) && after.length === 1 && after[0]?.kind === 'LITERAL'
+          ? after[0]
+          : undefined;
+      if (shownValue) {
+        forTargets(subjectNp, (target) => ({ type: 'VALUE', ...(target ? { target } : {}), expect: shownValue.value ?? '', check: 'value' }));
+        break;
+      }
       // "the system displays X", "the user should see X": the thing is the object. "X is displayed": the thing is the subject.
       // "The Backpack card shows the Remove from cart button": the thing is shown in that card, and a word like "from" is part of its name (UI-07).
       const holder = kind === 'SHOWS' && subjectNp && containerRef(subjectNp.original) ? subjectNp.original : undefined;
@@ -711,6 +720,22 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
         break;
       }
       pushVisibility(line, np, hidden, after, tailAfterLead, kind === 'SHOWS', clauseText, make, out, issues);
+      // "The password is shown (masked)": the clause splitter takes asides in brackets out, but one written right after a check says
+      // something more about the same thing. It is read, or said to be unread: never dropped silently (U6, E0.15).
+      const aside = !hidden && kind === 'VISIBLE' ? asideAfter(line, clauseTokens) : undefined;
+      if (aside) {
+        const inside = aside.map((t) => lw(t));
+        if (inside.length === 1 && ['masked', 'encrypted'].includes(inside[0] as string))
+          forTargets(np, (target) => ({ type: 'MASKED', ...(target ? { target } : {}), expect: 'MASKED', check: 'masked' }));
+        else
+          issues.push({
+            code: 'AMBIGUOUS',
+            severity: 'review',
+            message: `the words in brackets "(${originalOf(line, aside)})" are not understood and are not checked`,
+            original: clauseText,
+            suggestion: 'Say it as a check of its own: Verify <what> is <state>.',
+          });
+      }
       break;
     }
   }
@@ -718,7 +743,8 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   if (!out.length && !issues.length) {
     issues.push({
       code: 'NOT_UNDERSTOOD',
-      severity: 'blocking',
+      // As for a check with no predicate: one unreadable check goes to a person, the case still runs, never as a PASS (E0.15).
+      severity: 'review',
       message: 'the check names no target',
       original: clauseText,
       suggestion: 'Name what is checked: Verify the <name> <button, field, message> is displayed.',
@@ -744,6 +770,18 @@ const refIssue = (word: string, phrase: string, original: string): Omit<Issue, '
 // "… tabs and PIM as a default page": a tail that says how the thing is shown, not what is shown. What is shown is checked; the tail is
 // kept as written and listed, but it does not stop the case (it stopped 17 cases of one workbook).
 const DESCRIBES = ['as a ', 'as an ', 'as the ', 'as default'];
+
+/** The words in brackets written right after the clause in its line ("… is shown (masked)"), if there are any. */
+function asideAfter(line: Line, clauseTokens: readonly Token[]): Token[] | undefined {
+  const last = clauseTokens[clauseTokens.length - 1];
+  const at = last ? line.tokens.indexOf(last) : -1;
+  if (at < 0 || !isSymbol(line.tokens[at + 1], '(')) return undefined;
+  const close = line.tokens.findIndex((t, k) => k > at + 1 && isSymbol(t, ')'));
+  return close > at + 2 ? line.tokens.slice(at + 2, close) : undefined;
+}
+
+/** The kinds of element whose content is a value: what they "show" is what they hold (E0.15). */
+const VALUE_HOLDERS: ReadonlySet<string> = new Set(['Field', 'Dropdown']);
 
 /** "as a default page", "as the landing page": the words say the thing before them is the page shown first (E0.15). */
 const DEFAULT_PAGE_WORDS: ReadonlySet<string> = new Set([
