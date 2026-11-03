@@ -179,6 +179,8 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const conditionals: QaIr['conditionals'] = [];
   const stepIds = { last: undefined as string | undefined };
   const formats: Record<string, FieldFormat> = {};
+  /** Checks drawn from a sentence of the steps that is not an expected result ("Checking …"): see `checkSteps` of the references. */
+  const checkSteps = new Set<string>();
 
   // ---- the lines: steps first, then the expected result ----
   const stepLines = nonBlankLines(raw.steps).map((l) => splitStepLine(l));
@@ -251,6 +253,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
           ...(guardId ? { guard: guardId } : {}),
         });
         expectOf.set(item.index, id);
+        if (kind === 'step' && !original.toLowerCase().startsWith('verify ')) checkSteps.add(id);
         if (guardId) (conditionals.find((c) => c.id === guardId) as QaIr['conditionals'][number]).whenTrue.push(id);
         for (const d of e.decisions) decisions.push({ kind: 'decision', message: d, data: { expectation: id } });
       }
@@ -338,7 +341,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
 
   // ---- context (E0.5): what "it", "the same field" and "the added data" stand for, and the states the test case goes through ----
   const loggedIn = preconditions.some((p) => p.type === 'LOGGED_IN');
-  const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn });
+  const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn, checkSteps });
   steps.splice(0, steps.length, ...refs.steps);
   expectations.splice(0, expectations.length, ...refs.expectations);
   issues.splice(0, issues.length, ...refs.issues);

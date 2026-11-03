@@ -141,3 +141,32 @@ describe('E0.15: the parser defects of the audit (U6)', () => {
     assert.deepEqual(checksOf('The page shows "Saved"'), ['TEXT ']);
   });
 });
+
+describe('E0.15: a check written as a step and again as its expected result is checked once', () => {
+  const raw = (stepExpected: Record<string, string>, expected = 'The PIM heading is displayed') => ({
+    id: 'T-E015-TWIN',
+    title: 'twin',
+    steps: '1. Open the Login page\n2. Checking the login section at middle of the page',
+    stepExpected,
+    expected,
+  });
+  const layout = (c: ReturnType<typeof understandCase>) => c.ir?.expectations.filter((e) => e.condition.type === 'LAYOUT') ?? [];
+
+  it('keeps one layout check, under the words of the expected result', () => {
+    const c = understandCase(raw({ '2': 'Login section should be middle of the page' }));
+    assert.equal(layout(c).length, 1, JSON.stringify(layout(c)));
+    assert.equal(layout(c)[0]?.clause, 'Verify Login section should be middle of the page');
+    assert.ok(c.decisions.some((d) => d.message.includes('checked once')));
+  });
+
+  it('keeps the check of the step when no expected result says the same', () => {
+    const c = understandCase(raw({ '2': 'The PIM heading is displayed' }));
+    assert.equal(layout(c).length, 1);
+    assert.equal(layout(c)[0]?.clause, 'Checking the login section at middle of the page');
+  });
+
+  it('keeps both when two expected results read the same: each is a sentence of the tester', () => {
+    const c = understandCase(raw({ '2': 'Login section should be middle of the page' }, 'Login section should be middle of the page'));
+    assert.equal(layout(c).length, 2);
+  });
+});

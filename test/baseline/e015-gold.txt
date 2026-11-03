@@ -23,3 +23,14 @@ Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 
 Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 18% (target 0%)
   steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
   expectations: 231 of 299 right, 44 wrong, 24 set aside that a person could read, 0 missed, 225 extra (precision 46%, recall 77%, F1 58%)
+
+## Extra checks gone through (3 Nov 2026)
+Fix: a check written as a step ("Checking the login section at middle of the page") and again as the expected result at the same point is checked once, under the expected result's words. Removes 27 duplicate checks (19 login layout, 8 updated-records values). Login unchanged.
+
+### orangehrm-add-employee
+  expectations: 231 of 299 right, 44 wrong, 24 set aside that a person could read, 0 missed, 198 extra (precision 49%, recall 77%, F1 60%)
+
+The 198 left, all waiting on the owner's gold decisions:
+  162  "Checking the tabs of Admin, PIM, ... are visible or not" (18 cases x 9 tabs): the engine checks each named tab; the gold reads the expected result "see tabs" as one check on "tabs".
+   17  "Under Employee Information Section there should be add button": the only reading of the Add button check, because the expected result "User should add button ..." is set aside.
+   19  update cases: one sentence ("Respective fileds should accept the values", "User should updated the data", "User should see the same updated records") read as one check per field (incl. Supervisor); the gold has one clause, or none for Supervisor.

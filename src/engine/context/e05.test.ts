@@ -416,8 +416,11 @@ describe('RF-01: reference resolution', () => {
     assert.equal(ref?.status, 'RESOLVED');
     assert.deepEqual(ref?.steps, ['S35', 'S35.2', 'S35.3', 'S35.4'], 'the four fields entered in step 35, saved by step 37');
     assert.ok(ref?.because.includes('saved by S37'));
-    // The sentence also stands in the expected result; the one of step 39 is the one asked about.
-    const checks = l.ir?.expectations.filter((e) => e.clause.startsWith('checking the same updated records')) ?? [];
+    // The sentence of step 38 only checks, and the expected result checks the same fields at the same point: they are checked once,
+    // under the expected result's words (E0.15).
+    assert.ok(!l.ir?.expectations.some((e) => e.clause.startsWith('checking the same updated records')));
+    assert.ok(l.decisions.some((d) => d.message.startsWith('"checking the same updated records') && d.message.includes('checked once')));
+    const checks = l.ir?.expectations.filter((e) => e.clause === 'User should see the same updated records') ?? [];
     assert.equal(checks.length, 4, 'one check for each field');
     assert.deepEqual(
       checks.map((c) => c.condition.target?.name),

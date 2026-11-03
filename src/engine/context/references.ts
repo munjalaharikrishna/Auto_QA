@@ -24,6 +24,11 @@ export interface RefInput {
   expectations: IrExpectation[];
   issues: Issue[];
   loggedIn?: boolean;
+  /**
+   * The ids of checks drawn from a sentence of the steps that only checks something ("Checking the login section at middle of the
+   * page"), not from an expected result. Such a check is dropped when an expected result checks the same thing at the same point.
+   */
+  checkSteps?: ReadonlySet<string>;
 }
 
 export interface RefOutput {
@@ -265,6 +270,33 @@ export function resolveReferences(input: RefInput): RefOutput {
       add({ phrase, kind: 'ENTERED_DATA', status: 'RESOLVED', steps: group.map((g) => g.step), values: empty ? [] : group.map((g) => g.value), because: why });
       resolved.add(issue);
     }
+  }
+
+  // A check the tester wrote as a step and again as the expected result at the same point is checked once, under the expected result's
+  // words (E0.15). Two expected results that read the same are both kept: each is a sentence of the tester's.
+  const fromStep = (e: IrExpectation): boolean => (origin.get(e) ?? [e.id]).every((id) => input.checkSteps?.has(id));
+  const sameCheck = (e: IrExpectation): string => {
+    const c = e.condition;
+    return JSON.stringify([
+      c.type,
+      e.negated,
+      nameOf(c.target).toLowerCase(),
+      c.target?.within ?? '',
+      c.expect ?? '',
+      c.text ?? '',
+      c.region ?? '',
+      (c.alternatives ?? []).map((a) => nameOf(a).toLowerCase()),
+      e.afterStep ?? '',
+      e.guard ?? '',
+    ]);
+  };
+  for (const e of [...expectations]) {
+    if (!fromStep(e)) continue;
+    const twin = expectations.find((x) => x !== e && !fromStep(x) && sameCheck(x) === sameCheck(e));
+    if (!twin) continue;
+    origin.set(twin, [...(origin.get(twin) ?? [twin.id]), ...(origin.get(e) ?? [e.id])]);
+    expectations.splice(expectations.indexOf(e), 1);
+    decisions.push(`"${e.clause}" checks the same as "${twin.clause}" at the same point: it is checked once`);
   }
 
   // Expectation ids stay unique and in order after one check became several.
