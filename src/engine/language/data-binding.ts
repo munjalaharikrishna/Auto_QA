@@ -97,6 +97,12 @@ const ENV_NAME: Readonly<Record<string, { name: string; secret: boolean }>> = {
 };
 
 /**
+ * Other names of the test user's login, by compact key. "A valid email address" on a login form is the test user, as the old parser
+ * reads it (TEST_USERNAME); a bare "Email" could be any address, so only a "valid" one is bound this way.
+ */
+const VALID_USER_NAMES: ReadonlySet<string> = new Set(['email', 'emailaddress', 'emailid', 'mailid', 'userid', 'loginid', 'loginname', 'login']);
+
+/**
  * Binds the words of a value to a source. `tokens` are the words after the verb that name the value; `field` is the
  * target's own name, used when the words say only "valid" or "invalid".
  */
@@ -148,6 +154,10 @@ export function bindValue(line: Line, tokens: readonly Token[], data: readonly D
     if (credential) {
       decisions.push(`a valid ${compactKey(fieldName)} is the environment variable ${credential.name}`);
       return { spec: { kind: 'env', ...credential }, decisions };
+    }
+    if (VALID_USER_NAMES.has(compactKey(fieldName))) {
+      decisions.push(`a valid ${fieldName} is the test user's login, the environment variable ${ENV_NAME.username!.name}`);
+      return { spec: { kind: 'env', ...ENV_NAME.username! }, decisions };
     }
     return { spec: { kind: 'class', dataClass: 'VALID', field: fieldName }, decisions };
   }

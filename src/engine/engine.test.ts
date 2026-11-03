@@ -164,6 +164,19 @@ describe('pipeline contract (GV-15)', () => {
     for (const [, d] of secrets) assert.ok((d.value ?? '').startsWith('$env.') || d.value === '***', String(d.value));
   });
 
+  it('reads a valid email address as the test user, not a made-up address', async () => {
+    const r = await compileCase({
+      id: 'T-4b',
+      title: 'Login',
+      steps:
+        '1. Open https://example.com\n2. Enter the valid Email address in  Email Address Text box\n3. Enter The valid password in password Text box\n4. Click Login',
+      expected: 'User is redirected to Dashboard page',
+    });
+    assert.equal(r.status, 'compiled', String(r.error));
+    const email = r.ir?.steps.find((s) => s.id === 'S2')?.value?.slice('$data.'.length) ?? '';
+    assert.equal(r.ir?.data[email]?.value, '$env.TEST_USERNAME');
+  });
+
   it('never allows a clean PASS when an assumption was made (DEC-05)', async () => {
     const r = await compileCase({
       id: 'T-5',

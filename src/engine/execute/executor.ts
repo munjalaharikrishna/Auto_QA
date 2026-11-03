@@ -63,6 +63,9 @@ export type BlockCode =
   /** A person stepping through the run stopped it there (E0.14a). */
   | 'STOPPED';
 
+/** The person stepping through the run did the step themselves, in the browser (E0.14c): it is done, and nothing more is done for it. */
+class ByHand extends Error {}
+
 class Block extends Error {
   constructor(
     readonly code: BlockCode,
@@ -142,6 +145,8 @@ export interface StepRecord {
   checksAfter: string[];
   /** Pictures of the page before and after the step, when a folder was given: what a review card shows. */
   screenshots?: { before?: string; after?: string };
+  /** The person stepping through the run did this step themselves, in the browser (E0.14c). */
+  byHand?: true;
   notes: string[];
 }
 
@@ -212,8 +217,11 @@ export interface StepHook {
   before?(chain: Chain, index: number): Promise<'go' | 'stop'>;
   /** After the step, with what it did: go on, or stop. */
   after?(record: StepRecord, index: number): Promise<'go' | 'stop'>;
-  /** The element the step means, by its `ref`; nothing leaves the step blocked as it would be without a person. */
-  pick?(request: PickRequest): Promise<{ ref: string } | undefined>;
+  /**
+   * The element the step means, by its `ref`; `manual` when the person did the step themselves in the browser (E0.14c); nothing leaves
+   * the step blocked as it would be without a person.
+   */
+  pick?(request: PickRequest): Promise<{ ref: string } | { manual: true } | undefined>;
 }
 
 const MASK = '••••';
@@ -381,14 +389,17 @@ class Runner {
       await this.fillOtp(chain);
       await this.act(chain, rec);
     } catch (e) {
-      if (e instanceof Block) {
+      if (e instanceof ByHand) {
+        rec.byHand = true;
+        rec.notes.push('done by the person stepping through the run, in the browser');
+      } else if (e instanceof Block) {
         rec.status = 'blocked';
         rec.code = e.code;
       } else {
         rec.status = 'failed';
         rec.code = 'ACTION_FAILED';
       }
-      rec.reason = (e as Error).message;
+      if (!rec.byHand) rec.reason = (e as Error).message;
     }
     rec.dialogs = this.o.mcp.takeDialogs();
     this.dismissedDialog = chain.dialog === 'dismiss' && rec.dialogs.length > 0;
@@ -736,6 +747,7 @@ class Runner {
       screen,
       view: { ...(screenshot ? { screenshot } : {}), width: size.width, height: size.height, elements: shown },
     });
+    if (answer && 'manual' in answer) throw new ByHand();
     return answer ? byRef.get(answer.ref) : undefined;
   }
 

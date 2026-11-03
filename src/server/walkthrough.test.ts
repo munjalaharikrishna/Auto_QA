@@ -4,7 +4,20 @@ import type { StepRecord } from '../engine/execute/executor.js';
 import { observed } from '../engine/execute/observe.js';
 import type { DomElement } from '../engine/locate/types.js';
 import type { RawTestCase } from '../model/test-model.js';
-import { addCheck, CHECK_KINDS, changesData, checkProblem, checkSentence, placeCheck, tryOnScreen, type WalkCheck } from './walkthrough.js';
+import {
+  addCheck,
+  applyPending,
+  CHECK_KINDS,
+  changesData,
+  checkProblem,
+  checkSentence,
+  placeCheck,
+  type Recorded,
+  readsBack,
+  recordedSentence,
+  tryOnScreen,
+  type WalkCheck,
+} from './walkthrough.js';
 
 /** E0.14b: the rules of the guided walkthrough, without a browser. */
 
@@ -146,5 +159,94 @@ describe('E0.14b: a check is tried on the screen the person sees', () => {
     assert.equal(shown?.result, 'proven', shown?.why ?? 'not tried');
     const gone = tryOnScreen(added.expectation, record([el({ labels: ['Last Name'], xpath: '/l' })]));
     assert.notEqual(gone?.result, 'proven');
+  });
+});
+
+describe('E0.14c: what a person does in the browser is written as steps both readers read', () => {
+  const LOGIN = { username: 'student@bookmarket.com', password: 'password123' };
+  const EACH_ACTION: Array<[Recorded, string]> = [
+    [{ kind: 'navigate', value: 'https://book-market-virid.vercel.app/login' }, 'Navigate to https://book-market-virid.vercel.app/login'],
+    [
+      { kind: 'fill', element: { role: 'textbox', name: 'Email address' }, value: 'student@bookmarket.com' },
+      'Enter the valid username in the "Email address" field',
+    ],
+    [{ kind: 'fill', element: { role: 'textbox', name: 'Password' }, value: 'password123', secret: true }, 'Enter the valid password in the "Password" field'],
+    [{ kind: 'fill', element: { role: 'textbox', name: 'Password' }, value: 'nope', secret: true }, 'Enter an invalid password in the "Password" field'],
+    [{ kind: 'fill', element: { role: 'searchbox', name: 'Search book' }, value: 'Network Analysis' }, 'Enter "Network Analysis" in the "Search book" field'],
+    [{ kind: 'click', element: { role: 'button', name: 'Sign In' } }, 'Click the "Sign In" button'],
+    [{ kind: 'click', element: { role: 'link', name: 'Forgot password?' } }, 'Click the "Forgot password?" link'],
+    [{ kind: 'click', element: { role: 'tab', name: 'EEE' } }, 'Click the "EEE" tab'],
+    [{ kind: 'select', element: { role: 'combobox', name: 'Country' }, value: 'India' }, 'Select "India" from the "Country" dropdown'],
+    [{ kind: 'check', element: { role: 'checkbox', name: 'Remember me' } }, 'Check the "Remember me" checkbox'],
+    [{ kind: 'uncheck', element: { role: 'checkbox', name: 'Remember me' } }, 'Uncheck the "Remember me" checkbox'],
+    [{ kind: 'choose', element: { role: 'radio', name: '2nd Year' } }, 'Select the "2nd Year" radio button'],
+    [{ kind: 'press', value: 'Enter' }, 'Press Enter'],
+    [{ kind: 'press', value: 'Escape' }, 'Press Escape'],
+  ];
+  for (const [action, sentence] of EACH_ACTION) {
+    it(`${action.kind}: "${sentence}"`, async () => {
+      const made = recordedSentence(action, LOGIN);
+      assert.deepEqual('sentence' in made && made.sentence, sentence);
+      assert.equal(await readsBack(sentence, action), undefined);
+    });
+  }
+  it('never writes a password, and writes the project login as the valid one', () => {
+    const typed = recordedSentence({ kind: 'fill', element: { role: 'textbox', name: 'Password' }, value: 'password123', secret: true }, LOGIN);
+    assert.ok('sentence' in typed && !typed.sentence.includes('password123'));
+    const other = recordedSentence({ kind: 'fill', element: { role: 'textbox', name: 'Password' }, value: 'Secret!1', secret: true }, LOGIN);
+    assert.ok('sentence' in other && !other.sentence.includes('Secret!1') && other.note);
+  });
+  it('refuses what a step cannot hold, and says why', () => {
+    for (const r of [
+      { kind: 'click', element: { role: 'button', name: '' } },
+      { kind: 'click', element: { role: 'button', name: 'Say "hi"' } },
+      { kind: 'fill', element: { role: 'textbox', name: 'Notes' }, value: '' },
+      { kind: 'press', value: 'Tab' },
+    ] satisfies Recorded[])
+      assert.ok('why' in recordedSentence(r, LOGIN), JSON.stringify(r));
+  });
+  it('a sentence the readers take for something else is not kept', async () => {
+    const problem = await readsBack('Click the "Sign In" button', { kind: 'fill', element: { role: 'textbox', name: 'Sign In' }, value: 'x' });
+    assert.ok(problem);
+  });
+
+  it('places recorded steps after their step, in the order they were done, among the checks, and in place of a step done by hand', () => {
+    const r = applyPending(RAW, [
+      { kind: 'recorded', sentence: 'Click the "Sign In" button', afterStep: 'S1' },
+      { kind: 'check', check: { kind: 'url-contains', expected: 'dash', afterStep: 'S1' }, sentence: 'The page URL contains "dash"' },
+      { kind: 'recorded', sentence: 'Click the "Explore" button', afterStep: 'S1' },
+      { kind: 'recorded', sentence: 'Click the "PIM" link', replaces: 'S2' },
+      { kind: 'recorded', sentence: 'Click the "Add" link', replaces: 'S2' },
+      { kind: 'edit', step: 'S3', text: 'Click   the Add   button' },
+      { kind: 'check', check: { kind: 'visible', target: { role: 'button', name: 'Save' } }, sentence: 'The Save button is displayed' },
+    ]);
+    assert.equal(
+      r.steps,
+      [
+        '1. Open http://hr.test/',
+        '2. Click the "Sign In" button',
+        '3. Verify The page URL contains "dash"',
+        '4. Click the "Explore" button',
+        '5. Click the "PIM" link',
+        '6. Click the "Add" link',
+        '7. Click the Add button',
+        '8. Enter "Asha" in First Name',
+      ].join('\n'),
+    );
+    assert.equal(r.expected, 'The Save button is displayed\nThe Save button is displayed');
+  });
+  it('a step that is not in the case is refused', () => {
+    assert.throws(() => applyPending(RAW, [{ kind: 'recorded', sentence: 'Press Enter', afterStep: 'S9' }]), /no step S9/);
+  });
+  it('steps never run can be left out, so a flow recorded by hand is not followed by the old steps again', () => {
+    const r = applyPending(
+      RAW,
+      [
+        { kind: 'recorded', sentence: 'Click the "PIM" link', afterStep: 'S1' },
+        { kind: 'recorded', sentence: 'Click the "Add" link', afterStep: 'S1' },
+      ],
+      ['S2', 'S3', 'S4'],
+    );
+    assert.equal(r.steps, ['1. Open http://hr.test/', '2. Click the "PIM" link', '3. Click the "Add" link'].join('\n'));
   });
 });

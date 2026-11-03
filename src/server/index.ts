@@ -42,7 +42,14 @@ if (existsSync(pagesFile)) {
   renameSync(pagesFile, path.join(dataDir, 'pages.imported.json'));
   if (added) console.log(`Moved ${added} learned page URL(s) from pages.json into the database.`);
 }
-const runner = new JobRunner({ store, config: defaultParserConfig(), dataDir, headless: process.env.AUTO_QA_HEADED !== '1' });
+// A walkthrough's browser is shown, so the person can use it and what they do is recorded (E0.14c); AUTO_QA_WALKTHROUGH_HEADLESS=1 hides it.
+const runner = new JobRunner({
+  store,
+  config: defaultParserConfig(),
+  dataDir,
+  headless: process.env.AUTO_QA_HEADED !== '1',
+  walkthroughHeadless: process.env.AUTO_QA_WALKTHROUGH_HEADLESS === '1',
+});
 const app = await buildApp({ store, runner, dataDir, workspacesDir, webDir: path.join(root, 'web', 'dist') });
 
 const port = Number(process.env.PORT ?? 4400);

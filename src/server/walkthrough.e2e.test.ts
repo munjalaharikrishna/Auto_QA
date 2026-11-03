@@ -10,6 +10,7 @@ import { defaultParserConfig } from '../parser/index.js';
 import { buildApp } from './app.js';
 import { JobRunner } from './jobs.js';
 import { Store } from './store.js';
+import { PANEL_HOST_ID } from './walk-panel.js';
 
 /**
  * E0.14b exit tests, end to end on the demo app: a walkthrough opened for a saved test case runs its steps one at a time, asks for a
@@ -189,6 +190,236 @@ describe('E0.14b: the guided walkthrough, end to end', { skip: !!process.env.AUT
         ['demo'],
       );
     }
+  });
+
+  /** Answers each question with what `answer` gives, which may first act in the walkthrough's browser as the person, until the job ends. */
+  async function driveAs(jobId: string, answer: (q: Q) => Promise<unknown>): Promise<J> {
+    for (let i = 0; i < 1200; i++) {
+      const j = (await get(`/api/jobs/${jobId}`)) as J;
+      if (['done', 'failed', 'cancelled'].includes(j.status)) return j;
+      const q = j.questions[0];
+      if (j.status === 'waiting' && q) await post(`/api/questions/${q.id}/answer`, { answer: await answer(q) });
+      else await new Promise((r) => setTimeout(r, 200));
+    }
+    throw new Error(`job ${jobId} did not end`);
+  }
+
+  /** The tab of the walkthrough's browser that shows the application. */
+  const appTab = (jobId: string) => {
+    const tab = runner.walkthroughPages(jobId).find((p) => p.url().startsWith(demo.url));
+    assert.ok(tab, 'the walkthrough has a tab on the application');
+    return tab;
+  };
+
+  /** Waits until the walkthrough holds `n` changes to save. */
+  async function pendingOf(jobId: string, n: number): Promise<Array<{ kind: string; sentence?: string; afterStep?: string; replaces?: string }>> {
+    let walk: { pending: Array<{ kind: string; sentence?: string }>; recorderNote?: string } | undefined;
+    for (let i = 0; i < 100; i++) {
+      walk = ((await get(`/api/jobs/${jobId}`)) as J).output.walk as typeof walk;
+      if ((walk?.pending.length ?? 0) >= n) return walk?.pending ?? [];
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.fail(`expected ${n} recorded, got ${JSON.stringify(walk)}`);
+  }
+
+  it('records what the person does in the browser, across pages, as steps both readers read, and runs them again (E0.14c)', async () => {
+    await store.upsertTestCase(
+      'demo',
+      { id: 'TC-REC', title: 'Profile by hand', steps: `1. Open ${demo.url}/`, expected: 'The page URL contains "/"' },
+      { kind: 'form' },
+      'written',
+    );
+    const job = await post('/api/projects/demo/test-cases/TC-REC/walkthrough');
+    const done = await driveAs(job.id, async (q) => {
+      if (q.kind === 'step' && q.payload.step === 'S1') {
+        const tab = appTab(job.id);
+        await tab.fill('#username', DEMO_USER.username);
+        await tab.fill('#password', DEMO_USER.password);
+        await tab.click('button[data-testid="login"]');
+        await tab.waitForURL('**/dashboard');
+        await tab.getByRole('link', { name: 'Profile' }).click();
+        await tab.waitForURL('**/profile');
+        await tab.fill('#name', 'Asha');
+        await tab.keyboard.press('Tab');
+        await tab.selectOption('#country', 'in');
+        await tab.check('#news');
+        const recorded = await pendingOf(job.id, 7);
+        assert.ok(
+          recorded.every((p) => (p as { added?: boolean }).added === false),
+          'what was done is recorded first, not added as a step',
+        );
+        // Every step but the last is added; the checkbox is never said to be a step.
+        for (const [i, p] of recorded.slice(0, 6).entries()) await post(`/api/jobs/${job.id}/walkthrough/pending`, { add: i, sentence: p.sentence });
+        return 'next';
+      }
+      return q.kind === 'confirm' ? true : 'next';
+    });
+    assert.equal(done.status, 'done', done.error ?? '');
+    const saved = await store.testCase('demo', 'TC-REC');
+    assert.equal(saved?.version, 2, JSON.stringify(done.logs.map((l) => l.message)));
+    assert.equal(
+      saved?.raw.steps,
+      [
+        `1. Open ${demo.url}/`,
+        '2. Enter the valid username in the "Username" field',
+        '3. Enter the valid password in the "Password" field',
+        '4. Click the "Login" button',
+        '5. Click the "Profile" link',
+        '6. Enter "Asha" in the "Full name" field',
+        '7. Select "India" from the "Country" dropdown',
+      ].join('\n'),
+    );
+    assert.ok(done.logs.some((l) => l.message === '1 recorded step(s) you did not add are left out.'));
+    assert.ok(!saved?.raw.steps.includes(DEMO_USER.password), 'the password is never written');
+
+    // The recorded flow runs again, step by step, without a person doing anything but going on.
+    const again = await post('/api/projects/demo/test-cases/TC-REC/walkthrough');
+    const replay = await drive(again.id, (q) => (q.kind === 'confirm' ? true : 'next'));
+    assert.equal(replay.status, 'done', replay.error ?? '');
+    const steps = (replay.output.walk as { steps: Array<{ step: string; status: string }> }).steps;
+    assert.deepEqual(
+      steps.map((s) => `${s.step}:${s.status}`),
+      steps.map((s) => `${s.step}:done`),
+    );
+  });
+
+  it('a step that cannot find its element can be done by hand: what was done takes its place (E0.14c)', async () => {
+    await store.upsertTestCase(
+      'demo',
+      {
+        id: 'TC-HAND',
+        title: 'Security details',
+        steps: [`Open ${demo.url}/`, 'Enter valid username', 'Enter valid password', 'Click Login', 'Click Security info']
+          .map((l, i) => `${i + 1}. ${l}`)
+          .join('\n'),
+        expected: 'The page URL contains "dashboard"',
+      },
+      { kind: 'form' },
+      'written',
+    );
+    const job = await post('/api/projects/demo/test-cases/TC-HAND/walkthrough');
+    const asked: string[] = [];
+    const done = await driveAs(job.id, async (q) => {
+      asked.push(`${q.kind}:${String(q.payload.code ?? q.payload.step ?? '')}`);
+      if (q.kind === 'choose' && q.payload.item === 'S5') {
+        await appTab(job.id).getByRole('button', { name: 'Details' }).nth(1).click();
+        assert.deepEqual(await pendingOf(job.id, 1), [{ kind: 'recorded', sentence: 'Click the "Details" button', replaces: 'S5', added: false }]);
+        // "I did this step myself" is the OK for it: it is saved without pressing Add.
+        return 'manual';
+      }
+      return q.kind === 'confirm' ? true : 'next';
+    });
+    assert.equal(done.status, 'done', done.error ?? '');
+    assert.ok(asked.includes('step:S5'), `S5 counts as done: ${asked.join(' ')}`);
+    assert.ok(done.logs.some((l) => l.message === 'S5 was done by hand'));
+    assert.match((await store.testCase('demo', 'TC-HAND'))?.raw.steps ?? '', /\n5\. Click the "Details" button$/);
+    // The words of the step now mean the element used, on that screen, for every test case that says them.
+    const labels = await store.learnedEntries('demo', { kind: 'label' });
+    const word = labels.find((l) => (l.payload as { label?: string }).label === 'security info');
+    const payload = word?.payload as { means?: string; screen?: string } | undefined;
+    assert.deepEqual([payload?.means, payload?.screen, word?.status], ['Details', '/dashboard', 'active']);
+  });
+
+  const LOGIN_CASE = (id: string) => ({
+    id,
+    title: 'Login by hand',
+    steps: [`Open ${demo.url}/`, 'Enter valid username', 'Enter valid password', 'Click Login'].map((l, i) => `${i + 1}. ${l}`).join('\n'),
+    expected: 'The page URL contains "dashboard"',
+  });
+  const RECORDED_LOGIN = () =>
+    [
+      `1. Open ${demo.url}/`,
+      '2. Enter the valid username in the "Username" field',
+      '3. Enter the valid password in the "Password" field',
+      '4. Click the "Login" button',
+    ].join('\n');
+
+  /** Logs in by hand in the walkthrough's window, and waits until the three actions are recorded. */
+  async function loginByHand(jobId: string): Promise<void> {
+    const tab = appTab(jobId);
+    await tab.fill('#username', DEMO_USER.username);
+    await tab.fill('#password', DEMO_USER.password);
+    await tab.click('button[data-testid="login"]');
+    await tab.waitForURL('**/dashboard');
+    await pendingOf(jobId, 3);
+  }
+
+  it('closing the browser window keeps what was recorded, and saving can let it replace the steps not run (E0.14c)', async () => {
+    await store.upsertTestCase('demo', LOGIN_CASE('TC-CLOSE'), { kind: 'form' }, 'written');
+    const job = await post('/api/projects/demo/test-cases/TC-CLOSE/walkthrough');
+    let asked: Record<string, unknown> | undefined;
+    const done = await driveAs(job.id, async (q) => {
+      if (q.kind === 'step' && q.payload.step === 'S1') {
+        await loginByHand(job.id);
+        await post(`/api/jobs/${job.id}/walkthrough/pending`, { addAll: true });
+        // The person closes the window instead of answering.
+        await appTab(job.id).context().close();
+        for (let i = 0; i < 100 && runner.walkthroughPages(job.id).length; i++) await new Promise((r) => setTimeout(r, 100));
+        return 'next';
+      }
+      if (q.kind === 'confirm' && q.payload.code === 'SAVE_WALKTHROUGH') {
+        asked = q.payload;
+        return 'replace';
+      }
+      return q.kind === 'confirm' ? true : 'next';
+    });
+    assert.equal(done.status, 'done', done.error ?? JSON.stringify(done.logs.map((l) => l.message)));
+    assert.deepEqual(asked?.notRun, ['S2', 'S3', 'S4'], JSON.stringify(asked));
+    assert.match(String(asked?.text), /browser window was closed/);
+    const walk = done.output.walk as { ended: string; savedVersion?: number; browserClosed?: boolean };
+    assert.equal(walk.ended, 'closed');
+    assert.equal(walk.browserClosed, true);
+    assert.equal(walk.savedVersion, 2);
+    assert.equal((await store.testCase('demo', 'TC-CLOSE'))?.raw.steps, RECORDED_LOGIN());
+  });
+
+  it('the window shows the steps and what was recorded, and Finish and Save there end it with one tab open (E0.14c)', async () => {
+    await store.upsertTestCase('demo', LOGIN_CASE('TC-PANEL'), { kind: 'form' }, 'written');
+    // A headless browser has no panel by default; this one asks for it.
+    const job = await store.createJob({ projectId: 'demo', kind: 'walkthrough', input: { caseId: 'TC-PANEL', panel: true } });
+    runner.enqueue(job);
+    const panelText = () => appTab(job.id).evaluate((id) => (document.getElementById(id) as unknown as { text(): string } | null)?.text() ?? '', PANEL_HOST_ID);
+    const panelShown = () => appTab(job.id).evaluate((id) => document.getElementById(id)?.style.display === 'block', PANEL_HOST_ID);
+    const press = (label: string) =>
+      appTab(job.id).evaluate(([id, l]) => (document.getElementById(id) as unknown as { press(x: string): boolean }).press(l), [PANEL_HOST_ID, label] as const);
+    const until = async (what: string, test: () => Promise<boolean>) => {
+      for (let i = 0; i < 150; i++) {
+        if (await test().catch(() => false)) return;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      assert.fail(`the panel never showed ${what}: ${await panelText().catch((e: Error) => e.message)}`);
+    };
+    for (let i = 0; i < 300; i++) {
+      const j = (await get(`/api/jobs/${job.id}`)) as J;
+      if (j.status === 'waiting' && j.questions[0]?.payload.step === 'S1') break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.equal(runner.walkthroughPages(job.id).length, 1, 'the empty starter tab is closed: one window');
+    await until(
+      'the steps and Next step',
+      async () => (await panelShown()) && (await panelText()).includes('Enter valid password') && (await panelText()).includes('Next step'),
+    );
+    await loginByHand(job.id);
+    await until(
+      'what was recorded, waiting for an OK',
+      async () => (await panelText()).includes('Recorded (3)') && (await panelText()).includes('waiting for your OK'),
+    );
+    assert.equal(await press('Add all (3)'), true);
+    await until('the steps added', async () => !(await panelText()).includes('waiting for your OK') && (await panelText()).includes('added as a step'));
+    assert.equal(await press('Finish'), true);
+    await until('the save question', async () => (await panelText()).includes('Save: recorded steps replace S2–S4'));
+    assert.equal(await press('Save: recorded steps replace S2–S4'), true);
+    await until('that it was saved', async () => (await panelText()).includes('Saved as version 2 of TC-PANEL'));
+    let done: J | undefined;
+    for (let i = 0; i < 300; i++) {
+      done = (await get(`/api/jobs/${job.id}`)) as J;
+      if (['done', 'failed', 'cancelled'].includes(done.status)) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.equal(done?.status, 'done', done?.error ?? '');
+    assert.equal((done?.output.walk as { ended?: string } | undefined)?.ended, 'stopped');
+    // Pressing the panel's buttons is answering the walkthrough, never a step of the case.
+    assert.equal((await store.testCase('demo', 'TC-PANEL'))?.raw.steps, RECORDED_LOGIN());
   });
 
   it('serves the screenshots of a walkthrough, and only from the data folder', async () => {

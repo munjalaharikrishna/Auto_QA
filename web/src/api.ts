@@ -246,6 +246,9 @@ export const api = {
   regenerate: (id: string) => call(`/api/jobs/${id}/regenerate`, json('POST', {})),
   edit: (id: string, c: Omit<RawTestCase, 'row'>) => call(`/api/jobs/${id}/edit`, json('POST', { case: c })),
   cancel: (id: string) => call(`/api/jobs/${id}/cancel`, json('POST', {})),
+  /** Adds a recorded step of an open walkthrough (or all of them), or removes an item from what it will save (E0.14c). */
+  walkEdit: (id: string, edit: { add: number; sentence?: string } | { addAll: true } | { remove: number; sentence?: string }) =>
+    call<{ ok: boolean; message: string }>(`/api/jobs/${id}/walkthrough/pending`, json('POST', edit)),
   reviewQueue: (id: string) => call<Job>(`/api/jobs/${id}/review-queue`, json('POST', {})),
   reviewCards: (id: string) => call<{ cards: ReviewCard[] }>(`/api/jobs/${id}/review-queue`),
   decideCard: (id: string, body: { cardId: string; decision: 'PASS' | 'FAIL'; who?: string; note?: string }) =>
@@ -264,7 +267,7 @@ export const api = {
   saveObservation: (projectId: string, id: string, body: { check: string; facts: unknown }) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/accept-observation`, json('POST', body)),
   runTestCase: (projectId: string, id: string) => call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/run`, json('POST', {})),
-  /** A guided walkthrough of a saved test case (E0.14b), opened from a review card of `fromJob`. */
+  /** A guided walkthrough of a saved test case (E0.14b), opened from a review card of `fromJob`, or from the test cases list with the case's last run as `fromJob`. */
   walkthrough: (projectId: string, id: string, body: { who?: string; fromJob?: string } = {}) =>
     call<Job>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/walkthrough`, json('POST', body)),
   setApproval: (projectId: string, id: string, approval: 'draft' | 'approved') =>

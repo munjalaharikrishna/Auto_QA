@@ -22,7 +22,14 @@ export interface InspectOptions {
 }
 
 /** Runs in the page. Keep it self-contained. */
-export function readDom(opts: { testIdAttribute: string; includeText: boolean; containerSelector: string; headingSelector: string }): DomElement[] {
+export function readDom(opts: {
+  testIdAttribute: string;
+  includeText: boolean;
+  containerSelector: string;
+  headingSelector: string;
+  /** Read only these elements, and never scroll: a person is using the page (the walkthrough's recorder, E0.14c). */
+  only?: Element[];
+}): DomElement[] {
   const squash = (s: string | null | undefined): string => {
     let out = '';
     let space = false;
@@ -193,7 +200,7 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean; c
   };
 
   const out: DomElement[] = [];
-  const all = Array.from(document.querySelectorAll('*'));
+  const all = opts.only ?? Array.from(document.querySelectorAll('*'));
   let index = 0;
   for (const el of all) {
     const tag = el.tagName.toLowerCase();
@@ -224,7 +231,7 @@ export function readDom(opts: { testIdAttribute: string; includeText: boolean; c
     if (visible) {
       let cx = rect.left + rect.width / 2;
       let cy = rect.top + rect.height / 2;
-      if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) {
+      if (!opts.only && (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight)) {
         (el as HTMLElement).scrollIntoView({ block: 'center', inline: 'center' });
         rect = el.getBoundingClientRect();
         cx = rect.left + rect.width / 2;

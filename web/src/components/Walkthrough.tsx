@@ -7,7 +7,8 @@ import { PickElement, type ViewElement } from './PickElement';
 /**
  * The guided walkthrough (E0.14b, PD-13): the steps of the test case on the left, the application's screen on the right. The engine
  * runs one step at a time and waits: the person goes on, adds a check on what the screen shows, rewords the step, or stops. A step
- * that cannot find its element asks for a pick on the screenshot. Nothing is saved until the person says so at the end.
+ * that cannot find its element asks for a pick on the screenshot, or the person does it by hand. While it waits, what the person does in
+ * the walkthrough's browser window is recorded as steps (E0.14c). Nothing is saved until the person says so at the end.
  */
 
 interface WalkStep {
@@ -16,9 +17,13 @@ interface WalkStep {
   status: string;
 }
 interface WalkPending {
-  kind: 'check' | 'edit';
+  kind: 'check' | 'edit' | 'recorded';
   sentence?: string;
   afterStep?: string;
+  /** A recorded step done by hand in place of this step of the run. */
+  replaces?: string;
+  /** A recorded step the person added; one not added is not saved. */
+  added?: boolean;
   step?: string;
   text?: string;
 }
@@ -29,7 +34,13 @@ interface Walk {
   steps: WalkStep[];
   pending: WalkPending[];
   production?: boolean;
-  ended?: 'finished' | 'stopped' | 'idle';
+  /** The browser window is shown and what the person does in it is recorded (E0.14c). */
+  recording?: boolean;
+  /** What the recorder last could not keep, or a note on what it kept. */
+  recorderNote?: string;
+  ended?: 'finished' | 'stopped' | 'idle' | 'closed';
+  /** The person closed the browser window: what was recorded before is kept, to save here. */
+  browserClosed?: boolean;
   savedVersion?: number;
   durationMs?: number;
 }
@@ -67,6 +78,20 @@ export function Walkthrough({ job }: { job: JobDetail }) {
   const question = job.questions[0];
   const current = question && typeof question.payload.item === 'string' ? question.payload.item : undefined;
   const active = ['queued', 'running', 'waiting'].includes(job.status);
+  // A recorded step is added, or any change removed, at any time while the walkthrough is open (E0.14c).
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string>();
+  const edit = active
+    ? async (e: Parameters<typeof api.walkEdit>[1]) => {
+        setEditing(true);
+        setEditError(undefined);
+        await api
+          .walkEdit(job.id, e)
+          .catch((x: Error) => setEditError(x.message))
+          .finally(() => setEditing(false));
+      }
+    : undefined;
+  const waiting = walk?.pending.filter((p) => p.kind === 'recorded' && !p.added).length ?? 0;
 
   return (
     <div className="walk">
@@ -87,24 +112,80 @@ export function Walkthrough({ job }: { job: JobDetail }) {
         {!!walk?.pending.length && (
           <div>
             <h3 style={{ margin: '0.5rem 0 0.25rem' }}>To save at the end</h3>
+            {waiting > 0 && (
+              <p className="muted" style={{ margin: '0 0 0.25rem' }}>
+                What you do in the browser is recorded here first. Add each one you mean as a step; the ones you do not add are not saved.
+              </p>
+            )}
             <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
-              {walk.pending.map((p) => (
-                <li key={p.kind === 'check' ? `check ${p.afterStep} ${p.sentence}` : `edit ${p.step} ${p.text}`}>
+              {walk.pending.map((p, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the same step can be recorded twice; the list only grows or loses an item
+                <li key={`${i} ${p.kind} ${p.sentence ?? p.text}`}>
                   {p.kind === 'check' ? (
                     <>
                       {p.sentence} <span className="muted">({p.afterStep === 'end' ? 'at the end' : `after ${p.afterStep}`})</span>
+                    </>
+                  ) : p.kind === 'recorded' ? (
+                    <>
+                      {p.sentence} <span className="muted">({p.replaces ? `done for ${p.replaces}` : `recorded after ${p.afterStep}`})</span>{' '}
+                      {p.added ? <span className="badge PASS">added</span> : <span className="badge job">waiting for your OK</span>}
+                      {edit && !p.added && (
+                        <button
+                          type="button"
+                          className="chip"
+                          disabled={editing}
+                          onClick={() => void edit({ add: i, sentence: p.sentence })}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Add
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
                       {p.step} reads: {p.text}
                     </>
                   )}
+                  {edit && (
+                    <button
+                      type="button"
+                      className="chip"
+                      disabled={editing}
+                      onClick={() => void edit({ remove: i, ...(p.kind === 'edit' ? {} : { sentence: p.sentence }) })}
+                      style={{ marginLeft: '0.5rem' }}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
+            {edit && waiting > 1 && (
+              <button type="button" className="primary" disabled={editing} onClick={() => void edit({ addAll: true })} style={{ marginTop: '0.4rem' }}>
+                Add all ({waiting})
+              </button>
+            )}
+            <ErrorNote error={editError} />
           </div>
         )}
         {walk?.production && <p className="notice warn">Production environment: steps that change data are not run unless the project allows it.</p>}
+        {walk?.browserClosed && active && (
+          <p className="notice warn" style={{ margin: 0 }}>
+            The browser window was closed. Everything recorded before that is kept: say on the right whether to save it.
+          </p>
+        )}
+        {walk?.recording && active && !walk.browserClosed && (
+          <p className="notice" style={{ margin: 0 }}>
+            A browser window is open for this walkthrough, with these steps and the Next step and Finish buttons on its left. While it waits for you, everything
+            you do in that window is recorded as a step: clicks, typing, dropdowns, checkboxes, Enter and Escape, and the pages you go to. Your login is written
+            as the project's valid username and password, so every test case uses the same one.
+          </p>
+        )}
+        {walk?.recorderNote && active && (
+          <p className="notice warn" style={{ margin: 0 }}>
+            {walk.recorderNote}
+          </p>
+        )}
       </section>
 
       <section className="stack" aria-label="Screen">
@@ -122,7 +203,14 @@ export function Walkthrough({ job }: { job: JobDetail }) {
 
 function Ended({ job, walk }: { job: JobDetail; walk?: Walk }) {
   if (!walk) return null;
-  const how = walk.ended === 'idle' ? 'was closed after a long time without an answer' : walk.ended === 'stopped' ? 'was stopped' : 'went through every step';
+  const how =
+    walk.ended === 'idle'
+      ? 'was closed after a long time without an answer'
+      : walk.ended === 'closed'
+        ? 'ended when its browser window was closed'
+        : walk.ended === 'stopped'
+          ? 'was finished before its last step'
+          : 'went through every step';
   return (
     <div className="panel stack">
       <p style={{ margin: 0 }}>
@@ -130,7 +218,8 @@ function Ended({ job, walk }: { job: JobDetail; walk?: Walk }) {
       </p>
       {walk.savedVersion ? (
         <p className="notice" style={{ margin: 0 }}>
-          Saved as version {walk.savedVersion}. Run it again to see the result: the earlier run's result is not changed.
+          ✓ Saved as version {walk.savedVersion} of {walk.caseId}, with {walk.pending.filter((p) => p.kind === 'recorded').length} recorded step(s). Run it
+          again to see the result: the earlier run's result is not changed.
         </p>
       ) : (
         <p className="muted" style={{ margin: 0 }}>
@@ -169,6 +258,44 @@ function Asked({ question }: { question: Question }) {
   };
   const p = question.payload as Record<string, unknown>;
 
+  if (question.kind === 'confirm' && p.code === 'SAVE_WALKTHROUGH') {
+    const notRun = Array.isArray(p.notRun) ? (p.notRun as string[]) : [];
+    const steps = notRun.length > 2 ? `${notRun[0]}–${notRun[notRun.length - 1]}` : notRun.join(' and ');
+    return (
+      <div className="panel stack">
+        <p className="notice" style={{ margin: 0 }}>
+          {String(p.text ?? '')}
+        </p>
+        {notRun.length > 0 && (
+          <p className="muted" style={{ margin: 0 }}>
+            {steps} {notRun.length === 1 ? 'was' : 'were'} not run. If what you recorded does the same, let it replace {notRun.length === 1 ? 'it' : 'them'}.
+            Otherwise the old {notRun.length === 1 ? 'step runs' : 'steps run'} after what you recorded.
+          </p>
+        )}
+        <div className="row">
+          {notRun.length > 0 ? (
+            <>
+              <button type="button" className="primary" disabled={busy} onClick={() => void send('replace')}>
+                Save: recorded steps replace {steps}
+              </button>
+              <button type="button" disabled={busy} onClick={() => void send(true)}>
+                Save: keep {steps} too
+              </button>
+            </>
+          ) : (
+            <button type="button" className="primary" disabled={busy} onClick={() => void send(true)}>
+              Save
+            </button>
+          )}
+          <button type="button" className="danger" disabled={busy} onClick={() => void send(false)}>
+            Don't save
+          </button>
+        </div>
+        <ErrorNote error={error} />
+      </div>
+    );
+  }
+
   if (question.kind === 'confirm')
     return (
       <div className="panel stack">
@@ -202,9 +329,18 @@ function Asked({ question }: { question: Question }) {
         ) : (
           <p className="muted">There is no picture of the page to pick on.</p>
         )}
+        <p className="muted" style={{ margin: 0 }}>
+          Or do this step yourself in the browser window: what you do there is recorded in its place.
+        </p>
         <div className="row">
+          <button type="button" className="primary" disabled={busy} onClick={() => void send('manual')}>
+            I did this step myself
+          </button>
           <button type="button" disabled={busy} onClick={() => void send('skip')}>
             Leave the step blocked
+          </button>
+          <button type="button" disabled={busy} onClick={() => void send('finish')}>
+            Finish
           </button>
         </div>
         <ErrorNote error={error} />
@@ -349,6 +485,11 @@ function StepDone({ payload, busy, send, error }: { payload: StepPayload; busy: 
         </section>
       )}
       {mode === 'none' && (
+        <p className="muted" style={{ margin: 0 }}>
+          Anything you do in the browser window now is added as a step after {payload.step}.
+        </p>
+      )}
+      {mode === 'none' && (
         <div className="row">
           <button type="button" className="primary" disabled={busy} onClick={() => void send('next')}>
             Next step
@@ -359,8 +500,8 @@ function StepDone({ payload, busy, send, error }: { payload: StepPayload; busy: 
           <button type="button" disabled={busy} onClick={() => setMode('edit')}>
             Edit step
           </button>
-          <button type="button" className="danger" disabled={busy} onClick={() => void send('stop')}>
-            Stop
+          <button type="button" disabled={busy} onClick={() => void send('finish')} title="Do not run the steps left; save what was recorded">
+            Finish
           </button>
         </div>
       )}

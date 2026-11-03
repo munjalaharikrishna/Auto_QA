@@ -69,7 +69,13 @@ export async function step(title: string, page: Page, body: () => Promise<void>)
           () => true,
           () => false,
         );
-        if (saved) await info.attach(`step: ${title}`, { path: file, contentType: 'image/png' });
+        // Named in a note, not attached as a file: an attached file is copied under a name made from the whole step title, and on
+        // Windows that path can pass 260 characters and fail the step.
+        if (saved)
+          await info.attach('auto-qa-step-shot', {
+            body: JSON.stringify({ step: title, file }),
+            contentType: 'application/json',
+          });
       }
     }
   });

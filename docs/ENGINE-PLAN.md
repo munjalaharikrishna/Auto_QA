@@ -117,6 +117,7 @@ flowchart LR
 | Migrations | 0001 to 0009 (0008 learned entries, 0009 review decisions): see DATABASE.md §6.2.1. |
 | E0.13 Frame-aware execution | Done for the new engine (29 Oct). |
 | E0.14 Learn the application | **Done (30 Oct)**: run capture (E0.14a) and the guided walkthrough (E0.14b), PD-13 approved. Spike on local OrangeHRM: GO. Exit tests in §10.4; on local OrangeHRM the walkthrough reached Add Employee, a vague step was answered by a pick, nothing was saved without a yes, and a second case on that screen ran without the question. |
+| E0.14c Record in the walkthrough | **Built (2 Nov)**, PD-14: the walkthrough's browser is a real window; what the person does in it while the walkthrough waits is recorded as steps of the case, and a step can be done by hand. Exit tests in §10.4 pass on the demo app. **3 Nov:** the owner's first use on BookMarket found five problems, fixed the same day: a second, empty window; no steps or Finish in the window (now a panel in it); closing the window failed the job and lost what was recorded; recorded actions were saved without an OK (now Add or Remove each); a run failed on Windows with a step screenshot path over 260 characters. Walkthrough is on every row of the test case list. To be tried again by the owner. |
 | Open for the owner | Approval of PD-13; employee list workbook (PD-4); sign-off of the answer key (`test/benchmark/`); the mail provider (PD-5); the 5 Oct hand-check, which was not found. |
 
 ## 2. Version overview
@@ -588,6 +589,20 @@ Learn app from runs + walkthrough (screen models, iframes)  →  Lint sheet  →
 | Target marked production | Data-changing steps are refused without the project's permission |
 | Idle walkthrough | The browser is closed after 15 minutes without an answer, and the job says so |
 
+#### E0.14c Record in the walkthrough (PD-14, 2 Nov 2026)
+
+Asked for by the owner after using the walkthrough on BookMarket: the window could only show a screenshot, so nothing could be typed or clicked in it.
+
+1. **A real browser window.** The walkthrough's browser is shown (`AUTO_QA_WALKTHROUGH_HEADLESS=1` hides it). The Auto QA page keeps the steps, Next, Add check, Edit step and Stop.
+2. **Recording.** While the walkthrough waits after a step, or on a pick, what the person does in that window is recorded, on every page and frame they reach, new tabs included: click, value typed, option chosen, box ticked or cleared, radio chosen, Enter, Escape, and an address opened by hand (a page change 4 s or more after the last action). What the engine does itself is never recorded. Each element is read at the moment it is used by the engine's own inspector (`readDom` with `only`, which never scrolls), so it has the engine's role, name, frame path and xpath even when the click leaves the page (`src/server/recorder.ts`).
+3. **Written as steps, read back.** Each action becomes a sentence (`Click the "Sign In" button`, `Enter "x" in the "Name" field`, `Select "India" from the "Country" dropdown`…) and is kept only when the new engine and the old parser, which runs the case today, both read it as that action on that element. The project's login is written as "the valid username / password", so it comes from the project in every case; a password is never written. A double click and a hover are not recorded (the old parser has no double click).
+4. **Done by hand.** A step that cannot find its element can be done in the window instead of picked: what was recorded takes its place, and when it was one element, the step's words are remembered as that element on that screen, for every case that says them.
+5. **Saved like the rest.** Recorded steps go to "To save at the end", in the order they were done among the checks, can be removed there, and are saved only on a yes, as a new version; the normal Run then runs them.
+
+**Exit tests (demo app, `src/server/walkthrough.e2e.test.ts`):** a login and a profile form done by hand across two pages are saved as the steps the person added, which both readers read, with no password written, and one not added is left out; a second walkthrough runs every step without help; a step done by hand takes the recorded click's place and its words are remembered for that screen. Every sentence form reads back with both readers (`walkthrough.test.ts`).
+
+**After the owner's first use (3 Nov):** a panel in the window (steps, what was recorded, Add or Remove, Next step, Finish, save), shown only while the walkthrough waits; one window; closing it keeps what was recorded and asks to save on the Auto QA page; when saving, recorded steps can replace the steps not run. Exit tests: the window is closed after a login done by hand and the save keeps it without the old steps; a whole walkthrough is done from the panel with one tab open.
+
 #### E0.15 Grammar and lint
 **Builds:**
 1. A **slot grammar**: patterns with slots (action, target, value, ordinal, relation, anchor), optional words and alternatives; replaces the phrase lists.
@@ -691,4 +706,5 @@ Starts alongside E0.13; complete before E1.0.
 | PD-11 | Record once (E1.1) is optional and comes after E1.0 | Superseded by PD-13: the walkthrough replaces it in E0.14 |
 | PD-12 | Which pages the application scan visits: configured list, or follow links from the start page | Superseded by PD-13: no page list, no link following |
 | PD-13 | E0.14 learns screens from runs and a guided walkthrough instead of a scan or crawl; screenshot after each step (no live video); seven day-one check types (see E0.14b item 4); checks apply to one case; built as E0.14a (engine) then E0.14b (walkthrough) | **Approved by the owner, 30 Oct 2026** |
+| PD-14 | The walkthrough shows a real browser window, and what the person does in it is recorded (E0.14c); the recorded flow is saved as steps of the test case, which the normal Run runs, not as a separate script | **Chosen by the owner, 2 Nov 2026** |
 

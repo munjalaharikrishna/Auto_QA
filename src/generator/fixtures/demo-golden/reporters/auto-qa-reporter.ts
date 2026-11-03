@@ -97,9 +97,14 @@ export default class AutoQaReporter implements Reporter {
       errors: result.errors.map((e) => plain(e.message ?? e.value ?? 'unknown error')),
       facts: facts ? JSON.parse(mask(facts)) : undefined,
       screenshots: result.attachments.filter((a) => a.name === 'screenshot' && a.path).map((a) => rel(a.path!)),
-      stepScreenshots: result.attachments
-        .filter((a) => a.name.startsWith('step: ') && a.path)
-        .map((a) => ({ step: a.name.slice(6), file: rel(a.path!) })),
+      stepScreenshots: result.attachments.flatMap((a) => {
+        if (a.name === 'auto-qa-step-shot' && a.body) {
+          const shot = JSON.parse(a.body.toString()) as { step: string; file: string };
+          return [{ step: shot.step, file: rel(shot.file) }];
+        }
+        // Workspaces made before the note was used attach the file itself.
+        return a.name.startsWith('step: ') && a.path ? [{ step: a.name.slice(6), file: rel(a.path) }] : [];
+      }),
       trace: result.attachments.find((a) => a.name === 'trace' && a.path)?.path,
       video: result.attachments.find((a) => a.name === 'video' && a.path)?.path,
     };

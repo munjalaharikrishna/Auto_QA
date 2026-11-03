@@ -405,6 +405,21 @@ export function TestCasesTab({ project }: { project: ProjectView }) {
                   }}
                 >
                   Run again
+                </button>{' '}
+                <button
+                  type="button"
+                  title="Run the steps one at a time in a browser: pick elements, add checks, reword steps"
+                  onClick={async () => {
+                    try {
+                      // The case's last run, when there is one, gives the walkthrough its workbook's login case to log in with first.
+                      const job = await api.walkthrough(project.id, c.extId, c.lastJobId ? { fromJob: c.lastJobId } : {});
+                      navigate(`/jobs/${job.id}`);
+                    } catch (e) {
+                      setNotice(`Could not start the walkthrough of ${c.extId}: ${(e as Error).message}`);
+                    }
+                  }}
+                >
+                  Walkthrough
                 </button>
               </td>
             </tr>

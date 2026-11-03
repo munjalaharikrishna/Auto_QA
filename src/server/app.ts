@@ -567,6 +567,26 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return { ok: true };
   });
 
+  /** Adds a recorded step of an open walkthrough, all of them, or removes an item from what it will save (E0.14c). */
+  app.post('/api/jobs/:id/walkthrough/pending', async (req) => {
+    const b = (req.body ?? {}) as { add?: unknown; addAll?: unknown; remove?: unknown; sentence?: unknown };
+    const sentence = typeof b.sentence === 'string' ? { sentence: b.sentence } : {};
+    const edit =
+      b.addAll === true
+        ? ({ addAll: true } as const)
+        : typeof b.add === 'number'
+          ? { add: b.add, ...sentence }
+          : typeof b.remove === 'number'
+            ? { remove: b.remove, ...sentence }
+            : undefined;
+    if (!edit) throw bad('Say add (a number), addAll (true) or remove (a number).');
+    try {
+      return { ok: true, message: await runner.editWalkthrough((req.params as { id: string }).id, edit) };
+    } catch (e) {
+      throw bad((e as Error).message);
+    }
+  });
+
   /** A workbook's review queue, answered interactively in the UI. */
   app.post('/api/jobs/:id/review-queue', async (req, reply) => {
     const job =
