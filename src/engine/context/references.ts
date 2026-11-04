@@ -24,6 +24,11 @@ export interface RefInput {
   expectations: IrExpectation[];
   issues: Issue[];
   loggedIn?: boolean;
+  /**
+   * The ids of checks drawn from a sentence of the steps that only checks something ("Checking the login section at middle of the
+   * page"), not from an expected result. Such a check is dropped when an expected result checks the same thing at the same point.
+   */
+  checkSteps?: ReadonlySet<string>;
 }
 
 export interface RefOutput {
@@ -34,11 +39,14 @@ export interface RefOutput {
   issues: Issue[];
   references: IrReference[];
   decisions: string[];
+  /** What the report must point out: a check that is read as written although an earlier step probably makes it fail. */
+  warnings: string[];
 }
 
 const PRONOUNS: ReadonlySet<string> = new Set(['it', 'them', 'this', 'that', 'these', 'those']);
 const SAVED_DATA: ReadonlySet<string> = new Set(['added', 'updated', 'saved', 'created']);
 const OPENED_DATA: ReadonlySet<string> = new Set(['entered', 'uploaded']);
+const LIST_ROWS: ReadonlySet<string> = new Set(['record', 'records', 'row', 'rows', 'entries']);
 const NEEDS_THE_PAGE: ReadonlySet<string> = new Set(['above', 'below', 'previous', 'corresponding', 'associated', 'newly']);
 const ENTERS: ReadonlySet<string> = new Set(['ENTER_VALUE', 'SELECT', 'UPLOAD', 'CHECK', 'UNCHECK']);
 const WIPES: ReadonlySet<string> = new Set(['reset', 'clear', 'cancel']);
@@ -57,6 +65,7 @@ export function resolveReferences(input: RefInput): RefOutput {
   const origin = new Map<IrExpectation, string[]>(expectations.map((e) => [e, [e.id]]));
   const references: IrReference[] = [];
   const decisions: string[] = [];
+  const warnings: string[] = [];
   const contexts = buildContexts(input.testId, steps, expectations, { loggedIn: input.loggedIn });
   const resolved = new Set<Issue>();
   /** Items already replaced by checks on what was entered: a second word of the same clause points at the same thing. */
@@ -72,7 +81,7 @@ export function resolveReferences(input: RefInput): RefOutput {
     s.action === 'NAVIGATE' || expectations.some((e) => e.afterStep === s.id && e.condition.type === 'URL' && e.condition.expect !== 'UNCHANGED' && !e.negated);
 
   /** What was entered since the page was opened, up to the last Save before `index` (or up to `index` when nothing was saved yet). */
-  function enteredGroup(index: number, needsSave: boolean): { group: EnteredValue[]; why: string; ok: boolean } {
+  function enteredGroup(index: number, needsSave: boolean): { group: EnteredValue[]; why: string; ok: boolean; wiped?: IrStep } {
     let end = Math.min(index, steps.length);
     if (needsSave) {
       let save = -1;
@@ -96,8 +105,15 @@ export function resolveReferences(input: RefInput): RefOutput {
     const wiped = needsSave
       ? span.find((s, k) => start + k > firstEntered && (s.action === 'CLEAR' || (s.action === 'CLICK' && WIPES.has(nameOf(s.target).toLowerCase()))))
       : undefined;
-    if (wiped) return { group, ok: false, why: `${wiped.id} ("${wiped.original}") may have emptied what was entered before it was saved` };
     const saved = needsSave ? `, saved by ${steps[end]?.id}` : '';
+    // Reset before Save: the check is read as the tester wrote it, and the run shows whether it holds (owner, 4 Nov 2026).
+    if (wiped)
+      return {
+        group,
+        ok: true,
+        wiped,
+        why: `entered in ${group.map((g) => g.step).join(', ')}${saved}; ${wiped.id} ("${wiped.original}") probably emptied them before the save`,
+      };
     return { group, ok: true, why: `entered in ${group.map((g) => g.step).join(', ')}${saved}` };
   }
 
@@ -252,19 +268,84 @@ export function resolveReferences(input: RefInput): RefOutput {
     if (SAVED_DATA.has(word) || OPENED_DATA.has(word) || word === 'same') {
       const e = itemExpectation;
       if (!e) continue;
+      // "the same updated records": rows of a list, one per record. Which record is for a person to say (owner, 4 Nov 2026).
+      const record = phrase
+        .toLowerCase()
+        .split(' ')
+        .find((w) => LIST_ROWS.has(w));
+      // "The added record" names it: the one this case added. "The same updated records" does not.
+      if (record && word !== 'added' && word !== 'created') {
+        add({ phrase, kind: 'ENTERED_DATA', status: 'UNRESOLVED', steps: [], values: [], because: `"${record}" are rows of a list: which record is not said` });
+        continue;
+      }
       const mine = runOf(e);
       const at = e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
-      const { group, ok, why } = enteredGroup(at, SAVED_DATA.has(word) || word === 'same');
+      const { group, ok, why, wiped } = enteredGroup(at, SAVED_DATA.has(word) || word === 'same');
       if (!ok) {
         add({ phrase, kind: 'ENTERED_DATA', status: 'UNRESOLVED', steps: group.map((g) => g.step), values: [], because: why });
         continue;
       }
       const empty = mine.some((m) => m.condition.type === 'VALUE' && m.condition.expect === '');
+      if (wiped && !empty)
+        warnings.push(
+          `"${phrase}": ${wiped.id} ("${wiped.original}") empties what was entered before it is saved, so this check will probably fail. It is checked as written.`,
+        );
       replaceRun(mine, checksOn(group, e, empty));
       consumed.add(issue.item as string);
       add({ phrase, kind: 'ENTERED_DATA', status: 'RESOLVED', steps: group.map((g) => g.step), values: empty ? [] : group.map((g) => g.value), because: why });
       resolved.add(issue);
     }
+  }
+
+  // A check the tester wrote as a step and again as the expected result at the same point is checked once, under the expected result's
+  // words (E0.15). Two expected results that read the same are both kept: each is a sentence of the tester's.
+  const fromStep = (e: IrExpectation): boolean => (origin.get(e) ?? [e.id]).every((id) => input.checkSteps?.has(id));
+  const sameCheck = (e: IrExpectation): string => {
+    const c = e.condition;
+    return JSON.stringify([
+      c.type,
+      e.negated,
+      nameOf(c.target).toLowerCase(),
+      c.target?.within ?? '',
+      c.expect ?? '',
+      c.text ?? '',
+      c.region ?? '',
+      (c.alternatives ?? []).map((a) => nameOf(a).toLowerCase()),
+      e.afterStep ?? '',
+      e.guard ?? '',
+    ]);
+  };
+  // "User should see tabs" right after a step that named the tabs: the check is on those tabs, one each, not on the word "tabs"
+  // (owner, 3 Nov 2026). Only a check that names a kind of thing and no thing, and only when things of that kind were named at the
+  // same point; otherwise it stays as it is.
+  for (const e of [...expectations]) {
+    const t = e.condition.target;
+    if (e.condition.type !== 'VISIBILITY' || e.negated || !t?.ontology || t.name || e.condition.alternatives?.length) continue;
+    const named = expectations.filter(
+      (x) =>
+        x !== e &&
+        x.condition.type === 'VISIBILITY' &&
+        !x.negated &&
+        x.afterStep === e.afterStep &&
+        x.guard === e.guard &&
+        x.condition.target?.ontology === t.ontology &&
+        !!x.condition.target.name,
+    );
+    if (named.length < 2) continue;
+    replaceRun(
+      [e],
+      named.map((x) => ({ ...x, id: e.id, clause: e.clause })),
+    );
+    decisions.push(`"${e.clause}": the ${t.label ?? t.ontology} are the ones named before it: ${named.map((x) => nameOf(x.condition.target)).join(', ')}`);
+  }
+
+  for (const e of [...expectations]) {
+    if (!fromStep(e)) continue;
+    const twin = expectations.find((x) => x !== e && !fromStep(x) && sameCheck(x) === sameCheck(e));
+    if (!twin) continue;
+    origin.set(twin, [...(origin.get(twin) ?? [twin.id]), ...(origin.get(e) ?? [e.id])]);
+    expectations.splice(expectations.indexOf(e), 1);
+    decisions.push(`"${e.clause}" checks the same as "${twin.clause}" at the same point: it is checked once`);
   }
 
   // Expectation ids stay unique and in order after one check became several.
@@ -274,7 +355,7 @@ export function resolveReferences(input: RefInput): RefOutput {
     e.id = `E${i + 1}`;
     for (const old of stood) (expectationMap[old] ??= []).push(e.id);
   });
-  return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions };
+  return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions, warnings };
 }
 
 const LISTS: ReadonlySet<string> = new Set(['table', 'list', 'grid', 'results', 'listing', 'records', 'directory']);

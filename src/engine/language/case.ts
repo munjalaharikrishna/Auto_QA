@@ -179,6 +179,8 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const conditionals: QaIr['conditionals'] = [];
   const stepIds = { last: undefined as string | undefined };
   const formats: Record<string, FieldFormat> = {};
+  /** Checks drawn from a sentence of the steps that is not an expected result ("Checking …"): see `checkSteps` of the references. */
+  const checkSteps = new Set<string>();
 
   // ---- the lines: steps first, then the expected result ----
   const stepLines = nonBlankLines(raw.steps).map((l) => splitStepLine(l));
@@ -251,6 +253,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
           ...(guardId ? { guard: guardId } : {}),
         });
         expectOf.set(item.index, id);
+        if (kind === 'step' && !original.toLowerCase().startsWith('verify ')) checkSteps.add(id);
         if (guardId) (conditionals.find((c) => c.id === guardId) as QaIr['conditionals'][number]).whenTrue.push(id);
         for (const d of e.decisions) decisions.push({ kind: 'decision', message: d, data: { expectation: id } });
       }
@@ -264,9 +267,11 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     for (const m of result.models) models[m] = (models[m] ?? 0) + 1;
     const produced = result.steps.length + result.expectations.length;
     const blocking = issues.slice(first).some((i) => i.severity === 'blocking');
-    const understood = produced > 0 && !blocking;
+    // "Open Browser" is read as the run's own setup: nothing to do, and still understood.
+    const setup = issues.slice(first).find((i) => i.setup)?.setup;
+    const understood = (produced > 0 || setup !== undefined) && !blocking;
     // A line of the steps column that only checks something ("Verify …") is a check, whatever column it stands in.
-    const actual: Unit['kind'] = result.steps.length ? 'step' : result.expectations.length ? 'expectation' : kind;
+    const actual: Unit['kind'] = result.steps.length ? 'step' : result.expectations.length || setup === 'check' ? 'expectation' : kind;
     const categories = understood ? [...new Set([...result.steps.map((s) => s.action), ...result.expectations.map((e) => e.condition.type)])] : [];
     units.push({ kind: actual, original, where, produced, categories, understood, models: [...new Set(result.models)] });
   };
@@ -338,7 +343,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
 
   // ---- context (E0.5): what "it", "the same field" and "the added data" stand for, and the states the test case goes through ----
   const loggedIn = preconditions.some((p) => p.type === 'LOGGED_IN');
-  const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn });
+  const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn, checkSteps });
   steps.splice(0, steps.length, ...refs.steps);
   expectations.splice(0, expectations.length, ...refs.expectations);
   issues.splice(0, issues.length, ...refs.issues);
@@ -347,6 +352,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     c.whenFalse = c.whenFalse.flatMap((id) => refs.expectationMap[id] ?? [id]);
   }
   for (const message of refs.decisions) decisions.push({ kind: 'decision', message });
+  for (const message of refs.warnings) decisions.push({ kind: 'warning', message });
   const states = validateStates(steps, expectations, loggedIn ? 'DASHBOARD' : undefined);
   steps.splice(0, steps.length, ...states.steps);
   issues.push(...states.issues);

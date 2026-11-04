@@ -21,6 +21,11 @@ export interface CompileResult {
   testId: string;
   status: CompileStatus;
   ir?: QaIr;
+  /**
+   * What the language layer read when the compile stopped before a QA-IR could be used (needs-review): for the lint and the review
+   * screen only. A case is runnable only with `ir`, never with this.
+   */
+  reading?: QaIr;
   plan?: Plan;
   pages?: Record<string, string | null>;
   unparsed: Array<{ id: string; raw: string; why: string }>;
@@ -74,7 +79,16 @@ async function compileOnce(input: unknown, options: CompileOptions): Promise<Com
       // The values are settled all the same, so the report does not ask about what the resolver can answer.
       const settled = out.language.ir ? await settleData(options, out.language, out.language.ir) : undefined;
       const language = settled ? { ...out.language, issues: settled.issues } : out.language;
-      return { ...base, status: 'needs-review', unparsed: out.unparsed, ...summary(language), stage: run.stopped.stage, ran: run.ran, log: log.toJSON() };
+      return {
+        ...base,
+        status: 'needs-review',
+        unparsed: out.unparsed,
+        ...summary(language),
+        ...(out.language.ir ? { reading: out.language.ir } : {}),
+        stage: run.stopped.stage,
+        ran: run.ran,
+        log: log.toJSON(),
+      };
     }
     const out = run.output as { ir: QaIr; plan: Plan; pages: Record<string, string | null>; language: CaseLanguage; values?: Record<string, ResolvedValue> };
     // A document that was built can still hold something a person must decide (missing data, an unknown branch, a reference).

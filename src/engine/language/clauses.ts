@@ -1,6 +1,7 @@
 import type { Token } from '../text/index.js';
+import { commandAt } from './verbs.js';
 import { isSymbol, type Line, lw, originalOf } from './view.js';
-import { ASSERTION_WORDS, CHECK_MARKERS, isCommandForm } from './vocabulary.js';
+import { ASSERTION_WORDS, CHECK_MARKERS } from './vocabulary.js';
 
 /**
  * Layer 8, the clause parser (CL-01). A sentence is cut into clauses at and, or, but, then, while, because, if, when,
@@ -141,7 +142,7 @@ export function isClauseLike(tokens: readonly Token[]): boolean {
   while (i < words.length && FILLERS.has(words[i] as string)) i++;
   const first = words[i];
   if (first === undefined) return false;
-  if (isCommandForm(first) || first === 'leave') return true;
+  if (commandAt(words, i)) return true;
   return words.slice(0, 12).some((w) => PREDICATE_WORDS.has(w));
 }
 
@@ -156,8 +157,10 @@ export function startsClause(tokens: readonly Token[]): boolean {
   while (i < words.length && FILLERS.has(words[i] as string)) i++;
   const first = words[i];
   if (first === undefined) return false;
-  if (isCommandForm(first) || first === 'leave') return true;
-  return words.slice(0, 6).some((w) => PREDICATE_WORDS.has(w));
+  if (commandAt(words, i)) return true;
+  // "Admin, Leave, Time are visible": a comma before the predicate means the list goes on; the predicate belongs to all of it.
+  const predicate = words.slice(0, 6).findIndex((w) => PREDICATE_WORDS.has(w));
+  return predicate >= 0 && !words.slice(0, predicate).includes(',');
 }
 
 /** The tokens from `from` to the end of the sentence. */
@@ -185,7 +188,7 @@ function sharesPredicate(left: readonly Token[], right: readonly Token[]): boole
   const next = r.find((w) => !FILLERS.has(w));
   if (next === undefined || CHECK_MARKERS.has(next)) return false;
   // "… and Login button are visible": "Login" is a name here, because the words after it say something about it. "… and click Login" is a command.
-  return !isCommandForm(next) || r.slice(r.indexOf(next) + 1).some((w) => PREDICATE_WORDS.has(w));
+  return !commandAt(r, r.indexOf(next)) || r.slice(r.indexOf(next) + 1).some((w) => PREDICATE_WORDS.has(w));
 }
 
 const startsWithConnector = (tokens: readonly Token[]): boolean => CONNECTORS.has(lw(tokens[0]));

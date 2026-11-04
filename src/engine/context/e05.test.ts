@@ -408,23 +408,15 @@ describe('RF-01: reference resolution', () => {
       JSON.stringify(l.ir?.references),
     );
   });
-  it('Add_Employee TC18: "checking the same updated records" is what was entered in the steps before the Save', async () => {
+  it('Add_Employee TC18: "the same updated records" asks which record; the owner decided the engine does not assume it (4 Nov 2026)', async () => {
     const wb = await readWorkbook(fixture('Add_Employee.xlsx'));
     const tc18 = (wb.cases.find((c) => c.raw.id === '21022024_18') as { raw: RawTestCase }).raw;
     const l = understandCase(tc18);
-    const ref = l.ir?.references.find((r) => r.phrase.includes('same updated records'));
-    assert.equal(ref?.status, 'RESOLVED');
-    assert.deepEqual(ref?.steps, ['S35', 'S35.2', 'S35.3', 'S35.4'], 'the four fields entered in step 35, saved by step 37');
-    assert.ok(ref?.because.includes('saved by S37'));
-    // The sentence also stands in the expected result; the one of step 39 is the one asked about.
-    const checks = l.ir?.expectations.filter((e) => e.clause.startsWith('checking the same updated records')) ?? [];
-    assert.equal(checks.length, 4, 'one check for each field');
-    assert.deepEqual(
-      checks.map((c) => c.condition.target?.name),
-      ['Job Title', 'Employement Status', 'Sub-Division', 'Supervisor'],
-    );
-    for (const c of checks) assert.ok(c.condition.expect?.startsWith('$data.'), 'each field holds what was entered');
-    assert.ok(!l.issues.some((i) => i.code === 'NEEDS_REFERENCE' && i.original.includes('same updated records')));
+    const refs = l.ir?.references.filter((r) => r.phrase.includes('same updated records')) ?? [];
+    assert.ok(refs.length > 0);
+    for (const r of refs) assert.equal(r.status, 'UNRESOLVED', r.because);
+    assert.ok(refs.every((r) => r.because.includes('which record is not said')));
+    assert.ok(l.issues.some((i) => i.code === 'NEEDS_REFERENCE' && i.original.includes('same updated records')));
   });
   it('a check after each field is about the field before it, and one step that fills several fields is about all of them', async () => {
     const wb = await readWorkbook(fixture('Add_Employee.xlsx'));
@@ -451,7 +443,7 @@ describe('RF-01: reference resolution', () => {
     assert.equal(l.ir?.references[0]?.status, 'UNRESOLVED');
     assert.ok(l.ir?.references[0]?.because.includes('page'));
   });
-  it('never guesses: "added data" with no Save before it, or a reset in between, is not resolved', async () => {
+  it('never guesses "added data" with no Save before it; a reset in between is checked as written, with a warning (owner, 4 Nov 2026)', async () => {
     const none = read(['Open the Login page', "Enter 'a' in the Email field"], 'The added data is displayed');
     assert.equal(none.ir?.references.find((r) => r.kind === 'ENTERED_DATA')?.status, 'UNRESOLVED');
     assert.ok(none.issues.some((i) => i.code === 'NEEDS_REFERENCE'));
@@ -459,8 +451,9 @@ describe('RF-01: reference resolution', () => {
     const tc13 = (wb.cases.find((c) => c.raw.id === '21022024_13') as { raw: RawTestCase }).raw;
     const l = understandCase(tc13);
     const added = l.ir?.references.find((r) => r.phrase.includes('added data'));
-    assert.equal(added?.status, 'UNRESOLVED');
-    assert.ok(added?.because.includes('may have emptied'), added?.because);
+    assert.equal(added?.status, 'RESOLVED');
+    assert.ok(added?.because.includes('probably emptied'), added?.because);
+    assert.ok(l.decisions.some((d) => d.kind === 'warning' && d.message.includes('probably fail')));
   });
   it('keeps the checks of a conditional pointing at the right expectations after one check became several', () => {
     const l = understandCase(

@@ -50,6 +50,7 @@ type Kind =
   | 'VISIBLE'
   | 'SHOWS'
   | 'APP_STARTED'
+  | 'BROWSER_OPENED'
   | 'DEFAULT_PAGE';
 
 interface PredicateDef {
@@ -64,22 +65,22 @@ const p = (kind: Kind, priority: number, ...phrases: string[]): PredicateDef => 
 const last = (def: PredicateDef): PredicateDef => ({ ...def, endOnly: true });
 
 const PREDICATES: readonly PredicateDef[] = [
+  // "User should open browser", "Browser should be opened": the run's own browser, an environment fact the application does
+  // not show. Nothing is checked, and nobody is told the application started (owner, 3-4 Nov 2026).
   p(
-    'APP_STARTED',
-    95,
+    'BROWSER_OPENED',
+    96,
     'open browser',
     'open the browser',
-    'open application',
-    'open the application',
     'launch browser',
-    'launch application',
     'browser opens',
     'browser launches',
     'browser starts',
-    'application opens',
-    'application launches',
-    'application starts',
+    'browser opened',
+    'browser is opened',
+    'browser be opened',
   ),
+  p('APP_STARTED', 95, 'open application', 'open the application', 'launch application', 'application opens', 'application launches', 'application starts'),
   p('MASKED', 90, ...STATE_WORDS.masked),
   p(
     'LAYOUT',
@@ -419,8 +420,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   // (Not for "removed"/"changed": what they say about the entered data is not what the reference check compares.)
   if (hit && hit.def.kind !== 'DELETED' && hit.def.kind !== 'CHANGED') {
     const describing = new Set<Kind>(adjectives ?? []);
-    for (let k = 1; k < hit.start; k++) {
-      if (!['the', 'these', 'those', 'all', 'each', 'any', 'a', 'an'].includes(words[k - 1] ?? '')) continue;
+    // "Entered text boxes and uploaded photo should empty": the first word, and the first word of an item of a list, describe too (E0.15).
+    for (let k = 0; k < hit.start; k++) {
+      if (k > 0 && !['the', 'these', 'those', 'all', 'each', 'any', 'a', 'an', 'and', 'or', ','].includes(words[k - 1] ?? '')) continue;
       const inner = findPredicate([words[k] as string]);
       if (inner && inner.def.kind !== hit.def.kind) describing.add(inner.def.kind);
     }
@@ -465,7 +467,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       issues: [
         {
           code: 'NOT_UNDERSTOOD',
-          severity: 'blocking',
+          // An expected result is not a step: the case can still run without it, and a person decides this one check (E0.15).
+          // The verdict never gives PASS while it is unread.
+          severity: 'review',
           message: 'no check could be read: no word says what should be true',
           original: clauseText,
           suggestion: 'Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.',
@@ -491,7 +495,7 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   const subjectNp = subject?.kind === 'np' ? subject.np : undefined;
   const flagNp = (np: NounPhrase | undefined): void => {
     if (np?.reference) issues.push(refIssue(np.reference, np.original, clauseText));
-    if (np?.dropped) issues.push(droppedIssue(np.dropped, clauseText));
+    if (np?.dropped && !isDefaultPage(np.dropped)) issues.push(droppedIssue(np.dropped, clauseText));
   };
   flagNp(subjectNp);
   const make = (condition: IrCondition, flip = false): CheckResult['expectations'][number] => ({
@@ -535,6 +539,15 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   switch (kind) {
     case 'APP_STARTED':
       out.push(make({ type: 'STATE', expect: 'APPLICATION_STARTED' }));
+      break;
+    case 'BROWSER_OPENED':
+      issues.push({
+        code: 'NOT_CHECKED',
+        severity: 'info',
+        setup: 'check',
+        message: 'the run opens its own browser: that is the test setup, not something the application shows, so nothing is checked',
+        original: clauseText,
+      });
       break;
     case 'DEFAULT_PAGE': {
       // "PIM is the default page": the page the application opens on. The name is the subject, as the tester wrote it.
@@ -652,8 +665,28 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       decisions.push(`"${words[hit.start]}" says the data changed; the check is on the state of what changed`);
       // "the added data", "the updated records": which data? Whatever the test case entered; the references say what (RF-01).
       const changedWord = words[hit.start] ?? '';
-      if (kind === 'CHANGED' && np && np.words.length > 0 && np.words.every((w) => GENERIC_DATA.has(w))) {
-        issues.push(refIssue(['added', 'created', 'saved', 'stored'].includes(changedWord) ? 'added' : 'updated', np.original, clauseText));
+      const generic = !!np && np.words.length > 0 && np.words.every((w) => GENERIC_DATA.has(w));
+      // "User should updated the data": it says the data changed but not what shows it. A person says what to check (owner, 4 Nov 2026).
+      if (kind === 'CHANGED' && generic && !words.some((w) => OBSERVING.has(w))) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `it says the data was ${changedWord} but not what shows it (a message? the values on the page?)`,
+          original: clauseText,
+          suggestion: 'Say what is seen: Verify the message "<text>" is shown, or Verify <field> shows "<value>".',
+        });
+      } else if (kind === 'CHANGED' && generic) {
+        issues.push(refIssue(['added', 'created', 'saved', 'stored'].includes(changedWord) ? 'added' : 'updated', np?.original ?? '', clauseText));
+      }
+      // "Employee Data is deleted": which record was deleted is not said, and the engine does not assume it (owner, 4 Nov 2026).
+      if (kind === 'DELETED' && np?.words.some((w) => RECORD_WORDS.has(w))) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `it says "${np.original}" was deleted but not which one`,
+          original: clauseText,
+          suggestion: 'Name it: Verify "<name>" is not in the list.',
+        });
       }
       forTargets(np, (target) => ({
         type: 'STATE',
@@ -680,6 +713,26 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'VISIBLE':
     case 'SHOWS': {
       const hidden = kind === 'HIDDEN';
+      // "The actual password text is not visible": what is typed in a password field is hidden because the field masks it. That is
+      // the masked check; "not visible" could never fail on a masked field (owner, 4 Nov 2026).
+      const typed = subjectNp?.words ?? [];
+      if (
+        (hidden || (kind === 'VISIBLE' && negated)) &&
+        typed.includes('password') &&
+        typed.some((w) => ['text', 'value', 'characters', 'entered', 'typed'].includes(w))
+      ) {
+        out.push(make({ type: 'MASKED', target: { ontology: 'Password', name: 'Password' }, expect: 'MASKED', check: 'masked' }, kind === 'VISIBLE'));
+        break;
+      }
+      // "The Job Title field shows "Engineer"": a field that shows a value holds it. It is a check of the field, not a message (E0.15).
+      const shownValue =
+        kind === 'SHOWS' && subjectNp?.headClass && VALUE_HOLDERS.has(subjectNp.headClass) && after.length === 1 && after[0]?.kind === 'LITERAL'
+          ? after[0]
+          : undefined;
+      if (shownValue) {
+        forTargets(subjectNp, (target) => ({ type: 'VALUE', ...(target ? { target } : {}), expect: shownValue.value ?? '', check: 'value' }));
+        break;
+      }
       // "the system displays X", "the user should see X": the thing is the object. "X is displayed": the thing is the subject.
       // "The Backpack card shows the Remove from cart button": the thing is shown in that card, and a word like "from" is part of its name (UI-07).
       const holder = kind === 'SHOWS' && subjectNp && containerRef(subjectNp.original) ? subjectNp.original : undefined;
@@ -709,6 +762,22 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
         break;
       }
       pushVisibility(line, np, hidden, after, tailAfterLead, kind === 'SHOWS', clauseText, make, out, issues);
+      // "The password is shown (masked)": the clause splitter takes asides in brackets out, but one written right after a check says
+      // something more about the same thing. It is read, or said to be unread: never dropped silently (U6, E0.15).
+      const aside = !hidden && kind === 'VISIBLE' ? asideAfter(line, clauseTokens) : undefined;
+      if (aside) {
+        const inside = aside.map((t) => lw(t));
+        if (inside.length === 1 && ['masked', 'encrypted'].includes(inside[0] as string))
+          forTargets(np, (target) => ({ type: 'MASKED', ...(target ? { target } : {}), expect: 'MASKED', check: 'masked' }));
+        else
+          issues.push({
+            code: 'AMBIGUOUS',
+            severity: 'review',
+            message: `the words in brackets "(${originalOf(line, aside)})" are not understood and are not checked`,
+            original: clauseText,
+            suggestion: 'Say it as a check of its own: Verify <what> is <state>.',
+          });
+      }
       break;
     }
   }
@@ -716,10 +785,21 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   if (!out.length && !issues.length) {
     issues.push({
       code: 'NOT_UNDERSTOOD',
-      severity: 'blocking',
+      // As for a check with no predicate: one unreadable check goes to a person, the case still runs, never as a PASS (E0.15).
+      severity: 'review',
       message: 'the check names no target',
       original: clauseText,
       suggestion: 'Name what is checked: Verify the <name> <button, field, message> is displayed.',
+    });
+  }
+  // "Preferred stream should be selected": which one is preferred is the tester's choice, and the check does not say it (owner, 4 Nov 2026).
+  if (out.length && clauseTokens.some((t) => lw(t) === 'preferred') && !clauseTokens.some((t) => t.kind === 'LITERAL')) {
+    issues.push({
+      code: 'AMBIGUOUS',
+      severity: 'review',
+      message: 'it says "preferred" but not which one, so there is nothing to compare with',
+      original: clauseText,
+      suggestion: 'Write the value: Verify "<value>" is selected in <name>.',
     });
   }
   return { predicate: kind, expectations: out, issues, subject };
@@ -729,6 +809,30 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
 const stateOf = (word: string | undefined): string => (word === 'saves' ? 'SAVED' : (word ?? 'CHANGED').toUpperCase());
 
 const kind0 = (h: Hit): Kind => h.def.kind;
+
+/** Words that say the check is on what is seen: "should see the added data". Without one, "should updated the data" says nothing to check. */
+const OBSERVING: ReadonlySet<string> = new Set([
+  'see',
+  'sees',
+  'seen',
+  'view',
+  'shown',
+  'show',
+  'shows',
+  'displayed',
+  'display',
+  'displays',
+  'appear',
+  'appears',
+  'visible',
+  'listed',
+  'find',
+  'check',
+  'checking',
+  'verify',
+]);
+/** Words for a stored record, as opposed to an element of the page. */
+const RECORD_WORDS: ReadonlySet<string> = new Set(['data', 'record', 'records', 'row', 'rows', 'entry', 'entries', 'details']);
 
 const refIssue = (word: string, phrase: string, original: string): Omit<Issue, 'where'> => ({
   code: 'NEEDS_REFERENCE',
@@ -742,6 +846,30 @@ const refIssue = (word: string, phrase: string, original: string): Omit<Issue, '
 // "… tabs and PIM as a default page": a tail that says how the thing is shown, not what is shown. What is shown is checked; the tail is
 // kept as written and listed, but it does not stop the case (it stopped 17 cases of one workbook).
 const DESCRIBES = ['as a ', 'as an ', 'as the ', 'as default'];
+
+/** The words in brackets written right after the clause in its line ("… is shown (masked)"), if there are any. */
+function asideAfter(line: Line, clauseTokens: readonly Token[]): Token[] | undefined {
+  const last = clauseTokens[clauseTokens.length - 1];
+  const at = last ? line.tokens.indexOf(last) : -1;
+  if (at < 0 || !isSymbol(line.tokens[at + 1], '(')) return undefined;
+  const close = line.tokens.findIndex((t, k) => k > at + 1 && isSymbol(t, ')'));
+  return close > at + 2 ? line.tokens.slice(at + 2, close) : undefined;
+}
+
+/** The kinds of element whose content is a value: what they "show" is what they hold (E0.15). */
+const VALUE_HOLDERS: ReadonlySet<string> = new Set(['Field', 'Dropdown']);
+
+/** "as a default page", "as the landing page": the words say the thing before them is the page shown first (E0.15). */
+const DEFAULT_PAGE_WORDS: ReadonlySet<string> = new Set([
+  'as a default page',
+  'as the default page',
+  'as default page',
+  'as a default screen',
+  'as the default screen',
+  'as the landing page',
+  'as a landing page',
+]);
+const isDefaultPage = (dropped: string): boolean => DEFAULT_PAGE_WORDS.has(dropped.toLowerCase().split(' ').filter(Boolean).join(' '));
 const droppedIssue = (text: string, original: string): Omit<Issue, 'where'> => {
   const describes = DESCRIBES.some((d) => `${text.toLowerCase()} `.startsWith(d));
   return {
@@ -767,12 +895,25 @@ const originalText = (line: Line, tokens: readonly Token[]): string => {
   return lit ? (lit.value ?? '') : originalOf(line, tokens);
 };
 
-/** The page named after "to" or "on": the words minus the articles and a trailing "page". */
+/** Words that say what kind of screen it is, not which one: "the Add Employee page/popup" is the Add Employee screen (E0.15). */
+const SCREEN_WORDS: ReadonlySet<string> = new Set(['page', 'screen', 'popup', 'pop-up', 'dialog', 'modal', 'section', 'window']);
+
+/**
+ * The page named after "to" or "on": the words minus the articles and the screen words after the name, alone or joined ("page/popup",
+ * "page or popup"). After a screen word, "of …" names the application, not the page: "login section of Orange HRM" is "login".
+ */
 function pageOf(line: Line, tokens: readonly Token[]): string | undefined {
-  const body = tokens.filter((t, i) => !(i === 0 && ['the', 'a', 'an'].includes(lw(t))));
-  const last = body[body.length - 1];
-  const trimmed = last && ['page', 'screen'].includes(lw(last)) && body.length > 1 ? body.slice(0, -1) : body;
-  const text = originalOf(line, trimmed);
+  let body = tokens.filter((t, i) => !(i === 0 && ['the', 'a', 'an'].includes(lw(t))));
+  const of = body.findIndex((t, i) => i > 0 && SCREEN_WORDS.has(lw(t)) && lw(body[i + 1]) === 'of');
+  if (of > 0) body = body.slice(0, of);
+  // Trailing screen words, and the "/" or "or" between two of them; never the whole name.
+  for (;;) {
+    const last = lw(body[body.length - 1]);
+    const joiner = (last === '/' || last === 'or') && SCREEN_WORDS.has(lw(body[body.length - 2]));
+    if (body.length > 1 && (SCREEN_WORDS.has(last) || joiner)) body = body.slice(0, -1);
+    else break;
+  }
+  const text = originalOf(line, body);
   return text || undefined;
 }
 
@@ -790,6 +931,14 @@ function pushVisibility(
   issues: CheckResult['issues'],
 ): void {
   const expect = hidden ? 'HIDDEN' : 'VISIBLE';
+  // "User should see tabs and PIM as a default page": two checks in one sentence. The last thing named is the page shown first (the
+  // same check as "PIM is the default page"); the things before it are shown (E0.15).
+  if (!hidden && np.dropped && isDefaultPage(np.dropped) && np.targets.length) {
+    const last = np.targets[np.targets.length - 1] as IrTarget;
+    for (const target of np.targets.slice(0, -1)) out.push(make({ type: 'VISIBILITY', target, expect, check: 'visible' }));
+    out.push(make({ type: 'STATE', target: { ontology: 'Page', name: last.name ?? last.label ?? '' }, expect: 'DEFAULT_PAGE' }));
+    return;
+  }
   // "The Add Employee form or page is displayed": two alternatives. Which one is checked is the tester's to say; none is picked.
   if (np.words.includes('or')) {
     issues.push({

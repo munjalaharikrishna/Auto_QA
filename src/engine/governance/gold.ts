@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { canMakeUp, fieldOf } from '../data/resolver.js';
 import { CONDITION_TYPES, DATA_CLASSES, IR_ACTIONS, type QaIr } from '../ir/schema.js';
 import type { CaseLanguage } from '../language/case.js';
 import type { Issue } from '../language/types.js';
@@ -249,8 +250,14 @@ export function readingOfIr(ir: QaIr): CaseReading {
 
 /** The engine's reading of a case from its language layer: the IR when there is one, else what the layer recorded per sentence. */
 export function readingOfLanguage(lang: CaseLanguage): CaseReading {
+  // "Enter valid Last name" gives no value, but the engine makes one up when it compiles: the sentence is read, nobody is asked
+  // (owner, 4 Nov 2026). A value only a person can give (an existing record, a real password) is still a question.
+  const madeUp = (i: Issue): boolean => {
+    const d = i.code === 'MISSING_DATA' && i.data ? lang.ir?.data[i.data] : undefined;
+    return !!d && !!i.data && d.source === 'UNRESOLVED' && canMakeUp(d.class, fieldOf(i.data, lang.ir?.steps ?? []));
+  };
   const asked = (original: string): boolean =>
-    lang.issues.some((i) => i.severity !== 'info' && NOT_UNDERSTOOD_CODES.has(i.code) && bare(i.original) === bare(original));
+    lang.issues.some((i) => i.severity !== 'info' && NOT_UNDERSTOOD_CODES.has(i.code) && !madeUp(i) && bare(i.original) === bare(original));
   const reading: CaseReading = lang.ir
     ? readingOfIr(lang.ir)
     : {
@@ -275,9 +282,28 @@ export function readingOfLanguage(lang: CaseLanguage): CaseReading {
 const bare = (s: string): string => (norm(s).startsWith('verify ') ? norm(s).slice('verify '.length) : norm(s));
 
 /** Takes the first reading of the engine with the same words that no gold clause has taken yet. */
-function take(pool: Reading[], taken: Set<Reading>, words: string): Reading | undefined {
+function take(pool: Reading[], taken: Set<Reading>, words: string, part = false): Reading | undefined {
   const w = bare(words);
-  const found = pool.find((c) => !taken.has(c) && bare(c.original) === w);
+  // The gold keeps the tester's whole line; the engine sets a trailing note or sentence apart ("… text box. Note: accepts only
+  // letters"). The head of the line is the step, so it matches when what is left starts a note or a new sentence.
+  const head = (c: Reading): boolean => {
+    const lower = c.original.trim().toLowerCase();
+    const o = lower.startsWith('verify ') ? lower.slice('verify '.length).trim() : lower;
+    const g = words.trim().toLowerCase();
+    if (!o || !g.startsWith(o)) return false;
+    const rest = g.slice(o.length).trim();
+    return rest.startsWith('.') || rest.startsWith(';') || (rest.startsWith('note') && rest.slice('note'.length).trim().startsWith(':'));
+  };
+  // "Entered text boxes … should empty by clicking reset": the engine keeps the part it acted on ("clicking reset"). The gold line holds it
+  // as whole words, so it is the same sentence (steps only, and only when nothing matched it more closely).
+  const inside = (c: Reading): boolean => {
+    const o = bare(c.original);
+    return o.split(' ').length >= 2 && ` ${w} `.includes(` ${o} `);
+  };
+  const found =
+    pool.find((c) => !taken.has(c) && bare(c.original) === w) ??
+    pool.find((c) => !taken.has(c) && head(c)) ??
+    (part ? pool.find((c) => !taken.has(c) && inside(c)) : undefined);
   if (found) taken.add(found);
   return found;
 }
@@ -321,7 +347,7 @@ export function scoreCase(c: GoldCase, reading: CaseReading | undefined): { clau
     return { ...meta, outcome: diff.length ? 'wrong' : 'correct', differences: diff };
   };
 
-  for (const g of c.gold.steps) clauses.push(one('step', g, take(steps, takenS, g.original)));
+  for (const g of c.gold.steps) clauses.push(one('step', g, take(steps, takenS, g.original, true)));
   for (const g of c.gold.expectations) clauses.push(one('expectation', g, take(exps, takenE, g.original)));
   return {
     clauses,

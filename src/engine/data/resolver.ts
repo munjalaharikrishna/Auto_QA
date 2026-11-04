@@ -1,8 +1,9 @@
+import { fileURLToPath } from 'node:url';
 import type { DataClass, IrData, IrStep } from '../ir/schema.js';
 import type { DataEntry } from '../language/data-binding.js';
 import { dataKeyOf, fieldFromKey, isSecretName, upperSnake } from '../patterns/shapes.js';
 import { compactKey } from '../text/compound.js';
-import { dataClassDef, fieldKindOf, NEEDS_REAL_VALUE } from './classes.js';
+import { dataClassDef, fieldKindOf, isImageField, NEEDS_REAL_VALUE } from './classes.js';
 import type { FieldFormat } from './formats.js';
 import { DEFAULT_MAX_LENGTH, generate, seedOf } from './generator.js';
 import { isMasked, Secret } from './secret.js';
@@ -91,8 +92,19 @@ export interface Resolution {
   unresolved: Unresolved[];
 }
 
+/**
+ * Whether the generator may make up a value of this kind for this field, with nobody asked (DG-01): not an existing one (only
+ * the application has those), and not a valid username, password, passcode or file (those must be real). A valid photo is the
+ * exception among files: any real image will do, and the engine has one (SAMPLE_IMAGE).
+ */
+export const canMakeUp = (cls: DataClass, field: string): boolean =>
+  cls !== 'EXISTING' && !(cls === 'VALID' && NEEDS_REAL_VALUE.has(fieldKindOf(field)) && !(fieldKindOf(field) === 'file' && isImageField(field)));
+
+/** A small real PNG the engine ships, uploaded when a step asks for "a valid photo" and none is given (E0.15). */
+export const SAMPLE_IMAGE = fileURLToPath(new URL('./assets/sample-photo.png', import.meta.url));
+
 /** The field a data key is used for: the target name of the first step that holds it. */
-function fieldOf(key: string, steps: readonly IrStep[]): string {
+export function fieldOf(key: string, steps: readonly IrStep[]): string {
   const step = steps.find((s) => s.value === `$data.${key}`);
   // An upload is of a file, whatever button opens the chooser.
   if (step?.action === 'UPLOAD') return fieldFromKey(key);
@@ -270,8 +282,11 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
       out[key] = { class: cls, source: 'APPLICATION', value: '***', secret: true, rule: 'otp.at-run' };
       continue;
     }
-    const needsReal = (cls === 'VALID' || cls === 'EXISTING') && NEEDS_REAL_VALUE.has(kind);
-    if (cls === 'EXISTING' || needsReal) {
+    if (kind === 'file' && cls === 'VALID' && isImageField(field)) {
+      record(key, field, d, { class: 'GENERATED', source: 'GENERATOR', value: SAMPLE_IMAGE, rule: 'file.sample-image' }, tried);
+      continue;
+    }
+    if (!canMakeUp(cls, field)) {
       tried.push('APPLICATION');
       fail(
         key,

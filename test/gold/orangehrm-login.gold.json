@@ -1,7 +1,10 @@
 {
   "version": "G0.2",
-  "review": null,
-  "about": "DRAFT. What each step and expected result of the OrangeHRM login workbook means, worked out from the tester's words and the page, never from the engine's output. Not reviewed: a person checks it, then fills in `review`. Run: npm run engine:gold -- test/gold/orangehrm-login.gold.json --draft",
+  "review": {
+    "checkedBy": "harikrishnamunjala@brightcone.ai (owner)",
+    "checkedOn": "2026-11-04"
+  },
+  "about": "Drafted by Claude and checked by the owner (4 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM login workbook means, worked out from the tester's words and the page, never from the engine's output. Run: npm run engine:gold -- test/gold/orangehrm-login.gold.json",
   "cases": [
     {
       "id": "TC_LOGIN_001",
@@ -409,7 +412,7 @@
             "original": "the actual password text is not visible",
             "type": "MASKED",
             "negated": false,
-            "why": "restates the first clause: the actual text is hidden because the field is masked. A person decides whether it is a second check (the engine reads it as 'not visible', which can never fail on a masked field)"
+            "why": "restates the first clause: the actual text is hidden because the field is masked. One masked check, not a 'not visible' check that can never fail (owner, 4 Nov 2026)"
           }
         ]
       }

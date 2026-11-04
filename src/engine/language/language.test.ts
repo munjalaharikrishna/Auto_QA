@@ -639,9 +639,13 @@ describe('real wording of the rewritten Employee workbook', () => {
   const read = (sentence: string) => understandLine(sentence, { data: parseTestData(''), facts: new Map(), mode: 'step' });
   const conditions = (sentence: string) => read(sentence).expectations.map((e) => e.condition);
 
-  it('reads "the browser opens successfully" as the application starting, not as a page to land on', () => {
-    assert.deepEqual(conditions('Verify The browser opens successfully'), [{ type: 'STATE', expect: 'APPLICATION_STARTED' }]);
-    assert.deepEqual(read('Verify The browser opens successfully').issues, []);
+  it('reads "the browser opens successfully" as the test setup: nothing is checked, and nothing is asked (owner, 4 Nov 2026)', () => {
+    assert.deepEqual(conditions('Verify The browser opens successfully'), []);
+    assert.deepEqual(
+      read('Verify The browser opens successfully').issues.map((i) => [i.code, i.severity, i.setup]),
+      [['NOT_CHECKED', 'info', 'check']],
+    );
+    assert.deepEqual(conditions('Verify the application opens'), [{ type: 'STATE', expect: 'APPLICATION_STARTED' }]);
   });
   it('keeps a list of names with one shared predicate in one clause: "Verify the A, B (C) and D tabs are visible"', () => {
     const r = read('Verify that the Admin, PIM (Personal Information Management), Leave, Time, Benefits and Help tabs are visible');
@@ -657,11 +661,12 @@ describe('real wording of the rewritten Employee workbook', () => {
     assert.equal(r.expectations.length, 1);
     assert.equal(r.expectations[0]?.condition.target?.name, 'Reset');
   });
-  it('reads "PIM is the default page" as a check on the page PIM, and leaves "as a default page" to the noun phrase', () => {
+  it('reads "PIM is the default page" as a check on the page PIM, and "… PIM as a default page" as the same check (E0.15)', () => {
     assert.deepEqual(conditions('PIM is the default page'), [{ type: 'STATE', target: { ontology: 'Page', name: 'PIM' }, expect: 'DEFAULT_PAGE' }]);
     const old = read('Verify User Should see tabs and PIM as a default page');
-    // It is kept as written and listed, but it no longer stops the case (D3).
-    assert.ok(old.issues.some((i) => i.code === 'AMBIGUOUS' && i.severity === 'info' && i.message.includes('as a default page')));
+    // It no longer stops the case (D3), and since E0.15 the words are read, not set aside.
+    assert.ok(!old.issues.some((i) => i.message.includes('as a default page')));
+    assert.ok(old.expectations.some((e) => e.condition.type === 'STATE' && e.condition.expect === 'DEFAULT_PAGE' && e.condition.target?.name === 'PIM'));
   });
   it('reads "form or page" as two words for one thing: one check on the name, and no question', () => {
     const r = read('Verify The Add Employee form or page is displayed');

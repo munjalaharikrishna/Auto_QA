@@ -1,0 +1,84 @@
+# Gold readings to review: OrangeHRM Add Employee (E0.15)
+
+Drafted by Claude on 3 Nov 2026, **checked by the owner on 3-4 Nov 2026**. The E0.15 exit test measures the engine against these readings (at least 90% of sentences read as approved), so they must be **yours**, not mine. Each distinct sentence of the 19 cases is below once; the 19 cases are built from them by `test/gold/make-add-employee-gold.ts`.
+
+**How to review:** for each row, write OK in the last column, or what it should be. "A person decides" means the engine must not guess: it asks. When you are done, the readings are corrected and `review` is filled in with your name.
+
+Readings follow the earlier gold sets: a browser-opening line is set aside; a check written as a step ("Checking…") is set aside as a step, and its reading is the expected result that goes with it; a page name ("navigate to … page") is a URL check on that page.
+
+**Owner's answers (4 Nov 2026):** a step with no value ("Enter valid Last name") counts as read: the engine makes up a valid value. Supervisor and "User should updated the data" are for a person to decide. Which employee to click, select, delete or look for is for a person to decide. Names that are not on the screen word for word (Sub-Division is Sub Unit, the Employment section is Job) are for a person to decide. The Reset-then-Save trap is read as written, and so is LAYOUT for the login box. Every other row is OK.
+
+**Owner's answers (3 Nov 2026):** "User Should see tabs" is one check per tab named in the step (9 checks). The engine does not guess that "User should add button…" means "should see the Add button": that sentence is set aside, and the check is read from the step "Under Employee Information Section there should be add button" instead (below).
+
+## Checks read from a step
+
+| The tester wrote (a step) | Reading | Why | Your verdict |
+|---|---|---|---|
+| Under Employee Information Section there should be add button | VISIBILITY **Add** | the step says plainly that the Add button is there; its expected result ('should add button') is set aside (owner, 3 Nov 2026) | |
+
+## Steps
+
+| # | The tester wrote | Reading | Why | Your verdict |
+|---|---|---|---|---|
+| 1 | Open Browser | **a person decides** | opening a browser is the test setup, not something the application does | |
+| 2 | Enter url for Orange Hrm server | NAVIGATE **application** | 'Enter url' means go to the application's address (the project's base URL), not type into a field; no address is written | |
+| 3 | Checking the login section at middle of the page | **a person decides** | a check written as a step: its reading is the expected result that goes with it | |
+| 4 | Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. | **a person decides** | a check written as a step: its reading is the expected result that goes with it. The tabs show only after a login that no step writes: the case assumes it (E0.16 setup block) | |
+| 5 | Under Employee Information Section there should be add button. Which should be in PIM page | **a person decides** | a check written as a step: its reading is the expected result that goes with it | |
+| 6 | Click on the Add Button | CLICK **Add** |  | |
+| 7 | Enter the valid code/id in code text box Note: Text box should accept only numbers | ENTER_VALUE **Code** (value: VALID) | the Note is a rule of the field (digits only), not the value to type | |
+| 8 | Enter valid Last name in Last name text box. Note: Text box should accept only alphabets | ENTER_VALUE **Last Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
+| 9 | Enter valid First name in First name text box. Note: Text box should accept only alphabets | ENTER_VALUE **First Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
+| 10 | Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets | ENTER_VALUE **Middle Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
+| 11 | Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets | ENTER_VALUE **Nick Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
+| 12 | upload a photo by clicking upload button | UPLOAD **upload button** | a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026) | |
+| 13 | Entered text boxes and uploaded photo should empty by clicking reset | CLICK **Reset** | the action inside a sentence written as a check; the check is the expected result that goes with it | |
+| 14 | Click on Save | CLICK **Save** | TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save | |
+| 15 | To checking the added data in personal information page | **a person decides** | a check written as a step: its reading is the expected result that goes with it | |
+| 16 | Click on Back Button | CLICK **Back** |  | |
+| 17 | Click on Employee Name | **a person decides** | a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026) | |
+| 18 | Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section | SELECT **Job Title** (value: VALID) | a dropdown on the employee's Job page; no value is given | |
+|  | 〃 | SELECT **Employment Status** (value: VALID) | a dropdown; no value is given | |
+|  | 〃 | **a person decides** | the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026) | |
+|  | 〃 | **a person decides** | OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant | |
+| 19 | checking the same updated records in Employee information page | **a person decides** | a check written as a step: its reading is the expected result that goes with it | |
+| 20 | Select preferred Enployee/Employees and Click on Delete Button | **a person decides** | a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026) | |
+|  | 〃 | CLICK **Delete** |  | |
+
+## Expected results
+
+| # | The tester wrote | Reading | Why | Your verdict |
+|---|---|---|---|---|
+| 1 | User should open browser | **a person decides** | an environment fact (the test's own browser), not something the application shows | |
+| 2 | User should navigate to login section of Oragne Hrm | URL **login** | a page name, not address text. 'section' and 'of Oragne Hrm' are not part of the name (the application's name, misspelt) | |
+| 3 | Login section should be middle of the page | LAYOUT **login** | where the login box sits on the page ('middle'): a layout check. 'section' is the kind of thing, not its name | |
+| 4 | User Should see tabs and PIM as a default page | VISIBILITY **Admin** | one check for each tab named in the step it belongs to (owner, 3 Nov 2026) | |
+|  | 〃 | VISIBILITY **PIM** |  | |
+|  | 〃 | VISIBILITY **Leave** |  | |
+|  | 〃 | VISIBILITY **Time** |  | |
+|  | 〃 | VISIBILITY **Benefits** |  | |
+|  | 〃 | VISIBILITY **Recruitment** |  | |
+|  | 〃 | VISIBILITY **Reports** |  | |
+|  | 〃 | VISIBILITY **Bug Tracker** |  | |
+|  | 〃 | VISIBILITY **Help** |  | |
+|  | 〃 | STATE **PIM** | PIM is the page shown first after login: the engine's 'default page' check, as for 'PIM is the default page' | |
+| 5 | User should add button in employee information section | **a person decides** | 'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step | |
+| 6 | User should navigate to Add Employee page/popup | URL **Add Employee** | a screen name ('page/popup': whichever it is) | |
+| 7 | Text box should accept values | VALUE **the field of its step** | the field of the step it belongs to holds the value typed | |
+| 8 | Upload button should accept photo | STATE **upload button** | the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026) | |
+| 9 | User should see the empty text boxes and uploaded photo | VALUE **each field filled in before (empty)** | every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger) | |
+| 10 | User should naviagte to Personal Information page | URL **Personal Information** | a page name ('naviagte' is a typo) | |
+| 11 | User should see added data | VALUE **each field filled in before (holds its value)** | each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026 | |
+| 12 | User should navigate to Employee Information page | URL **Employee Information** | a page name | |
+| 13 | User should naviagte to Employment section | **a person decides** | the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026) | |
+| 14 | Respective fileds should accept the values | VALUE **Job Title** | each field of the step holds the value chosen | |
+|  | 〃 | VALUE **Employment Status** | each field of the step holds the value chosen | |
+|  | 〃 | **a person decides** | the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026) | |
+| 15 | User should updated the data | **a person decides** | says the data was updated without saying what shows it (a message? the values kept after Save?): a person must say what to check | |
+| 16 | User should see the same updated records | **a person decides** | a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026) | |
+| 17 | User Should succesfully Deleted Employee Data | **a person decides** | a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026) | |
+
+## Two things in the cases themselves (not readings)
+
+1. From TC12 on, step 13 (Reset) empties the form and step 14 saves it: the Save sends an empty form, so "User should see added data" cannot hold. The tester probably meant Reset to be its own case (TC11).
+2. No step logs in, yet the tabs (step 4) show only after a login: the cases assume one. E0.16 turns these setup lines into one setup block that logs in.

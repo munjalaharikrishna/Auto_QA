@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { lintCase, lintText } from '../engine/language/lint.js';
 import { wordingOf } from '../engine/language/preflight.js';
 import type { Field } from '../importer/columns.js';
 import { type BatchSummary, defaultResultsFile, type RowResult, writeResults } from '../importer/results.js';
@@ -97,13 +98,17 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
 
   // What the pre-flight suggests the tester writes instead, for the results workbook (BP-5; the semantic engine only).
   const wording = new Map<string, string>();
+  // Every line's lint status (E0.15): understood, matched, not found, screen not learned yet, vague, ambiguous, not understood.
+  const lint = new Map<string, string>();
   const run = await runCases(selected, {
     ...options,
     login,
-    onCompiled: async (compiled) => {
+    onCompiled: async (compiled, knowledge) => {
       const text = wordingOf(compiled.issues);
       if (text) wording.set(compiled.testId, text);
-      await options.onCompiled?.(compiled);
+      const lines = lintCase(compiled, knowledge);
+      if (lines.length) lint.set(compiled.testId, lintText(lines));
+      await options.onCompiled?.(compiled, knowledge);
     },
   });
   for (const v of run.verdicts) saved.verdicts[v.testId] = v;
@@ -117,7 +122,14 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   const results: RowResult[] = [
     ...models.flatMap((m) =>
       saved.verdicts[m.id]
-        ? [{ row: rowOf.get(m.id)!, verdict: saved.verdicts[m.id], ...(wording.has(m.id) ? { suggestedWording: wording.get(m.id) } : {}) }]
+        ? [
+            {
+              row: rowOf.get(m.id)!,
+              verdict: saved.verdicts[m.id],
+              ...(wording.has(m.id) ? { suggestedWording: wording.get(m.id) } : {}),
+              ...(lint.has(m.id) ? { lint: lint.get(m.id) } : {}),
+            },
+          ]
         : [],
     ),
     ...unreadable,

@@ -297,7 +297,9 @@ export function judge(input: JudgeInput): Verdict {
   const unproven = evaluations.filter((e) => e.result === 'unproven');
   const stale = evaluations.some((e) => e.doubt === 'STALE');
   const vacuous = evaluations.some((e) => e.doubt === 'VACUOUS');
-  const guarded = !plan.passAllowed;
+  // An expected result nobody could read is a check that was never made: the case cannot be a clean PASS (E0.15).
+  const unread = compile.issues.find((i) => i.code === 'NOT_UNDERSTOOD' && i.severity !== 'info');
+  const guarded = !plan.passAllowed || !!unread;
   const verification = answers({
     ...base,
     3: { answer: 'yes', detail: 'every value has a stated source' },
@@ -340,7 +342,9 @@ export function judge(input: JudgeInput): Verdict {
   const first = unproven[0] ?? (evaluations[0] as Evaluation);
   const why =
     guarded && unproven.length === 0
-      ? 'an assumption or an unknown condition in the test case means it cannot be a clean PASS'
+      ? unread
+        ? `${unread.where}: "${unread.original}" could not be read as a check, so it was not made: a person decides`
+        : 'an assumption or an unknown condition in the test case means it cannot be a clean PASS'
       : `${first.expectation} "${first.clause}" is unproven: ${first.why}`;
   return {
     testId: id,

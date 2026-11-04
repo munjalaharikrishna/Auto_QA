@@ -126,7 +126,7 @@ export function validateStates(steps: readonly IrStep[], expectations: readonly 
   const before = expectations.filter((e) => e.afterStep === undefined);
   for (const e of before) {
     const s = stateOfExpectation(e);
-    if (s && !isOrdinaryMessage(s, state)) move(s, e.id, e.clause, 'expected result');
+    if (s && !isOrdinaryMessage(s, state) && !isPublicHome(e, s, state)) move(s, e.id, e.clause, 'expected result');
   }
   for (const step of steps) {
     const s = stateAfterStep(step, state);
@@ -139,12 +139,21 @@ export function validateStates(steps: readonly IrStep[], expectations: readonly 
     out.push(marked);
     for (const e of expectations.filter((x) => x.afterStep === step.id)) {
       const es = stateOfExpectation(e);
-      if (es && !isOrdinaryMessage(es, state)) move(es, e.id, e.clause, `step ${step.id.slice(1)}`);
+      if (es && !isOrdinaryMessage(es, state) && !isPublicHome(e, es, state)) move(es, e.id, e.clause, `step ${step.id.slice(1)}`);
     }
   }
   void lastStep;
   return { steps: out, issues, path };
 }
+
+/**
+ * "Book Market Home Page" right after the application opens: many applications have a home page before anyone logs in. A page
+ * called "home" is the logged-in dashboard only once a login was submitted; "dashboard" always is (E0.15).
+ */
+const isPublicHome = (e: IrExpectation, to: string, from: string | undefined): boolean =>
+  to === 'DASHBOARD' &&
+  !(e.condition.target?.name ?? '').toLowerCase().includes('dashboard') &&
+  !['LOGIN_SUBMITTED', 'LOGIN_SUCCESS', 'DASHBOARD'].includes(from ?? '');
 
 /** An error shown is a state of the login only right after a login was tried; anywhere else it is just a message (a form error, a rejected value). */
 const isOrdinaryMessage = (to: string, from: string | undefined): boolean =>

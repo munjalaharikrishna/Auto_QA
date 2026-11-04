@@ -1,0 +1,343 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import type { RunTrace, StepRecord } from './execute/executor.js';
+import type { Observation } from './execute/observe.js';
+import { planActions } from './execute/planner.js';
+import { understandLine } from './language/grammar.js';
+import { understandCase } from './language/index.js';
+import { fixTyposIn } from './language/synonyms.js';
+import { compileCase } from './pipeline/compile.js';
+import { judge } from './verdict/index.js';
+
+/**
+ * E0.15: the reading fixes that do not depend on the owner's gold readings. Each test is a sentence from the real OrangeHRM Add
+ * Employee workbook (test/fixtures/Add_Employee.xlsx) or the BookMarket one.
+ */
+
+const page = (p: Partial<Observation> = {}): Observation => ({
+  url: 'http://app/pim',
+  title: 'PIM',
+  lines: [],
+  elements: [],
+  messages: [],
+  fieldErrors: [],
+  tabs: 1,
+  ...p,
+});
+const SHOWN: Partial<Observation> = {
+  lines: ['PIM', 'Employee Information', 'Add'],
+  elements: [{ identity: 'add', role: 'button', name: 'Add', tag: 'button', disabled: false, invalid: false }],
+};
+
+/** Compiles the case, makes every step "done" on a page showing `after`, and judges it. */
+async function runCase(expected: string) {
+  const compile = await compileCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the PIM page', expected }, { env: {} });
+  if (!compile.ir || !compile.plan) return { compile, verdict: undefined };
+  const steps: StepRecord[] = planActions(compile.ir, compile.plan).chains.map((ch) => ({
+    step: ch.step,
+    action: ch.action,
+    original: ch.original,
+    status: 'done',
+    calls: [],
+    changes: [],
+    dialogs: [],
+    checksAfter: ch.checksAfter,
+    notes: [],
+    before: page({ url: 'http://app/' }),
+    after: page(SHOWN),
+  }));
+  const trace: RunTrace = { testId: 'T-E015', status: 'completed', capabilities: [], steps };
+  return { compile, verdict: judge({ compile, trace }) };
+}
+
+describe('E0.15: an expected result nobody can read does not stop the case', () => {
+  const UNREADABLE = 'User should add  button in employee information section';
+
+  it('the case still compiles and runs; that one check goes to a person', async () => {
+    const { compile } = await runCase(`The Add button is displayed\n${UNREADABLE}`);
+    assert.ok(compile.ir && compile.plan, 'one unreadable check no longer blocks the whole case');
+    const issue = compile.issues.find((i) => i.code === 'NOT_UNDERSTOOD');
+    assert.equal(issue?.severity, 'review');
+    assert.equal(compile.status, 'needs-review');
+  });
+
+  it('is never a PASS while that check is unread, even when every other check holds', async () => {
+    const readable = await runCase('The Add button is displayed');
+    assert.equal(readable.verdict?.verdict, 'PASS', readable.verdict?.reason ?? '');
+    const { verdict } = await runCase(`The Add button is displayed\n${UNREADABLE}`);
+    assert.equal(verdict?.verdict, 'NEEDS_REVIEW', verdict?.reason ?? '');
+    assert.ok((verdict?.reason ?? '').includes('could not be read as a check'), verdict?.reason ?? '');
+  });
+});
+
+/** The name of what each expected result of `expected` checks, with its type. */
+const checksOf = (expected: string) =>
+  (understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the PIM page', expected }).ir?.expectations ?? []).map(
+    (e) => `${e.condition.type} ${e.condition.target?.name ?? ''}`,
+  );
+
+describe('E0.15: a page is named by its name, not by what kind of screen it is', () => {
+  it('drops screen words after the name, alone or joined: page/popup, page or popup, section, screen', () => {
+    assert.deepEqual(checksOf('User should navigate to Add Employee page/popup'), ['URL Add Employee']);
+    assert.deepEqual(checksOf('User should navigate to the Add Employee page or popup'), ['URL Add Employee']);
+    assert.deepEqual(checksOf('User should naviagte to Employment section'), ['URL Employment']);
+    assert.deepEqual(checksOf('User is redirected to the Dashboard screen'), ['URL Dashboard']);
+  });
+  it('after a screen word, "of …" names the application, not the page', () => {
+    assert.deepEqual(checksOf('User should navigate to login section of Oragne Hrm'), ['URL login']);
+  });
+  it("keeps a choice between two pages as written: which one is the tester's to say", () => {
+    assert.deepEqual(checksOf('User should navigate to the Admin or PIM page'), ['URL Admin or PIM']);
+  });
+});
+
+describe('E0.15: a known typo is not part of a name', () => {
+  it('corrects it and keeps how the word was capitalised', () => {
+    assert.equal(fixTyposIn('Employement Status'), 'Employment Status');
+    assert.equal(fixTyposIn('respective fileds'), 'respective fields');
+    assert.equal(fixTyposIn('EMPLOYEMENT'), 'EMPLOYMENT');
+    assert.equal(fixTyposIn('Sub-Division'), 'Sub-Division');
+  });
+  it('a field named with a typo is the field', () => {
+    const lang = understandCase({
+      id: 'T-E015',
+      title: 'E0.15',
+      steps: '1. Select "Full-Time" in the Employement Status dropdown',
+      expected: 'The Employement Status shows "Full-Time"',
+    });
+    assert.equal(lang.ir?.steps[0]?.target?.name, 'Employment Status');
+  });
+  it('a quoted name stays exactly as written', () => {
+    const lang = understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Click the "Employement" tab', expected: 'The page shows "Saved"' });
+    assert.equal(lang.ir?.steps[0]?.target?.name, 'Employement');
+  });
+});
+
+describe('E0.15: one sentence, two checks', () => {
+  it('"see tabs and PIM as a default page": the tabs are shown, and PIM is the page shown first', () => {
+    const lang = understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the PIM page', expected: 'User Should see tabs and PIM as a default page' });
+    const checks = (lang.ir?.expectations ?? []).map((e) => [e.condition.type, e.condition.target?.name ?? e.condition.target?.label, e.condition.expect]);
+    assert.deepEqual(checks, [
+      ['VISIBILITY', 'tabs', 'VISIBLE'],
+      ['STATE', 'PIM', 'DEFAULT_PAGE'],
+    ]);
+    assert.ok(!lang.issues.some((i) => i.message.includes('as a default page')), 'the words are read, not set aside');
+  });
+  it('a list item that is only a kind of thing is kept: "tabs and PIM" names two things', () => {
+    assert.deepEqual(checksOf('The tabs and the PIM link are displayed').length, 2);
+  });
+});
+
+describe('E0.15: the parser defects of the audit (U6)', () => {
+  it('"(masked)" right after a check is a second check on the same thing, not dropped', () => {
+    assert.deepEqual(checksOf('The password is shown (masked)'), ['VISIBILITY password', 'MASKED password']);
+  });
+  it('words in brackets it cannot read are said to be unread, never dropped silently', () => {
+    const lang = understandCase({ id: 'T-E015', title: 'E0.15', steps: '1. Open the login page', expected: 'The password is displayed (as dots)' });
+    assert.ok(lang.issues.some((i) => i.severity === 'review' && i.message.includes('(as dots)')));
+  });
+  it('"The Job Title field shows "Engineer"" checks the field\'s value, not a message', () => {
+    assert.deepEqual(checksOf('The Job Title field shows "Engineer"'), ['VALUE Job Title']);
+    assert.deepEqual(checksOf('The Country dropdown shows "India"'), ['VALUE Country']);
+    assert.deepEqual(checksOf('The page shows "Saved"'), ['TEXT ']);
+  });
+});
+
+describe('E0.15: a check written as a step and again as its expected result is checked once', () => {
+  const raw = (stepExpected: Record<string, string>, expected = 'The PIM heading is displayed') => ({
+    id: 'T-E015-TWIN',
+    title: 'twin',
+    steps: '1. Open the Login page\n2. Checking the login section at middle of the page',
+    stepExpected,
+    expected,
+  });
+  const layout = (c: ReturnType<typeof understandCase>) => c.ir?.expectations.filter((e) => e.condition.type === 'LAYOUT') ?? [];
+
+  it('keeps one layout check, under the words of the expected result', () => {
+    const c = understandCase(raw({ '2': 'Login section should be middle of the page' }));
+    assert.equal(layout(c).length, 1, JSON.stringify(layout(c)));
+    assert.equal(layout(c)[0]?.clause, 'Verify Login section should be middle of the page');
+    assert.ok(c.decisions.some((d) => d.message.includes('checked once')));
+  });
+
+  it('keeps the check of the step when no expected result says the same', () => {
+    const c = understandCase(raw({ '2': 'The PIM heading is displayed' }));
+    assert.equal(layout(c).length, 1);
+    assert.equal(layout(c)[0]?.clause, 'Checking the login section at middle of the page');
+  });
+
+  it('keeps both when two expected results read the same: each is a sentence of the tester', () => {
+    const c = understandCase(raw({ '2': 'Login section should be middle of the page' }, 'Login section should be middle of the page'));
+    assert.equal(layout(c).length, 2);
+  });
+});
+
+describe('E0.15: "see tabs" after a step that named the tabs is a check on each of them (owner, 3 Nov 2026)', () => {
+  const raw = (step: string) => ({
+    id: 'T-E015-TABS',
+    title: 'tabs',
+    steps: `1. Open the PIM page\n2. ${step}`,
+    stepExpected: { '2': 'User should see tabs' },
+    expected: 'The PIM heading is displayed',
+  });
+  const tabChecks = (c: ReturnType<typeof understandCase>) =>
+    (c.ir?.expectations ?? []).filter((e) => e.condition.type === 'VISIBILITY' && e.condition.target?.ontology === 'Tab');
+
+  it("one check per named tab, under the expected result, and the step's own checks are not run twice", () => {
+    // The sentence of the Add Employee workbook, as written.
+    const c = understandCase(
+      raw(
+        'Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.',
+      ),
+    );
+    const tabs = tabChecks(c);
+    assert.deepEqual(
+      tabs.map((e) => e.condition.target?.name),
+      ['Admin', 'PIM', 'Leave', 'Time', 'Benefits', 'Recruitment', 'Reports', 'Bug Tracker', 'Help'],
+    );
+    assert.ok(tabs.every((e) => e.clause === 'Verify User should see tabs'));
+  });
+
+  it('with no tabs named before it, "see tabs" stays one check', () => {
+    const c = understandCase(raw('Click the PIM menu'));
+    assert.equal(tabChecks(c).length, 1);
+    assert.equal(tabChecks(c)[0]?.condition.target?.name, undefined);
+  });
+});
+
+describe('E0.15: one verb table for the clause parser and the grammar (audit U3, U7, U8)', () => {
+  const read = (text: string, mode: 'step' | 'expected' = 'step') => understandLine(text, { data: [], facts: new Map(), mode });
+
+  it('"Return to the list and verify the updated record" is a navigation and a check: the check is not lost (U8)', () => {
+    const r = read('Return to the Employee List page and verify the updated record');
+    assert.deepEqual(
+      r.steps.map((s) => [s.action, s.target?.name]),
+      [['NAVIGATE', 'Employee List']],
+    );
+    assert.equal(r.expectations.length, 1, 'the check of the updated record is read, not swallowed into the page name');
+  });
+
+  it('"Leave" in a list of tabs is a name, not "leave … blank"', () => {
+    const r = read('Checking the tabs of Admin, Leave, Time are visible or not');
+    assert.deepEqual(
+      r.expectations.map((e) => e.condition.target?.name),
+      ['Admin', 'Leave', 'Time'],
+    );
+    assert.ok(!r.issues.some((i) => i.severity !== 'info'), JSON.stringify(r.issues));
+  });
+
+  it('"Login with admin" and "Log in as Admin" keep who logs in', () => {
+    for (const [text, who] of [
+      ['Login with admin', 'admin'],
+      ['Log in as Admin', 'Admin'],
+    ] as const) {
+      const s = read(text).steps[0];
+      assert.equal(s?.action, 'LOGIN');
+      assert.deepEqual(s?.value, { kind: 'literal', value: who });
+    }
+  });
+
+  it('the sentence shapes of enter, select, fill and leave read as before', () => {
+    const shape = (text: string) => read(text).steps.map((s) => [s.action, s.target?.name, s.value]);
+    assert.deepEqual(shape('Type "abc" into the Search box'), [['ENTER_VALUE', 'Search', { kind: 'literal', value: 'abc' }]]);
+    assert.deepEqual(shape('Choose "Full-Time" from the Employment Status dropdown'), [
+      ['SELECT', 'Employment Status', { kind: 'literal', value: 'Full-Time' }],
+    ]);
+    assert.deepEqual(shape('Fill the Name field with "Asha"'), [['ENTER_VALUE', 'Name', { kind: 'literal', value: 'Asha' }]]);
+    assert.deepEqual(shape('Leave the Code field blank'), [['ENTER_VALUE', 'Code', { kind: 'blank' }]]);
+  });
+});
+
+/** Step 3 (owner, 4 Nov 2026): where the tester's words do not say which one, the engine asks instead of choosing. */
+describe('E0.15 the engine asks where a person decides', () => {
+  const caseOf = (steps: string[], expected: string[]) =>
+    understandCase({ id: 'T-ASK', title: 'ask', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected: expected.join('\n') });
+  const asked = (l: ReturnType<typeof caseOf>, original: string) =>
+    l.issues.some((i) => i.severity !== 'info' && (i.original ?? '').toLowerCase().includes(original.toLowerCase()));
+
+  it('opening the browser is setup: no step and no check, but opening the application is a step', () => {
+    const l = caseOf(
+      ['Open Browser', 'Open the application', 'Click on Login'],
+      ['User should open browser', 'Browser should be Opened', 'User should navigate to Dashboard page'],
+    );
+    assert.deepEqual(
+      l.ir?.steps.map((s) => s.original),
+      ['Open the application', 'Click on Login'],
+    );
+    assert.ok(!l.ir?.expectations.some((e) => e.clause.toLowerCase().includes('browser')));
+    assert.ok(!l.issues.some((i) => i.severity !== 'info' && (i.original ?? '').toLowerCase().includes('browser')), JSON.stringify(l.issues));
+  });
+
+  it('"Click on Employee Name" asks which employee; a field name such as First Name does not', () => {
+    const l = caseOf(['Click on Employee Name', 'Click on First Name', 'Click on Save'], ['Employee is saved']);
+    assert.ok(asked(l, 'Click on Employee Name'));
+    assert.ok(!asked(l, 'Click on First Name'));
+  });
+
+  it('"preferred" with no value asks which one, in a step and in a check', () => {
+    const l = caseOf(['Select the preffered stream', 'Select "Science" in the preferred Stream dropdown'], ['Preffered stream should be selected']);
+    assert.ok(asked(l, 'Select the preffered stream'));
+    assert.ok(!asked(l, 'Select "Science"'));
+    assert.ok(asked(l, 'Preffered stream should be selected'));
+  });
+
+  it('a change with nothing that shows it, and a record nobody named, are questions; "see added data" still reads', () => {
+    const l = caseOf(
+      ['Enter "Asha" in the First Name field', 'Click on Save'],
+      [
+        'User should updated the data',
+        'User should see the same updated records',
+        'User Should succesfully Deleted Employee Data',
+        'User should see added data',
+      ],
+    );
+    assert.ok(asked(l, 'User should updated the data'));
+    assert.ok(asked(l, 'same updated records'));
+    assert.ok(asked(l, 'Deleted Employee Data'));
+    assert.ok(l.ir?.expectations.some((e) => e.clause.includes('added data') && e.condition.type === 'VALUE'));
+  });
+});
+
+/** Step 4 (4 Nov 2026): readings fixed from the text alone, and the owner's "read the trap as written". */
+describe('E0.15 step 4: photos, the Reset trap, addresses and pages', () => {
+  const read = (text: string, mode: 'step' | 'expected' = 'step') => understandLine(text, { data: [], facts: new Map(), mode });
+  const caseOf = (steps: string[], expected: string[]) =>
+    understandCase({ id: 'T-S4', title: 's4', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected: expected.join('\n') });
+
+  it('"Entered text boxes and uploaded photo should empty" is a check on what was entered, not a check with no element', () => {
+    const r = read('Entered text boxes and uploaded photo should empty');
+    assert.ok(r.expectations.length > 0);
+    assert.ok(!r.issues.some((i) => i.code === 'AMBIGUOUS'), JSON.stringify(r.issues));
+    assert.ok(r.issues.some((i) => i.code === 'NEEDS_REFERENCE'));
+  });
+
+  it('a valid photo can be given without asking (the engine has a sample image); a valid résumé cannot', async () => {
+    const { canMakeUp, SAMPLE_IMAGE } = await import('./data/resolver.js');
+    const { existsSync } = await import('node:fs');
+    assert.ok(canMakeUp('VALID', 'photo'));
+    assert.ok(canMakeUp('VALID', 'Profile Image'));
+    assert.ok(!canMakeUp('VALID', 'resume file'));
+    assert.ok(!canMakeUp('VALID', 'password'));
+    assert.ok(existsSync(SAMPLE_IMAGE));
+  });
+
+  it('data entered, then Reset, then Save: the check is read as written, with a warning that it will probably fail', () => {
+    const l = caseOf(['Enter "Asha" in the First Name field', 'Click on Reset', 'Click on Save'], ['User should see added data']);
+    assert.ok(l.ir?.expectations.some((e) => e.condition.type === 'VALUE' && e.condition.target?.name === 'First Name'));
+    assert.ok(!l.issues.some((i) => i.code === 'NEEDS_REFERENCE'), JSON.stringify(l.issues));
+    assert.ok(l.decisions.some((d) => d.kind === 'warning' && d.message.includes('probably fail')));
+  });
+
+  it('"Enter <App> URL ---> https://…" opens the address; "Enter https://… in the Website field" types it', () => {
+    const go = read('Enter BoookMarket URL--->https://book-market.test/login').steps[0];
+    assert.equal(go?.action, 'NAVIGATE');
+    assert.deepEqual(go?.value, { kind: 'literal', value: 'https://book-market.test/login' });
+    assert.equal(read('Enter https://x.test in the Website field').steps[0]?.action, 'ENTER_VALUE');
+  });
+
+  it('a "home" page right after the application opens is its public home page, not the logged-in dashboard', () => {
+    const l = caseOf(['Enter the application URL https://shop.test', 'Click on Browse page'], ['User should navigate to Shop Home Page']);
+    assert.ok(!l.issues.some((i) => i.code === 'PARADOX'), JSON.stringify(l.issues));
+    assert.equal(l.ir?.steps.find((s) => s.original.includes('Browse'))?.target?.ontology, 'Link');
+  });
+});

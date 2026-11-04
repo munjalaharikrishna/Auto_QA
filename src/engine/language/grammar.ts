@@ -9,10 +9,12 @@ import { bindValue, type DataEntry } from './data-binding.js';
 import { type NounPhrase, type NounPhraseOptions, parseNounPhrase } from './nounphrase.js';
 import { actionsOf, allowsAction } from './ontology.js';
 import { type CheckResult, MESSAGE_HEADS, PREDICATE_STARTS, parseCheck, type Subject } from './predicates.js';
+import { matchSlots, type Span } from './slots.js';
 import { matchPhrase } from './synonyms.js';
 import type { Given, GrammarModel, Issue, LineConditional, LineResult, ParsedConditional, ParsedExpectation, ParsedStep, ValueSpec } from './types.js';
+import { verbAt } from './verbs.js';
 import { isSymbol, type Line, lw, originalOf, readLine, wordsOf } from './view.js';
-import { isCommandForm, VERBS, type VerbDef, verbOf } from './vocabulary.js';
+import { isCommandForm, VERBS, verbOf } from './vocabulary.js';
 
 /**
  * Layer 7, the QA grammar (GR-01 to GR-11). A line is cut into clauses (CL-01) and each clause is read as an action or
@@ -54,7 +56,6 @@ const MARKER_STARTS: ReadonlySet<string> = new Set([
   'confirming',
   'ensuring',
 ]);
-const PREPS: ReadonlySet<string> = new Set(['in', 'into', 'on', 'to', 'for', 'with', 'as', 'from', 'at', 'onto', 'inside', 'within']);
 
 const DEFAULT_CLASS: Partial<Record<IrAction, string>> = {
   ENTER_VALUE: 'Field',
@@ -98,15 +99,8 @@ function afterSubject(words: readonly string[], from: number): { index: number; 
   return { index: from, modal: false };
 }
 
-/** The phrases of the Navigation category that are actions on their own: starting the application, going back or forward. */
-const NAV_ACTIONS: ReadonlySet<string> = new Set(['open application', 'go back', 'go forward']);
-const navAction = (words: readonly string[], i: number): { canonical: string; length: number } | undefined => {
-  const hit = matchPhrase('Navigation', words, i, 6);
-  return hit && NAV_ACTIONS.has(hit.canonical) ? hit : undefined;
-};
-
-/** "Wait 5 seconds": not one of the 31 verbs, but read by its own pattern (RX-17): until the page is idle, never a fixed sleep (UI-09). */
-const WAIT_WORDS: ReadonlySet<string> = new Set(['wait', 'pause', 'sleep', 'delay']);
+/** The verbs of the table that are navigation phrases, actions on their own: starting the application, going back or forward. */
+const NAV_VERBS = { 'open application': true, 'go back': true, 'go forward': true } as const;
 
 /** Words that, right after a word, make it the subject of a sentence ("Login is rejected") and not a command ("Login"). */
 const AFTER_SUBJECT: ReadonlySet<string> = new Set([
@@ -130,19 +124,15 @@ const AFTER_SUBJECT: ReadonlySet<string> = new Set([
   'succeeds',
 ]);
 
-interface VerbHit {
-  def: VerbDef;
-  length: number;
-  via?: string;
+/** The words of an action after its verb, matched to a sentence shape of the slot grammar: the tokens of each slot. */
+function shape(pattern: string, rest: readonly Token[]): Record<string, Token[]> | undefined {
+  const m = matchSlots(pattern, wordsOf(rest));
+  if (!m) return undefined;
+  return Object.fromEntries(Object.entries(m.slots).map(([k, sp]: [string, Span]) => [k, rest.slice(sp.from, sp.to)]));
 }
 
-function readVerb(words: readonly string[], i: number): VerbHit | undefined {
-  const direct = verbOf(words[i] ?? '');
-  if (direct) return { def: direct, length: 1 };
-  const syn = matchPhrase('Action', words, i, 3);
-  const def = syn ? verbOf(syn.canonical) : undefined;
-  return syn && def ? { def, length: syn.length, via: words.slice(i, i + syn.length).join(' ') } : undefined;
-}
+/** Prepositions that say where a value is entered, as alternatives of a pattern. */
+const PLACE = '(in|into|on|onto|to|at|inside|for)';
 
 /** The verb a word ending in -ing comes from ("entering" is "enter", "selecting" "select"), when it is one of the verbs. */
 function gerundBase(word: string | undefined): string | undefined {
@@ -207,8 +197,9 @@ function kindOf(line: Line, clause: Clause, ctx: LineContext): 'action' | 'check
     const bare = ctx.mode === 'step' && !hasPredicate(words.slice(i + 1)) && np.headClass === undefined && !np.within && !np.reference && np.words.length <= 4;
     return bare ? 'action' : 'check';
   }
-  if (head === 'leave' || navAction(words, i)) return 'action';
-  const imperative = VERBS.some((v) => v.forms[0] === head) || readVerb(words, i)?.via !== undefined || WAIT_WORDS.has(head);
+  const verb = verbAt(words, i);
+  if (verb && (verb.verb === 'leave' || verb.verb in NAV_VERBS)) return 'action';
+  const imperative = VERBS.some((v) => v.forms[0] === head) || verb?.via !== undefined || verb?.verb === 'wait';
   const subjectLed = AFTER_SUBJECT.has(words[i + 1] ?? '') || words[i + 1] === 'not';
   if (imperative && !hasModal(words.slice(i + 1, i + 4)) && !subjectLed) return 'action';
   if (subject.index !== stepStart(words) && verbOf(head)) return 'action';
@@ -223,14 +214,6 @@ function kindOf(line: Line, clause: Clause, ctx: LineContext): 'action' | 'check
 const hasModal = (words: readonly string[]): boolean => words.some((w) => ['should', 'must', 'shall'].includes(w));
 
 const hasPredicate = (words: readonly string[]): boolean => words.some((w) => PREDICATE_STARTS.has(w));
-
-/** Prepositions that say where a value is entered. */
-const PLACE_PREPS: ReadonlySet<string> = new Set(['in', 'into', 'on', 'onto', 'to', 'at', 'inside', 'for']);
-
-const prepIndex = (tokens: readonly Token[], preps: ReadonlySet<string> = PREPS): number => {
-  for (let i = 1; i < tokens.length; i++) if (tokens[i]?.kind === 'WORD' && preps.has(lw(tokens[i]))) return i;
-  return -1;
-};
 
 interface ReadAction {
   steps: Array<Omit<ParsedStep, 'model'>>;
@@ -286,7 +269,33 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     decisions: [...decisions],
   });
   const done = (steps: Array<Omit<ParsedStep, 'model'>>, model: GrammarModel): ReadAction => {
+    // "Select the preferred stream": which one is preferred is the tester's choice, and the case does not say it (owner, 4 Nov 2026).
+    if (words.includes('preferred') && steps.length && !steps.some((s) => s.value?.kind === 'literal' || s.value?.kind === 'data')) {
+      issues.push({
+        code: 'AMBIGUOUS',
+        severity: 'review',
+        message: 'it says "preferred" but not which one: the engine does not choose for the tester',
+        original,
+        suggestion: 'Write the value: Select "<value>" in the <name> dropdown, or give it in Test Data.',
+      });
+    }
     for (const s of steps) {
+      // "Click on Browse page": a page is reached through the link to it; the click is on that link (E0.15).
+      if (s.action === 'CLICK' && s.target?.ontology === 'Page') {
+        s.target = { ...s.target, ontology: 'Link' };
+        s.decisions.push(`"${s.target.name ?? s.target.label}" page: the click is on the link to it`);
+      }
+      // "Click on Employee Name": a record's name, not a button. Which record is for a person to say (owner, 4 Nov 2026).
+      const recordOf = s.action === 'CLICK' && s.target?.ontology === 'Element' ? recordNameOf(s.target.name) : undefined;
+      if (recordOf) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `"${s.target?.name}" names no ${recordOf}: which ${recordOf} to open is not said, and the engine does not choose one`,
+          original,
+          suggestion: `Name the ${recordOf}: Click on "<the name>" in the list, or give it in Test Data.`,
+        });
+      }
       const cls = s.target?.ontology;
       if (cls && cls !== 'Element' && !allowsAction(cls, s.action)) {
         issues.push({
@@ -301,7 +310,8 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     return { steps, issues, model };
   };
 
-  if (WAIT_WORDS.has(words[i] ?? '')) {
+  const hit = verbAt(words, i);
+  if (hit?.verb === 'wait') {
     const found = patterns().scan(clause.tokens.map((t) => t.text).join(' '), ['waitDuration']).matches[0];
     const ms = found ? waitMs(found) : undefined;
     decisions.push(
@@ -312,28 +322,45 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     return done([step('WAIT', undefined, ms === undefined ? undefined : { kind: 'literal', value: String(ms) })], ms === undefined ? 'GR-01' : 'GR-02');
   }
 
+  // "Enter BookMarket URL ---> https://…": the address of an application, named before it, is where to go, not a value to type.
+  // "Enter https://x.test in the Website field" still types: the address comes first (E0.15).
+  if ((hit?.verb === 'enter' || hit?.verb === 'type') && hit) {
+    const at = clause.tokens.findIndex((t) => t.kind === 'URL');
+    const named = clause.tokens
+      .slice(i + hit.length, Math.max(at, 0))
+      .filter((t) => t.kind === 'WORD')
+      .map((t) => lw(t));
+    if (at > i + hit.length && ['url', 'address', 'link'].includes(named[named.length - 1] ?? '')) {
+      decisions.push(`"${named.join(' ')}" names the address to open`);
+      return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' }, { kind: 'literal', value: (clause.tokens[at] as Token).text })], 'GR-02');
+    }
+  }
+
   // Phrases of the Navigation category: "open browser", "launch the application", "enter URL for X", "go back".
-  const nav = navAction(words, i);
-  if (nav?.canonical === 'open application') {
-    decisions.push(`"${words.slice(i, i + nav.length).join(' ')}" starts the application`);
+  if (hit?.verb === 'open application') {
     const url = clause.tokens.find((t) => t.kind === 'URL');
+    // "Open Browser": the run opens its own browser. That is the test setup: no step, and no page called "browser" (owner, 3-4 Nov 2026).
+    if (!url && words.slice(i, i + hit.length).includes('browser')) {
+      decisions.push('opening the browser is done by every run: no step is needed');
+      issues.push({
+        code: 'NOT_CHECKED',
+        severity: 'info',
+        setup: 'step',
+        message: 'the run opens its own browser: that is the test setup, so there is no step',
+        original,
+      });
+      return done([], 'GR-01');
+    }
+    decisions.push(`"${words.slice(i, i + hit.length).join(' ')}" starts the application`);
     return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' }, url ? { kind: 'literal', value: url.text } : undefined)], 'GR-01');
   }
-  if (nav?.canonical === 'go back') return done([step('BACK')], 'GR-01');
-  if (nav?.canonical === 'go forward') return done([step('FORWARD')], 'GR-01');
+  if (hit?.verb === 'go back') return done([step('BACK')], 'GR-01');
+  if (hit?.verb === 'go forward') return done([step('FORWARD')], 'GR-01');
 
-  // "Leave the Login Name text box blank": a field left empty on purpose.
-  if (words[i] === 'leave') {
-    const rest = clause.tokens.slice(i + 1);
-    const end = rest.findIndex((t, k) => k > 0 && ['blank', 'empty'].includes(lw(t)));
-    const np = parseNp(end >= 0 ? rest.slice(0, end) : rest, 'Field');
-    if (end < 0)
-      return {
-        steps: [],
-        issues: [ambiguous('"leave" needs to say what is left blank', original, 'Write: Leave the <field name> field blank')],
-        model: 'GR-02',
-        unsupported: undefined,
-      };
+  // "Leave the Login Name text box blank": a field left empty on purpose (the verb table knows "leave" only in this shape).
+  const left = hit?.verb === 'leave' ? shape('{target} (blank|empty) {rest?}', clause.tokens.slice(i + 1)) : undefined;
+  if (left) {
+    const np = parseNp(left.target ?? [], 'Field');
     decisions.push('"leave … blank" is a value of class BLANK');
     return done(
       np.targets.map((t) => step('ENTER_VALUE', t, { kind: 'blank' })),
@@ -341,8 +368,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     );
   }
 
-  const hit = readVerb(words, i);
-  if (!hit) {
+  if (!hit?.def) {
     const first = originalOf(line, clause.tokens.slice(i, i + 1));
     return {
       steps: [],
@@ -359,15 +385,16 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       unsupported: first,
     };
   }
-  if (hit.via) decisions.push(`"${hit.via}" is read as ${hit.def.verb} (synonym)`);
+  const def = hit.def;
+  if (hit.via) decisions.push(`"${hit.via}" is read as ${def.verb} (synonym)`);
   i += hit.length;
   // "Enter/update the Job Title": a second verb joined by a slash names the same step.
-  if (isSymbol(clause.tokens[i], '/') && lw(clause.tokens[i + 1]) !== undefined && !readVerb(words, i + 1)) {
+  if (isSymbol(clause.tokens[i], '/') && lw(clause.tokens[i + 1]) !== undefined && !verbAt(words, i + 1)) {
     decisions.push(`"${lw(clause.tokens[i + 1])}" after the slash is the same step`);
     i += 2;
   }
   let rest = clause.tokens.slice(i);
-  const action = hit.def.action;
+  const action = def.action;
 
   switch (action) {
     case 'NAVIGATE': {
@@ -381,6 +408,13 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       // "Open a web browser", "Launch the browser": the run opens its own browser. There is nothing to do, and no page called "browser".
       if (BROWSER_NAMES.has(said)) {
         decisions.push('opening the browser is done by every run: no step is needed');
+        issues.push({
+          code: 'NOT_CHECKED',
+          severity: 'info',
+          setup: 'step',
+          message: 'the run opens its own browser: that is the test setup, so there is no step',
+          original,
+        });
         return done([], 'GR-01');
       }
       // "Navigate to the application", "Open the app": the address the run starts from, however it is spelled.
@@ -408,21 +442,22 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
           issues: [ambiguous('it does not say what to enter or where', original, 'Write: Enter <value> in the <field name> field')],
           model: 'GR-02',
         };
-      const cut = prepIndex(rest, new Set([...PLACE_PREPS, 'with']));
-      if (hit.def.verb === 'fill' && cut > 0 && lw(rest[cut]) === 'with') {
-        const np = parseNp(rest.slice(0, cut), 'Field', { field: true });
-        const bound = bindValue(line, rest.slice(cut + 1), ctx.data, np.targets[0]?.name);
+      // "Fill the Name field with Asha": the field, then the value.
+      const filled = def.verb === 'fill' ? shape('{target} with {value}', rest) : undefined;
+      if (filled) {
+        const np = parseNp(filled.target ?? [], 'Field', { field: true });
+        const bound = bindValue(line, filled.value ?? [], ctx.data, np.targets[0]?.name);
         decisions.push(...bound.decisions);
         return done(
           np.targets.map((t) => step('ENTER_VALUE', t, bound.spec)),
           'GR-02',
         );
       }
-      const placeCut = prepIndex(rest, PLACE_PREPS);
-      if (placeCut > 0) {
-        const cut = placeCut;
-        const valueTokens = rest.slice(0, cut);
-        const place = parseNp(rest.slice(cut + 1), 'Field', { field: true });
+      // "Enter Asha in the First Name field": the value, a word that says where, and the field.
+      const placed = shape(`{value} ${PLACE} {target}`, rest);
+      if (placed) {
+        const valueTokens = placed.value ?? [];
+        const place = parseNp(placed.target ?? [], 'Field', { field: true });
         const generic = place.targets.every((t) => !t.name);
         if (generic) {
           // "Enter the Job Title, Status in respective fields": the first phrase names the fields, the second only says "fields".
@@ -469,11 +504,12 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
           'GR-01',
         );
       }
-      const cut = prepIndex(rest, new Set(['from', 'in', 'of', 'on']));
-      if (cut > 0) {
-        const place = parseNp(rest.slice(cut + 1), 'Dropdown');
+      // "Select Full-Time from the Employment Status dropdown": the option, then the list it is chosen from.
+      const chosen = shape('{value} (from|in|of|on) {target}', rest);
+      if (chosen) {
+        const place = parseNp(chosen.target ?? [], 'Dropdown');
         const target = place.targets[0] as IrTarget;
-        const bound = bindValue(line, rest.slice(0, cut), ctx.data, target.name);
+        const bound = bindValue(line, chosen.value ?? [], ctx.data, target.name);
         decisions.push(...bound.decisions);
         const literal: ValueSpec = bound.spec.kind === 'class' && bound.spec.dataClass === 'VALID' && bound.spec.field ? bound.spec : bound.spec;
         return done([step('SELECT', target, literal)], 'GR-02');
@@ -486,12 +522,12 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     }
     case 'UPLOAD': {
       // "Upload Photo to the Photo field": what is uploaded, and the file field it goes to. The field is not named "Photo to the Photo".
-      const into = by0(rest);
-      if (into > 0 && !rest.some((t) => lw(t) === 'by')) {
-        const field = parseNp(rest.slice(into + 1), 'File');
+      const into = rest.some((t) => lw(t) === 'by') ? undefined : shape('{value} (to|into|onto) {target}', rest);
+      if (into) {
+        const field = parseNp(into.target ?? [], 'File');
         const named = field.targets[0] as IrTarget;
         const fieldName = named.name ?? named.label ?? 'file';
-        const bound = bindValue(line, rest.slice(0, into), ctx.data, fieldName);
+        const bound = bindValue(line, into.value ?? [], ctx.data, fieldName);
         if (bound.spec.kind === 'data') decisions.push(...bound.decisions);
         decisions.push(`"${fieldName}" is the file field the file goes to`);
         return done(
@@ -527,9 +563,10 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       return done([step('UPLOAD', target, bound?.spec.kind === 'data' ? bound.spec : { kind: 'class', dataClass: 'VALID', field: fileName })], 'GR-02');
     }
     case 'LOGIN': {
-      const cut = prepIndex(rest, new Set(['with', 'as', 'using']));
-      if (cut >= 0) {
-        const bound = bindValue(line, rest.slice(cut + 1), ctx.data, 'credentials');
+      // "Login with admin", "Log in to the site as Admin": who logs in comes after with, as or using.
+      const as = shape('{where?} (with|as|using) {value}', rest);
+      if (as) {
+        const bound = bindValue(line, as.value ?? [], ctx.data, 'credentials');
         decisions.push(...bound.decisions);
         return done([step('LOGIN', { ontology: 'User' }, bound.spec)], 'GR-02');
       }
@@ -538,10 +575,10 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     case 'SEARCH': {
       // "Search for 'laptop' in the Search field", "Search 'laptop' in the Search field", "Search for 'laptop'".
       const body = lw(rest[0]) === 'for' ? rest.slice(1) : rest;
-      const cut = prepIndex(body, new Set(['in', 'on', 'into']));
-      if (cut > 0) {
-        const target = parseNp(body.slice(cut + 1), 'Field').targets[0] as IrTarget;
-        const bound = bindValue(line, body.slice(0, cut), ctx.data, target.name);
+      const where = shape('{value} (in|on|into) {target}', body);
+      if (where) {
+        const target = parseNp(where.target ?? [], 'Field').targets[0] as IrTarget;
+        const bound = bindValue(line, where.value ?? [], ctx.data, target.name);
         decisions.push(...bound.decisions);
         return done([step('SEARCH', target, bound.spec)], 'GR-02');
       }
@@ -569,9 +606,9 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
             steps: [],
             issues: [
               ambiguous(
-                `it does not say what to ${hit.def.verb}`,
+                `it does not say what to ${def.verb}`,
                 original,
-                `Write: ${hit.def.verb[0]?.toUpperCase()}${hit.def.verb.slice(1)} the '<name>' <button, link, field …>`,
+                `Write: ${def.verb[0]?.toUpperCase()}${def.verb.slice(1)} the '<name>' <button, link, field …>`,
               ),
             ],
             model: 'GR-01',
@@ -1027,8 +1064,29 @@ function asideSays(tokens: readonly Token[], word: string): boolean {
   return tokens.some((t, k) => isSymbol(t, '(') && lw(tokens[k + 1]) === word && isSymbol(tokens[k + 2], ')'));
 }
 
-/** Where "to", "into" or "onto" sits in the words of an upload, after something that is uploaded. */
-const by0 = (rest: readonly Token[]): number => rest.findIndex((t, k) => k > 0 && ['to', 'into', 'onto'].includes(lw(t)));
+/** Words before "name" that make it a field's own name ("First Name", "User Name"), not the name of a record. */
+const NAME_PARTS: ReadonlySet<string> = new Set([
+  'first',
+  'last',
+  'middle',
+  'nick',
+  'full',
+  'sur',
+  'user',
+  'display',
+  'given',
+  'family',
+  'login',
+  'file',
+  'company',
+]);
+
+/** "Employee Name" → "employee": the record a click on "<Thing> Name" would open, when nothing says which one. */
+function recordNameOf(name: string | undefined): string | undefined {
+  const parts = (name ?? '').toLowerCase().split(' ').filter(Boolean);
+  if (parts.length !== 2 || parts[1] !== 'name' || NAME_PARTS.has(parts[0] as string)) return undefined;
+  return parts[0];
+}
 
 const BROWSER_NAMES: ReadonlySet<string> = new Set([
   'browser',

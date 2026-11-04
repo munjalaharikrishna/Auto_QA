@@ -67,6 +67,51 @@ describe('gold set scoring', () => {
     assert.equal(r.clauses.find((c) => c.original === 'Enter valid username')?.outcome, 'should-abstain-but-answered');
     assert.ok(r.confidentMistakes > 0);
   });
+
+  // Owner, 4 Nov 2026: "Enter valid Last name" with no value is read; the engine makes a valid one up when it compiles.
+  const nameCase = {
+    id: 'TC-NAME',
+    title: 'Add an employee',
+    steps: '1. Enter valid Last name in Last name text box. Note: Text box should accept only alphabets\n2. Enter existing Employee Id in Employee Id text box',
+    expected: 'Employee is saved',
+  };
+  const nameGold = (): GoldSet =>
+    GoldSetSchema.parse({
+      version: 'G0.2',
+      review: { checkedBy: 'test', checkedOn: '2026-11-04' },
+      cases: [
+        {
+          id: 'TC-NAME',
+          module: 'm',
+          source: { file: 'x' },
+          status: 'single',
+          gold: {
+            steps: [
+              {
+                original: 'Enter valid Last name in Last name text box. Note: Text box should accept only alphabets',
+                action: 'ENTER_VALUE',
+                target: 'Last Name',
+                value: { class: 'VALID' },
+              },
+              { original: 'Enter existing Employee Id in Employee Id text box', abstain: true },
+            ],
+            expectations: [],
+          },
+        },
+      ],
+    });
+  it('a value the engine can make up is read, not asked; an existing record is still asked', () => {
+    const reading = readingOfLanguage(understandCase(nameCase as never));
+    const r = scoreGold(nameGold(), new Map([['m/TC-NAME', reading]]));
+    const outcome = (o: string) => r.clauses.find((c) => c.original.startsWith(o))?.outcome;
+    assert.equal(outcome('Enter valid Last name'), 'correct');
+    assert.equal(outcome('Enter existing Employee Id'), 'rightly-abstained');
+  });
+  it('a gold line matches the engine step that is its head, when the rest is a note', () => {
+    const reading = readingOfLanguage(understandCase(nameCase as never));
+    const r = scoreGold(nameGold(), new Map([['m/TC-NAME', reading]]));
+    assert.equal(r.steps.spurious, 0);
+  });
 });
 
 describe('agreement between labellers', () => {

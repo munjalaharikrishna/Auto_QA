@@ -70,6 +70,9 @@ export type FieldKind = 'username' | 'password' | 'otp' | 'email' | 'personName'
 
 const HAS = (key: string, ...parts: string[]): boolean => parts.some((p) => key.includes(p));
 
+/** A file field for a picture ("photo", "profile image", "avatar"): any valid image will do, so one can be given without asking. */
+export const isImageField = (name: string): boolean => HAS(compactKey(name), 'photo', 'image', 'picture', 'avatar', 'logo');
+
 export function fieldKindOf(name: string): FieldKind {
   const key = compactKey(name);
   // "otp" as a part of a longer word ("footprint") is not a one-time passcode.

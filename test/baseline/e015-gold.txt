@@ -1,0 +1,73 @@
+E0.15 baseline, 3 Nov 2026, before any grammar change (branch engine/e0.15-grammar at 3cf3331). Gold readings are DRAFT until the owner approves them.
+
+## OrangeHRM Login (test/gold/orangehrm-login.gold.json)
+Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 2% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 19 of 20 right, 1 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 83%, recall 95%, F1 88%)
+
+## OrangeHRM Add Employee (test/gold/orangehrm-add-employee.gold.json)
+Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 43% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 132 of 299 right, 125 wrong, 42 set aside that a person could read, 0 missed, 225 extra (precision 27%, recall 44%, F1 34%)
+
+## After the review-free fixes (3 Nov 2026, branch engine/e0.15-grammar)
+Fixes: unreadable check no longer blocks the case; page names without screen words; names without known typos; 'tabs and PIM as a default page' is two checks; '(masked)' is a check; 'field shows "x"' is a value check.
+Draft gold changes in the same commits (flagged on the review page): login page named 'login'; default page is the STATE check.
+
+### orangehrm-login
+Gold set (DRAFT: nobody has checked it yet): 60 clauses, confident-mistake rate 2% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 19 of 20 right, 1 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 83%, recall 95%, F1 88%)
+
+### orangehrm-add-employee
+Gold set (DRAFT: nobody has checked it yet): 540 clauses, confident-mistake rate 18% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 231 of 299 right, 44 wrong, 24 set aside that a person could read, 0 missed, 225 extra (precision 46%, recall 77%, F1 58%)
+
+## Extra checks gone through (3 Nov 2026)
+Fix: a check written as a step ("Checking the login section at middle of the page") and again as the expected result at the same point is checked once, under the expected result's words. Removes 27 duplicate checks (19 login layout, 8 updated-records values). Login unchanged.
+
+### orangehrm-add-employee
+  expectations: 231 of 299 right, 44 wrong, 24 set aside that a person could read, 0 missed, 198 extra (precision 49%, recall 77%, F1 60%)
+
+The 198 left, all waiting on the owner's gold decisions:
+  162  "Checking the tabs of Admin, PIM, ... are visible or not" (18 cases x 9 tabs): the engine checks each named tab; the gold reads the expected result "see tabs" as one check on "tabs".
+   17  "Under Employee Information Section there should be add button": the only reading of the Add button check, because the expected result "User should add button ..." is set aside.
+   19  update cases: one sentence ("Respective fileds should accept the values", "User should updated the data", "User should see the same updated records") read as one check per field (incl. Supervisor); the gold has one clause, or none for Supervisor.
+
+## Owner's answers on the extra checks (3 Nov 2026)
+- "User Should see tabs" is one check per tab named in the step (9). Gold changed; engine: a check that names only a kind of thing ("tabs") is the things of that kind named at the same point.
+- No guess that "User should add button" means "should see the Add button": that sentence is set aside in the gold, and the Add button check is read from the step "Under Employee Information Section there should be add button" (new STEP_CHECKS in the generator).
+
+### orangehrm-add-employee (701 clauses now: 161 more gold checks)
+Gold set (DRAFT: nobody has checked it yet): 701 clauses, confident-mistake rate 12% (target 0%)
+  steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
+  expectations: 409 of 460 right, 44 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 87%, recall 89%, F1 88%)
+Login and BookMarket unchanged. Left extra: 19 update-case field checks (one per field incl. Supervisor).
+
+## Add Employee gold signed by the owner (4 Nov 2026), slot grammar and lint in place
+Gold set: 701 clauses, confident-mistake rate 15% (target 0%)
+  steps: 124 of 241 right, 24 wrong, 93 set aside that a person could read, 0 missed, 11 extra (precision 78%, recall 51%, F1 62%)
+  expectations: 400 of 460 right, 53 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 85%, recall 87%, F1 86%)
+
+## Step 2 (4 Nov 2026): a made-up value is read, and a gold line matches the step at its head
+Gold set: 701 clauses, confident-mistake rate 16% (target 0%)
+  steps: 181 of 241 right, 40 wrong, 20 set aside that a person could read, 0 missed, 11 extra (precision 78%, recall 75%, F1 77%)
+  expectations: 400 of 460 right, 53 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 85%, recall 87%, F1 86%)
+
+## Step 3 (4 Nov 2026): the engine asks where the owner said a person decides
+Gold set: 701 clauses, confident-mistake rate 8% (target 0%)
+  steps: 205 of 241 right, 16 wrong, 20 set aside that a person could read, 0 missed, 10 extra (precision 89%, recall 85%, F1 87%)
+  expectations: 425 of 460 right, 28 wrong, 7 set aside that a person could read, 0 missed, 4 extra (precision 93%, recall 92%, F1 93%)
+BookMarket (draft): Gold set (DRAFT: nobody has checked it yet): 34 clauses, confident-mistake rate 22% (target 0%)
+
+## Steps 4 and 5 (4 Nov 2026): E0.15 exit tests
+### orangehrm-login (signed)
+Gold set: 60 clauses, confident-mistake rate 0% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 20 of 20 right, 0 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 87%, recall 100%, F1 93%)
+### orangehrm-add-employee (signed)
+Gold set: 736 clauses, confident-mistake rate 4% (target 0%)
+  steps: 225 of 241 right, 16 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 93%, recall 93%, F1 93%)
+  expectations: 486 of 495 right, 9 wrong, 0 set aside that a person could read, 0 missed, 4 extra (precision 97%, recall 98%, F1 98%)
+Together: 771 of 796 clauses read as approved (97%, target 90%). Lint: 506 lines, all with a status, every vague line with a suggestion.
