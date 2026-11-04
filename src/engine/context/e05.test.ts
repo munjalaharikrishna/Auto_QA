@@ -443,7 +443,7 @@ describe('RF-01: reference resolution', () => {
     assert.equal(l.ir?.references[0]?.status, 'UNRESOLVED');
     assert.ok(l.ir?.references[0]?.because.includes('page'));
   });
-  it('never guesses: "added data" with no Save before it, or a reset in between, is not resolved', async () => {
+  it('never guesses "added data" with no Save before it; a reset in between is checked as written, with a warning (owner, 4 Nov 2026)', async () => {
     const none = read(['Open the Login page', "Enter 'a' in the Email field"], 'The added data is displayed');
     assert.equal(none.ir?.references.find((r) => r.kind === 'ENTERED_DATA')?.status, 'UNRESOLVED');
     assert.ok(none.issues.some((i) => i.code === 'NEEDS_REFERENCE'));
@@ -451,8 +451,9 @@ describe('RF-01: reference resolution', () => {
     const tc13 = (wb.cases.find((c) => c.raw.id === '21022024_13') as { raw: RawTestCase }).raw;
     const l = understandCase(tc13);
     const added = l.ir?.references.find((r) => r.phrase.includes('added data'));
-    assert.equal(added?.status, 'UNRESOLVED');
-    assert.ok(added?.because.includes('may have emptied'), added?.because);
+    assert.equal(added?.status, 'RESOLVED');
+    assert.ok(added?.because.includes('probably emptied'), added?.because);
+    assert.ok(l.decisions.some((d) => d.kind === 'warning' && d.message.includes('probably fail')));
   });
   it('keeps the checks of a conditional pointing at the right expectations after one check became several', () => {
     const l = understandCase(

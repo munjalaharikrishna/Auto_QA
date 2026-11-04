@@ -280,6 +280,11 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       });
     }
     for (const s of steps) {
+      // "Click on Browse page": a page is reached through the link to it; the click is on that link (E0.15).
+      if (s.action === 'CLICK' && s.target?.ontology === 'Page') {
+        s.target = { ...s.target, ontology: 'Link' };
+        s.decisions.push(`"${s.target.name ?? s.target.label}" page: the click is on the link to it`);
+      }
       // "Click on Employee Name": a record's name, not a button. Which record is for a person to say (owner, 4 Nov 2026).
       const recordOf = s.action === 'CLICK' && s.target?.ontology === 'Element' ? recordNameOf(s.target.name) : undefined;
       if (recordOf) {
@@ -315,6 +320,20 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         : `"wait ${ms} ms" is "until the page is idle, for at most ${ms} ms": never a fixed sleep`,
     );
     return done([step('WAIT', undefined, ms === undefined ? undefined : { kind: 'literal', value: String(ms) })], ms === undefined ? 'GR-01' : 'GR-02');
+  }
+
+  // "Enter BookMarket URL ---> https://…": the address of an application, named before it, is where to go, not a value to type.
+  // "Enter https://x.test in the Website field" still types: the address comes first (E0.15).
+  if ((hit?.verb === 'enter' || hit?.verb === 'type') && hit) {
+    const at = clause.tokens.findIndex((t) => t.kind === 'URL');
+    const named = clause.tokens
+      .slice(i + hit.length, Math.max(at, 0))
+      .filter((t) => t.kind === 'WORD')
+      .map((t) => lw(t));
+    if (at > i + hit.length && ['url', 'address', 'link'].includes(named[named.length - 1] ?? '')) {
+      decisions.push(`"${named.join(' ')}" names the address to open`);
+      return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' }, { kind: 'literal', value: (clause.tokens[at] as Token).text })], 'GR-02');
+    }
   }
 
   // Phrases of the Navigation category: "open browser", "launch the application", "enter URL for X", "go back".

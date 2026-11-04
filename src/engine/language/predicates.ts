@@ -420,8 +420,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
   // (Not for "removed"/"changed": what they say about the entered data is not what the reference check compares.)
   if (hit && hit.def.kind !== 'DELETED' && hit.def.kind !== 'CHANGED') {
     const describing = new Set<Kind>(adjectives ?? []);
-    for (let k = 1; k < hit.start; k++) {
-      if (!['the', 'these', 'those', 'all', 'each', 'any', 'a', 'an'].includes(words[k - 1] ?? '')) continue;
+    // "Entered text boxes and uploaded photo should empty": the first word, and the first word of an item of a list, describe too (E0.15).
+    for (let k = 0; k < hit.start; k++) {
+      if (k > 0 && !['the', 'these', 'those', 'all', 'each', 'any', 'a', 'an', 'and', 'or', ','].includes(words[k - 1] ?? '')) continue;
       const inner = findPredicate([words[k] as string]);
       if (inner && inner.def.kind !== hit.def.kind) describing.add(inner.def.kind);
     }
@@ -712,6 +713,17 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'VISIBLE':
     case 'SHOWS': {
       const hidden = kind === 'HIDDEN';
+      // "The actual password text is not visible": what is typed in a password field is hidden because the field masks it. That is
+      // the masked check; "not visible" could never fail on a masked field (owner, 4 Nov 2026).
+      const typed = subjectNp?.words ?? [];
+      if (
+        (hidden || (kind === 'VISIBLE' && negated)) &&
+        typed.includes('password') &&
+        typed.some((w) => ['text', 'value', 'characters', 'entered', 'typed'].includes(w))
+      ) {
+        out.push(make({ type: 'MASKED', target: { ontology: 'Password', name: 'Password' }, expect: 'MASKED', check: 'masked' }, kind === 'VISIBLE'));
+        break;
+      }
       // "The Job Title field shows "Engineer"": a field that shows a value holds it. It is a check of the field, not a message (E0.15).
       const shownValue =
         kind === 'SHOWS' && subjectNp?.headClass && VALUE_HOLDERS.has(subjectNp.headClass) && after.length === 1 && after[0]?.kind === 'LITERAL'

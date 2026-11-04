@@ -352,6 +352,7 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     c.whenFalse = c.whenFalse.flatMap((id) => refs.expectationMap[id] ?? [id]);
   }
   for (const message of refs.decisions) decisions.push({ kind: 'decision', message });
+  for (const message of refs.warnings) decisions.push({ kind: 'warning', message });
   const states = validateStates(steps, expectations, loggedIn ? 'DASHBOARD' : undefined);
   steps.splice(0, steps.length, ...states.steps);
   issues.push(...states.issues);

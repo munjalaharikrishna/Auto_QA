@@ -31,7 +31,7 @@ Readings follow the earlier gold sets: a browser-opening line is set aside; a ch
 | 9 | Enter valid First name in First name text box. Note: Text box should accept only alphabets | ENTER_VALUE **First Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
 | 10 | Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets | ENTER_VALUE **Middle Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
 | 11 | Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets | ENTER_VALUE **Nick Name** (value: VALID) | the Note is a rule of the field (letters only), not the value | |
-| 12 | upload a photo by clicking upload button | UPLOAD **Photograph** | the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed | |
+| 12 | upload a photo by clicking upload button | UPLOAD **upload button** | a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026) | |
 | 13 | Entered text boxes and uploaded photo should empty by clicking reset | CLICK **Reset** | the action inside a sentence written as a check; the check is the expected result that goes with it | |
 | 14 | Click on Save | CLICK **Save** | TRAP: in these cases Reset (the step before) has just emptied the form, so this Save sends an empty form. The reading is still a click on Save | |
 | 15 | To checking the added data in personal information page | **a person decides** | a check written as a step: its reading is the expected result that goes with it | |
@@ -65,10 +65,10 @@ Readings follow the earlier gold sets: a browser-opening line is set aside; a ch
 | 5 | User should add button in employee information section | **a person decides** | 'should add button' does not say what to check; the engine does not guess that it means 'should see the Add button' (owner, 3 Nov 2026). The check comes from the step | |
 | 6 | User should navigate to Add Employee page/popup | URL **Add Employee** | a screen name ('page/popup': whichever it is) | |
 | 7 | Text box should accept values | VALUE **the field of its step** | the field of the step it belongs to holds the value typed | |
-| 8 | Upload button should accept photo | VALUE **Photograph** | the photo file input holds the chosen file | |
-| 9 | User should see the empty text boxes and uploaded photo | VALUE **each field filled in before (empty)** | every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger) | |
+| 8 | Upload button should accept photo | STATE **upload button** | the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026) | |
+| 9 | User should see the empty text boxes and uploaded photo | VALUE **each field filled in before (empty)** | every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger) | |
 | 10 | User should naviagte to Personal Information page | URL **Personal Information** | a page name ('naviagte' is a typo) | |
-| 11 | User should see added data | TEXT **Personal Information** | the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see | |
+| 11 | User should see added data | VALUE **each field filled in before (holds its value)** | each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026 | |
 | 12 | User should navigate to Employee Information page | URL **Employee Information** | a page name | |
 | 13 | User should naviagte to Employment section | **a person decides** | the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026) | |
 | 14 | Respective fileds should accept the values | VALUE **Job Title** | each field of the step holds the value chosen | |

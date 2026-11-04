@@ -1502,8 +1502,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           }
         ],
         "expectations": [
@@ -1644,10 +1644,10 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           }
         ]
       }
@@ -1740,8 +1740,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -1888,52 +1888,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded\nphoto",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           }
         ]
       }
@@ -2026,8 +2026,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -2180,52 +2180,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -2325,8 +2325,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -2484,52 +2484,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -2540,10 +2540,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           }
         ]
       }
@@ -2636,8 +2671,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -2800,52 +2835,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -2856,10 +2891,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",
@@ -2959,8 +3029,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -3128,52 +3198,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -3184,10 +3254,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",
@@ -3292,8 +3397,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -3489,52 +3594,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -3545,10 +3650,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",
@@ -3672,8 +3812,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -3875,52 +4015,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -3931,10 +4071,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",
@@ -4063,8 +4238,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -4271,52 +4446,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -4327,10 +4502,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",
@@ -4464,8 +4674,8 @@
           {
             "original": "upload a photo by clicking upload button",
             "action": "UPLOAD",
-            "target": "Photograph",
-            "why": "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed"
+            "target": "upload button",
+            "why": "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "Entered text boxes and uploaded photo should empty by clicking reset",
@@ -4682,52 +4892,52 @@
           },
           {
             "original": "Upload button should accept photo",
-            "type": "VALUE",
+            "type": "STATE",
             "negated": false,
-            "target": "Photograph",
-            "why": "the photo file input holds the chosen file"
+            "target": "upload button",
+            "why": "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Code",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Last Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "First Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Middle Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
             "type": "VALUE",
             "negated": false,
             "target": "Nick Name",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should see the empty text boxes and uploaded photo",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Photograph",
-            "why": "every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)"
+            "type": "STATE",
+            "negated": true,
+            "target": "upload button",
+            "why": "every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)"
           },
           {
             "original": "User should naviagte to Personal Information page",
@@ -4738,10 +4948,45 @@
           },
           {
             "original": "User should see added data",
-            "type": "TEXT",
+            "type": "VALUE",
             "negated": false,
-            "target": "Personal Information",
-            "why": "the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see"
+            "target": "Code",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Last Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "First Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Middle Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "VALUE",
+            "negated": false,
+            "target": "Nick Name",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
+          },
+          {
+            "original": "User should see added data",
+            "type": "STATE",
+            "negated": false,
+            "target": "upload button",
+            "why": "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026"
           },
           {
             "original": "User should navigate to Employee Information page",

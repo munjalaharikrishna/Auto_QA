@@ -39,6 +39,8 @@ export interface RefOutput {
   issues: Issue[];
   references: IrReference[];
   decisions: string[];
+  /** What the report must point out: a check that is read as written although an earlier step probably makes it fail. */
+  warnings: string[];
 }
 
 const PRONOUNS: ReadonlySet<string> = new Set(['it', 'them', 'this', 'that', 'these', 'those']);
@@ -63,6 +65,7 @@ export function resolveReferences(input: RefInput): RefOutput {
   const origin = new Map<IrExpectation, string[]>(expectations.map((e) => [e, [e.id]]));
   const references: IrReference[] = [];
   const decisions: string[] = [];
+  const warnings: string[] = [];
   const contexts = buildContexts(input.testId, steps, expectations, { loggedIn: input.loggedIn });
   const resolved = new Set<Issue>();
   /** Items already replaced by checks on what was entered: a second word of the same clause points at the same thing. */
@@ -78,7 +81,7 @@ export function resolveReferences(input: RefInput): RefOutput {
     s.action === 'NAVIGATE' || expectations.some((e) => e.afterStep === s.id && e.condition.type === 'URL' && e.condition.expect !== 'UNCHANGED' && !e.negated);
 
   /** What was entered since the page was opened, up to the last Save before `index` (or up to `index` when nothing was saved yet). */
-  function enteredGroup(index: number, needsSave: boolean): { group: EnteredValue[]; why: string; ok: boolean } {
+  function enteredGroup(index: number, needsSave: boolean): { group: EnteredValue[]; why: string; ok: boolean; wiped?: IrStep } {
     let end = Math.min(index, steps.length);
     if (needsSave) {
       let save = -1;
@@ -102,8 +105,15 @@ export function resolveReferences(input: RefInput): RefOutput {
     const wiped = needsSave
       ? span.find((s, k) => start + k > firstEntered && (s.action === 'CLEAR' || (s.action === 'CLICK' && WIPES.has(nameOf(s.target).toLowerCase()))))
       : undefined;
-    if (wiped) return { group, ok: false, why: `${wiped.id} ("${wiped.original}") may have emptied what was entered before it was saved` };
     const saved = needsSave ? `, saved by ${steps[end]?.id}` : '';
+    // Reset before Save: the check is read as the tester wrote it, and the run shows whether it holds (owner, 4 Nov 2026).
+    if (wiped)
+      return {
+        group,
+        ok: true,
+        wiped,
+        why: `entered in ${group.map((g) => g.step).join(', ')}${saved}; ${wiped.id} ("${wiped.original}") probably emptied them before the save`,
+      };
     return { group, ok: true, why: `entered in ${group.map((g) => g.step).join(', ')}${saved}` };
   }
 
@@ -270,12 +280,16 @@ export function resolveReferences(input: RefInput): RefOutput {
       }
       const mine = runOf(e);
       const at = e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
-      const { group, ok, why } = enteredGroup(at, SAVED_DATA.has(word) || word === 'same');
+      const { group, ok, why, wiped } = enteredGroup(at, SAVED_DATA.has(word) || word === 'same');
       if (!ok) {
         add({ phrase, kind: 'ENTERED_DATA', status: 'UNRESOLVED', steps: group.map((g) => g.step), values: [], because: why });
         continue;
       }
       const empty = mine.some((m) => m.condition.type === 'VALUE' && m.condition.expect === '');
+      if (wiped && !empty)
+        warnings.push(
+          `"${phrase}": ${wiped.id} ("${wiped.original}") empties what was entered before it is saved, so this check will probably fail. It is checked as written.`,
+        );
       replaceRun(mine, checksOn(group, e, empty));
       consumed.add(issue.item as string);
       add({ phrase, kind: 'ENTERED_DATA', status: 'RESOLVED', steps: group.map((g) => g.step), values: empty ? [] : group.map((g) => g.value), because: why });
@@ -341,7 +355,7 @@ export function resolveReferences(input: RefInput): RefOutput {
     e.id = `E${i + 1}`;
     for (const old of stood) (expectationMap[old] ??= []).push(e.id);
   });
-  return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions };
+  return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions, warnings };
 }
 
 const LISTS: ReadonlySet<string> = new Set(['table', 'list', 'grid', 'results', 'listing', 'records', 'directory']);

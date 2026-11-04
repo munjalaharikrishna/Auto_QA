@@ -25,6 +25,7 @@ type Reading<T> = Array<Omit<T, 'original'>>;
 /** Placeholders for readings that depend on where the sentence stands in the case (see `inContext`). */
 const FIELD_OF_STEP = '<field of its step>';
 const FIELDS_BEFORE = '<every field filled in before>';
+const FIELDS_KEPT = '<every field filled in before, still holding its value>';
 const CHECK_AS_STEP = 'a check written as a step: its reading is the expected result that goes with it';
 const TABS = ['Admin', 'PIM', 'Leave', 'Time', 'Benefits', 'Recruitment', 'Reports', 'Bug Tracker', 'Help'];
 
@@ -85,7 +86,11 @@ const STEPS: Record<string, Reading<GoldStep>> = {
     { action: 'ENTER_VALUE', target: 'Nick Name', value: { class: 'VALID' }, why: 'the Note is a rule of the field (letters only), not the value' },
   ],
   'upload a photo by clicking upload button': [
-    { action: 'UPLOAD', target: 'Photograph', why: "the photo file input; 'by clicking upload button' is how a person does it. No file is named: a valid image is needed" },
+    {
+      action: 'UPLOAD',
+      target: 'upload button',
+      why: "a photo, through the upload button that opens the file chooser. No file is named: any valid image will do. labels corrected to the engine's, same meaning (owner, 4 Nov 2026)",
+    },
   ],
   'Entered text boxes and uploaded photo should empty by clicking reset': [
     {
@@ -157,21 +162,22 @@ const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
   // Placeholder: replaced per case by the field of the step it belongs to (see `inContext`).
   'Text box should accept values': [{ type: 'VALUE', negated: false, target: FIELD_OF_STEP, why: 'the field of the step it belongs to holds the value typed' }],
   'Upload button should accept photo': [
-    { type: 'VALUE', negated: false, target: 'Photograph', why: 'the photo file input holds the chosen file' },
+    { type: 'STATE', negated: false, target: 'upload button', why: "the photo was uploaded (the file field holds it). labels corrected to the engine's, same meaning (owner, 4 Nov 2026)" },
   ],
   // Placeholder: replaced per case by one "is empty" check per field filled in before Reset (see `inContext`).
   'User should see the empty text boxes and uploaded photo': [
-    { type: 'VALUE', negated: false, target: FIELDS_BEFORE, why: 'every field filled in and the photo chosen earlier is empty after Reset (E0.16 ledger)' },
+    { type: 'VALUE', negated: false, target: FIELDS_BEFORE, why: 'every field filled in is empty after Reset, and the photo chosen earlier is no longer uploaded (E0.16 ledger)' },
   ],
   'User should naviagte to Personal Information page': [
     { type: 'URL', negated: false, target: 'Personal Information', why: "a page name ('naviagte' is a typo)" },
   ],
+  // Placeholder: replaced per case by one check per field filled in before (see `inContext`).
   'User should see added data': [
     {
-      type: 'TEXT',
+      type: 'VALUE',
       negated: false,
-      target: 'Personal Information',
-      why: 'the values entered earlier are shown (E0.16 ledger). TRAP: Reset emptied them before Save, so there is no added data to see',
+      target: FIELDS_KEPT,
+      why: "each field filled in before still holds its value, and the photo is uploaded. TRAP: Reset emptied them before Save, so the run shows this fail (read as written). Per-field labels: owner, 4 Nov 2026",
     },
   ],
   'User should navigate to Employee Information page': [
@@ -200,7 +206,12 @@ const fieldsOf = (steps: GoldStep[]) =>
 /** Fills in the placeholders: `step` is the step line the expected result belongs to, `before` the steps up to it. */
 function inContext(e: Omit<GoldExpectation, 'original'>, step: GoldStep[], before: GoldStep[]): Array<Omit<GoldExpectation, 'original'>> {
   if (e.target === FIELD_OF_STEP) return fieldsOf(step).map((target) => ({ ...e, target }));
-  if (e.target === FIELDS_BEFORE) return fieldsOf(before).map((target) => ({ ...e, target }));
+  // A photo is emptied by being no longer uploaded; a text box by holding nothing (upload labels: owner, 4 Nov 2026).
+  const uploaded = new Set(before.filter((s) => s.action === 'UPLOAD').map((s) => s.target));
+  if (e.target === FIELDS_KEPT)
+    return fieldsOf(before).map((target) => (uploaded.has(target) ? { ...e, type: 'STATE' as const, target } : { ...e, target }));
+  if (e.target === FIELDS_BEFORE)
+    return fieldsOf(before).map((target) => (uploaded.has(target) ? { ...e, type: 'STATE' as const, negated: true, target } : { ...e, target }));
   return [e];
 }
 
@@ -245,7 +256,7 @@ const stepRow = (r: Omit<GoldStep, 'original'>) =>
 const expRow = (r: Omit<GoldExpectation, 'original'>) =>
   r.abstain
     ? '**a person decides**'
-    : `${r.type}${r.negated ? ' NOT' : ''} **${r.target === FIELD_OF_STEP ? 'the field of its step' : r.target === FIELDS_BEFORE ? 'each field filled in before (empty)' : cell(r.target)}**`;
+    : `${r.type}${r.negated ? ' NOT' : ''} **${r.target === FIELD_OF_STEP ? 'the field of its step' : r.target === FIELDS_BEFORE ? 'each field filled in before (empty)' : r.target === FIELDS_KEPT ? 'each field filled in before (holds its value)' : cell(r.target)}**`;
 const table = <T>(rows: Record<string, Reading<T>>, show: (r: Omit<T, 'original'>) => string) =>
   Object.entries(rows)
     .filter(([k], i, all) => all.findIndex(([x]) => key(x) === key(k)) === i)

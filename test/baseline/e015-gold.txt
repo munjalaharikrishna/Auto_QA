@@ -60,3 +60,14 @@ Gold set: 701 clauses, confident-mistake rate 8% (target 0%)
   steps: 205 of 241 right, 16 wrong, 20 set aside that a person could read, 0 missed, 10 extra (precision 89%, recall 85%, F1 87%)
   expectations: 425 of 460 right, 28 wrong, 7 set aside that a person could read, 0 missed, 4 extra (precision 93%, recall 92%, F1 93%)
 BookMarket (draft): Gold set (DRAFT: nobody has checked it yet): 34 clauses, confident-mistake rate 22% (target 0%)
+
+## Steps 4 and 5 (4 Nov 2026): E0.15 exit tests
+### orangehrm-login (signed)
+Gold set: 60 clauses, confident-mistake rate 0% (target 0%)
+  steps: 40 of 40 right, 0 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 100%, recall 100%, F1 100%)
+  expectations: 20 of 20 right, 0 wrong, 0 set aside that a person could read, 0 missed, 3 extra (precision 87%, recall 100%, F1 93%)
+### orangehrm-add-employee (signed)
+Gold set: 736 clauses, confident-mistake rate 4% (target 0%)
+  steps: 225 of 241 right, 16 wrong, 0 set aside that a person could read, 0 missed, 0 extra (precision 93%, recall 93%, F1 93%)
+  expectations: 486 of 495 right, 9 wrong, 0 set aside that a person could read, 0 missed, 4 extra (precision 97%, recall 98%, F1 98%)
+Together: 771 of 796 clauses read as approved (97%, target 90%). Lint: 506 lines, all with a status, every vague line with a suggestion.

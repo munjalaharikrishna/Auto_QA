@@ -297,3 +297,47 @@ describe('E0.15 the engine asks where a person decides', () => {
     assert.ok(l.ir?.expectations.some((e) => e.clause.includes('added data') && e.condition.type === 'VALUE'));
   });
 });
+
+/** Step 4 (4 Nov 2026): readings fixed from the text alone, and the owner's "read the trap as written". */
+describe('E0.15 step 4: photos, the Reset trap, addresses and pages', () => {
+  const read = (text: string, mode: 'step' | 'expected' = 'step') => understandLine(text, { data: [], facts: new Map(), mode });
+  const caseOf = (steps: string[], expected: string[]) =>
+    understandCase({ id: 'T-S4', title: 's4', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected: expected.join('\n') });
+
+  it('"Entered text boxes and uploaded photo should empty" is a check on what was entered, not a check with no element', () => {
+    const r = read('Entered text boxes and uploaded photo should empty');
+    assert.ok(r.expectations.length > 0);
+    assert.ok(!r.issues.some((i) => i.code === 'AMBIGUOUS'), JSON.stringify(r.issues));
+    assert.ok(r.issues.some((i) => i.code === 'NEEDS_REFERENCE'));
+  });
+
+  it('a valid photo can be given without asking (the engine has a sample image); a valid résumé cannot', async () => {
+    const { canMakeUp, SAMPLE_IMAGE } = await import('./data/resolver.js');
+    const { existsSync } = await import('node:fs');
+    assert.ok(canMakeUp('VALID', 'photo'));
+    assert.ok(canMakeUp('VALID', 'Profile Image'));
+    assert.ok(!canMakeUp('VALID', 'resume file'));
+    assert.ok(!canMakeUp('VALID', 'password'));
+    assert.ok(existsSync(SAMPLE_IMAGE));
+  });
+
+  it('data entered, then Reset, then Save: the check is read as written, with a warning that it will probably fail', () => {
+    const l = caseOf(['Enter "Asha" in the First Name field', 'Click on Reset', 'Click on Save'], ['User should see added data']);
+    assert.ok(l.ir?.expectations.some((e) => e.condition.type === 'VALUE' && e.condition.target?.name === 'First Name'));
+    assert.ok(!l.issues.some((i) => i.code === 'NEEDS_REFERENCE'), JSON.stringify(l.issues));
+    assert.ok(l.decisions.some((d) => d.kind === 'warning' && d.message.includes('probably fail')));
+  });
+
+  it('"Enter <App> URL ---> https://…" opens the address; "Enter https://… in the Website field" types it', () => {
+    const go = read('Enter BoookMarket URL--->https://book-market.test/login').steps[0];
+    assert.equal(go?.action, 'NAVIGATE');
+    assert.deepEqual(go?.value, { kind: 'literal', value: 'https://book-market.test/login' });
+    assert.equal(read('Enter https://x.test in the Website field').steps[0]?.action, 'ENTER_VALUE');
+  });
+
+  it('a "home" page right after the application opens is its public home page, not the logged-in dashboard', () => {
+    const l = caseOf(['Enter the application URL https://shop.test', 'Click on Browse page'], ['User should navigate to Shop Home Page']);
+    assert.ok(!l.issues.some((i) => i.code === 'PARADOX'), JSON.stringify(l.issues));
+    assert.equal(l.ir?.steps.find((s) => s.original.includes('Browse'))?.target?.ontology, 'Link');
+  });
+});

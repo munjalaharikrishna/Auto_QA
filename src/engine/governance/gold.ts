@@ -282,7 +282,7 @@ export function readingOfLanguage(lang: CaseLanguage): CaseReading {
 const bare = (s: string): string => (norm(s).startsWith('verify ') ? norm(s).slice('verify '.length) : norm(s));
 
 /** Takes the first reading of the engine with the same words that no gold clause has taken yet. */
-function take(pool: Reading[], taken: Set<Reading>, words: string): Reading | undefined {
+function take(pool: Reading[], taken: Set<Reading>, words: string, part = false): Reading | undefined {
   const w = bare(words);
   // The gold keeps the tester's whole line; the engine sets a trailing note or sentence apart ("… text box. Note: accepts only
   // letters"). The head of the line is the step, so it matches when what is left starts a note or a new sentence.
@@ -294,7 +294,16 @@ function take(pool: Reading[], taken: Set<Reading>, words: string): Reading | un
     const rest = g.slice(o.length).trim();
     return rest.startsWith('.') || rest.startsWith(';') || (rest.startsWith('note') && rest.slice('note'.length).trim().startsWith(':'));
   };
-  const found = pool.find((c) => !taken.has(c) && bare(c.original) === w) ?? pool.find((c) => !taken.has(c) && head(c));
+  // "Entered text boxes … should empty by clicking reset": the engine keeps the part it acted on ("clicking reset"). The gold line holds it
+  // as whole words, so it is the same sentence (steps only, and only when nothing matched it more closely).
+  const inside = (c: Reading): boolean => {
+    const o = bare(c.original);
+    return o.split(' ').length >= 2 && ` ${w} `.includes(` ${o} `);
+  };
+  const found =
+    pool.find((c) => !taken.has(c) && bare(c.original) === w) ??
+    pool.find((c) => !taken.has(c) && head(c)) ??
+    (part ? pool.find((c) => !taken.has(c) && inside(c)) : undefined);
   if (found) taken.add(found);
   return found;
 }
@@ -338,7 +347,7 @@ export function scoreCase(c: GoldCase, reading: CaseReading | undefined): { clau
     return { ...meta, outcome: diff.length ? 'wrong' : 'correct', differences: diff };
   };
 
-  for (const g of c.gold.steps) clauses.push(one('step', g, take(steps, takenS, g.original)));
+  for (const g of c.gold.steps) clauses.push(one('step', g, take(steps, takenS, g.original, true)));
   for (const g of c.gold.expectations) clauses.push(one('expectation', g, take(exps, takenE, g.original)));
   return {
     clauses,
