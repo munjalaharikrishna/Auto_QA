@@ -44,3 +44,8 @@ Gold set (DRAFT: nobody has checked it yet): 701 clauses, confident-mistake rate
   steps: 124 of 241 right, 19 wrong, 98 set aside that a person could read, 0 missed, 11 extra (precision 81%, recall 51%, F1 63%)
   expectations: 409 of 460 right, 44 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 87%, recall 89%, F1 88%)
 Login and BookMarket unchanged. Left extra: 19 update-case field checks (one per field incl. Supervisor).
+
+## Add Employee gold signed by the owner (4 Nov 2026), slot grammar and lint in place
+Gold set: 701 clauses, confident-mistake rate 15% (target 0%)
+  steps: 124 of 241 right, 24 wrong, 93 set aside that a person could read, 0 missed, 11 extra (precision 78%, recall 51%, F1 62%)
+  expectations: 400 of 460 right, 53 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 85%, recall 87%, F1 86%)

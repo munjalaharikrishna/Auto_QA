@@ -1,7 +1,10 @@
 {
   "version": "G0.2",
-  "review": null,
-  "about": "DRAFT by Claude (3 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM Add Employee workbook means, worked out from the tester's words and the OrangeHRM 2.5 screens, never from the engine's output. Not reviewed: the owner checks each reading (above all the abstains and the \"why\"), corrects it, then fills in `review`. Built by test/gold/make-add-employee-gold.ts. Run: npm run engine:gold -- test/gold/orangehrm-add-employee.gold.json --draft",
+  "review": {
+    "checkedBy": "harikrishnamunjala@brightcone.ai (owner)",
+    "checkedOn": "2026-11-04"
+  },
+  "about": "Drafted by Claude (3 Nov 2026) and checked by the owner (3-4 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM Add Employee workbook means, worked out from the tester's words and the OrangeHRM 2.5 screens, never from the engine's output. Built by test/gold/make-add-employee-gold.ts. Run: npm run engine:gold -- test/gold/orangehrm-add-employee.gold.json",
   "cases": [
     {
       "id": "21022024_1",
@@ -2983,9 +2986,8 @@
           },
           {
             "original": "Click on Employee Name",
-            "action": "CLICK",
-            "target": "Employee Name",
-            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           }
         ],
         "expectations": [
@@ -3196,10 +3198,8 @@
           },
           {
             "original": "User should naviagte to Employment section",
-            "type": "URL",
-            "negated": false,
-            "target": "Employment",
-            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)"
           }
         ]
       }
@@ -3319,9 +3319,8 @@
           },
           {
             "original": "Click on Employee Name",
-            "action": "CLICK",
-            "target": "Employee Name",
-            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -3343,12 +3342,8 @@
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
-            "action": "SELECT",
-            "target": "Sub Division",
-            "value": {
-              "class": "VALID"
-            },
-            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -3564,10 +3559,8 @@
           },
           {
             "original": "User should naviagte to Employment section",
-            "type": "URL",
-            "negated": false,
-            "target": "Employment",
-            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Respective fileds should accept the values",
@@ -3585,10 +3578,8 @@
           },
           {
             "original": "Respective fileds should accept the values",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Sub Division",
-            "why": "each field of the step holds the value chosen"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           }
         ]
       }
@@ -3708,9 +3699,8 @@
           },
           {
             "original": "Click on Employee Name",
-            "action": "CLICK",
-            "target": "Employee Name",
-            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -3732,12 +3722,8 @@
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
-            "action": "SELECT",
-            "target": "Sub Division",
-            "value": {
-              "class": "VALID"
-            },
-            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -3959,10 +3945,8 @@
           },
           {
             "original": "User should naviagte to Employment section",
-            "type": "URL",
-            "negated": false,
-            "target": "Employment",
-            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Respective fileds should accept the values",
@@ -3980,10 +3964,8 @@
           },
           {
             "original": "Respective fileds should accept the values",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Sub Division",
-            "why": "each field of the step holds the value chosen"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "User should updated the data",
@@ -4108,9 +4090,8 @@
           },
           {
             "original": "Click on Employee Name",
-            "action": "CLICK",
-            "target": "Employee Name",
-            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -4132,12 +4113,8 @@
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
-            "action": "SELECT",
-            "target": "Sub Division",
-            "value": {
-              "class": "VALID"
-            },
-            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -4364,10 +4341,8 @@
           },
           {
             "original": "User should naviagte to Employment section",
-            "type": "URL",
-            "negated": false,
-            "target": "Employment",
-            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Respective fileds should accept the values",
@@ -4385,10 +4360,8 @@
           },
           {
             "original": "Respective fileds should accept the values",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Sub Division",
-            "why": "each field of the step holds the value chosen"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "User should updated the data",
@@ -4397,10 +4370,8 @@
           },
           {
             "original": "User should see the same updated records",
-            "type": "TEXT",
-            "negated": false,
-            "target": "the employee's row",
-            "why": "the list row of the employee shows the values updated earlier (E0.16 ledger, a row: E0.17). 'same' points back to them"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           }
         ]
       }
@@ -4520,9 +4491,8 @@
           },
           {
             "original": "Click on Employee Name",
-            "action": "CLICK",
-            "target": "Employee Name",
-            "why": "the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -4544,12 +4514,8 @@
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
-            "action": "SELECT",
-            "target": "Sub Division",
-            "value": {
-              "class": "VALID"
-            },
-            "why": "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
@@ -4569,9 +4535,8 @@
           },
           {
             "original": "Select preferred Enployee/Employees and Click on Delete Button",
-            "action": "CHECK",
-            "target": "the added employee",
-            "why": "'preferred employee' is the one this case added: its row's checkbox in the list (E0.16 ledger). Never any other employee"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "Select preferred Enployee/Employees and Click on Delete Button",
@@ -4787,10 +4752,8 @@
           },
           {
             "original": "User should naviagte to Employment section",
-            "type": "URL",
-            "negated": false,
-            "target": "Employment",
-            "why": "a section of the employee's details (Job in OrangeHRM 2.5): a screen name"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "Respective fileds should accept the values",
@@ -4808,10 +4771,8 @@
           },
           {
             "original": "Respective fileds should accept the values",
-            "type": "VALUE",
-            "negated": false,
-            "target": "Sub Division",
-            "why": "each field of the step holds the value chosen"
+            "abstain": true,
+            "why": "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)"
           },
           {
             "original": "User should updated the data",
@@ -4820,17 +4781,13 @@
           },
           {
             "original": "User should see the same updated records",
-            "type": "TEXT",
-            "negated": false,
-            "target": "the employee's row",
-            "why": "the list row of the employee shows the values updated earlier (E0.16 ledger, a row: E0.17). 'same' points back to them"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           },
           {
             "original": "User Should succesfully Deleted Employee Data",
-            "type": "VISIBILITY",
-            "negated": true,
-            "target": "the deleted employee's row",
-            "why": "the employee is no longer in the list. OrangeHRM asks to confirm the delete first"
+            "abstain": true,
+            "why": "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)"
           }
         ]
       }

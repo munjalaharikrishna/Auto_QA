@@ -103,17 +103,11 @@ const STEPS: Record<string, Reading<GoldStep>> = {
   ],
   'To checking the added data in personal information page': [{ abstain: true, why: CHECK_AS_STEP }],
   'Click on Back Button': [{ action: 'CLICK', target: 'Back' }],
-  'Click on Employee Name': [
-    {
-      action: 'CLICK',
-      target: 'Employee Name',
-      why: 'the name of the employee added earlier, a link in the Employee Information list (a row: E0.16 ledger, E0.17 rows)',
-    },
-  ],
+  'Click on Employee Name': [{ abstain: true, why: "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)" }],
   'Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section': [
     { action: 'SELECT', target: 'Job Title', value: { class: 'VALID' }, why: "a dropdown on the employee's Job page; no value is given" },
     { action: 'SELECT', target: 'Employment Status', value: { class: 'VALID' }, why: 'a dropdown; no value is given' },
-    { action: 'SELECT', target: 'Sub Division', value: { class: 'VALID' }, why: "OrangeHRM 2.5 calls it 'Sub Unit'; a dropdown; no value is given" },
+    { abstain: true, why: "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)" },
     {
       abstain: true,
       why: "OrangeHRM 2.5 sets a supervisor under 'Report-to', not on the Job page: a person must say what is meant",
@@ -121,11 +115,7 @@ const STEPS: Record<string, Reading<GoldStep>> = {
   ],
   'checking the same updated records in Employee information page': [{ abstain: true, why: CHECK_AS_STEP }],
   'Select preferred Enployee/Employees and Click on Delete Button': [
-    {
-      action: 'CHECK',
-      target: 'the added employee',
-      why: "'preferred employee' is the one this case added: its row's checkbox in the list (E0.16 ledger). Never any other employee",
-    },
+    { abstain: true, why: "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)" },
     { action: 'CLICK', target: 'Delete' },
   ],
 };
@@ -187,18 +177,11 @@ const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
   'User should navigate to Employee Information page': [
     { type: 'URL', negated: false, target: 'Employee Information', why: 'a page name' },
   ],
-  'User should naviagte to Employment section': [
-    {
-      type: 'URL',
-      negated: false,
-      target: 'Employment',
-      why: "a section of the employee's details (Job in OrangeHRM 2.5): a screen name",
-    },
-  ],
+  'User should naviagte to Employment section': [{ abstain: true, why: "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Job'): a person says what is meant (owner, 4 Nov 2026)" }],
   'Respective fileds should accept the values': [
     { type: 'VALUE', negated: false, target: 'Job Title', why: 'each field of the step holds the value chosen' },
     { type: 'VALUE', negated: false, target: 'Employment Status', why: 'each field of the step holds the value chosen' },
-    { type: 'VALUE', negated: false, target: 'Sub Division', why: 'each field of the step holds the value chosen' },
+    { abstain: true, why: "the tester's name is not on the screen word for word (OrangeHRM 2.5 says 'Sub Unit'): a person says what is meant (owner, 4 Nov 2026)" },
   ],
   'User should updated the data': [
     {
@@ -206,22 +189,8 @@ const EXPECTATIONS: Record<string, Reading<GoldExpectation>> = {
       why: "says the data was updated without saying what shows it (a message? the values kept after Save?): a person must say what to check",
     },
   ],
-  'User should see the same updated records': [
-    {
-      type: 'TEXT',
-      negated: false,
-      target: "the employee's row",
-      why: "the list row of the employee shows the values updated earlier (E0.16 ledger, a row: E0.17). 'same' points back to them",
-    },
-  ],
-  'User Should succesfully Deleted Employee Data': [
-    {
-      type: 'VISIBILITY',
-      negated: true,
-      target: "the deleted employee's row",
-      why: 'the employee is no longer in the list. OrangeHRM asks to confirm the delete first',
-    },
-  ],
+  'User should see the same updated records': [{ abstain: true, why: "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)" }],
+  'User Should succesfully Deleted Employee Data': [{ abstain: true, why: "a person picks which employee; the engine does not assume it is the one this case added (owner, 4 Nov 2026)" }],
 };
 
 /** The fields a step puts a value in. */
@@ -245,9 +214,9 @@ const stepText = (line: string) => line.replace(/^\s*\d+\.\s*/, '').trim();
 const book = await readWorkbook(path.join(root, SOURCE));
 const set: GoldSet = {
   version: 'G0.2',
-  review: null,
+  review: { checkedBy: 'harikrishnamunjala@brightcone.ai (owner)', checkedOn: '2026-11-04' },
   about:
-    'DRAFT by Claude (3 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM Add Employee workbook means, worked out from the tester\'s words and the OrangeHRM 2.5 screens, never from the engine\'s output. Not reviewed: the owner checks each reading (above all the abstains and the "why"), corrects it, then fills in `review`. Built by test/gold/make-add-employee-gold.ts. Run: npm run engine:gold -- test/gold/orangehrm-add-employee.gold.json --draft',
+    'Drafted by Claude (3 Nov 2026) and checked by the owner (3-4 Nov 2026), for the E0.15 exit test. What each step and expected result of the OrangeHRM Add Employee workbook means, worked out from the tester\'s words and the OrangeHRM 2.5 screens, never from the engine\'s output. Built by test/gold/make-add-employee-gold.ts. Run: npm run engine:gold -- test/gold/orangehrm-add-employee.gold.json',
   cases: book.cases.map((c) => {
     const lines = c.raw.steps.split('\n').map(stepText).filter(Boolean);
     const perLine: GoldStep[][] = lines.map((original) => lookup(STEPS, original).map((r) => ({ original, ...r })));
@@ -286,13 +255,15 @@ const table = <T>(rows: Record<string, Reading<T>>, show: (r: Omit<T, 'original'
     .join('\n');
 const review = `# Gold readings to review: OrangeHRM Add Employee (E0.15)
 
-DRAFT by Claude, 3 Nov 2026. The E0.15 exit test measures the engine against these readings (at least 90% of sentences read as approved), so they must be **yours**, not mine. Each distinct sentence of the 19 cases is below once; the 19 cases are built from them by \`test/gold/make-add-employee-gold.ts\`.
+Drafted by Claude on 3 Nov 2026, **checked by the owner on 3-4 Nov 2026**. The E0.15 exit test measures the engine against these readings (at least 90% of sentences read as approved), so they must be **yours**, not mine. Each distinct sentence of the 19 cases is below once; the 19 cases are built from them by \`test/gold/make-add-employee-gold.ts\`.
 
 **How to review:** for each row, write OK in the last column, or what it should be. "A person decides" means the engine must not guess: it asks. When you are done, the readings are corrected and \`review\` is filled in with your name.
 
 Readings follow the earlier gold sets: a browser-opening line is set aside; a check written as a step ("Checking…") is set aside as a step, and its reading is the expected result that goes with it; a page name ("navigate to … page") is a URL check on that page.
 
-**Your answers so far (3 Nov 2026):** "User Should see tabs" is one check per tab named in the step (9 checks). The engine does not guess that "User should add button…" means "should see the Add button": that sentence is set aside, and the check is read from the step "Under Employee Information Section there should be add button" instead (below).
+**Owner's answers (4 Nov 2026):** a step with no value (\"Enter valid Last name\") counts as read: the engine makes up a valid value. Supervisor and \"User should updated the data\" are for a person to decide. Which employee to click, select, delete or look for is for a person to decide. Names that are not on the screen word for word (Sub-Division is Sub Unit, the Employment section is Job) are for a person to decide. The Reset-then-Save trap is read as written, and so is LAYOUT for the login box. Every other row is OK.
+
+**Owner's answers (3 Nov 2026):** "User Should see tabs" is one check per tab named in the step (9 checks). The engine does not guess that "User should add button…" means "should see the Add button": that sentence is set aside, and the check is read from the step "Under Employee Information Section there should be add button" instead (below).
 
 ## Checks read from a step
 
