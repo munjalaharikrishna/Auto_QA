@@ -324,6 +324,8 @@ const TYPOS: Readonly<Record<string, string>> = {
   filed: 'field',
   enployee: 'employee',
   employement: 'employment',
+  preffered: 'preferred',
+  prefered: 'preferred',
   benfits: 'benefits',
   oragne: 'orange',
   verfiy: 'verify',

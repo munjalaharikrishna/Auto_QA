@@ -247,3 +247,53 @@ describe('E0.15: one verb table for the clause parser and the grammar (audit U3,
     assert.deepEqual(shape('Leave the Code field blank'), [['ENTER_VALUE', 'Code', { kind: 'blank' }]]);
   });
 });
+
+/** Step 3 (owner, 4 Nov 2026): where the tester's words do not say which one, the engine asks instead of choosing. */
+describe('E0.15 the engine asks where a person decides', () => {
+  const caseOf = (steps: string[], expected: string[]) =>
+    understandCase({ id: 'T-ASK', title: 'ask', steps: steps.map((s, i) => `${i + 1}. ${s}`).join('\n'), expected: expected.join('\n') });
+  const asked = (l: ReturnType<typeof caseOf>, original: string) =>
+    l.issues.some((i) => i.severity !== 'info' && (i.original ?? '').toLowerCase().includes(original.toLowerCase()));
+
+  it('opening the browser is setup: no step and no check, but opening the application is a step', () => {
+    const l = caseOf(
+      ['Open Browser', 'Open the application', 'Click on Login'],
+      ['User should open browser', 'Browser should be Opened', 'User should navigate to Dashboard page'],
+    );
+    assert.deepEqual(
+      l.ir?.steps.map((s) => s.original),
+      ['Open the application', 'Click on Login'],
+    );
+    assert.ok(!l.ir?.expectations.some((e) => e.clause.toLowerCase().includes('browser')));
+    assert.ok(!l.issues.some((i) => i.severity !== 'info' && (i.original ?? '').toLowerCase().includes('browser')), JSON.stringify(l.issues));
+  });
+
+  it('"Click on Employee Name" asks which employee; a field name such as First Name does not', () => {
+    const l = caseOf(['Click on Employee Name', 'Click on First Name', 'Click on Save'], ['Employee is saved']);
+    assert.ok(asked(l, 'Click on Employee Name'));
+    assert.ok(!asked(l, 'Click on First Name'));
+  });
+
+  it('"preferred" with no value asks which one, in a step and in a check', () => {
+    const l = caseOf(['Select the preffered stream', 'Select "Science" in the preferred Stream dropdown'], ['Preffered stream should be selected']);
+    assert.ok(asked(l, 'Select the preffered stream'));
+    assert.ok(!asked(l, 'Select "Science"'));
+    assert.ok(asked(l, 'Preffered stream should be selected'));
+  });
+
+  it('a change with nothing that shows it, and a record nobody named, are questions; "see added data" still reads', () => {
+    const l = caseOf(
+      ['Enter "Asha" in the First Name field', 'Click on Save'],
+      [
+        'User should updated the data',
+        'User should see the same updated records',
+        'User Should succesfully Deleted Employee Data',
+        'User should see added data',
+      ],
+    );
+    assert.ok(asked(l, 'User should updated the data'));
+    assert.ok(asked(l, 'same updated records'));
+    assert.ok(asked(l, 'Deleted Employee Data'));
+    assert.ok(l.ir?.expectations.some((e) => e.clause.includes('added data') && e.condition.type === 'VALUE'));
+  });
+});

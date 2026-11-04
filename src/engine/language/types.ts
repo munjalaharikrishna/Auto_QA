@@ -49,6 +49,8 @@ export interface Issue {
   data?: string;
   /** The step or expectation the issue is about (`S3`, `E7`): the same sentence can stand in many places, so text alone cannot say which. */
   item?: string;
+  /** The line is test setup the run does by itself ("Open Browser"): it is read, and there is nothing to do (a step) or check (a check). */
+  setup?: 'step' | 'check';
 }
 
 /** A value a step needs. */

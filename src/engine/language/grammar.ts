@@ -269,7 +269,28 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
     decisions: [...decisions],
   });
   const done = (steps: Array<Omit<ParsedStep, 'model'>>, model: GrammarModel): ReadAction => {
+    // "Select the preferred stream": which one is preferred is the tester's choice, and the case does not say it (owner, 4 Nov 2026).
+    if (words.includes('preferred') && steps.length && !steps.some((s) => s.value?.kind === 'literal' || s.value?.kind === 'data')) {
+      issues.push({
+        code: 'AMBIGUOUS',
+        severity: 'review',
+        message: 'it says "preferred" but not which one: the engine does not choose for the tester',
+        original,
+        suggestion: 'Write the value: Select "<value>" in the <name> dropdown, or give it in Test Data.',
+      });
+    }
     for (const s of steps) {
+      // "Click on Employee Name": a record's name, not a button. Which record is for a person to say (owner, 4 Nov 2026).
+      const recordOf = s.action === 'CLICK' && s.target?.ontology === 'Element' ? recordNameOf(s.target.name) : undefined;
+      if (recordOf) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `"${s.target?.name}" names no ${recordOf}: which ${recordOf} to open is not said, and the engine does not choose one`,
+          original,
+          suggestion: `Name the ${recordOf}: Click on "<the name>" in the list, or give it in Test Data.`,
+        });
+      }
       const cls = s.target?.ontology;
       if (cls && cls !== 'Element' && !allowsAction(cls, s.action)) {
         issues.push({
@@ -298,8 +319,20 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
 
   // Phrases of the Navigation category: "open browser", "launch the application", "enter URL for X", "go back".
   if (hit?.verb === 'open application') {
-    decisions.push(`"${words.slice(i, i + hit.length).join(' ')}" starts the application`);
     const url = clause.tokens.find((t) => t.kind === 'URL');
+    // "Open Browser": the run opens its own browser. That is the test setup: no step, and no page called "browser" (owner, 3-4 Nov 2026).
+    if (!url && words.slice(i, i + hit.length).includes('browser')) {
+      decisions.push('opening the browser is done by every run: no step is needed');
+      issues.push({
+        code: 'NOT_CHECKED',
+        severity: 'info',
+        setup: 'step',
+        message: 'the run opens its own browser: that is the test setup, so there is no step',
+        original,
+      });
+      return done([], 'GR-01');
+    }
+    decisions.push(`"${words.slice(i, i + hit.length).join(' ')}" starts the application`);
     return done([step('NAVIGATE', { ontology: 'Page', name: 'Application' }, url ? { kind: 'literal', value: url.text } : undefined)], 'GR-01');
   }
   if (hit?.verb === 'go back') return done([step('BACK')], 'GR-01');
@@ -356,6 +389,13 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       // "Open a web browser", "Launch the browser": the run opens its own browser. There is nothing to do, and no page called "browser".
       if (BROWSER_NAMES.has(said)) {
         decisions.push('opening the browser is done by every run: no step is needed');
+        issues.push({
+          code: 'NOT_CHECKED',
+          severity: 'info',
+          setup: 'step',
+          message: 'the run opens its own browser: that is the test setup, so there is no step',
+          original,
+        });
         return done([], 'GR-01');
       }
       // "Navigate to the application", "Open the app": the address the run starts from, however it is spelled.
@@ -1003,6 +1043,30 @@ function scopeOf(tokens: readonly Token[]): { name: string; rest: Token[] } | un
 /** Whether a word stands alone in brackets in the line: "(masked)". */
 function asideSays(tokens: readonly Token[], word: string): boolean {
   return tokens.some((t, k) => isSymbol(t, '(') && lw(tokens[k + 1]) === word && isSymbol(tokens[k + 2], ')'));
+}
+
+/** Words before "name" that make it a field's own name ("First Name", "User Name"), not the name of a record. */
+const NAME_PARTS: ReadonlySet<string> = new Set([
+  'first',
+  'last',
+  'middle',
+  'nick',
+  'full',
+  'sur',
+  'user',
+  'display',
+  'given',
+  'family',
+  'login',
+  'file',
+  'company',
+]);
+
+/** "Employee Name" → "employee": the record a click on "<Thing> Name" would open, when nothing says which one. */
+function recordNameOf(name: string | undefined): string | undefined {
+  const parts = (name ?? '').toLowerCase().split(' ').filter(Boolean);
+  if (parts.length !== 2 || parts[1] !== 'name' || NAME_PARTS.has(parts[0] as string)) return undefined;
+  return parts[0];
 }
 
 const BROWSER_NAMES: ReadonlySet<string> = new Set([

@@ -50,6 +50,7 @@ type Kind =
   | 'VISIBLE'
   | 'SHOWS'
   | 'APP_STARTED'
+  | 'BROWSER_OPENED'
   | 'DEFAULT_PAGE';
 
 interface PredicateDef {
@@ -64,22 +65,22 @@ const p = (kind: Kind, priority: number, ...phrases: string[]): PredicateDef => 
 const last = (def: PredicateDef): PredicateDef => ({ ...def, endOnly: true });
 
 const PREDICATES: readonly PredicateDef[] = [
+  // "User should open browser", "Browser should be opened": the run's own browser, an environment fact the application does
+  // not show. Nothing is checked, and nobody is told the application started (owner, 3-4 Nov 2026).
   p(
-    'APP_STARTED',
-    95,
+    'BROWSER_OPENED',
+    96,
     'open browser',
     'open the browser',
-    'open application',
-    'open the application',
     'launch browser',
-    'launch application',
     'browser opens',
     'browser launches',
     'browser starts',
-    'application opens',
-    'application launches',
-    'application starts',
+    'browser opened',
+    'browser is opened',
+    'browser be opened',
   ),
+  p('APP_STARTED', 95, 'open application', 'open the application', 'launch application', 'application opens', 'application launches', 'application starts'),
   p('MASKED', 90, ...STATE_WORDS.masked),
   p(
     'LAYOUT',
@@ -538,6 +539,15 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     case 'APP_STARTED':
       out.push(make({ type: 'STATE', expect: 'APPLICATION_STARTED' }));
       break;
+    case 'BROWSER_OPENED':
+      issues.push({
+        code: 'NOT_CHECKED',
+        severity: 'info',
+        setup: 'check',
+        message: 'the run opens its own browser: that is the test setup, not something the application shows, so nothing is checked',
+        original: clauseText,
+      });
+      break;
     case 'DEFAULT_PAGE': {
       // "PIM is the default page": the page the application opens on. The name is the subject, as the tester wrote it.
       const name = subjectNp ? subjectNp.original : undefined;
@@ -654,8 +664,28 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       decisions.push(`"${words[hit.start]}" says the data changed; the check is on the state of what changed`);
       // "the added data", "the updated records": which data? Whatever the test case entered; the references say what (RF-01).
       const changedWord = words[hit.start] ?? '';
-      if (kind === 'CHANGED' && np && np.words.length > 0 && np.words.every((w) => GENERIC_DATA.has(w))) {
-        issues.push(refIssue(['added', 'created', 'saved', 'stored'].includes(changedWord) ? 'added' : 'updated', np.original, clauseText));
+      const generic = !!np && np.words.length > 0 && np.words.every((w) => GENERIC_DATA.has(w));
+      // "User should updated the data": it says the data changed but not what shows it. A person says what to check (owner, 4 Nov 2026).
+      if (kind === 'CHANGED' && generic && !words.some((w) => OBSERVING.has(w))) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `it says the data was ${changedWord} but not what shows it (a message? the values on the page?)`,
+          original: clauseText,
+          suggestion: 'Say what is seen: Verify the message "<text>" is shown, or Verify <field> shows "<value>".',
+        });
+      } else if (kind === 'CHANGED' && generic) {
+        issues.push(refIssue(['added', 'created', 'saved', 'stored'].includes(changedWord) ? 'added' : 'updated', np?.original ?? '', clauseText));
+      }
+      // "Employee Data is deleted": which record was deleted is not said, and the engine does not assume it (owner, 4 Nov 2026).
+      if (kind === 'DELETED' && np?.words.some((w) => RECORD_WORDS.has(w))) {
+        issues.push({
+          code: 'AMBIGUOUS',
+          severity: 'review',
+          message: `it says "${np.original}" was deleted but not which one`,
+          original: clauseText,
+          suggestion: 'Name it: Verify "<name>" is not in the list.',
+        });
       }
       forTargets(np, (target) => ({
         type: 'STATE',
@@ -750,6 +780,16 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
       suggestion: 'Name what is checked: Verify the <name> <button, field, message> is displayed.',
     });
   }
+  // "Preferred stream should be selected": which one is preferred is the tester's choice, and the check does not say it (owner, 4 Nov 2026).
+  if (out.length && clauseTokens.some((t) => lw(t) === 'preferred') && !clauseTokens.some((t) => t.kind === 'LITERAL')) {
+    issues.push({
+      code: 'AMBIGUOUS',
+      severity: 'review',
+      message: 'it says "preferred" but not which one, so there is nothing to compare with',
+      original: clauseText,
+      suggestion: 'Write the value: Verify "<value>" is selected in <name>.',
+    });
+  }
   return { predicate: kind, expectations: out, issues, subject };
 }
 
@@ -757,6 +797,30 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
 const stateOf = (word: string | undefined): string => (word === 'saves' ? 'SAVED' : (word ?? 'CHANGED').toUpperCase());
 
 const kind0 = (h: Hit): Kind => h.def.kind;
+
+/** Words that say the check is on what is seen: "should see the added data". Without one, "should updated the data" says nothing to check. */
+const OBSERVING: ReadonlySet<string> = new Set([
+  'see',
+  'sees',
+  'seen',
+  'view',
+  'shown',
+  'show',
+  'shows',
+  'displayed',
+  'display',
+  'displays',
+  'appear',
+  'appears',
+  'visible',
+  'listed',
+  'find',
+  'check',
+  'checking',
+  'verify',
+]);
+/** Words for a stored record, as opposed to an element of the page. */
+const RECORD_WORDS: ReadonlySet<string> = new Set(['data', 'record', 'records', 'row', 'rows', 'entry', 'entries', 'details']);
 
 const refIssue = (word: string, phrase: string, original: string): Omit<Issue, 'where'> => ({
   code: 'NEEDS_REFERENCE',

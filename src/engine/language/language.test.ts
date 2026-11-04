@@ -639,9 +639,13 @@ describe('real wording of the rewritten Employee workbook', () => {
   const read = (sentence: string) => understandLine(sentence, { data: parseTestData(''), facts: new Map(), mode: 'step' });
   const conditions = (sentence: string) => read(sentence).expectations.map((e) => e.condition);
 
-  it('reads "the browser opens successfully" as the application starting, not as a page to land on', () => {
-    assert.deepEqual(conditions('Verify The browser opens successfully'), [{ type: 'STATE', expect: 'APPLICATION_STARTED' }]);
-    assert.deepEqual(read('Verify The browser opens successfully').issues, []);
+  it('reads "the browser opens successfully" as the test setup: nothing is checked, and nothing is asked (owner, 4 Nov 2026)', () => {
+    assert.deepEqual(conditions('Verify The browser opens successfully'), []);
+    assert.deepEqual(
+      read('Verify The browser opens successfully').issues.map((i) => [i.code, i.severity, i.setup]),
+      [['NOT_CHECKED', 'info', 'check']],
+    );
+    assert.deepEqual(conditions('Verify the application opens'), [{ type: 'STATE', expect: 'APPLICATION_STARTED' }]);
   });
   it('keeps a list of names with one shared predicate in one clause: "Verify the A, B (C) and D tabs are visible"', () => {
     const r = read('Verify that the Admin, PIM (Personal Information Management), Leave, Time, Benefits and Help tabs are visible');

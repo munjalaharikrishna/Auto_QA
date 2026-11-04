@@ -44,6 +44,7 @@ export interface RefOutput {
 const PRONOUNS: ReadonlySet<string> = new Set(['it', 'them', 'this', 'that', 'these', 'those']);
 const SAVED_DATA: ReadonlySet<string> = new Set(['added', 'updated', 'saved', 'created']);
 const OPENED_DATA: ReadonlySet<string> = new Set(['entered', 'uploaded']);
+const LIST_ROWS: ReadonlySet<string> = new Set(['record', 'records', 'row', 'rows', 'entries']);
 const NEEDS_THE_PAGE: ReadonlySet<string> = new Set(['above', 'below', 'previous', 'corresponding', 'associated', 'newly']);
 const ENTERS: ReadonlySet<string> = new Set(['ENTER_VALUE', 'SELECT', 'UPLOAD', 'CHECK', 'UNCHECK']);
 const WIPES: ReadonlySet<string> = new Set(['reset', 'clear', 'cancel']);
@@ -257,6 +258,16 @@ export function resolveReferences(input: RefInput): RefOutput {
     if (SAVED_DATA.has(word) || OPENED_DATA.has(word) || word === 'same') {
       const e = itemExpectation;
       if (!e) continue;
+      // "the same updated records": rows of a list, one per record. Which record is for a person to say (owner, 4 Nov 2026).
+      const record = phrase
+        .toLowerCase()
+        .split(' ')
+        .find((w) => LIST_ROWS.has(w));
+      // "The added record" names it: the one this case added. "The same updated records" does not.
+      if (record && word !== 'added' && word !== 'created') {
+        add({ phrase, kind: 'ENTERED_DATA', status: 'UNRESOLVED', steps: [], values: [], because: `"${record}" are rows of a list: which record is not said` });
+        continue;
+      }
       const mine = runOf(e);
       const at = e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
       const { group, ok, why } = enteredGroup(at, SAVED_DATA.has(word) || word === 'same');
