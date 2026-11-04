@@ -12,6 +12,7 @@
     "engine:mutate": "tsx src/cli/engine-mutate.ts",
     "engine:cache-bench": "tsx src/cli/engine-cache-bench.ts",
     "engine:gold": "tsx src/cli/engine-gold.ts",
+    "engine:lint": "tsx src/cli/engine-lint.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "biome check .",
     "format": "biome check --write .",

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import type { RunTrace, StepRecord } from './execute/executor.js';
 import type { Observation } from './execute/observe.js';
 import { planActions } from './execute/planner.js';
+import { understandLine } from './language/grammar.js';
 import { understandCase } from './language/index.js';
 import { fixTyposIn } from './language/synonyms.js';
 import { compileCase } from './pipeline/compile.js';
@@ -201,5 +202,48 @@ describe('E0.15: "see tabs" after a step that named the tabs is a check on each 
     const c = understandCase(raw('Click the PIM menu'));
     assert.equal(tabChecks(c).length, 1);
     assert.equal(tabChecks(c)[0]?.condition.target?.name, undefined);
+  });
+});
+
+describe('E0.15: one verb table for the clause parser and the grammar (audit U3, U7, U8)', () => {
+  const read = (text: string, mode: 'step' | 'expected' = 'step') => understandLine(text, { data: [], facts: new Map(), mode });
+
+  it('"Return to the list and verify the updated record" is a navigation and a check: the check is not lost (U8)', () => {
+    const r = read('Return to the Employee List page and verify the updated record');
+    assert.deepEqual(
+      r.steps.map((s) => [s.action, s.target?.name]),
+      [['NAVIGATE', 'Employee List']],
+    );
+    assert.equal(r.expectations.length, 1, 'the check of the updated record is read, not swallowed into the page name');
+  });
+
+  it('"Leave" in a list of tabs is a name, not "leave … blank"', () => {
+    const r = read('Checking the tabs of Admin, Leave, Time are visible or not');
+    assert.deepEqual(
+      r.expectations.map((e) => e.condition.target?.name),
+      ['Admin', 'Leave', 'Time'],
+    );
+    assert.ok(!r.issues.some((i) => i.severity !== 'info'), JSON.stringify(r.issues));
+  });
+
+  it('"Login with admin" and "Log in as Admin" keep who logs in', () => {
+    for (const [text, who] of [
+      ['Login with admin', 'admin'],
+      ['Log in as Admin', 'Admin'],
+    ] as const) {
+      const s = read(text).steps[0];
+      assert.equal(s?.action, 'LOGIN');
+      assert.deepEqual(s?.value, { kind: 'literal', value: who });
+    }
+  });
+
+  it('the sentence shapes of enter, select, fill and leave read as before', () => {
+    const shape = (text: string) => read(text).steps.map((s) => [s.action, s.target?.name, s.value]);
+    assert.deepEqual(shape('Type "abc" into the Search box'), [['ENTER_VALUE', 'Search', { kind: 'literal', value: 'abc' }]]);
+    assert.deepEqual(shape('Choose "Full-Time" from the Employment Status dropdown'), [
+      ['SELECT', 'Employment Status', { kind: 'literal', value: 'Full-Time' }],
+    ]);
+    assert.deepEqual(shape('Fill the Name field with "Asha"'), [['ENTER_VALUE', 'Name', { kind: 'literal', value: 'Asha' }]]);
+    assert.deepEqual(shape('Leave the Code field blank'), [['ENTER_VALUE', 'Code', { kind: 'blank' }]]);
   });
 });

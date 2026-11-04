@@ -13,6 +13,8 @@ export const RESULT_COLUMNS = ['Status', 'Actual Result', 'Failed Step', 'Execut
 export const SUMMARY_SHEET = 'Auto QA';
 /** Written only when a test case has a suggestion (BP-5): a clearer way to write what the pre-flight could not read. */
 export const WORDING_COLUMN = 'Suggested Wording';
+/** The status of every line of the test case before the run (E0.15): written when the new engine read the case. */
+export const LINT_COLUMN = 'Lint';
 
 /** Row result: a verdict, or a row that could not be read as a test case. */
 export interface RowResult {
@@ -24,6 +26,8 @@ export interface RowResult {
   title?: string;
   /** What the pre-flight suggests the tester writes instead (BP-5), one line per sentence. */
   suggestedWording?: string;
+  /** The lint of every line (E0.15), one line each, with a suggestion under the ones that need one. */
+  lint?: string;
 }
 
 export interface BatchSummary {
@@ -74,6 +78,15 @@ export async function writeResults(imported: ImportResult, results: RowResult[],
     cell.style = { ...style, font: { ...(style.font ?? {}), bold: true } };
     sheet.getColumn(wordingCol).width = 70;
   }
+  let lintCol: number | undefined;
+  if (results.some((r) => r.lint)) {
+    const found = imported.headers.findIndex((h) => h.trim().toLowerCase() === LINT_COLUMN.toLowerCase());
+    lintCol = found >= 0 ? found + 1 : next++;
+    const cell = header.getCell(lintCol);
+    cell.value = LINT_COLUMN;
+    cell.style = { ...style, font: { ...(style.font ?? {}), bold: true } };
+    sheet.getColumn(lintCol).width = 80;
+  }
   sheet.getColumn(cols['Actual Result']).width = 60;
   sheet.getColumn(cols['Failed Step']).width = 30;
   sheet.getColumn(cols.Status).width = 15;
@@ -99,6 +112,11 @@ export async function writeResults(imported: ImportResult, results: RowResult[],
     if (wordingCol && r.suggestedWording) {
       const cell = row.getCell(wordingCol);
       cell.value = r.suggestedWording;
+      cell.alignment = { wrapText: true, vertical: 'top' };
+    }
+    if (lintCol && r.lint) {
+      const cell = row.getCell(lintCol);
+      cell.value = r.lint;
       cell.alignment = { wrapText: true, vertical: 'top' };
     }
     row.getCell(cols['Failed Step']).value = v?.failedStep ?? null;

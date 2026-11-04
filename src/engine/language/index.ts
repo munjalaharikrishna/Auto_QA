@@ -3,6 +3,7 @@ export { type Clause, isClauseLike, type Relation, splitClauses, startsClause } 
 export { type Coverage, coverageOf, coverageText, type Rate, reasonOf } from './coverage.js';
 export { type DataEntry, parseTestData } from './data-binding.js';
 export { evaluate, type LineContext, type Mode, understandLine } from './grammar.js';
+export { type LintInput, type LintLine, type LintStatus, lintCase, lintCounts, lintText } from './lint.js';
 export {
   actionsOf,
   allowsAction,

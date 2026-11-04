@@ -5,6 +5,7 @@ import { type AssistProvider, noAssist } from '../assist/provider.js';
 import type { OtpSource } from '../engine/auth/index.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
+import type { Application } from '../engine/knowledge/schema.js';
 import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
@@ -71,7 +72,8 @@ export interface PipelineOptions {
   /** `legacy` (default) runs exactly as before. `semantic` first compiles every case to QA-IR with a decision log (E0.1). */
   engine?: EngineKind;
   /** Called with each case's compilation, when the engine is `semantic`. */
-  onCompiled?: (result: CompileResult) => void | Promise<void>;
+  /** Called with each compiled case and what the engine knows of the application (for the lint). */
+  onCompiled?: (result: CompileResult, knowledge?: Application) => void | Promise<void>;
 }
 
 export interface PipelineResult {
@@ -187,7 +189,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
 `,
       );
       compiledOf = compiled;
-      await options.onCompiled?.(compiled);
+      await options.onCompiled?.(compiled, knowledge);
       progress(`… ${at}: compiled (${compiled.status}), ${compiled.log.length} decision(s) logged`);
       // A stage that broke its contract is an engine fault, not a test result: say so instead of running on a bad plan.
       if (compiled.status === 'error') {
