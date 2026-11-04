@@ -91,8 +91,14 @@ export interface Resolution {
   unresolved: Unresolved[];
 }
 
+/**
+ * Whether the generator may make up a value of this kind for this field, with nobody asked (DG-01): not an existing one (only
+ * the application has those), and not a valid username, password, passcode or file (those must be real).
+ */
+export const canMakeUp = (cls: DataClass, field: string): boolean => cls !== 'EXISTING' && !(cls === 'VALID' && NEEDS_REAL_VALUE.has(fieldKindOf(field)));
+
 /** The field a data key is used for: the target name of the first step that holds it. */
-function fieldOf(key: string, steps: readonly IrStep[]): string {
+export function fieldOf(key: string, steps: readonly IrStep[]): string {
   const step = steps.find((s) => s.value === `$data.${key}`);
   // An upload is of a file, whatever button opens the chooser.
   if (step?.action === 'UPLOAD') return fieldFromKey(key);
@@ -270,8 +276,7 @@ export async function resolveData(data: Record<string, IrData>, ctx: ResolveCont
       out[key] = { class: cls, source: 'APPLICATION', value: '***', secret: true, rule: 'otp.at-run' };
       continue;
     }
-    const needsReal = (cls === 'VALID' || cls === 'EXISTING') && NEEDS_REAL_VALUE.has(kind);
-    if (cls === 'EXISTING' || needsReal) {
+    if (!canMakeUp(cls, field)) {
       tried.push('APPLICATION');
       fail(
         key,

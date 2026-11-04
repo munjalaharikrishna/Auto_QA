@@ -49,3 +49,8 @@ Login and BookMarket unchanged. Left extra: 19 update-case field checks (one per
 Gold set: 701 clauses, confident-mistake rate 15% (target 0%)
   steps: 124 of 241 right, 24 wrong, 93 set aside that a person could read, 0 missed, 11 extra (precision 78%, recall 51%, F1 62%)
   expectations: 400 of 460 right, 53 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 85%, recall 87%, F1 86%)
+
+## Step 2 (4 Nov 2026): a made-up value is read, and a gold line matches the step at its head
+Gold set: 701 clauses, confident-mistake rate 16% (target 0%)
+  steps: 181 of 241 right, 40 wrong, 20 set aside that a person could read, 0 missed, 11 extra (precision 78%, recall 75%, F1 77%)
+  expectations: 400 of 460 right, 53 wrong, 7 set aside that a person could read, 0 missed, 19 extra (precision 85%, recall 87%, F1 86%)
