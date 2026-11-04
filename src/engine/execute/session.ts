@@ -19,6 +19,8 @@ export interface ExecutionSession {
   /** The page the run starts on. */
   page: Page;
   context: BrowserContext;
+  /** The browser profile folder of this session; it is removed when the session closes. */
+  profileDir: string;
   /**
    * Gives the next test case a clean browser (VD-03): extra tabs closed, cookies, permissions, local and session storage,
    * IndexedDB and caches cleared, and the page back on a blank one. Two test cases run in any order then give the same verdicts.
@@ -111,6 +113,7 @@ export async function openExecutionSession(options: SessionOptions = {}): Promis
     page,
     reset,
     context,
+    profileDir: userDataDir,
     port: {
       tools: mcp.tools,
       callTool: (name, args) => mcp.callTool(name, args),

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -290,7 +290,7 @@ describe('the second run is faster, by a margin that does not depend on the mach
     }
   });
 
-  it('reading a large folder of explorations: a warm read is under half of a cold one', async (t: TestContext) => {
+  it('reading a large folder of explorations: a warm read is served from the cache, gives the same result, and is faster', async (t: TestContext) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'auto-qa-big-'));
     try {
       for (let f = 0; f < 60; f++) {
@@ -303,6 +303,12 @@ describe('the second run is faster, by a margin that does not depend on the mach
         await knowledgeFromRuns('big', 'http://127.0.0.1:1', dir, [], { cache });
         return performance.now() - start;
       };
+      // What the cache does is checked exactly: the cold read misses and the warm one hits, with the same answer.
+      clearCaches();
+      const first = await knowledgeFromRuns('big', 'http://127.0.0.1:1', dir, [], { cache: true });
+      const again = await knowledgeFromRuns('big', 'http://127.0.0.1:1', dir, [], { cache: true });
+      assert.deepEqual(cacheStats().knowledge, { hits: 1, misses: 1, size: 1 });
+      assert.deepEqual(again, first, 'the warm read gives what the cold one gave');
       await time(false);
       const cold: number[] = [];
       const warm: number[] = [];
@@ -312,7 +318,9 @@ describe('the second run is faster, by a margin that does not depend on the mach
         warm.push(await time(true));
       }
       t.diagnostic(`60 explorations: cold ${median(cold).toFixed(1)} ms, warm ${median(warm).toFixed(1)} ms`);
-      assert.ok(median(warm) * 2 < median(cold), `warm ${median(warm).toFixed(1)} ms, cold ${median(cold).toFixed(1)} ms`);
+      // How much faster depends on the machine (on a shared Linux runner a cold read is cheap: 61 against 106 ms on 3 Nov 2026), so
+      // only "faster" is required here; the ratio is printed above.
+      assert.ok(median(warm) < median(cold), `warm ${median(warm).toFixed(1)} ms, cold ${median(cold).toFixed(1)} ms`);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -403,18 +411,17 @@ describe('in Chrome: the same run and verdict with the caches on and off, and a 
 });
 
 describe('no browser is left behind (GV-11)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER }, () => {
-  const leftovers = (): string[] => readdirSync(tmpdir()).filter((n) => n.startsWith('auto-qa-run-'));
-
   it('a session that is closed leaves no browser profile and no open page, however often it is opened', async () => {
-    const before = leftovers().length;
+    // Each session's own folder is checked: other test files run browsers at the same time, in the same temporary folder.
     for (let i = 0; i < 3; i++) {
       const session = await openExecutionSession();
       await session.page.goto('about:blank');
       const context = session.context;
+      assert.ok(session.profileDir.startsWith(tmpdir()) && existsSync(session.profileDir), 'the profile is a folder of its own');
       await session.close();
       assert.equal(session.page.isClosed(), true, 'the page is closed');
       assert.equal(context.pages().length, 0, 'no page is left in the browser');
+      assert.equal(existsSync(session.profileDir), false, 'the profile folder of the session is removed');
     }
-    assert.equal(leftovers().length, before, 'the profile folders of the sessions are removed');
   });
 });
