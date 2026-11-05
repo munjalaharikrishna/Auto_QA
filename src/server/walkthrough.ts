@@ -126,7 +126,7 @@ export function placeCheck(raw: RawTestCase, sentence: string, afterStep?: strin
   const lines = foldedLines(raw);
   if (!Number.isInteger(n) || n < 1 || n > lines.length) throw new Error(`There is no step ${afterStep} to put the check after.`);
   lines.splice(n, 0, `Verify ${sentence}`);
-  const { stepExpected: _folded, ...rest } = raw;
+  const { stepExpected: _folded, stepData: _rows, ...rest } = raw;
   return { ...rest, steps: lines.map((l, i) => `${i + 1}. ${l}`).join('\n') };
 }
 
@@ -188,7 +188,7 @@ export function editStep(raw: RawTestCase, step: string, text: string): RawTestC
   const n = Number(step.slice(1));
   if (!Number.isInteger(n) || n < 1 || n > lines.length) throw new Error(`There is no step ${step}.`);
   lines[n - 1] = words;
-  const { stepExpected: _folded, ...rest } = raw;
+  const { stepExpected: _folded, stepData: _rows, ...rest } = raw;
   return { ...rest, steps: lines.map((l, i) => `${i + 1}. ${l}`).join('\n') };
 }
 
@@ -325,7 +325,7 @@ export function applyPending(raw: RawTestCase, pending: readonly Pending[], drop
       else if (p.kind === 'recorded' && p.afterStep === step) out.push(p.sentence);
     }
   });
-  const { stepExpected: _folded, ...rest } = raw;
+  const { stepExpected: _folded, stepData: _rows, ...rest } = raw;
   return withEnd({ ...rest, steps: out.map((l, i) => `${i + 1}. ${l}`).join('\n') });
 }
 

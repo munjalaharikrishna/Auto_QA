@@ -1,4 +1,4 @@
-import { type RawTestCase, stepsWithChecks } from '../../model/test-model.js';
+import { type RawTestCase, stepDataOfLines, stepsWithChecks } from '../../model/test-model.js';
 import { resolveReferences } from '../context/references.js';
 import { type CaseSetup, loginPoint } from '../context/setup.js';
 import { validateStates } from '../context/states.js';
@@ -97,6 +97,14 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const units: Unit[] = [];
   const models: CaseLanguage['models'] = {};
   const dataEntries: DataEntry[] = parseTestData(raw.testData);
+  /**
+   * The Test Data the line being read sees (E0.16, P2): its own row's data first, then the case's. Two rows can give the same key
+   * different values ("Username: admin" on one step, "Username: wrong" on another): each step gets its own.
+   */
+  const dataOfLines = stepDataOfLines(given);
+  let lineData: DataEntry[] = dataEntries;
+  /** The entry each data key was made from: its secret is the one a run types for that key. */
+  const entryOfKey = new Map<string, DataEntry>();
   const data: Record<string, IrData> = {};
   const facts = new Map<string, string>();
   for (const d of dataEntries) if (d.blank) facts.set(compactKey(d.key), 'BLANK');
@@ -123,7 +131,8 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
       });
       return '$ref.previous';
     }
-    const cacheKey = JSON.stringify([spec, target?.name]);
+    const ownEntry = spec.kind === 'data' ? (lineData.find((d) => d.key === spec.key) ?? dataEntries.find((d) => d.key === spec.key)) : undefined;
+    const cacheKey = JSON.stringify([spec, target?.name, ownEntry?.value]);
     const cached = keyOfValue.get(cacheKey);
     if (cached) return cached;
     let key: string;
@@ -138,8 +147,15 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
         break;
       }
       case 'data': {
-        const entry = dataEntries.find((d) => d.key === spec.key) as DataEntry;
+        const entry = ownEntry as DataEntry;
         key = dataKeyOf(entry.key);
+        // The same key with another value in another row: this row's value gets a key of its own.
+        const before = entryOfKey.get(key);
+        if (before && (before.value !== entry.value || before.blank !== entry.blank)) {
+          key = UNIQUE_KEY(data, key);
+          decisions.push({ kind: 'decision', message: `${key}: the Test Data of this step's own row gives "${entry.key}" another value`, data: { where } });
+        }
+        entryOfKey.set(key, entry);
         data[key] = entry.blank
           ? { class: 'BLANK', source: 'EXCEL', value: '', ...(spec.intent ? { intent: spec.intent } : {}) }
           : entry.secret
@@ -308,12 +324,15 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     units.push({ kind: actual, original, where, produced, categories, understood, models: [...new Set(result.models)] });
   };
 
-  const context = (mode: 'step' | 'expected'): LineContext => ({ data: dataEntries, facts, mode });
+  const context = (mode: 'step' | 'expected'): LineContext => ({ data: lineData, facts, mode });
 
   stepLines.forEach((line, k) => {
     const lineNo = String(numbered ? line.number : k + 1);
+    const own = dataOfLines[k];
+    lineData = own ? [...parseTestData(own), ...dataEntries] : dataEntries;
     take(understandLine(line.text, context('step')), `step ${lineNo}`, lineNo, 'step', line.text, !!caseSetup && k < caseSetup.lines);
   });
+  lineData = dataEntries;
   // The expected result is checked after the last step. A line break inside a sentence does not end it.
   sentencesOf(raw.expected).forEach((line, k) => {
     const lineNo = String(stepLines.length + 1 + k);
@@ -455,7 +474,12 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   }
 
   const excel = dataEntries.map((e) => (e.secret ? { ...e, value: '' } : e));
-  const excelSecrets = Object.fromEntries(dataEntries.filter((e) => e.secret && !e.blank).map((e) => [dataKeyOf(e.key), new Secret(e.value)]));
+  // A repeated key keeps its first value; a key made for a row's own value (`password_2`) keeps that row's (E0.16).
+  const excelSecrets = Object.fromEntries(
+    [...[...dataEntries].reverse().map((e) => [dataKeyOf(e.key), e] as const), ...entryOfKey.entries()]
+      .filter(([, e]) => e.secret && !e.blank)
+      .map(([k, e]) => [k, new Secret(e.value)]),
+  );
   if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models, excel, excelSecrets, formats };
   // The tester's own words keep their quotes around a value; the value is taken out of them.
   const scrub = (text: string): string => {
