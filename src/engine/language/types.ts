@@ -51,6 +51,11 @@ export interface Issue {
   item?: string;
   /** The line is test setup the run does by itself ("Open Browser"): it is read, and there is nothing to do (a step) or check (a check). */
   setup?: 'step' | 'check';
+  /**
+   * The line is one of the setup block of this suite (E0.16): the same question stands in every case that starts with the block,
+   * so it is the suite's question, asked once. The name of the suite.
+   */
+  block?: string;
 }
 
 /** A value a step needs. */

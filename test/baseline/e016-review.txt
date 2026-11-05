@@ -1,0 +1,25 @@
+E0.16 baseline, 5 Nov 2026, branch engine/e0.16-setup-ledger from main at b2a7987 (E0.15 done).
+Measured with: npm run engine:review -- --no-examples   (compile time, no browser; both OrangeHRM workbooks)
+
+## Before (b2a7987)
+29 test cases: 9 ready, 2 wait only for engine work, 18 need a tester, 0 need project data
+37 review reasons:
+   17  [TESTER] not understood: "Verify User should add button in employee information section" (step 10 of 16 cases + TC03's expected result)
+    5  [TESTER] "Click on Employee Name" names no employee (TC15-TC19)
+    5  [TESTER] "updated the data" / "updated records": not what shows it (TC17-TC19)
+    4  [ENGINE] unresolved reference "the same updated records" (TC18, TC19)
+    2  [ENGINE] LAYOUT checks are not judged yet (TC01, TC02)
+    1  TC19 "Select preferred Employee"   1  TC19 "Deleted Employee Data"
+    2  TC_LOGIN_010 (not understood, unknown branch)
+Lint (npm run engine:lint): 506 lines; understood 438, vague 36, ambiguous 14, not understood 18.
+
+## Step 1: setup blocks
+Setup block of Add_Employee.xlsx: the first 10 lines (Open Browser … the Add button), 16 members (TC04-TC19); TC01-TC03 end inside it.
+Login sheet: block of 1 line ("Open the OrangeHRM login page."): its login lines take Test Data, so they are not setup.
+29 test cases: 9 ready, 13 wait only for engine work, 7 need a tester, 0 need project data
+32 review reasons:
+   13  [ENGINE] LAYOUT checks are not judged yet ("login section at middle of the page", a setup line: hidden before by the question above)
+    5  [TESTER] "Click on Employee Name"     5  [TESTER] "updated the data"     4  [ENGINE] "the same updated records"
+    1  TC03 "User should add button…" (its own expected result)   1 + 1 TC19   2 TC_LOGIN_010
+Lint: understood 454, vague 36, ambiguous 14, not understood 2.
+Gold unchanged: Login 60/60, Add Employee 711/736 (771 of 796).

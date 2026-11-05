@@ -103,6 +103,8 @@ export async function runBatch(file: string, options: BatchOptions): Promise<Bat
   const run = await runCases(selected, {
     ...options,
     login,
+    // The setup block is the whole sheet's, also when only the review queue is run (E0.16).
+    suite: { name: imported.sheet, cases: imported.cases.map((c) => c.raw) },
     onCompiled: async (compiled, knowledge) => {
       const text = wordingOf(compiled.issues);
       if (text) wording.set(compiled.testId, text);

@@ -4,6 +4,19 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 
 ## Unreleased
 
+### Engine (E0.16 setup blocks, data ledger, test data; in progress)
+- **Setup blocks (item 1).** The leading lines most cases of a sheet share (open the browser, open the application, check the login page, check the tabs) are found once per sheet (`src/engine/context/setup.ts`). A block only ever holds lines that are setup by kind, so a data-entry line many cases share is never taken for setup, and a line that takes its value from the Test Data is not setup either (TC_LOGIN_003 keeps its wrong password). Nothing is removed from a case: each still runs and checks all it says.
+  - A question about a setup line is the sheet's: the review report counts it once (`Issue.block`). A setup line that cannot be read and only restates the line before it ("Verify User should add button…" after "there should be add button") is set aside with the reason, and the check before it still runs. On Add Employee the question raised in 16 cases is raised in none; TC03, which tests that line, still asks.
+  - **The login the cases assume (E7).** When the setup checks the tabs right after the login page and no line logs in, the case logs in there with the project's login (`TEST_USERNAME`, `TEST_PASSWORD`), with the fields and button of the project's login case when there is one; the login page is still checked before it, the tabs after it.
+  - Batch runs read the block from the whole sheet, also when only the review queue runs; `engine:review` and `engine:lint` read it too. `engine:gold` reads each case on its own, so the signed gold readings do not change (771 of 796, as before).
+- **Decisions (5 Nov 2026, PD-15):** clean-up lists what a run created and deletes nothing by itself in V1; runs stay at one worker until more test accounts exist.
+
+### Engine (E0.15 grammar and lint)
+- **Slot grammar and one verb table** replace the phrase lists (`src/engine/language/slots.ts`, `verbs.ts`); Given/When/Then, "user should", articles and known typos inside names are ignored; the parser defects of audit U6 are fixed.
+- **Lint before a run** (`npm run engine:lint`): every line of a case gets one status (understood, matched, ambiguous, not found, screen not learned yet, vague, not understood) with a suggestion, also in the results workbook.
+- **Measured against the owner's signed gold readings** (`npm run engine:gold`), not "no blocking error": Login 60 of 60, Add Employee 711 of 736, together 771 of 796 clauses (97%, target 90%). Re-run on 5 Nov 2026.
+- Not done: 25 Add Employee clauses still read wrongly, most in TC18/TC19 (Employment section, Sub-Division, Supervisor), where the engine should ask a person.
+
 ### Engine (E0.14c record in the walkthrough, PD-14)
 - **A valid email address is the project's login.** "Enter the valid Email address" was read by the new engine as "make up a valid email", so a walkthrough typed `qa.…@example.test` and the login failed. A valid email, email address, email id, user id or login id is now `TEST_USERNAME`, as the old parser already read it; a bare "Email" still needs a value.
 - **The walkthrough's browser is a window you use.** While the walkthrough waits, what is done in it is recorded as steps of the case, on every page reached: clicks, typing, dropdowns, checkboxes, radios, Enter, Escape, and addresses opened by hand. Each step is kept only when both the new engine and the old parser read it back as that action on that element; the login is written as the valid username and password, never the password itself (`src/server/recorder.ts`).

@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import type { OtpSource } from '../engine/auth/index.js';
+import { type CaseSetup, DEFAULT_LOGIN, loginOf, suiteSetups } from '../engine/context/setup.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import type { Application } from '../engine/knowledge/schema.js';
@@ -74,6 +75,11 @@ export interface PipelineOptions {
   /** Called with each case's compilation, when the engine is `semantic`. */
   /** Called with each compiled case and what the engine knows of the application (for the lint). */
   onCompiled?: (result: CompileResult, knowledge?: Application) => void | Promise<void>;
+  /**
+   * The whole sheet the cases come from (E0.16), so its setup block is found from every case of it, not only those run now. Without
+   * it the cases are read on their own, as before.
+   */
+  suite?: { name: string; cases: RawTestCase[] };
 }
 
 export interface PipelineResult {
@@ -140,6 +146,13 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     return loginCompiled;
   };
   const needsLogin = (c: CompileResult): boolean => !!c.ir?.preconditions.some((p) => p.type === 'LOGGED_IN');
+  // The setup block of the sheet (E0.16): its login is the project's, with the fields and button of the login case when there is one.
+  const setups =
+    options.engine === 'semantic' && options.suite
+      ? suiteSetups(options.suite.name, options.suite.cases, loginOf((await loginFor())?.ir) ?? DEFAULT_LOGIN)
+      : new Map<string, CaseSetup>();
+  const block = [...setups.values()].find((s) => s.member);
+  if (block) progress(`Setup block of "${block.suite}": the first ${block.lines} line(s) of ${[...setups.values()].filter((s) => s.member).length} case(s)`);
 
   const policy = options.policy ?? DEFAULT_POLICY;
   for (const [index, original] of models.entries()) {
@@ -168,12 +181,14 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
       return true;
     };
     if (options.engine === 'semantic') {
+      const setup = setups.get(original.id);
       const compiled = await compileCase(rawOf(original), {
         config: options.config,
         pageRoutes: await pages.load(),
         env: options.env,
         knowledge,
         otpAtRun: !!options.otp,
+        ...(setup ? { setup } : {}),
       });
       const dir = path.join(exploreDir, original.id);
       await mkdir(dir, { recursive: true });

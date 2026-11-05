@@ -604,6 +604,8 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 **After the owner's first use (3 Nov):** a panel in the window (steps, what was recorded, Add or Remove, Next step, Finish, save), shown only while the walkthrough waits; one window; closing it keeps what was recorded and asks to save on the Auto QA page; when saving, recorded steps can replace the steps not run. Exit tests: the window is closed after a login done by hand and the save keeps it without the old steps; a whole walkthrough is done from the panel with one tab open.
 
 #### E0.15 Grammar and lint
+**Status (2026-11-05): done.** All three exit tests re-run on 5 Nov: gold 771 of 796 clauses read as approved (97%; Login 60/60, Add Employee 711/736), the earlier failing sentences read correctly (`e015.test.ts`, `parser-defects.test.ts`), and the lint gives all 506 lines of the original sheets a status with a suggestion under every vague one. Measurements in `test/baseline/e015-gold.txt`. Open: 25 Add Employee clauses still read wrongly, most in TC18/TC19 where a person should be asked.
+
 **Builds:**
 1. A **slot grammar**: patterns with slots (action, target, value, ordinal, relation, anchor), optional words and alternatives; replaces the phrase lists.
 2. **One vocabulary** (merge PREDICATES and synonyms); verb table with word forms (hides → not visible; return to → navigate; enter or update → enter).
@@ -622,6 +624,14 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 | Lint on the original OrangeHRM sheet | Every step has a status and the vague ones have a suggestion |
 
 #### E0.16 Setup blocks, data ledger and test data
+**Status (2026-11-05): in progress.** Item 1 built (`src/engine/context/setup.ts`, `setup.test.ts`): on Add Employee the setup question raised in 16 cases is raised in none, and the cases log in where their setup assumes it.
+
+**Decisions (PD-15, owner, 5 Nov 2026):**
+- **Clean-up (item 4) lists, it does not delete.** Each run gives created records unique names and writes the list of what it created; nothing is deleted by Auto QA in V1, and there is no nightly sweep. The exit test becomes: after a run, every record the run created is on its clean-up list.
+- **One worker (item 5).** OrangeHRM allows one session per user and there is one test account. One account per worker with its own saved login is built and tested on the demo app, and runs default to one worker until more accounts exist.
+- **Setup login.** The login a setup block assumes is the project's (`TEST_USERNAME`, `TEST_PASSWORD`), never the Excel credentials of a case (S4).
+- **The ledger suggests, a person confirms (item 2).** The owner's signed gold (4 Nov) keeps "which employee to click, select, delete or look for" a person's decision, so "Click on Employee Name" and "the same updated records" stay questions. The ledger offers the record this case created or changed as the answer, and one answer covers every case with the same sentence. Words that name the record plainly ("the added employee", "the updated record", "the entered details") resolve on their own. The exit test "added data / updated records resolve" is read this way.
+
 **Builds:**
 1. Detect setup lines (open browser, open the application, log in, "see tabs") and turn them into one setup block per suite; executed for "Logged in" preconditions in the new engine (E7).
 2. **Data ledger**: every entered or created value recorded with its entity and step; "the entered details", "the added employee", "the updated record", "previous page" resolve through it, including rows in lists (U5).
