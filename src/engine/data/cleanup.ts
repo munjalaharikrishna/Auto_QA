@@ -87,7 +87,7 @@ export function cleanupText(list: CleanupList): string {
   if (!list.records.length) lines.push('This run created no records.');
   for (const r of list.records) {
     const thing = r.entity ? r.entity.toLowerCase() : 'record';
-    const what = `${r.testId} ${r.record}: ${r.kind === 'updated' ? 'changed' : 'created'} ${/^[aeiou]/.test(thing) ? 'an' : 'a'} ${thing}`;
+    const what = `${r.testId} ${r.record}: ${r.kind === 'updated' ? 'changed' : 'created'} ${'aeiou'.includes(thing[0] ?? '') ? 'an' : 'a'} ${thing}`;
     const where = r.page ? ` on "${r.page}"` : '';
     const maybe = r.status === 'maybe' ? ' (the Save did not finish: it may not have been kept)' : '';
     const wiped = r.wipedBy ? ` (${r.wipedBy} probably emptied the form before the Save)` : '';

@@ -126,7 +126,10 @@ const kindOf = (page: string | undefined, earlier: readonly LedgerRecord[], enti
 };
 
 const sameEntity = (a: string, b: string): boolean => {
-  const k = (s: string): string => s.toLowerCase().replace(/s$/, '');
+  const k = (s: string): string => {
+    const lower = s.toLowerCase();
+    return lower.endsWith('s') ? lower.slice(0, -1) : lower;
+  };
   return k(a) === k(b);
 };
 

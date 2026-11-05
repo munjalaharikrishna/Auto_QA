@@ -95,8 +95,8 @@ describe('clean-up list', () => {
       assert.equal(json.deletes, false);
       assert.equal(json.records.length, 1);
       const text = await readFile(path.join(dir, 'cleanup.txt'), 'utf8');
-      assert.match(text, /Auto QA deleted nothing/);
-      assert.match(text, /TC_ADD D1: created an employee on "Add Employee", saved by S5/);
+      assert.ok(text.includes('Auto QA deleted nothing'));
+      assert.ok(text.includes('TC_ADD D1: created an employee on "Add Employee", saved by S5'));
       assert.ok(!text.includes('S3cret!pass') && !JSON.stringify(json).includes('S3cret!pass'));
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -104,6 +104,6 @@ describe('clean-up list', () => {
   });
 
   it('an empty run says it created nothing', () => {
-    assert.match(cleanupText({ executionId: 'EXEC-2', seed: 's', createdAt: 'now', deletes: false, records: [] }), /This run created no records/);
+    assert.ok(cleanupText({ executionId: 'EXEC-2', seed: 's', createdAt: 'now', deletes: false, records: [] }).includes('This run created no records'));
   });
 });

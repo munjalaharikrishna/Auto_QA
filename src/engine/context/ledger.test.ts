@@ -36,7 +36,7 @@ describe('data ledger', () => {
     assert.equal(record?.entity, 'Employee');
     assert.equal(record?.kind, 'created');
     assert.equal(record?.savedBy, 'S4');
-    assert.match(describeRecord(record as NonNullable<typeof record>), /the employee this case created in S2-S3, saved by S4 \(First name, Last name\)/);
+    assert.ok(describeRecord(record as NonNullable<typeof record>).includes('the employee this case created in S2-S3, saved by S4 (First name, Last name)'));
   });
 
   it('names the kind of thing from the page, not from words that only say what is done there', () => {
@@ -108,7 +108,7 @@ describe('references through the ledger', () => {
         ['TEXT', '$data.Last_name_valid'],
       ],
     );
-    assert.ok(r.ir?.references.some((x) => x.status === 'RESOLVED' && /the employee this case created/.test(x.because)));
+    assert.ok(r.ir?.references.some((x) => x.status === 'RESOLVED' && x.because.includes('the employee this case created')));
   });
 
   it('"the added employee" is left as written when the case saved no employee', () => {
@@ -136,7 +136,7 @@ describe('which record: a person decides, the ledger suggests (owner, 4 Nov 2026
     const click = r.issues.find((i) => i.original === 'Click on Employee Name');
     assert.equal(click?.severity, 'review');
     assert.equal(click?.record, 'employee');
-    assert.match(click?.suggested?.answer ?? '', /the employee this case created in S2-S3, saved by S4/);
+    assert.ok((click?.suggested?.answer ?? '').includes('the employee this case created in S2-S3, saved by S4'));
     assert.deepEqual(click?.suggested?.steps, ['S2', 'S3']);
     const deleted = r.issues.find((i) => i.original === 'User Should succesfully Deleted Employee Data');
     assert.equal(deleted?.suggested?.record, 'D1');
@@ -170,6 +170,6 @@ describe('which record: a person decides, the ledger suggests (owner, 4 Nov 2026
     assert.equal(group?.owner, 'tester');
     assert.equal(group?.count, 1);
     assert.equal(group?.cases.length, 3);
-    assert.match(group?.examples[0]?.message ?? '', /suggested: the employee this case created/);
+    assert.ok((group?.examples[0]?.message ?? '').includes('suggested: the employee this case created'));
   });
 });

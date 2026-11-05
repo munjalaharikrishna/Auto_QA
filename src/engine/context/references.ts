@@ -193,7 +193,10 @@ export function resolveReferences(input: RefInput): RefOutput {
       // One written step can enter several fields (S35, S35.2, …): "the values" are all of them.
       const siblings = steps.filter((s) => baseId(s.id) === baseId(entry.id) && ENTERS.has(s.action) && s.target && s.value !== undefined);
       // "the entered details": everything entered since the page was opened, as the ledger holds it (E0.16), not only the last step.
-      const words = phrase.toLowerCase().split(/[^a-z]+/);
+      const words = [...phrase.toLowerCase()]
+        .map((c) => (c >= 'a' && c <= 'z' ? c : ' '))
+        .join('')
+        .split(' ');
       const all = words.includes('entered') && words.some((w) => DATA_NOUNS.has(w)) ? enteredGroup(afterIndex + 1, false) : undefined;
       const group = all?.ok ? all.group : siblings.map((s) => ({ step: s.id, target: s.target as IrTarget, value: s.value as string }));
       replaceRun(runOf(e), checksOn(group, e, false));

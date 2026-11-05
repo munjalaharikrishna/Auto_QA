@@ -23,3 +23,14 @@ Login sheet: block of 1 line ("Open the OrangeHRM login page."): its login lines
     1  TC03 "User should add button…" (its own expected result)   1 + 1 TC19   2 TC_LOGIN_010
 Lint: understood 454, vague 36, ambiguous 14, not understood 2.
 Gold unchanged: Login 60/60, Add Employee 711/736 (771 of 796).
+
+## Steps 2-5: data ledger, per-step data, clean-up list, workers (branch engine/e0.16-ledger-and-data)
+29 test cases: 9 ready, 13 wait only for engine work, 7 need a tester, 0 need project data
+27 review reasons:
+   13  [ENGINE] LAYOUT checks are not judged yet
+    5  [TESTER] "updated the data": not what shows it
+    3  [TESTER] "the same updated records" (was [ENGINE] unresolved reference, 4): a person decides which record; ledger suggestion attached
+    1  [TESTER] "Click on Employee Name" (was 5: one question for TC15-TC19, with the ledger's suggestion)
+    1  TC19 "Select preferred Employee"   1  TC19 "Deleted Employee Data" (suggestion attached)
+    1  TC03 "User should add button…"   2  TC_LOGIN_010
+Gold unchanged: Login 60/60, Add Employee 711/736 (771 of 796).
