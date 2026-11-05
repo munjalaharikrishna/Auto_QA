@@ -2,6 +2,18 @@ import type { IrCondition, IrExpectation, IrReference, IrStep, IrTarget } from '
 import type { Issue } from '../language/types.js';
 import { compactKey } from '../text/compound.js';
 import { buildContexts, type EnteredValue } from './context.js';
+import {
+  buildLedger,
+  describeRecord,
+  ENTERS,
+  isPreviousPage,
+  isSave,
+  isWipe,
+  type LedgerRecord,
+  pageBefore,
+  changesPage as pageChanges,
+  recordBefore,
+} from './ledger.js';
 
 /**
  * Layer 14, reference resolution (RF-01). "Click it", "the same field", "the added data": the words point at something
@@ -14,6 +26,12 @@ import { buildContexts, type EnteredValue } from './context.js';
  *  - "accepts the values"    → what the step before the check entered
  *  - "entered text boxes"    → what was entered since the page was opened
  *  - "added data", "updated records" → what was entered since the page was opened, up to the Save
+ *  - "the entered details"   → what was entered since the page was opened (the data ledger, E0.16)
+ *  - "the added employee", "the updated record" → the values of the record the case saved (the data ledger)
+ *  - "the previous page"     → the page the case was on before the current one (the data ledger)
+ *
+ * Where a person decides which record ("Click on Employee Name", "the same updated records"), the ledger suggests the record this
+ * case created or changed (`Issue.suggested`), and the question stays for a person to confirm (owner, 4 Nov 2026).
  *
  * Words that need a look at the page ("above field", "corresponding button", "newly opened tab") are not resolved here.
  */
@@ -48,15 +66,13 @@ const SAVED_DATA: ReadonlySet<string> = new Set(['added', 'updated', 'saved', 'c
 const OPENED_DATA: ReadonlySet<string> = new Set(['entered', 'uploaded']);
 const LIST_ROWS: ReadonlySet<string> = new Set(['record', 'records', 'row', 'rows', 'entries']);
 const NEEDS_THE_PAGE: ReadonlySet<string> = new Set(['above', 'below', 'previous', 'corresponding', 'associated', 'newly']);
-const ENTERS: ReadonlySet<string> = new Set(['ENTER_VALUE', 'SELECT', 'UPLOAD', 'CHECK', 'UNCHECK']);
-const WIPES: ReadonlySet<string> = new Set(['reset', 'clear', 'cancel']);
+/** "the entered details", "the entered data": the whole group entered, not only the step before. */
+const DATA_NOUNS: ReadonlySet<string> = new Set(['details', 'data', 'information', 'info', 'values', 'fields']);
+/** A state check that names a saved record: "the added employee is shown", "the updated record". */
+const RECORD_STATES: ReadonlySet<string> = new Set(['ADDED', 'CREATED', 'SAVED', 'UPDATED']);
 
 const nameOf = (t?: IrTarget): string => t?.name ?? t?.label ?? '';
 const baseId = (id: string): string => id.split('.')[0] as string;
-
-/** Whether a step is a save of what was entered: a click or a save on a Save/Submit/Update target. */
-const isSave = (s: IrStep): boolean =>
-  s.action === 'SAVE' || s.action === 'SUBMIT' || (s.action === 'CLICK' && ['save', 'submit', 'update', 'confirm'].includes(nameOf(s.target).toLowerCase()));
 
 export function resolveReferences(input: RefInput): RefOutput {
   const steps = input.steps.map((s) => ({ ...s }));
@@ -67,7 +83,11 @@ export function resolveReferences(input: RefInput): RefOutput {
   const decisions: string[] = [];
   const warnings: string[] = [];
   const contexts = buildContexts(input.testId, steps, expectations, { loggedIn: input.loggedIn });
+  // The data ledger (E0.16): what the case entered and saved, built before any check is rewritten.
+  const ledger = buildLedger(steps, expectations);
   const resolved = new Set<Issue>();
+  /** Questions the ledger raises itself: "the previous page" when the case was on no other page. */
+  const unresolvedPages: Issue[] = [];
   /** Items already replaced by checks on what was entered: a second word of the same clause points at the same thing. */
   const consumed = new Set<string>();
 
@@ -77,8 +97,7 @@ export function resolveReferences(input: RefInput): RefOutput {
   };
 
   /** The page changes at a step that is followed by a check of the page it leads to: an entered group does not reach across it. */
-  const changesPage = (s: IrStep): boolean =>
-    s.action === 'NAVIGATE' || expectations.some((e) => e.afterStep === s.id && e.condition.type === 'URL' && e.condition.expect !== 'UNCHANGED' && !e.negated);
+  const changesPage = (s: IrStep): boolean => pageChanges(s, expectations);
 
   /** What was entered since the page was opened, up to the last Save before `index` (or up to `index` when nothing was saved yet). */
   function enteredGroup(index: number, needsSave: boolean): { group: EnteredValue[]; why: string; ok: boolean; wiped?: IrStep } {
@@ -102,9 +121,7 @@ export function resolveReferences(input: RefInput): RefOutput {
       .map((s) => ({ step: s.id, target: s.target as IrTarget, value: s.value as string }));
     if (!group.length) return { group, ok: false, why: `nothing was entered after ${steps[start - 1]?.id ?? 'the start'}` };
     const firstEntered = steps.findIndex((s) => s.id === (group[0] as EnteredValue).step);
-    const wiped = needsSave
-      ? span.find((s, k) => start + k > firstEntered && (s.action === 'CLEAR' || (s.action === 'CLICK' && WIPES.has(nameOf(s.target).toLowerCase()))))
-      : undefined;
+    const wiped = needsSave ? span.find((s, k) => start + k > firstEntered && isWipe(s)) : undefined;
     const saved = needsSave ? `, saved by ${steps[end]?.id}` : '';
     // Reset before Save: the check is read as the tester wrote it, and the run shows whether it holds (owner, 4 Nov 2026).
     if (wiped)
@@ -175,7 +192,10 @@ export function resolveReferences(input: RefInput): RefOutput {
       }
       // One written step can enter several fields (S35, S35.2, …): "the values" are all of them.
       const siblings = steps.filter((s) => baseId(s.id) === baseId(entry.id) && ENTERS.has(s.action) && s.target && s.value !== undefined);
-      const group = siblings.map((s) => ({ step: s.id, target: s.target as IrTarget, value: s.value as string }));
+      // "the entered details": everything entered since the page was opened, as the ledger holds it (E0.16), not only the last step.
+      const words = phrase.toLowerCase().split(/[^a-z]+/);
+      const all = words.includes('entered') && words.some((w) => DATA_NOUNS.has(w)) ? enteredGroup(afterIndex + 1, false) : undefined;
+      const group = all?.ok ? all.group : siblings.map((s) => ({ step: s.id, target: s.target as IrTarget, value: s.value as string }));
       replaceRun(runOf(e), checksOn(group, e, false));
       consumed.add(issue.item as string);
       add({
@@ -275,6 +295,7 @@ export function resolveReferences(input: RefInput): RefOutput {
         .find((w) => LIST_ROWS.has(w));
       // "The added record" names it: the one this case added. "The same updated records" does not.
       if (record && word !== 'added' && word !== 'created') {
+        issue.record ??= 'record';
         add({ phrase, kind: 'ENTERED_DATA', status: 'UNRESOLVED', steps: [], values: [], because: `"${record}" are rows of a list: which record is not said` });
         continue;
       }
@@ -295,6 +316,82 @@ export function resolveReferences(input: RefInput): RefOutput {
       add({ phrase, kind: 'ENTERED_DATA', status: 'RESOLVED', steps: group.map((g) => g.step), values: empty ? [] : group.map((g) => g.value), because: why });
       resolved.add(issue);
     }
+  }
+
+  // ---- the data ledger (E0.16) ----
+  /** Where a sentence stands: the index of its step, or of the step after the one its check follows. */
+  const placeOf = (i: Issue): number => {
+    const byItem = i.item ? steps.findIndex((s) => s.id === i.item) : -1;
+    if (byItem >= 0) return byItem;
+    const e = (i.item ? expectations.find((x) => x.id === i.item) : undefined) ?? expectations.find((x) => x.clause === i.original);
+    if (e) return e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
+    const step = steps.findIndex((s) => s.original === i.original);
+    return step >= 0 ? step : steps.length;
+  };
+
+  // "User should navigate to the previous page": the page the case was on before this one, not a page called "previous".
+  for (const e of expectations) {
+    const t = e.condition.target;
+    if (e.condition.type !== 'URL' || !isPreviousPage(t)) continue;
+    const at = e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
+    const before = pageBefore(ledger, steps, at);
+    if (!before) {
+      add({ phrase: e.clause, kind: 'PREVIOUS_STEP', status: 'UNRESOLVED', steps: [], values: [], because: 'the case was on no other page before this one' });
+      unresolvedPages.push({
+        code: 'NEEDS_REFERENCE',
+        severity: 'review',
+        reference: 'previous',
+        item: e.id,
+        where: 'expected result',
+        original: e.clause,
+        message: '"the previous page" points at the page before this one, and the case names no page before it',
+        suggestion: 'Name the page: User should navigate to the <name> page.',
+      });
+      continue;
+    }
+    e.condition = { ...e.condition, target: { ...(t as IrTarget), name: before.page }, expect: before.page };
+    add({
+      phrase: e.clause,
+      kind: 'PREVIOUS_STEP',
+      status: 'RESOLVED',
+      steps: [before.step],
+      values: [],
+      because: `the page the case was on after ${before.step}: "${before.page}"`,
+    });
+  }
+
+  // "User should see the added employee in the list": a record the case saved, named plainly. Its values are checked (owner, 5 Nov 2026).
+  for (const e of [...expectations]) {
+    const c = e.condition;
+    if (c.type !== 'STATE' || e.negated || !RECORD_STATES.has(c.expect ?? '') || !c.target?.name || consumed.has(e.id)) continue;
+    const at = e.afterStep ? steps.findIndex((s) => s.id === e.afterStep) + 1 : steps.length;
+    const thing = c.target.name;
+    const record = recordBefore(ledger, steps, at, LIST_ROWS.has(thing.toLowerCase()) ? undefined : thing);
+    if (!record?.entity && !LIST_ROWS.has(thing.toLowerCase())) continue;
+    if (!record) continue;
+    if (record.wipedBy)
+      warnings.push(
+        `"${e.clause}": ${record.wipedBy} empties what was entered before ${record.savedBy} saves it, so this check will probably fail. It is checked as written.`,
+      );
+    const group = record.values.map((v) => ({ step: v.step, target: v.field, value: v.value }));
+    replaceRun([e], checksOn(group, e, false));
+    add({
+      phrase: e.clause,
+      kind: 'ENTERED_DATA',
+      status: 'RESOLVED',
+      steps: group.map((g) => g.step),
+      values: group.map((g) => g.value),
+      because: describeRecord(record),
+    });
+  }
+
+  // "Click on Employee Name", "the same updated records": a person decides which record. The ledger offers the one this case saved.
+  for (const i of input.issues) {
+    if (resolved.has(i) || !i.record) continue;
+    const record = recordBefore(ledger, steps, placeOf(i), i.record === 'record' ? undefined : i.record);
+    if (!record) continue;
+    i.suggested = suggestionOf(record);
+    decisions.push(`suggested for "${i.original}": ${i.suggested.answer} (a person confirms it)`);
   }
 
   // A check the tester wrote as a step and again as the expected result at the same point is checked once, under the expected result's
@@ -355,7 +452,15 @@ export function resolveReferences(input: RefInput): RefOutput {
     e.id = `E${i + 1}`;
     for (const old of stood) (expectationMap[old] ??= []).push(e.id);
   });
-  return { steps, expectations, expectationMap, issues: input.issues.filter((i) => !resolved.has(i)), references, decisions, warnings };
+  return {
+    steps,
+    expectations,
+    expectationMap,
+    issues: [...input.issues.filter((i) => !resolved.has(i)), ...unresolvedPages],
+    references,
+    decisions,
+    warnings,
+  };
 }
 
 const LISTS: ReadonlySet<string> = new Set(['table', 'list', 'grid', 'results', 'listing', 'records', 'directory']);
@@ -373,4 +478,9 @@ function shownElsewhere(place: string | undefined): boolean {
       .split(' ')
       .some((w) => LISTS.has(w))
   );
+}
+
+/** What a person is offered as the answer: the record, in words, and the steps and values it holds. */
+function suggestionOf(r: LedgerRecord): NonNullable<Issue['suggested']> {
+  return { record: r.id, answer: describeRecord(r), steps: r.values.map((v) => v.step), values: r.values.map((v) => v.value) };
 }
