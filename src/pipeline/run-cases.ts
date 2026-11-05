@@ -4,6 +4,7 @@ import path from 'node:path';
 import { type AssistProvider, noAssist } from '../assist/provider.js';
 import type { OtpSource } from '../engine/auth/index.js';
 import { type CaseSetup, DEFAULT_LOGIN, loginOf, suiteSetups } from '../engine/context/setup.js';
+import { type CleanupList, type CleanupRecord, writeCleanupList } from '../engine/data/cleanup.js';
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import type { Application } from '../engine/knowledge/schema.js';
@@ -80,6 +81,11 @@ export interface PipelineOptions {
    * it the cases are read on their own, as before.
    */
   suite?: { name: string; cases: RawTestCase[] };
+  /**
+   * The seed of the values this run makes up (E0.16): each run creates records with names of its own, and the same seed makes the
+   * same names again. Default: one made from the time the run starts. It is written on the run's clean-up list.
+   */
+  runSeed?: string;
 }
 
 export interface PipelineResult {
@@ -102,6 +108,8 @@ export interface Prepared {
    * (semantic engine only). Each also has its legacy stop in `early`, which stays the answer unless the new run gives a verdict.
    */
   semantic?: Map<string, SemanticJob>;
+  /** The seed the made-up values of this run come from (E0.16). */
+  seed?: string;
   /** Cases the legacy route will run and the verdict engine can judge: a legacy PASS of each is re-judged by a run of the new engine (S6). */
   shadow?: Map<string, SemanticJob>;
 }
@@ -154,6 +162,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const block = [...setups.values()].find((s) => s.member);
   if (block) progress(`Setup block of "${block.suite}": the first ${block.lines} line(s) of ${[...setups.values()].filter((s) => s.member).length} case(s)`);
 
+  // Made-up values are seeded by the run, so records a run creates get names of their own (E0.16 item 4).
+  const seed = options.runSeed ?? `run-${new Date().toISOString().replace(/[-:.TZ]/g, '')}`;
   const policy = options.policy ?? DEFAULT_POLICY;
   for (const [index, original] of models.entries()) {
     // A check nothing can verify does not stop the test (balanced and lenient); under strict it is asked about.
@@ -188,6 +198,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         env: options.env,
         knowledge,
         otpAtRun: !!options.otp,
+        run: seed,
         ...(setup ? { setup } : {}),
       });
       const dir = path.join(exploreDir, original.id);
@@ -377,7 +388,7 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     for (const dir of ['tests', 'pages', 'locators', 'data']) await rm(path.join(workspace, dir), { recursive: true, force: true });
     await writeProject(workspace, files);
   }
-  return { explored, early, workspace, changes, ...(semantic.size ? { semantic } : {}), ...(shadow.size ? { shadow } : {}) };
+  return { explored, early, workspace, changes, seed, ...(semantic.size ? { semantic } : {}), ...(shadow.size ? { shadow } : {}) };
 }
 
 /** Runs what `prepareCases` generated and puts every case's verdict in the models' order. */
@@ -403,6 +414,11 @@ export async function executeCases(
     for (const v of run.verdicts) ran.set(v.testId, v);
   }
 
+  // What the new engine's runs saved, for the clean-up list (E0.16): nothing is deleted, a person removes it.
+  const created: CleanupRecord[] = [];
+  const onCreated = (records: CleanupRecord[]): void => {
+    created.push(...records);
+  };
   // Cases the legacy route could not finish and the new engine can judge: a verdict from the new run replaces the legacy stop.
   const fromNewRun = new Map<string, TestVerdict>();
   // The screens the new engine's runs reach are kept with each case, as the knowledge the next compile reads (E0.14a).
@@ -410,7 +426,7 @@ export async function executeCases(
   if (prepared.semantic?.size) {
     executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
     const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'semantic');
-    for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, exploreDir, onProgress: options.onProgress }))
+    for (const [id, v] of await runSemanticJobs([...prepared.semantic.values()], { screenshotDir, exploreDir, onProgress: options.onProgress, onCreated }))
       fromNewRun.set(id, v);
   }
 
@@ -419,12 +435,18 @@ export async function executeCases(
   if (passed.length) {
     executionId ??= await (options.nextExecutionId ?? (() => nextExecutionId(options.runsDir ?? path.join('.auto-qa', 'runs'))))();
     const screenshotDir = path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId, 'shadow');
-    const second = await runSemanticJobs(passed, { screenshotDir, exploreDir, onProgress: options.onProgress });
+    const second = await runSemanticJobs(passed, { screenshotDir, exploreDir, onProgress: options.onProgress, onCreated });
     for (const job of passed) {
       const legacy = ran.get(job.model.id) as TestVerdict;
       // A case the new engine could not run at all has no answer: the PASS cannot be confirmed, so it is not given.
       ran.set(job.model.id, reconcile(legacy, second.get(job.model.id) ?? noAnswer(legacy)));
     }
+  }
+
+  if (executionId && (prepared.semantic?.size || passed.length)) {
+    const list: CleanupList = { executionId, seed: prepared.seed ?? 'run-1', createdAt: new Date().toISOString(), deletes: false, records: created };
+    const file = await writeCleanupList(path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId), list);
+    if (created.length) options.onProgress?.(`Clean-up list: ${created.length} record(s) this run saved, in ${file}. Nothing was deleted.`);
   }
 
   const verdicts = models.map((m) => ran.get(m.id) ?? fromNewRun.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
