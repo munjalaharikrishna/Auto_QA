@@ -1,5 +1,6 @@
 import type { StepRecord } from '../execute/executor.js';
 import type { Observation, ObservedContainer, ObservedElement } from '../execute/observe.js';
+import { rowHolds } from '../execute/row-match.js';
 import { containerRef, matchContainers } from '../ir/container.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
 import { findHolder } from '../locate/holders.js';
@@ -388,6 +389,42 @@ function areaOf(box: { x: number; y: number; width: number; height: number }, vp
   return { row, col };
 }
 
+/**
+ * Whether a box is ticked (E0.17 item 4): "The checkbox in the row for Anita Kumari Rao is checked". The box is found by its name, or,
+ * in a row the check names, as the one box of that row; the row is matched by the same rules as the run's (`rowHolds`). One box: its
+ * state decides. None, or several, is not decided.
+ */
+function judgeChecked(exp: IrExpectation, c: IrCondition, after: Observation, expected: string, step?: string): Evaluation {
+  const boxes = (e: ObservedElement): boolean => ['checkbox', 'switch', 'radio'].includes(e.role);
+  const wantRow = c.target?.row;
+  const named = c.target?.name;
+  let found = after.elements.filter(boxes);
+  if (wantRow?.length) found = found.filter((e) => e.row && rowHolds({ cells: e.row }, wantRow));
+  if (named) found = found.filter((e) => nameMatches(e, named));
+  const where = wantRow?.length ? ` in the row for ${wantRow.map((r) => `"${r}"`).join(' and ')}` : '';
+  if (found.length !== 1)
+    return unproven(
+      exp,
+      found.length ? 'AMBIGUOUS' : 'NOT_FOUND',
+      expected,
+      found.length ? `${found.length} boxes${where}` : `no box${named ? ` called "${named}"` : ''}${where} on the page`,
+      found.length ? 'the engine does not choose between boxes' : 'a box that is not found has no state',
+      step,
+    );
+  const box = found[0] as ObservedElement;
+  const ticked = box.checked === true;
+  const wanted = c.expect === 'CHECKED';
+  return settled(
+    exp,
+    (ticked === wanted) !== exp.negated,
+    expected,
+    `the box${where} is ${ticked ? 'checked' : 'not checked'}`,
+    ticked === wanted ? 'the box shows it' : 'the box shows the other state',
+    true,
+    step,
+  );
+}
+
 /** A holder this wide is the layout of the page, not a part a person points at: it is "in the middle" of any page. */
 const PAGE_WIDE = 0.95;
 
@@ -527,6 +564,9 @@ function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
       return judgeAuthentication(exp, page);
     case 'LAYOUT':
       return judgeLayout(exp, c, page.after, p.step);
+    case 'STATE':
+      if (c.expect === 'CHECKED' || c.expect === 'UNCHECKED') return judgeChecked(exp, c, page.after, expectedText, p.step);
+      return unproven(exp, 'NOT_OBSERVABLE', expectedText, 'not judged', `a ${c.expect ?? 'state'} check is not judged by this engine yet`, p.step);
     case 'URL': {
       const wanted = c.expect ?? '';
       // "User stays on the Login page": the step did not move the page, which is a comparison with the page before it, not with a name.

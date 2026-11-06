@@ -59,7 +59,10 @@ export function semanticSupport(compiled: CompileResult): Support {
   const blocking = compiled.issues.find((i) => i.severity === 'blocking');
   if (blocking) return { ok: false, why: `${blocking.where}: ${blocking.message}` };
   if (compiled.ir.expectations.length === 0) return { ok: false, why: 'the case has no expected result to judge' };
-  const other = compiled.ir.expectations.find((e) => !JUDGED.has(e.condition.type));
+  // A state check is judged when it asks whether a box is ticked (E0.17 item 4); other states are not yet.
+  const judged = (c: { type: string; expect?: string }): boolean =>
+    JUDGED.has(c.type) || (c.type === 'STATE' && (c.expect === 'CHECKED' || c.expect === 'UNCHECKED'));
+  const other = compiled.ir.expectations.find((e) => !judged(e.condition));
   if (other) return { ok: false, why: `${other.id} is a ${other.condition.type} check, which the verdict engine does not judge yet` };
   return { ok: true };
 }

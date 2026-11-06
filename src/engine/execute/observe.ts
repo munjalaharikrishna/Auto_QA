@@ -38,6 +38,8 @@ export interface ObservedElement {
   frame?: string[];
   /** Where it is on a picture of the page, with the place of its frames added: what a pick on the screenshot hits (E0.14). */
   box?: Box;
+  /** The cells of the table row it is in (E0.17 item 4): what "the checkbox in the row for Anita" is judged by. */
+  row?: string[];
 }
 
 /** A named container on the page and the text it shows: what a check on "the Backpack card" is judged on (UI-07). */
@@ -156,6 +158,7 @@ export function observed(
       ...(e.id ? { htmlId: e.id } : {}),
       ...(e.nameAttr ? { nameAttr: e.nameAttr } : {}),
       ...(e.frame?.length ? { frame: [...e.frame] } : {}),
+      ...(e.rowCells?.length ? { row: [...e.rowCells] } : {}),
       ...(e.frame?.length && !at ? {} : { box: at ? { ...e.box, x: e.box.x + at.x, y: e.box.y + at.y } : { ...e.box } }),
     });
   }

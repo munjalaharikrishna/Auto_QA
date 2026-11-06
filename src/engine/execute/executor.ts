@@ -633,6 +633,14 @@ class Runner {
     let elements = seen.elements;
     if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
     let query = this.query(target, purpose);
+    // "The checkbox in the row for Anita": the row is the place, and the only control of that kind in it is meant (E0.17 item 4).
+    // A target with no name of its own ("the checkbox", "the box"): only its kind, whatever word says the kind.
+    if (row && !target?.name && query.ontology && query.ontology !== 'Element') {
+      query = { ...query, name: '', aliases: [], onlyOfKind: true };
+      rec.notes.push(
+        `the step names no ${query.ontology ?? 'control'}, only its kind: the only one of that kind in the row "${row.row.cells.join(' | ')}" is meant`,
+      );
+    }
     // "Click Edit in the Job section" on a page that marks no sections: the part titled Job is the anchor (E0.17 item 1).
     const scope = row ? ({ status: 'unscoped' } as const) : await anchorScope(this.page, query.within, elements);
     if (scope.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', scope.why);

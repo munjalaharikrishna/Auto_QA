@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -259,6 +259,28 @@ for (const card of document.querySelectorAll('article')) {
     cart.textContent = names.length ? 'Cart: ' + names.join(', ') : 'Cart: empty';
   });
 }
+</script>`,
+  ),
+
+  // E0.17 item 4: rows with a name kept in three columns and an unnamed checkbox each; one row has two checkboxes.
+  '/ui/rows': layout(
+    'Rows',
+    `<h1>People</h1>
+<p id="picked" role="status"></p>
+<table id="people" aria-label="People">
+  <thead><tr><th></th><th>First</th><th>Middle</th><th>Last</th><th>Actions</th></tr></thead>
+  <tbody>
+    <tr><td><input type="checkbox" name="pick[]" value="1"></td><td>Anita</td><td>Kumari</td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="2"></td><td>Anita</td><td></td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="3"></td><td>Kumari</td><td>Anita</td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="4"><input type="checkbox" name="star[]" value="4"></td><td>Ravi</td><td></td><td>Shah</td><td><button type="button" class="delete">Delete</button></td></tr>
+  </tbody>
+</table>
+<script>
+for (const box of document.querySelectorAll('#people input[type=checkbox]')) box.addEventListener('change', () => {
+  picked.textContent = 'Picked: ' + [...document.querySelectorAll('#people input[name="pick[]"]:checked')].map((b) => b.value).join(', ');
+});
+for (const del of document.querySelectorAll('#people .delete')) del.onclick = () => { picked.textContent = 'Deleted row ' + del.closest('tr').querySelector('input').value; };
 </script>`,
   ),
 

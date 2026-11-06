@@ -200,6 +200,40 @@ export function locate(query: LocateQuery, page: readonly DomElement[], options:
   const elements = page.filter((e) => inContainer(e, query.within, named));
   const tried: Tried[] = [];
 
+  // "Check the checkbox in the row for Anita": no name, only a kind, and the row is the place. The only one of its kind there is meant.
+  if (names.size === 0 && query.onlyOfKind && query.ontology && query.ontology !== 'Element') {
+    const kind = elements.filter((e) => roleFits(query.ontology, e));
+    const usableOnes = kind.filter((e) => usable(e, purpose));
+    const weight = WEIGHT.role;
+    if (usableOnes.length === 1) {
+      tried.push({ level: 'role', weight, matches: kind.length, active: 1, outcome: 'used' });
+      const one = usableOnes[0] as DomElement;
+      return {
+        status: 'found',
+        element: one,
+        level: 'role',
+        weight,
+        tried,
+        ignored: kind.filter((e) => e !== one).map((element) => ({ element, reason: hiddenWhy(element) ?? 'another match was used' })),
+        passAllowed: true,
+      };
+    }
+    if (usableOnes.length > 1) {
+      tried.push({ level: 'role', weight, matches: kind.length, active: usableOnes.length, outcome: 'ambiguous' });
+      return {
+        status: 'ambiguous',
+        candidates: usableOnes,
+        level: 'role',
+        reason: `${usableOnes.length} controls of the kind ${query.ontology} are in the row, and the step does not name one`,
+        tried,
+        ignored: [],
+        passAllowed: false,
+      };
+    }
+    tried.push({ level: 'role', weight, matches: kind.length, active: 0, outcome: kind.length ? 'inactive' : 'nothing' });
+    return { status: 'not-found', tried, reason: `there is no usable control of the kind ${query.ontology} in the row`, passAllowed: false };
+  }
+
   for (const level of LEVELS) {
     const matches = matchesAt(level, query, names, elements, options);
     const weight = WEIGHT[level];

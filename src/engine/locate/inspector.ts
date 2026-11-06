@@ -305,6 +305,16 @@ export function readDom(opts: {
         ? { handler: squash(el.getAttribute('onclick') ?? el.getAttribute('href') ?? '').slice(0, 200) }
         : {}),
       text,
+      ...(() => {
+        // The cells of the table row it is in (E0.17 item 4): a check about "the checkbox in the row for Anita" is judged on that row.
+        const tr = el.closest('tr');
+        if (!tr) return {};
+        const cells = Array.from(tr.children)
+          .filter((c) => c.tagName === 'TD' || c.tagName === 'TH')
+          .slice(0, 12)
+          .map((c) => squash((c as HTMLElement).innerText ?? c.textContent).slice(0, 80));
+        return cells.length ? { rowCells: cells } : {};
+      })(),
       visible,
       ...(reason ? { hiddenReason: reason } : {}),
       disabled: (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true' || el.closest('fieldset[disabled]') !== null,

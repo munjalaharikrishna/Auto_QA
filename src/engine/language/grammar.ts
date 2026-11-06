@@ -628,8 +628,14 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       // A place that is not a container ("on the Login page") is read as it always was.
       const inCard = inRow ? undefined : containerOfNp(np);
       if (inCard) decisions.push(`the step is about the "${containerRef(inCard)?.text}" ${containerRef(inCard)?.noun}, and nothing else on the page (UI-07)`);
+      // "Tick the box in the Anita row": a box that is ticked is a checkbox, not a text box (E0.17 item 4).
+      const ticked = (action === 'CHECK' || action === 'UNCHECK') && tickedBox(np);
+      if (ticked) decisions.push('a box that is ticked is a checkbox');
       return done(
-        np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : inCard ? { ...t, within: inCard } : t)),
+        np.targets.map((t) => {
+          const kind = ticked && t.ontology === 'Field' ? { ...t, ontology: 'Checkbox' } : t;
+          return step(action, inRow ? { ...kind, row: inRow } : inCard ? { ...kind, within: inCard } : kind);
+        }),
         'GR-01',
       );
     }
@@ -1024,6 +1030,16 @@ function takeRow(rest: readonly Token[]): { rest: Token[]; row?: string } {
       };
   }
   return { rest: rest as Token[] };
+}
+
+/** Words before "box" that make it a box to type in: "text box", "search box". */
+const TYPED_BOXES: ReadonlySet<string> = new Set(['text', 'input', 'edit', 'search', 'entry', 'combo', 'list']);
+
+/** "the box", "the Remember me box": a box ticked or unticked, not a "text box" (E0.17 item 4). */
+function tickedBox(np: NounPhrase): boolean {
+  const words = np.words;
+  if (words[words.length - 1] !== 'box') return false;
+  return !TYPED_BOXES.has(words[words.length - 2] ?? '');
 }
 
 /** The words before a place that put a target inside a container: "in the Job section", "under Dependents section". */
