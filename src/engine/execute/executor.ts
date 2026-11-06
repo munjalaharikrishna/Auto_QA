@@ -10,6 +10,7 @@ import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
 import { labelKey } from '../knowledge/labels.js';
 import { screenWord } from '../knowledge/screens.js';
+import { anchorScope } from '../locate/anchors.js';
 import { contentFrameOf, frameOffsets } from '../locate/frames.js';
 import {
   type DomElement,
@@ -624,7 +625,16 @@ class Runner {
     const seen = await inspectPageDetailed(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
     let elements = seen.elements;
     if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
-    const query = this.query(target, purpose);
+    let query = this.query(target, purpose);
+    // "Click Edit in the Job section" on a page that marks no sections: the part titled Job is the anchor (E0.17 item 1).
+    const scope = row ? ({ status: 'unscoped' } as const) : await anchorScope(this.page, query.within, elements);
+    if (scope.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', scope.why);
+    if (scope.status === 'scoped' || scope.status === 'whole-page') {
+      const { within: _scoped, ...rest } = query;
+      query = rest;
+      rec.notes.push(scope.note);
+      if (scope.status === 'scoped') elements = scope.elements;
+    }
     // The screen this is on (E0.14), and what a person said the step's word means on it in a walkthrough: that is tried first.
     const screen = screenKeyOf(
       contentFrameOf(seen.frames)?.url ?? this.page.url(),

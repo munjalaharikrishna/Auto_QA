@@ -452,7 +452,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         const bound = bindValue(line, filled.value ?? [], ctx.data, np.targets[0]?.name);
         decisions.push(...bound.decisions);
         return done(
-          np.targets.map((t) => step('ENTER_VALUE', t, bound.spec)),
+          inContainerOf(np).map((t) => step('ENTER_VALUE', t, bound.spec)),
           'GR-02',
         );
       }
@@ -481,7 +481,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         const bound = bindValue(line, valueTokens, ctx.data, target.name);
         decisions.push(...bound.decisions);
         return done(
-          place.targets.map((t) => step('ENTER_VALUE', t, bound.spec)),
+          inContainerOf(place).map((t) => step('ENTER_VALUE', t, bound.spec)),
           'GR-02',
         );
       }
@@ -623,12 +623,10 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       if (np.headClass === undefined && action !== 'CLICK') decisions.push(`no kind of element named: read as a ${np.targets[0]?.ontology}`);
       // "Edit for John Smith": the row of a table that holds those values, not a container of the page (UI-06).
       const inRow = ofRow.row ? [ofRow.row] : np.placeWord === 'for' && np.within ? [np.within] : undefined;
-      // "Click Add to cart on the 'Backpack' card": the step is about that card and no other (UI-07). A place that is not a repeated
-      // widget ("on the Login page") is read as it always was.
-      const inCard =
-        !inRow && np.within && np.placeWord && ['on', 'in', 'within', 'inside', 'at'].includes(np.placeWord) && containerRef(np.within)?.repeated
-          ? np.within
-          : undefined;
+      // "Click Add to cart on the 'Backpack' card": the step is about that card and no other (UI-07). "Click Edit in the Job section"
+      // is about that section (E0.17 item 1): the run looks inside it, or on the whole page when the page has no part with that title.
+      // A place that is not a container ("on the Login page") is read as it always was.
+      const inCard = inRow ? undefined : containerOfNp(np);
       if (inCard) decisions.push(`the step is about the "${containerRef(inCard)?.text}" ${containerRef(inCard)?.noun}, and nothing else on the page (UI-07)`);
       return done(
         np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : inCard ? { ...t, within: inCard } : t)),
@@ -1026,6 +1024,20 @@ function takeRow(rest: readonly Token[]): { rest: Token[]; row?: string } {
       };
   }
   return { rest: rest as Token[] };
+}
+
+/** The words before a place that put a target inside a container: "in the Job section", "under Dependents section". */
+const CONTAINER_PLACES: ReadonlySet<string> = new Set(['on', 'in', 'within', 'inside', 'at', 'under']);
+
+/** The container a noun phrase puts its target in (UI-07, E0.17 item 1), or undefined when its place is not a container. */
+function containerOfNp(np: NounPhrase): string | undefined {
+  return np.within && np.placeWord && CONTAINER_PLACES.has(np.placeWord) && containerRef(np.within) ? np.within : undefined;
+}
+
+/** The targets of a phrase, each placed in the container the phrase names. */
+function inContainerOf(np: NounPhrase): IrTarget[] {
+  const within = containerOfNp(np);
+  return within ? np.targets.map((t) => (t.within ? t : { ...t, within })) : np.targets;
 }
 
 const SCOPE_PREPS: ReadonlySet<string> = new Set(['in', 'on', 'under', 'within', 'inside']);

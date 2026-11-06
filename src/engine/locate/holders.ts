@@ -51,6 +51,60 @@ export interface PageHolder {
   fields: number;
   /** What a person reads in it: its text, and the words on its buttons and fields. */
   text: string;
+  /** The first line of its text: the title a section without markup shows ("Job", "Contact Details"). */
+  title?: string;
+}
+
+/** The parts of the page whose title is a name (E0.17 item 1): the anchor a step "in the Job section" is done inside. */
+export type AnchorResult =
+  | { status: 'found'; anchor: PageHolder; why: string }
+  | { status: 'ambiguous'; anchors: PageHolder[]; why: string }
+  | { status: 'not-found'; why: string };
+
+/**
+ * The part of the page a section name means, by its title (E0.17 item 1). A page that marks no container still shows each section
+ * under a title, and the part that starts with that title holds the section. A title that is the name wins over one that only holds it
+ * ("Job" over "Job History" for "the Job section"). Of titled parts inside each other the innermost is the anchor; titled parts that are
+ * not inside each other are two sections, and the engine does not choose between them.
+ */
+export function anchorFor(name: string, holders: readonly PageHolder[]): AnchorResult {
+  const wanted = partWords(name);
+  if (!wanted.length) return { status: 'not-found', why: `"${name}" does not say which part of the page it is` };
+  const titled = holders.filter((h) => h.title && h.box.width > 0 && h.box.height > 0);
+  const titleWords = (h: PageHolder): string[] => nameWords(h.title ?? '');
+  const exact = titled.filter((h) => titleWords(h).join(' ') === wanted.join(' '));
+  const holding = titled.filter((h) => {
+    const t = titleWords(h);
+    for (let i = 0; i + wanted.length <= t.length; i++) if (wanted.every((w, k) => t[i + k] === w)) return true;
+    return false;
+  });
+  const pool = exact.length ? exact : holding;
+  if (!pool.length) return { status: 'not-found', why: `no part of the page is titled "${wanted.join(' ')}"` };
+  const innermost = pool.filter((h) => !pool.some((o) => inside(o, h)));
+  if (innermost.length > 1)
+    return {
+      status: 'ambiguous',
+      anchors: innermost,
+      why: `${innermost.length} parts of the page are titled "${wanted.join(' ')}": ${innermost.map((h) => `${h.tag} at ${h.box.x},${h.box.y}`).join(' and ')}`,
+    };
+  const anchor = innermost[0] as PageHolder;
+  return { status: 'found', anchor, why: `the part of the page titled "${anchor.title}" (${anchor.tag} at ${anchor.box.x},${anchor.box.y})` };
+}
+
+/** Which of the given elements are inside the element at an address. Runs in the page, so it is self-contained. */
+export function elementsInside(args: { anchor: string; xpaths: string[] }): boolean[] {
+  const at = (xpath: string): Node | null => {
+    try {
+      return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    } catch {
+      return null;
+    }
+  };
+  const anchor = at(args.anchor);
+  return args.xpaths.map((x) => {
+    const el = at(x);
+    return !!anchor && !!el && anchor !== el && anchor.contains(el);
+  });
 }
 
 export type HolderResult =
@@ -110,7 +164,7 @@ function innermostOf(holds: readonly PageHolder[], wanted: readonly string[]): H
 }
 
 /** The holders of a frame that are shown and hold at least two controls. Runs in the page, so it is self-contained. */
-export function readHolders(args: { selector: string; limit: number }): Omit<PageHolder, 'frame'>[] {
+export function readHolders(args: { selector: string; limit: number; minControls?: number }): Omit<PageHolder, 'frame'>[] {
   const CONTROLS = 'input, select, textarea, button, a[href], [role="button"], [role="link"], [role="textbox"], [role="combobox"]';
   const shown = (el: Element): boolean => {
     const box = el.getBoundingClientRect();
@@ -136,7 +190,7 @@ export function readHolders(args: { selector: string; limit: number }): Omit<Pag
       if (c.tagName === 'INPUT' && (c as HTMLInputElement).type === 'hidden') return false;
       return shown(c);
     });
-    if (controls.length < 2) continue;
+    if (controls.length < (args.minControls ?? 2)) continue;
     const fields = controls.filter((c) => {
       if (c.tagName === 'SELECT' || c.tagName === 'TEXTAREA') return true;
       if (c.tagName !== 'INPUT') return ['textbox', 'combobox'].includes(c.getAttribute('role') ?? '');
@@ -159,6 +213,7 @@ export function readHolders(args: { selector: string; limit: number }): Omit<Pag
       controls: controls.length,
       fields,
       text: text.length > 600 ? text.slice(0, 600) : text,
+      title: (((el as HTMLElement).innerText ?? '').split(String.fromCharCode(10)).find((l) => l.trim() !== '') ?? '').trim().slice(0, 80),
     });
     if (out.length >= args.limit) break;
   }

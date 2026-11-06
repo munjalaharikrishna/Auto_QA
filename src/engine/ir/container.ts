@@ -13,7 +13,7 @@
 export const REPEATED_NOUNS: ReadonlySet<string> = new Set(['card', 'tile', 'item', 'entry', 'listing']);
 
 /** Areas of a page that group things. */
-export const AREA_NOUNS: ReadonlySet<string> = new Set(['section', 'panel', 'box', 'group', 'widget', 'area', 'block']);
+export const AREA_NOUNS: ReadonlySet<string> = new Set(['section', 'panel', 'box', 'group', 'widget', 'area', 'block', 'tab']);
 
 const DETERMINERS: ReadonlySet<string> = new Set(['the', 'a', 'an']);
 

@@ -189,6 +189,8 @@ export function readDom(opts: {
     }
     if (Number(getComputedStyle(el).opacity) === 0) return 'opacity:0';
     if (rect.width === 0 || rect.height === 0) return 'no size';
+    // Left or above the start of the page: nobody can scroll to it. OrangeHRM 2.5 hides its other tabs at x -9999 (E0.17).
+    if (rect.right + window.scrollX <= 0 || rect.bottom + window.scrollY <= 0) return 'off the page';
     return undefined;
   };
 

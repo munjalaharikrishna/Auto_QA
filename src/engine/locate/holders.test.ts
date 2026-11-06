@@ -83,7 +83,7 @@ describe('E0.17 item 2: the part of the page a name means', () => {
       r.around.map((h) => h.box.width),
       [717, 1280, 1280],
     );
-    assert.match(r.why, /innermost of 4 nested parts/);
+    assert.ok(r.why.includes('innermost of 4 nested parts'), r.why);
   });
 
   it('two parts that are not inside each other are not chosen between', () => {
@@ -134,8 +134,8 @@ describe('E0.17: a layout check measures the part and the parts around it (owner
     const e = judge(page(nested(261, 256)));
     assert.equal(e.result, 'unproven');
     assert.equal(e.doubt, 'AMBIGUOUS');
-    assert.match(e.actual, /296 px off the middle/);
-    assert.match(e.actual, /717 px wide\): 26 px off the middle/);
+    assert.ok(e.actual.includes('296 px off the middle'), e.actual);
+    assert.ok(e.actual.includes('717 px wide): 26 px off the middle'), e.actual);
   });
 
   it('box and panel both in the middle: proven', () => {
@@ -201,7 +201,7 @@ describe('E0.17 exit test: the captured OrangeHRM 2.5 login page (3 nested "logi
     assert.equal(r.holder.tag, 'table');
     assert.equal(r.holder.controls, 4);
     assert.equal(r.holder.fields, 2);
-    assert.match(r.holder.text, /Login Name/);
+    assert.ok(r.holder.text.includes('Login Name'));
     assert.ok(r.around.length >= 2, `${r.around.length} holders around it`);
     // The panel around the box is narrower than the window: it is measured as well.
     assert.ok(r.around.some((h) => h.box.width < 1280 * 0.95));
