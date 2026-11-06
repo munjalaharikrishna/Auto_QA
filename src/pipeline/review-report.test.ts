@@ -154,12 +154,12 @@ describe('what the compile finds in real sentences', () => {
     assert.ok(c.ir);
     const odd = {
       ...c,
-      ir: { ...c.ir, expectations: c.ir.expectations.map((e, i) => (i === 0 ? { ...e, condition: { ...e.condition, type: 'LAYOUT' as const } } : e)) },
+      ir: { ...c.ir, expectations: c.ir.expectations.map((e, i) => (i === 0 ? { ...e, condition: { ...e.condition, type: 'COUNT' as const } } : e)) },
     } as CompileResult;
     const out = compileItems('w.xlsx', 'T-L', odd);
     assert.equal(out.length, 1);
     assert.equal(out[0]?.owner, 'engine');
-    assert.ok(out[0]?.cause.includes('LAYOUT'), out[0]?.cause);
+    assert.ok(out[0]?.cause.includes('COUNT'), out[0]?.cause);
   });
   it('finds the reason of a vague case, with the tester words and where it is', async () => {
     const out = await items(raw('T-V', ['Open Login page', 'Do the needful'], 'System works correctly'));

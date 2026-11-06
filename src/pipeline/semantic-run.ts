@@ -22,7 +22,7 @@ import type { CheckVerdict, ReviewReason, StepVerdict, TestVerdict } from '../re
  */
 
 /** The condition types `evaluateExpectation` decides. Any other type is never run through this path. */
-const JUDGED = new Set(['VISIBILITY', 'TEXT', 'AUTHENTICATION', 'URL', 'ENABLED', 'VALUE', 'MASKED', 'HEALTH']);
+const JUDGED = new Set(['VISIBILITY', 'TEXT', 'AUTHENTICATION', 'URL', 'ENABLED', 'VALUE', 'MASKED', 'HEALTH', 'LAYOUT']);
 
 export interface SemanticJob {
   model: TestModel;

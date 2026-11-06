@@ -2,6 +2,7 @@ import type { StepRecord } from '../execute/executor.js';
 import type { Observation, ObservedContainer, ObservedElement } from '../execute/observe.js';
 import { containerRef, matchContainers } from '../ir/container.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
+import { findHolder } from '../locate/holders.js';
 import { pageIdentityOf } from '../locate/page-identity.js';
 import { compactKey } from '../text/compound.js';
 import { tokenize } from '../text/index.js';
@@ -375,6 +376,95 @@ function judgeAuthentication(exp: IrExpectation, p: Pages & { after: Observation
   return unproven(exp, 'NOT_OBSERVABLE', expected, `address ${after.url}`, 'the page does not show whether the login worked', p.step);
 }
 
+/** How far from the middle a part may sit and still be in the middle: 5% of the window, as the generated tests measure it (VAL-F01). */
+const CENTRE_TOLERANCE = 0.05;
+
+/** The area of the window, in thirds, where the middle of a box is. */
+function areaOf(box: { x: number; y: number; width: number; height: number }, vp: { width: number; height: number }): { row: string; col: string } {
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const row = cy < vp.height / 3 ? 'top' : cy > (vp.height * 2) / 3 ? 'bottom' : 'middle';
+  const col = cx < vp.width / 3 ? 'left' : cx > (vp.width * 2) / 3 ? 'right' : 'middle';
+  return { row, col };
+}
+
+/** A holder this wide is the layout of the page, not a part a person points at: it is "in the middle" of any page. */
+const PAGE_WIDE = 0.95;
+
+type Placed = { box: { x: number; y: number; width: number; height: number }; what: string };
+
+/**
+ * Where a part of the page or an element sits in the window (E0.17): "Login section should be middle of the page". A part is found by
+ * what it holds, the innermost of nested holders (`findHolder`); a named control (a button, a field) is found as an element. The middle
+ * is measured across, within 5% of the window, as the generated tests do; the other regions are the thirds of the window.
+ *
+ * Owner, 6 Nov 2026: "the login section" can be the box around the fields or the panel around that box. The innermost box and the
+ * holders of the same words around it are all measured, leaving out those as wide as the window. All where the check says: PASS; none:
+ * FAIL; some and not others: not decided, with each measurement (OrangeHRM 2.5: the box is left of the middle, its panel is in it).
+ */
+function judgeLayout(exp: IrExpectation, c: IrCondition, after: Observation, step?: string): Evaluation {
+  const region = c.region ?? 'center';
+  const name = c.target?.name ?? c.target?.label ?? '';
+  const expected = `${describeTarget(c.target)} ${exp.negated ? 'not ' : ''}${region === 'center' ? 'in the middle of the page' : `at the ${region} of the page`}`;
+  const vp = after.viewport;
+  if (!vp)
+    return unproven(exp, 'NOT_OBSERVABLE', expected, 'the size of the window was not read', 'without the window, a place on it cannot be measured', step);
+  const placed: Placed[] = [];
+  if (ROLES[c.target?.ontology ?? '']) {
+    const found = elementsFor(after, c.target).filter((e) => e.box);
+    if (found.length !== 1)
+      return unproven(
+        exp,
+        found.length ? 'AMBIGUOUS' : 'NOT_FOUND',
+        expected,
+        found.length ? `${found.length} elements are called "${name}"` : `nothing on the page is called "${name}"`,
+        found.length ? 'the engine does not choose between equal elements' : 'what is not found cannot be placed',
+        step,
+      );
+    const one = found[0] as ObservedElement & { box: Placed['box'] };
+    placed.push({ box: one.box, what: `${one.role} "${one.name}"` });
+  } else {
+    const part = findHolder(name, after.holders ?? []);
+    if (part.status === 'ambiguous') return unproven(exp, 'AMBIGUOUS', expected, part.why, 'the engine does not choose between two parts of the page', step);
+    if (part.status === 'not-found') {
+      // "The logo is at the top": a single element by that name, when no part of the page holds it.
+      const one = elementsFor(after, c.target).filter((e) => e.box);
+      if (one.length !== 1 || !one[0]?.box) return unproven(exp, 'NOT_FOUND', expected, part.why, 'what is not found cannot be placed', step);
+      placed.push({ box: one[0].box, what: `${one[0].role} "${one[0].name}"` });
+    } else {
+      placed.push({ box: part.holder.box, what: `the ${part.holder.tag} around the controls` });
+      for (const h of part.around) if (h.box.width < vp.width * PAGE_WIDE) placed.push({ box: h.box, what: `the ${h.tag} around it (${h.box.width} px wide)` });
+    }
+  }
+  const measured = placed.map((p) => {
+    const area = areaOf(p.box, vp);
+    const off = Math.round(Math.abs(p.box.x + p.box.width / 2 - vp.width / 2));
+    const there =
+      region === 'center'
+        ? off <= vp.width * CENTRE_TOLERANCE
+        : region.split('-').every((side) => (side === 'top' || side === 'bottom' ? area.row === side : area.col === side));
+    const said =
+      region === 'center'
+        ? `${p.what}: ${off} px off the middle across`
+        : `${p.what}: in the ${area.row === area.col ? 'middle' : `${area.row} ${area.col}`} of the window`;
+    return { there, said };
+  });
+  const window = region === 'center' ? ` (the window is ${vp.width} px wide; up to ${Math.round(vp.width * CENTRE_TOLERANCE)} px is the middle)` : '';
+  const actual = `${measured.map((m) => m.said).join('; ')}${window}`;
+  const yes = measured.filter((m) => m.there).length;
+  if (yes > 0 && yes < measured.length)
+    return unproven(
+      exp,
+      'AMBIGUOUS',
+      expected,
+      actual,
+      'the box around the controls and the part around it are not in the same place: a person says which one the check means',
+      step,
+    );
+  const holds = yes === measured.length;
+  return settled(exp, holds !== exp.negated, expected, actual, holds ? 'it sits there' : 'it does not sit there', true, step);
+}
+
 /** The kinds of check that conclude something about what a page holds, so that a frame nobody read can hide what they ask about. */
 const ABOUT_CONTENT: ReadonlySet<string> = new Set(['VISIBILITY', 'TEXT', 'ENABLED', 'VALUE', 'COUNT', 'MASKED']);
 
@@ -435,6 +525,8 @@ function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
     }
     case 'AUTHENTICATION':
       return judgeAuthentication(exp, page);
+    case 'LAYOUT':
+      return judgeLayout(exp, c, page.after, p.step);
     case 'URL': {
       const wanted = c.expect ?? '';
       // "User stays on the Login page": the step did not move the page, which is a comparison with the page before it, not with a name.

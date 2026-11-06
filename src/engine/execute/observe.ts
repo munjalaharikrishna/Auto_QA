@@ -1,6 +1,7 @@
 import type { Page } from 'playwright';
 import { CONTAINER_SELECTOR, HEADING_SELECTOR } from '../locate/containers.js';
 import { contentFrameOf, frameOffsets, prepareFrame, readSettled, visibleFrames } from '../locate/frames.js';
+import { HOLDER_SELECTOR, type PageHolder, readHolders } from '../locate/holders.js';
 import { inspectPageDetailed } from '../locate/inspector.js';
 import { screenKeyOf } from '../locate/page-identity.js';
 import type { Box, DomElement } from '../locate/types.js';
@@ -84,6 +85,10 @@ export interface Observation {
   tables?: string[][];
   /** The title of the dialog that is open. */
   dialog?: string;
+  /** The parts of the page that hold two controls or more, with their place on the whole page (E0.17): what "the login section" is found in. */
+  holders?: PageHolder[];
+  /** The size of the window the page is shown in: what "in the middle of the page" is measured against. */
+  viewport?: { width: number; height: number };
 }
 
 const MESSAGE_ROLES: ReadonlySet<string> = new Set(['alert', 'status', 'alertdialog', 'log']);
@@ -125,6 +130,8 @@ export function observed(
     /** Where each frame is on the page, by its path joined with `>`: a box inside a frame is moved by it. */
     offsets?: Readonly<Record<string, { x: number; y: number }>>;
     tables?: string[][];
+    holders?: PageHolder[];
+    viewport?: { width: number; height: number };
   } = {},
 ): Observation {
   const shown = elements.filter((e) => e.visible);
@@ -171,6 +178,8 @@ export function observed(
     ...(headings.length ? { headings } : {}),
     ...(frames.tables?.length ? { tables: frames.tables } : {}),
     ...(dialog ? { dialog } : {}),
+    ...(frames.holders?.length ? { holders: frames.holders } : {}),
+    ...(frames.viewport ? { viewport: frames.viewport } : {}),
   };
 }
 
@@ -275,6 +284,15 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
   }
   // The place of each frame on the page, so a box inside it can be drawn on a picture of the whole page (E0.14).
   const offsets = await frameOffsets(page, frames);
+  // The parts of each frame that hold controls, placed on the whole page; a frame whose place is not known is left out (E0.17).
+  const holders: PageHolder[] = [];
+  for (const { frame, path } of frames) {
+    const at = offsets[path.join('>')];
+    if (!at) continue;
+    const read = await readSettled(frame, () => frame.evaluate(readHolders, { selector: HOLDER_SELECTOR, limit: 400 })).catch(() => undefined);
+    if (read?.ok) holders.push(...read.value.map((h) => ({ ...h, frame: [...path], box: { ...h.box, x: h.box.x + at.x, y: h.box.y + at.y } })));
+  }
+  const viewport = page.viewportSize() ?? (await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })));
   const seen = await inspectPageDetailed(page, { testIdAttribute: options.testIdAttribute, includeText: false });
   for (const path of seen.unread) unread.add(path.join(' > '));
   const content = contentFrameOf(seen.frames);
@@ -283,5 +301,7 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
     unread: [...unread],
     offsets,
     tables,
+    holders,
+    viewport,
   });
 }
