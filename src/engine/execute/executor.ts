@@ -9,8 +9,9 @@ import { isMasked, maskDeep, Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
 import { labelKey } from '../knowledge/labels.js';
-import { screenWord } from '../knowledge/screens.js';
+import { screenFound, screenWord } from '../knowledge/screens.js';
 import { anchorScope, nearestTo } from '../locate/anchors.js';
+import { type Fingerprint, fingerprintOf, matchFingerprint } from '../locate/fingerprint.js';
 import { contentFrameOf, frameOffsets } from '../locate/frames.js';
 import {
   type DomElement,
@@ -97,6 +98,9 @@ export interface Located {
    * approval keeps this element as what the word means on this screen (a label of the screen, as a walkthrough pick is).
    */
   assumed?: { why: string; word: string; means: string; screen: string; element: string };
+  /** The screen it was found on, and what it was there (E0.17 item 5): kept with the screen, for the fallback of a later run. */
+  screen?: string;
+  fingerprint?: Fingerprint;
 }
 
 export interface Call {
@@ -700,12 +704,33 @@ class Runner {
         result.status === 'not-found'
           ? `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`
           : result.reason;
-      // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
-      const candidates = result.status === 'ambiguous' ? result.candidates : [];
-      const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
-      if (!picked) throw new Block(code, reason);
-      found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
-      rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+      // E0.17 item 5: nothing by any level, to act on it: what the element was in an earlier run on this screen, as an assumption.
+      const kept =
+        result.status === 'not-found' && purpose === 'act' && !row
+          ? screenFound(
+              this.o.knowledge?.screens?.find((s) => s.key === screen),
+              query.name,
+            )
+          : undefined;
+      const again = kept ? matchFingerprint(kept as unknown as Fingerprint, elements) : undefined;
+      if (again?.status === 'none') rec.notes.push(`an earlier fingerprint of "${query.name}" was compared: ${again.why}`);
+      if (again?.status === 'found') {
+        found = {
+          element: again.element,
+          level: 'inspection',
+          weight: again.score,
+          ignored: [],
+          assumed: `"${query.name}" was not found by any level; ${again.why}`,
+        };
+        rec.notes.push(found.assumed as string);
+      } else {
+        // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
+        const candidates = result.status === 'ambiguous' ? result.candidates : [];
+        const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
+        if (!picked) throw new Block(code, reason);
+        found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
+        rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+      }
     }
     const selector = selectorIn(found.element.frame, found.element.xpath);
     const count = await this.page.locator(selector).count();
@@ -747,6 +772,8 @@ class Runner {
           }
         : {}),
     };
+    // What the element is, for a later run that cannot find it by its name or id (E0.17 item 5). Only what a level found plainly.
+    if (!found.assumed && !found.picked) rec.located = { ...rec.located, screen, fingerprint: fingerprintOf(found.element, seen.elements) };
     this.lastElement = { frame: [...found.element.frame], xpath: found.element.xpath };
     return { element: found.element, selector };
   }

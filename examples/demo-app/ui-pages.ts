@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows', 'renamed'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -259,6 +259,22 @@ for (const card of document.querySelectorAll('article')) {
     cart.textContent = names.length ? 'Cart: ' + names.join(', ') : 'Cart: empty';
   });
 }
+</script>`,
+  ),
+
+  // E0.17 item 5: a release renames a button (?v=2): its id and what it does stay, its words change. ?v=3 also gives it a new id.
+  '/ui/renamed': layout(
+    'Renamed',
+    `<h1>Profile</h1>
+<p><button type="button" id="profile-primary" onclick="done('Profile stored')">Save profile</button>
+<button type="button" id="profile-secondary" onclick="done('Cancelled')">Cancel</button></p>
+<p id="out" role="status"></p>
+<script>
+function done(text) { document.getElementById('out').textContent = text; }
+const v = new URLSearchParams(location.search).get('v');
+const b = document.getElementById('profile-primary');
+if (v === '2' || v === '3') b.textContent = 'Store profile';
+if (v === '3') { b.id = 'profile-main'; b.setAttribute('onclick', "done('Profile kept')"); }
 </script>`,
   ),
 
