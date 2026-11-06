@@ -1,0 +1,179 @@
+<html>
+<head>
+<title>OrangeHRM - New Level of HR Management</title>
+<link href="favicon.ico" rel="icon" type="image/gif"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script type="text/javascript">
+
+	function submitForm() {
+
+		if(document.loginForm.txtUserName.value == "") {
+				alert('User Name not given!');
+				return false;
+		   }
+
+		if(document.loginForm.txtPassword.value == "") {
+				alert("Password not given!");
+				return false;
+		   }
+
+		document.loginForm.actionID.value = "chkAuthentication";
+		document.loginForm.hdnUserTimeZoneOffset.value = calculateUserTimeZoneOffset();
+		document.loginForm.submit();
+	}
+
+	if (window.parent != window) {
+		window.parent.location.reload();
+	}
+
+	function calculateUserTimeZoneOffset() {
+
+		var myDate = new Date();
+		var offset = (-1)*myDate.getTimezoneOffset()/60;
+
+		return offset;
+
+	}
+
+</script>
+<link href="themes/orange/css/style.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+<!--
+body {
+	background-color: #FFFFFF;
+}
+.bodyTXT {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	color: #666666;
+}
+.style2 {color: #339900}
+.loginTXT {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	color: #666666;
+	height: 19px;
+	vertical-align: middle;
+	padding-top:0;
+}
+-->
+</style></head>
+<body leftmargin="0" topmargin="0" marginwidth="0" marginheight="0">
+<noscript>
+	<strong><font color='Red' style="padding-left:15px; text-decoration:blink;">
+		You need a JavaScript enabled Browser. Ex. 		<a href="http://www.mozilla.com/firefox/" target="_blank"
+			style="text-decoration:none;">Mozilla Firefox</a>
+		</font>
+	</strong>
+</noscript>
+
+<!-- ImageReady Slices (orange_new.psd) -->
+<table id="Table_01" width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td width="43%" align="right"><img src="themes/orange/pictures/orange_new_02.gif" width="266" height="67"></td>
+    <td width="57%" align="center">&nbsp;</td>
+  </tr>
+</table>
+<table id="Table_01" width="100%" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td width="10%" align="center" bgcolor="#E77817"><table id="Table_01" width="874" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="25"><img src="themes/orange/pictures/orange_new_05.gif" width="25" height="14" alt=""></td>
+        <td width="72"><img src="themes/orange/pictures/orange_new_06.gif" width="72" height="14" alt=""></td>
+        <td colspan="2"><img src="themes/orange/pictures/orange_new_07.gif" width="107" height="14" alt=""></td>
+        <td colspan="5"><img src="themes/orange/pictures/orange_new_08.gif" width="610" height="14" alt=""></td>
+        <td width="403"><img src="themes/orange/pictures/orange_new_09.gif" width="49" height="14" alt=""></td>
+        <td width="52"><img src="themes/orange/pictures/orange_new_10.gif" width="10" height="14" alt=""></td>
+      </tr>
+    </table></td>
+  </tr>
+</table>
+  <form name="loginForm" method="post" action="./login.php" onSubmit="submitForm(); return false;">
+	<input type="hidden" name="actionID"/>
+	<input type="hidden" name="hdnUserTimeZoneOffset" id="hdnUserTimeZoneOffset" value="" />
+<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td width="20%"><img src="themes/orange/pictures/spacer.gif" width="5" height="5" alt=""></td>
+    <td width="60%"><table id="Table_01" width="717" height="379" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td rowspan="6"><img src="themes/orange/pictures/orange_newMain_01.gif" width="5" height="338" alt=""></td>
+        <td rowspan="5" valign="top"><img src="themes/orange/pictures/orange_new_13.jpg" width="167" height="180">
+          <table width="100%"  border="0" cellspacing="0" cellpadding="3">
+            <tr>
+              <td width="45%">&nbsp;</td>
+              <td width="55%">&nbsp;</td>
+            </tr>
+            <tr>
+              <td align="right" class="bodyTXT">Login Name : </td>
+              <td>
+              <input name="txtUserName" type="text" class="loginText" tabindex="1"/>
+              </td>
+            </tr>
+            <tr>
+              <td align="right" class="bodyTXT">Password : </td>
+              <td><input name="txtPassword" type="password" class="loginText" tabindex="2"/></td>
+            </tr>
+            <tr>
+			<td height="40" valign="bottom" align="center"><input type="Submit" name="Submit" value="Login" class="button" tabindex="3"/> </td>
+            <td align="center" valign="bottom"><input type="reset" name="clear" value="Clear" class="button" tabindex="4"/></td>
+            </tr>
+            <tr>
+             	<td></td>
+			<td align='center'><strong ><font color='Red'>&nbsp;</font></strong></td>
+            </tr>
+          </table></td>
+          </form>
+        <td colspan="2" rowspan="3"><img src="themes/orange/pictures/orange_new_14.jpg" width="94" height="116"></td>
+        <td colspan="2"><img src="themes/orange/pictures/orange_newMain_04.gif" width="451" height="29" alt=""></td>
+      </tr>
+      <tr>
+        <td colspan="2"><img src="themes/orange/pictures/orange_newMain_05.gif" width="451" height="46" alt=""></td>
+      </tr>
+      <tr>
+        <td colspan="2"><img src="themes/orange/pictures/orange_newMain_06.gif" width="451" height="41" alt=""></td>
+      </tr>
+      <tr>
+        <td><img src="themes/orange/pictures/orange_new_19.gif" width="23" height="22"></td>
+        <td colspan="3"><img src="themes/orange/pictures/orange_newMain_08.gif" width="522" height="22" alt=""></td>
+      </tr>
+      <tr>
+        <td><img src="themes/orange/pictures/orange_newMain_09.gif" width="23" height="169" alt=""></td>
+        <td colspan="3" valign="top"><table width="80%"  border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td class="bodyTXT"><!--<strong>Orange<span class="style2">HRM</span></strong> comes as a comprehensive solution for the efficient management and development of your Human Resource. It will assist you in the complex and strategic process of managing this crucial resource of your enterprise. Based on modular architecture, it facilitates a vast range of HR activities, with features that reflect the main HR management activities. It comes as a web-enabled application and considering the available flexibility, OrangeHRM is a perfect platform for reengineering your HR processes and achieving a new level of HR Management.-->
+            <font color="#6C7E89" size="2" face="Tahoma">Orange</font>
+	<font size="2" face="Tahoma" color="#FF9933">HRM</font></b>
+	<font color="#6C7E89" size="3" face="tahoma" style="line-height: 18px; font-size: 11.8px; font-family: tahoma;">
+	 comes as a comprehensive solution for the efficient management and development of your Human Resource. It will assist you in the complex and strategic process of managing this crucial resource of your enterprise. Based on modular architecture, it facilitates a vast range of HR activities, with features that reflect the main HR management activities. It comes as a web-enabled application and considering the available flexibility, OrangeHRM is a perfect platform for reengineering your HR processes and achieving a new level of HR Management.	</font></td>
+          </tr>
+        </table></td>
+      </tr>
+      <tr>
+        <td valign="bottom"><img src="themes/orange/pictures/orange_new_13_2.jpg" width="167" height="25"></td>
+        <td colspan="4"><img src="themes/orange/pictures/orange_newMain_11.gif" width="545" height="31" alt=""></td>
+      </tr>
+      <tr>
+        <td colspan="5"><img src="themes/orange/pictures/orange_newMain_12.gif" width="657" height="40" alt=""></td>
+        <td><img src="themes/orange/pictures/orange_newMain_13.gif" width="60" height="40" alt=""></td>
+      </tr>
+      <tr>
+        <td><img src="themes/orange/pictures/spacer.gif" width="5" height="1" alt=""></td>
+        <td><img src="themes/orange/pictures/spacer.gif" width="167" height="1" alt=""></td>
+        <td><img src="themes/orange/pictures/spacer.gif" width="23" height="1" alt=""></td>
+        <td><img src="themes/orange/pictures/spacer.gif" width="71" height="1" alt=""></td>
+        <td><img src="themes/orange/pictures/spacer.gif" width="391" height="1" alt=""></td>
+        <td><img src="themes/orange/pictures/spacer.gif" width="60" height="1" alt=""></td>
+      </tr>
+    </table></td>
+    <td width="20%" valign="top">&nbsp;</td>
+  </tr>
+</table>
+<!-- End ImageReady Slices -->
+<table width="100%">
+<tr>
+<td align="center"><a href="http://www.orangehrm.com" target="_blank">OrangeHRM</a> ver 2.5.0.2 &copy; OrangeHRM Inc. 2005 - 2009 All rights reserved.</td>
+</tr>
+</table>
+
+</body>
+</html>

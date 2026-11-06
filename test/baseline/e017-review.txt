@@ -1,0 +1,24 @@
+E0.17 baseline, 6 Nov 2026, branch engine/e0.17-locating from main at e43e547 (E0.16 merged).
+Measured with: npm run engine:review -- --no-examples   (compile time, no browser; both OrangeHRM workbooks)
+
+## Before (e43e547, E0.16 done)
+29 test cases: 9 ready, 13 wait only for engine work, 7 need a tester, 0 need project data
+27 review reasons; 13 of them [ENGINE] LAYOUT checks are not judged yet.
+
+## After (E0.17 steps 1-6)
+29 test cases: 10 ready, 12 wait only for engine work, 7 need a tester, 0 need project data
+26 review reasons:
+   12  [ENGINE] STATE checks are not judged yet (DEFAULT_PAGE "PIM as a default page", UPLOADED "uploaded photo", UPDATED;
+       hidden behind the LAYOUT blocker before; for E0.18)
+    5  [TESTER] "updated the data": not what shows it
+    3  [TESTER] "the same updated records": a person decides which record
+    1  [TESTER] "Click on Employee Name"   1 + 1  TC19   1  TC03 "User should add button…"   2  TC_LOGIN_010
+Gold unchanged: Login 60/60, Add Employee 711/736 (771 of 796). Wrong-PASS traps 10 of 10.
+
+## Exit tests, live on local OrangeHRM 2.5.0.2 (user selenium, employee 0001 Anita Kumari Rao)
+TC01 "Login section should be middle of the page": login box found without a question (innermost of 4 nested holders);
+  box 296 px off the middle, panel 26 px off: NEEDS REVIEW (owner decision, 6 Nov 2026; the draft answer key expects it).
+Job tab, "Click Edit in the Job section" and plain "Click Edit": btnEditJob, PASS (closed tabs are off the page).
+"Check the checkbox in the row for Anita Kumari Rao" / "… is checked": chkLocID[] of row 0001, PASS.
+"Click the Add Employee link" (PIM hover menu): PIM hovered once, link clicked, PASS.
+Identical-element cycle and fingerprints: demo app /ui/alike and /ui/renamed (the live Job tab shows one Edit button).

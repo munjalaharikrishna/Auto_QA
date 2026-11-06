@@ -294,12 +294,14 @@ export function judge(input: JudgeInput): Verdict {
     evaluations.push(ev);
   }
   const disproven = evaluations.filter((e) => e.result === 'disproven');
+  // A control the engine chose among alike ones (E0.17 item 3) is an assumption: a person approves it before the case can PASS.
+  const chose = trace.steps.find((s) => s.located?.assumed);
   const unproven = evaluations.filter((e) => e.result === 'unproven');
   const stale = evaluations.some((e) => e.doubt === 'STALE');
   const vacuous = evaluations.some((e) => e.doubt === 'VACUOUS');
   // An expected result nobody could read is a check that was never made: the case cannot be a clean PASS (E0.15).
   const unread = compile.issues.find((i) => i.code === 'NOT_UNDERSTOOD' && i.severity !== 'info');
-  const guarded = !plan.passAllowed || !!unread;
+  const guarded = !plan.passAllowed || !!unread || !!chose;
   const verification = answers({
     ...base,
     3: { answer: 'yes', detail: 'every value has a stated source' },
@@ -317,6 +319,17 @@ export function judge(input: JudgeInput): Verdict {
   });
   const common = { evaluations, verification, ...(decided ? { decidedByUser: decided } : {}) };
 
+  if (disproven.length > 0 && chose?.located?.assumed) {
+    // The check failed after the engine chose among alike controls: the choice may be why, so it is not a FAIL of the application.
+    const e = disproven[0] as Evaluation;
+    return {
+      testId: id,
+      verdict: 'NEEDS_REVIEW',
+      reason: `${e.expectation} "${e.clause}": expected ${e.expected}; ${e.actual}. ${chose.step} "${chose.original}": ${chose.located.assumed.why}, so a person says whether that was the right one`,
+      reviewCause: `${e.expectation}:CHOSEN:${e.clause}:${e.actual}`,
+      ...common,
+    };
+  }
   if (disproven.length > 0) {
     const e = disproven[0] as Evaluation;
     return { testId: id, verdict: 'FAIL', rootCause: 'APPLICATION', reason: `${e.expectation} "${e.clause}": expected ${e.expected}; ${e.actual}`, ...common };
@@ -344,7 +357,9 @@ export function judge(input: JudgeInput): Verdict {
     guarded && unproven.length === 0
       ? unread
         ? `${unread.where}: "${unread.original}" could not be read as a check, so it was not made: a person decides`
-        : 'an assumption or an unknown condition in the test case means it cannot be a clean PASS'
+        : chose?.located?.assumed
+          ? `${chose.step} "${chose.original}": ${chose.located.assumed.why}; a person approves the choice before the case can PASS`
+          : 'an assumption or an unknown condition in the test case means it cannot be a clean PASS'
       : `${first.expectation} "${first.clause}" is unproven: ${first.why}`;
   return {
     testId: id,

@@ -177,12 +177,26 @@ describe('LC-01, LA-01, DM-01 on the DOM fixture pages', { skip }, () => {
       assert.equal(none.status === 'not-found' && none.tried.length, LEVELS.length, 'every level was tried');
       assert.equal(none.passAllowed, false);
     });
-    it('two equal "Save" buttons are ambiguous: both are shown, none is chosen', async () => {
+    it('two "Save" buttons alike in every way: the first is used, as an assumption that cannot PASS (E0.17 item 3)', async () => {
       const r = find(await open('duplicates.html'), { name: 'Save', ontology: 'Button' });
+      assert.equal(r.status, 'found');
+      assert.equal(r.passAllowed, false);
+      if (r.status !== 'found' || r.passAllowed) return;
+      assert.equal(r.element.id, 'save-a');
+      assert.deepEqual(
+        r.alike.map((e) => e.id),
+        ['save-a', 'save-b'],
+      );
+      assert.ok(r.assumed.includes('the first on the page was used'), r.assumed);
+      assert.ok(
+        r.alike.every((c) => c.box.width > 0),
+        'with where they are, for the screenshot',
+      );
+    });
+    it('to look at one of them, alike buttons are still a question: a check is never made on a guess', async () => {
+      const r = find(await open('duplicates.html'), { name: 'Save', ontology: 'Button', purpose: 'inspect' });
       assert.equal(r.status, 'ambiguous');
       assert.deepEqual(idsOf(r).sort(), ['save-a', 'save-b']);
-      assert.equal(r.passAllowed, false);
-      assert.ok(r.status === 'ambiguous' && r.candidates.every((c) => c.box.width > 0), 'with where they are, for the screenshot');
     });
     it('the container the tester named tells two buttons apart: "Submit" in the address form', async () => {
       const els = await open('duplicates.html');

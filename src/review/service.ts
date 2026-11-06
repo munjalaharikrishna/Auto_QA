@@ -49,8 +49,22 @@ function checkedNote(given: unknown): string {
   return note;
 }
 
+/** A control the engine chose among alike ones, as the verdict keeps it (E0.17 item 3). */
+export type Pick = NonNullable<TestVerdict['picks']>[number];
+
+export interface ReviewOptions {
+  /**
+   * Keeps a choice a person approved by passing the case: the word means that element on that screen from now on (E0.17 item 3). A
+   * choice that cannot be kept does not undo the decision; the decision is the person's, the memory only saves asking again.
+   */
+  remember?: (projectId: string, pick: Pick, source: string, who: string) => Promise<unknown>;
+}
+
 export class ReviewService {
-  constructor(private readonly store: Store) {}
+  constructor(
+    private readonly store: Store,
+    private readonly options: ReviewOptions = {},
+  ) {}
 
   private async rows(jobId: string): Promise<StoredVerdict[]> {
     return (await this.store.verdicts(jobId)).map((r) => ({
@@ -137,6 +151,10 @@ export class ReviewService {
       evidenceSha256: evidenceHash(c.evidence),
     });
     if (saved.outcome === 'refused') return refused(saved.reason);
+    // A PASS approves what the engine chose among alike controls in this run: it is remembered for that screen (E0.17 item 3).
+    if (decision === 'PASS' && this.options.remember)
+      for (const pick of (result.verdict as TestVerdict | undefined)?.picks ?? [])
+        await this.options.remember(projectId, pick, `review of ${c.testId} in ${jobId} (${pick.step})`, reviewer).catch(() => undefined);
     return { testId: c.testId, outcome: saved.outcome, id: saved.id };
   }
 }

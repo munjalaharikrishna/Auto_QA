@@ -105,11 +105,11 @@ describe('which cases the semantic run may take', () => {
     assert.ok(c.ir);
     const odd = {
       ...c,
-      ir: { ...c.ir, expectations: c.ir.expectations.map((e, i) => (i === 0 ? { ...e, condition: { ...e.condition, type: 'LAYOUT' as const } } : e)) },
+      ir: { ...c.ir, expectations: c.ir.expectations.map((e, i) => (i === 0 ? { ...e, condition: { ...e.condition, type: 'COUNT' as const } } : e)) },
     };
     const s = semanticSupport(odd as CompileResult);
     assert.equal(s.ok, false);
-    assert.ok(!s.ok && /LAYOUT/.test(s.why), JSON.stringify(s));
+    assert.ok(!s.ok && /COUNT/.test(s.why), JSON.stringify(s));
   });
   it('does not take a case that did not compile', async () => {
     const c = await compiled(raw('T', ['Open the login page'], REJECTED));

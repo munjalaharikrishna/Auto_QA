@@ -47,6 +47,11 @@ export const ScreenSchema = z.object({
    * A person's word wins over what a run found by itself; it holds on this screen only.
    */
   words: z.array(z.object({ word: z.string().min(1), means: z.string().min(1), element: z.string().optional() })).default([]),
+  /**
+   * What each word of a step found here in a run, as a fingerprint (E0.17 item 5): when the element's label or id changes, the next run
+   * can still find it, as an assumption a person approves. A run's own finding, never a person's word: `words` wins over it.
+   */
+  found: z.array(z.object({ word: z.string().min(1), fingerprint: z.record(z.string(), z.unknown()) })).optional(),
 });
 export type Screen = z.infer<typeof ScreenSchema>;
 
@@ -110,6 +115,7 @@ export function mergeScreens(older: readonly Screen[], newer: readonly Screen[])
       cases: [...new Set([...was.cases, ...s.cases])],
       ...(s.seenAt ? { seenAt: s.seenAt } : {}),
       words: mergeWords(was.words, s.words),
+      found: mergeFound(was.found, s.found),
     });
   }
   return [...out.values()];
@@ -122,6 +128,7 @@ const copy = (s: Screen): Screen => ({
   elements: s.elements.map((e) => ({ ...e, frame: [...e.frame], inside: [...e.inside] })),
   cases: [...s.cases],
   words: s.words.map((w) => ({ ...w })),
+  found: (s.found ?? []).map((f) => ({ ...f })),
 });
 
 /** The words of two captures: a word given again takes its newer meaning. */
@@ -129,6 +136,19 @@ function mergeWords(older: Screen['words'], newer: Screen['words']): Screen['wor
   const out = new Map(older.map((w) => [labelKey(w.word), { ...w }]));
   for (const w of newer) out.set(labelKey(w.word), { ...w });
   return [...out.values()];
+}
+
+/** What two runs found for each word: the newer run's fingerprint of a word replaces the older one (E0.17 item 5). */
+function mergeFound(older: Screen['found'] = [], newer: Screen['found'] = []): Screen['found'] {
+  const out = new Map(older.map((f) => [labelKey(f.word), { ...f }]));
+  for (const f of newer) out.set(labelKey(f.word), { ...f });
+  return [...out.values()];
+}
+
+/** What a run found for a word on this screen (E0.17 item 5), or nothing. */
+export function screenFound(screen: Screen | undefined, phrase: string): Record<string, unknown> | undefined {
+  const key = labelKey(phrase);
+  return screen?.found?.find((f) => labelKey(f.word) === key)?.fingerprint;
 }
 
 /** What a person said a word means on this screen (E0.14b): the name, and the element picked when there is one; or nothing. */

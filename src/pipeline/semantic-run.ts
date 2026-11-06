@@ -22,7 +22,7 @@ import type { CheckVerdict, ReviewReason, StepVerdict, TestVerdict } from '../re
  */
 
 /** The condition types `evaluateExpectation` decides. Any other type is never run through this path. */
-const JUDGED = new Set(['VISIBILITY', 'TEXT', 'AUTHENTICATION', 'URL', 'ENABLED', 'VALUE', 'MASKED', 'HEALTH']);
+const JUDGED = new Set(['VISIBILITY', 'TEXT', 'AUTHENTICATION', 'URL', 'ENABLED', 'VALUE', 'MASKED', 'HEALTH', 'LAYOUT']);
 
 export interface SemanticJob {
   model: TestModel;
@@ -59,7 +59,10 @@ export function semanticSupport(compiled: CompileResult): Support {
   const blocking = compiled.issues.find((i) => i.severity === 'blocking');
   if (blocking) return { ok: false, why: `${blocking.where}: ${blocking.message}` };
   if (compiled.ir.expectations.length === 0) return { ok: false, why: 'the case has no expected result to judge' };
-  const other = compiled.ir.expectations.find((e) => !JUDGED.has(e.condition.type));
+  // A state check is judged when it asks whether a box is ticked (E0.17 item 4); other states are not yet.
+  const judged = (c: { type: string; expect?: string }): boolean =>
+    JUDGED.has(c.type) || (c.type === 'STATE' && (c.expect === 'CHECKED' || c.expect === 'UNCHECKED'));
+  const other = compiled.ir.expectations.find((e) => !judged(e.condition));
   if (other) return { ok: false, why: `${other.id} is a ${other.condition.type} check, which the verdict engine does not judge yet` };
   return { ok: true };
 }
@@ -225,7 +228,16 @@ export function toTestVerdict(
     durationMs,
     ...(startedAt ? { startedAt } : {}),
     evidence: { screenshots: shots, ...(auditFile ? { audit: auditFile } : {}) },
+    ...(picksOf(trace).length ? { picks: picksOf(trace) } : {}),
   };
+}
+
+/** The controls the engine chose among alike ones (E0.17 item 3): a person's PASS on the case keeps each as what its word means there. */
+function picksOf(trace: RunTrace | undefined): NonNullable<TestVerdict['picks']> {
+  return (trace?.steps ?? []).flatMap((s) => {
+    const a = s.located?.assumed;
+    return a ? [{ step: s.step, word: a.word, means: a.means, screen: a.screen, element: a.element, why: a.why }] : [];
+  });
 }
 
 /**

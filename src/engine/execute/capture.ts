@@ -78,5 +78,15 @@ export function screensOf(trace: RunTrace, seenAt = new Date().toISOString(), so
       if (screen.elements.length) out = mergeScreens(out, [screen]);
     }
   }
+  // What each step's word found, on the screen it was found on (E0.17 item 5): the fallback of a later run reads it.
+  for (const s of trace.steps) {
+    const l = s.located;
+    if (!l?.fingerprint || !l.screen) continue;
+    const found = [{ word: l.name, fingerprint: l.fingerprint as unknown as Record<string, unknown> }];
+    const at = out.find((x) => x.key === l.screen);
+    out = at
+      ? mergeScreens(out, [{ ...at, elements: [], cases: [], words: [], found }])
+      : [...out, { key: l.screen, headings: [], tables: [], elements: [], source, cases: [trace.testId], seenAt, words: [], found }];
+  }
   return out;
 }

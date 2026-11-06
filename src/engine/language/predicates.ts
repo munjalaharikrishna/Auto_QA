@@ -1,4 +1,4 @@
-import { containerRef } from '../ir/container.js';
+import { containerRef, rowOfPlace } from '../ir/container.js';
 import type { IrCondition, IrTarget } from '../ir/schema.js';
 import type { Token } from '../text/index.js';
 import { DATA_CLASS_CHECK_WORDS, STATE_WORDS } from './lexicon.js';
@@ -526,7 +526,9 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
     const fallback = FALLBACK_FOR[kind];
     for (const target of np.targets) {
       const refined = fallback && !np.headClass ? { ...target, ontology: fallback === 'Field' ? refineName(target.name, fallback) : fallback } : target;
-      out.push(make(build({ ...refined, ...(np.within ? { within: np.within } : {}) })));
+      // "The checkbox in the row for Anita is checked": the row is a table row, as in a step, not a container of the page (E0.17 item 4).
+      const row = rowOfPlace(np.within);
+      out.push(make(build({ ...refined, ...(row ? { row: [row] } : np.within ? { within: np.within } : {}) })));
     }
   };
 

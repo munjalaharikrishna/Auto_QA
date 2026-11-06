@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Identical controls</title>
+<!-- E0.17 item 3: two parts the page does not mark, each with a field and a Save button that does the same (OrangeHRM 2.5 style). -->
+<form name="frmEmp">
+  <p><a href="#" onclick="return false;" id="menu-job">Job</a></p>
+  <div id="part-name">
+    <div>Name</div>
+    <input type="text" name="txtName" id="txt-name">
+    <input type="button" class="savebutton" value="Save" onclick="saveAll(); return false;" id="save-1">
+  </div>
+  <div id="part-phone">
+    <div>Phone</div>
+    <input type="text" name="txtPhone" id="txt-phone">
+    <input type="button" class="savebutton" value="Save" onclick="saveAll(); return false;" id="save-2">
+  </div>
+  <div id="part-other">
+    <input type="button" value="Save" onclick="saveOther(); return false;" id="save-other" style="display:none">
+  </div>
+</form>
+<script>function saveAll() {} function saveOther() {}</script>

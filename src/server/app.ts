@@ -601,7 +601,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
 
   // The review queue of a job: the cases the engine could not decide, as cards a person says PASS or FAIL on (VD-11, DEC-05).
-  const review = new ReviewService(store);
+  // A PASS on a case where the engine chose among alike controls keeps that choice for the screen, as a walkthrough pick does (E0.17).
+  const review = new ReviewService(store, {
+    remember: (projectId, pick, source, who) =>
+      learning.saveLabel(projectId, { label: pick.word, means: pick.means, screen: pick.screen, element: pick.element }, source, who, { seenOnScreen: true }),
+  });
   const reviewFailed = (e: unknown): never => {
     if (e instanceof ReviewRefused) throw e.status === 404 ? notFound(e.message.includes('card') ? 'Card' : 'Job') : bad(e.message);
     throw e;

@@ -648,6 +648,19 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 | Parallel run with 2 workers | No session conflicts |
 
 #### E0.17 Locating like a person
+**Status (2026-11-06): built, exit tests run on local OrangeHRM 2.5.0.2** (user `selenium`; test employee Anita Kumari Rao, Id 0001; captured pages in `test/dom/orangehrm-*.html`).
+- Item 2 (`locate/holders.ts`): TC01 "Login section should be middle of the page" finds the login box without a question (the innermost of 4 nested holders). Its verdict is NEEDS REVIEW: the box is 296 px left of the middle and the panel around it 26 px off, and they disagree (owner decision below); the draft answer key expects NEEDS REVIEW.
+- Item 1 (`locate/anchors.ts`): "Click Edit in the Job section" is done inside the part titled Job; live PASS. Closed tabs parked at x -9999 are now hidden ("off the page"), which removed the 4 equal Edit buttons and 2 equal Job links.
+- Item 3 (`candidates.ts` `identical`, `anchors.ts` `nearestTo`): on the live Job tab a person sees one Edit button, so plain "Click Edit" passes and the "5 identical buttons" of the audit no longer reach the rule. The rule's cycle (NEEDS REVIEW, PASS on the card kept as a screen label, next run PASS) is tested on demo `/ui/alike`.
+- Item 4 (`row-match.ts`, `onlyOfKind`, `rowOfPlace`, judge of checked boxes): "Check the checkbox in the row for Anita Kumari Rao … is checked": live PASS.
+- Item 5 (`locate/fingerprint.ts`, `Screen.found`): tested on demo `/ui/renamed`; a fallback find is NEEDS REVIEW, never for a check.
+- From E0.14: a label with its field's id still names the field; a hover-menu link ("Add Employee" under PIM) is reached by hovering its item once; live PASS.
+- Measured: review reasons 27 → 26, ready cases 9 → 10; gold unchanged (771 of 796); traps 10 of 10. Removing the LAYOUT blocker shows the next one: 12 cases wait for STATE checks the verdict engine does not judge (DEFAULT_PAGE, UPLOADED, UPDATED), for E0.18.
+
+**Decisions (owner, 6 Nov 2026):**
+- **Identical elements (item 3):** narrow to the section the step names, then to the part of the page the case is working in (nearest to the element of the step before); only then the first visible one, as review-needed.
+- **Layout of a nested part (item 2):** the innermost holder and the holders of the same words around it (not as wide as the window) are all measured: all in place PASS, none FAIL, they disagree NEEDS REVIEW with each measurement.
+
 **Builds:**
 1. **Container anchors**: an element in a repeated widget is located inside its row, card or section; position inside the anchor only as a logged tie-breaker.
 2. **Nested containers** with the same name: use the innermost that contains the target.
