@@ -12,7 +12,7 @@ import { labelKey } from '../knowledge/labels.js';
 import { screenFound, screenWord } from '../knowledge/screens.js';
 import { anchorScope, nearestTo } from '../locate/anchors.js';
 import { type Fingerprint, fingerprintOf, matchFingerprint } from '../locate/fingerprint.js';
-import { contentFrameOf, frameOffsets } from '../locate/frames.js';
+import { contentFrameOf, frameOffsets, visibleFrames } from '../locate/frames.js';
 import {
   type DomElement,
   inspectPage,
@@ -27,6 +27,7 @@ import {
   type Tried,
   WEIGHT,
 } from '../locate/index.js';
+import { menuOpenerOf } from '../locate/menus.js';
 import { screenKeyOf } from '../locate/page-identity.js';
 import { refusesOtp } from '../patterns/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
@@ -615,7 +616,12 @@ class Runner {
   }
 
   /** Finds the one element a target means, or blocks with the reason (LC-01, LA-01). */
-  private async find(target: IrTarget | undefined, rec: StepRecord, purpose: 'act' | 'inspect' = 'act'): Promise<{ element: DomElement; selector: string }> {
+  private async find(
+    target: IrTarget | undefined,
+    rec: StepRecord,
+    purpose: 'act' | 'inspect' = 'act',
+    revealed = false,
+  ): Promise<{ element: DomElement; selector: string }> {
     let row: { row: TableRow; label: string; visited: number; frame: readonly string[] } | undefined;
     if (target?.row?.length) {
       const wanted = target.row.map((r) => {
@@ -679,6 +685,22 @@ class Runner {
         `on this screen a person said "${query.name}" is ${pickedBefore ? 'the element they picked' : `"${said.means}"`}${bySaid?.status === 'found' ? '' : ', which is not on the page now: found as usual'}`,
       );
     const result = bySaid?.status === 'found' ? bySaid : locate(query, elements);
+    // A link of a hover menu parked off the page ("Add Employee" under PIM): the item it hangs from is hovered once, as a person does.
+    if (result.status === 'inactive' && purpose === 'act' && !row && !revealed) {
+      const hidden = result.candidates.find((c) => c.element.hiddenReason === 'off the page' || c.element.hiddenReason?.startsWith('display:none'));
+      const frame = hidden ? (await visibleFrames(this.page)).find((f) => sameFrame(f.path, hidden.element.frame))?.frame : undefined;
+      const opener = hidden && frame ? await frame.evaluate(menuOpenerOf, { xpath: hidden.element.xpath }).catch(() => undefined) : undefined;
+      if (hidden && opener) {
+        const where = selectorIn(hidden.element.frame, opener);
+        if ((await this.tool('hover', { target: where, element: `the menu of "${query.name}"` }, rec)) === 'fallback') {
+          await this.page.locator(where).hover();
+          this.viaPage('hover', { target: where }, rec);
+        }
+        await waitUntilIdle(this.page, 2000).catch(() => undefined);
+        rec.notes.push(`"${query.name}" is in a menu that opens on the pointer: the item it hangs from was hovered first`);
+        return this.find(target, rec, purpose, true);
+      }
+    }
     const tried = result.tried;
     // A frame that could not be read is not a frame without the element: the run says so, and the case is set aside, not failed.
     const unreadNote = seen.unread.length

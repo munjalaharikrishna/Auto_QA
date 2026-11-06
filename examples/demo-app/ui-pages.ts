@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows', 'renamed'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows', 'renamed', 'menu'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -260,6 +260,17 @@ for (const card of document.querySelectorAll('article')) {
   });
 }
 </script>`,
+  ),
+
+  // E0.17, left from E0.14: a hover menu as OrangeHRM 2.5 builds it, its entries parked off the page until the pointer is on the item.
+  '/ui/menu': layout(
+    'Menu',
+    `<style>#nav li ul{position:absolute;left:-9999px} #nav li.open ul{left:auto}</style>
+<ul id="nav"><li id="people" onmouseover="this.classList.add('open')" onmouseout="this.classList.remove('open')"><a href="#">People</a>
+  <ul><li><a href="#" onclick="go('Add person'); return false;">Add person</a></li><li><a href="#" onclick="go('Person list'); return false;">Person list</a></li></ul></li></ul>
+<p><button type="button" style="display:none" onclick="go('Secret')">Secret</button></p>
+<p id="where" role="status"></p>
+<script>function go(t) { document.getElementById('where').textContent = 'Opened ' + t; }</script>`,
   ),
 
   // E0.17 item 5: a release renames a button (?v=2): its id and what it does stay, its words change. ?v=3 also gives it a new id.

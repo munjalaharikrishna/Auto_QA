@@ -250,6 +250,14 @@ export function readDom(opts: {
     const labels: string[] = [];
     const controlLabels = (el as HTMLInputElement).labels;
     if (controlLabels) for (const l of Array.from(controlLabels)) labels.push(squash(l.textContent));
+    // A <label for="x"> the browser did not tie to the field, because the label has the id "x" too (OrangeHRM 2.5, E0.17): the label
+    // still names the field it is written for, when that field is the only control with the id.
+    const ownId = el.getAttribute('id');
+    if (!labels.length && ownId && ['input', 'select', 'textarea'].includes(el.tagName.toLowerCase())) {
+      const controls = Array.from(document.querySelectorAll(`[id="${CSS.escape(ownId)}"]`)).filter((x) => ['INPUT', 'SELECT', 'TEXTAREA'].includes(x.tagName));
+      if (controls.length === 1)
+        for (const l of Array.from(document.querySelectorAll(`label[for="${CSS.escape(ownId)}"]`))) if (l !== el) labels.push(squash(l.textContent));
+    }
     const ariaName =
       squash(ariaLabel) ||
       squash(textOfIds(el.getAttribute('aria-labelledby'))) ||

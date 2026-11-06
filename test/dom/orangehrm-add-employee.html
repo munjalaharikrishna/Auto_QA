@@ -1,0 +1,758 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>
+<title>OrangeHRM - Employee Details</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script type="text/javascript" src="../../scripts/archive.js"></script>
+	<script type="text/javascript"><!--//--><![CDATA[//><!--
+var xajaxRequestUri="http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode";
+var xajaxDebug=false;
+var xajaxStatusMessages=false;
+var xajaxWaitCursor=true;
+var xajaxDefinedGet=0;
+var xajaxDefinedPost=1;
+var xajaxLoaded=false;
+function xajax_populateStates(){return xajax.call("populateStates", arguments, 1);}
+function xajax_populateDistrict(){return xajax.call("populateDistrict", arguments, 1);}
+function xajax_fetchJobSpecInfo(){return xajax.call("fetchJobSpecInfo", arguments, 1);}
+function xajax_getUnAssMemberships(){return xajax.call("getUnAssMemberships", arguments, 1);}
+function xajax_getMinMaxCurrency(){return xajax.call("getMinMaxCurrency", arguments, 1);}
+function xajax_getUnAssignedCurrencyList(){return xajax.call("getUnAssignedCurrencyList", arguments, 1);}
+function xajax_assignLocation(){return xajax.call("assignLocation", arguments, 1);}
+function xajax_removeLocation(){return xajax.call("removeLocation", arguments, 1);}
+	//--><!]]></script>
+	<script type="text/javascript" src="../../lib/common/xajax/xajax_js/xajax.js"></script>
+	<script type="text/javascript"><!--//--><![CDATA[//><!--
+window.setTimeout(function () { if (!xajaxLoaded) { alert('Error: the xajax Javascript file could not be included. Perhaps the URL is incorrect?\nURL: ../../lib/common/xajax/xajax_js/xajax.js'); } }, 4000);
+	//--><!]]></script>
+<link type="text/css" rel="stylesheet" href="/orangehrm-2.5.0.2/themes/orange/css/yui/fonts/fonts.css">
+<link type="text/css" rel="stylesheet" href="/orangehrm-2.5.0.2/themes/orange/css/yui/container/assets/container.css">
+<link type="text/css" rel="stylesheet" href="/orangehrm-2.5.0.2/themes/orange/css/yui/calendar/assets/calendar.css">
+<link type="text/css" rel="stylesheet" href="/orangehrm-2.5.0.2/themes/orange/css/yui/button/assets/button.css">
+
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/yahoo/yahoo-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/event/event-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/dom/dom-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/container/container-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/yahoo-dom-event/yahoo-dom-event.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/element/element-beta-min.js"></script>
+
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/calendar/calendar.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/button/button-beta-min.js"></script>
+
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/animation/animation-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/yui/autocomplete/autocomplete-min.js"></script>
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/time.js"></script>
+
+<script type="text/javascript" src="/orangehrm-2.5.0.2/scripts/calendar/calendar.js"></script>
+<script type="text/javascript">
+YAHOO.namespace("OrangeHRM.time");
+
+YAHOO.OrangeHRM.calendar.format = 'yyyy-MM-dd';
+YAHOO.OrangeHRM.calendar.formatHint.format = 'YYYY-mm-DD';
+
+YAHOO.OrangeHRM.time.format = 'HH:mm';
+</script>
+<script type="text/javascript"><!--//--><![CDATA[//><!--
+
+function MM_findObj(n, d) { //v4.01
+  var p,i,x;  if(!d) d=document; if((p=n.indexOf("?"))>0&&parent.frames.length) {
+    d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);}
+  if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i<d.forms.length;i++) x=d.forms[i][n];
+  for(i=0;!x&&d.layers&&i<d.layers.length;i++) x=MM_findObj(n,d.layers[i].document);
+  if(!x && d.getElementById) x=d.getElementById(n); return x;
+}
+
+function MM_showHideLayers() { //v6.0
+  var z,i,p,v,obj,args=MM_showHideLayers.arguments;
+  for (i=0; i<(args.length-2); i+=3) if ((obj=MM_findObj(args[i]))!=null) { v=args[i+2];
+    if (obj.style) { obj=obj.style; z=(v=='show')?3:(v=='hide')?2:2; v=(v=='show')?'visible':(v=='hide')?'hidden':v; }
+    obj.visibility=v; obj.zIndex=z; }
+}
+
+function MM_preloadImages() { //v3.0
+  var d=document; if(d.images){ if(!d.MM_p) d.MM_p=new Array();
+    var i,j=d.MM_p.length,a=MM_preloadImages.arguments; for(i=0; i<a.length; i++)
+    if (a[i].indexOf("#")!=0){ d.MM_p[j]=new Image; d.MM_p[j++].src=a[i];}}
+}
+
+
+function addEmpMain() {
+
+	var cnt = document.frmEmp.txtEmpLastName;
+	if(!(cnt.value == '') && !alpha(cnt) && !confirm('Last Name contains numbers. Do you want to continue?')) {
+		cnt.focus();
+		return;
+	}  if (cnt.value == '') {
+		alert('Last Name Empty!');
+		cnt.focus();
+		return;
+	}
+
+	var cnt = document.frmEmp.txtEmpFirstName;
+	if(!(cnt.value == '') && !alpha(cnt) && !confirm('First Name contains numbers. Do you want to continue?')) {
+		cnt.focus();
+		return;
+	} else if (cnt.value == '') {
+		alert('First Name Empty!');
+		cnt.focus();
+		return;
+	}
+
+
+
+	document.frmEmp.sqlState.value = "NewRecord";
+	document.frmEmp.submit();
+}
+
+
+function goBack() {
+	location.href = "./CentralController.php?reqcode=EMP&VIEW=MAIN";
+}
+
+function editEmpMain() {
+
+	var lockedEl = Array(100);
+	var lockEmpCont = false;
+
+
+	if(document.frmEmp.EditMode.value=='1') {
+		updateEmpMain();
+		return;
+	}
+
+	var frm=document.frmEmp;
+
+	for (var i=0; i < frm.elements.length; i++) {
+		if (frm.elements[i].type == "hidden")
+			frm.elements[i].disabled=false;
+
+		
+        if (frm.elements[i].className.indexOf('noDefaultEdit') == -1) {
+		  frm.elements[i].disabled=false;
+        }
+
+			}
+
+                    var addLocationLayer = document.getElementById("addLocationLayer");
+            if (addLocationLayer) {
+                addLocationLayer.style.display = 'block';
+            }
+                            var elms = YAHOO.util.Dom.getElementsByClassName('locationDeleteChkBox');
+            // loop over all the elements
+            for(var i=0,j=elms.length;i<j;i++){
+                elms[i].style.display = 'block';
+            }
+
+        
+		
+
+		
+    /* Enable clear buttons */
+    var clearButtons = YAHOO.util.Dom.getElementsByClassName('clearbutton');
+    for(var i=0; i < clearButtons.length; i++) {
+        clearButtons[i].disabled = false;
+    }
+
+    /* Convert edit buttons to save buttons */
+    var editButtons = YAHOO.util.Dom.getElementsByClassName('editbutton');
+    for(var i=0; i < editButtons.length; i++) {
+        editButtons[i].value="Save";
+        editButtons[i].title="Save";
+        editButtons[i].className = "savebutton";
+    }
+
+	document.frmEmp.EditMode.value='1';
+
+}
+
+function updateEmpMain() {
+	var cnt = document.frmEmp.txtEmpLastName;
+	if(!(cnt.value == '') && !alpha(cnt) && !confirm('Last Name contains numbers. Do you want to continue?')) {
+		cnt.focus();
+		return;
+	}  if (cnt.value == '') {
+		alert('Last Name Empty!');
+		cnt.focus();
+		return;
+	}
+
+	var cnt = document.frmEmp.txtEmpFirstName;
+	if(!(cnt.value == '') && !alpha(cnt) && !confirm('First Name contains numbers. Do you want to continue?')) {
+		cnt.focus();
+		return;
+	} else if (cnt.value == '') {
+		alert('First Name Empty!');
+		cnt.focus();
+		return;
+	}
+
+	var cnt = document.frmEmp.txtEmpMiddleName;
+
+
+    // contact details validation
+    if( document.frmEmp.contactFlag.value == '1' ){
+
+        // check work email
+        var workEmail = document.frmEmp.txtWorkEmail.value;
+        if (workEmail != '') {
+            if( !checkEmail(workEmail) ){
+                alert ('The work email is not valid');
+                return false;
+            }
+        }
+
+        // txtOtherEmail
+        var otherEmail = document.frmEmp.txtOtherEmail.value;
+        if (otherEmail != '') {
+            if( !checkEmail(otherEmail) ){
+                alert ('The other email is not valid');
+                return false;
+            }
+        }
+    }
+
+
+
+	var cntrl = document.frmEmp.txtHmTelep;
+	if(cntrl.value != '' && !checkPhone(cntrl)) {
+		alert('Home Telephone : Not a valid phone/fax number');
+		cntrl.focus();
+		return;
+	}
+
+	var cntrl = document.frmEmp.txtMobile;
+	if(cntrl.value != '' && !checkPhone(cntrl)) {
+		alert('Mobile : Not a valid phone/fax number');
+		cntrl.focus();
+		return;
+	}
+
+	var cntrl = document.frmEmp.txtWorkTelep;
+	if(cntrl.value != '' && !checkPhone(cntrl)) {
+		alert('Work Telephone : Not a valid phone/fax number');
+		cntrl.focus();
+		return;
+	}
+
+	var cntrl = document.frmEmp.taxFederalExceptions;
+	if(cntrl.value != '' && !numbers(cntrl)) {
+		alert('Federal Income Tax Exemptions : Field should be numeric');
+		cntrl.focus();
+		return;
+	}
+
+	var cntrl = document.frmEmp.taxStateExceptions;
+	if(cntrl.value != '' && !numbers(cntrl)) {
+		alert('State Income Tax Exemptions : Field should be numeric');
+		cntrl.focus();
+		return;
+	}
+
+	document.getElementById("cmbProvince").value=document.getElementById("txtState").value;
+	document.frmEmp.sqlState.value = "UpdateRecord";
+	document.frmEmp.submit();
+}
+
+
+
+ function qCombo(lblPane) {
+	document.frmEmp.pane.value=lblPane;
+	document.frmEmp.submit();
+}
+
+function displayLayer(panelNo) {
+
+	hasChanges = (panelNo != 1 && document.frmEmp.personalFlag.value == '1');
+	hasChanges |= (panelNo != 2 && document.frmEmp.jobFlag.value == '1');
+	hasChanges |= (panelNo != 4 && document.frmEmp.contactFlag.value == '1');
+	hasChanges |= (panelNo != 18 && document.frmEmp.taxFlag.value == '1');
+	hasChanges |= (panelNo != 20 && document.frmEmp.customFlag.value == '1');
+	hasChanges |= (panelNo != 21 && document.frmEmp.photoFlag.value == '1')
+  	if(hasChanges) {
+
+  		if(confirm("Please save the changes before you move onto another pane!")) {
+  			editEmpMain();
+  			if( !updateEmpMain() ){
+                return;
+            }
+  		} else {
+  			document.frmEmp.personalFlag.value=0;
+  			document.frmEmp.jobFlag.value=0;
+  			document.frmEmp.contactFlag.value=0;
+  			document.frmEmp.taxFlag.value=0;
+  			document.frmEmp.customFlag.value=0;
+  		}
+  	}
+
+	switch(panelNo) {
+          	case 1 : showPane('personal');break;
+          	case 2 : showPane('job');break;
+          	case 3 : showPane('dependents');break;
+          	case 4 : showPane('contacts'); break;
+          	case 5 : showPane('emgcontacts'); break;
+          	case 6 : showPane('attachments'); break;
+          	case 7 : break;
+          	case 8 : break;
+          	case 9 : showPane('education'); break;
+          	case 10 : showPane('immigration'); break;
+          	case 11 : showPane('languages'); break;
+          	case 12 : showPane('licenses'); break;
+          	case 13 : showPane('memberships'); break;
+          	case 14 : showPane('payments'); break;
+          	case 15 : showPane('report-to'); break;
+          	case 16 : showPane('skills'); break;
+          	case 17 : showPane('work-experiance'); break;
+          	case 18 : showPane('tax'); break;
+          	case 19 : showPane('direct-debit'); break;
+          	case 20 : showPane('custom'); break;
+          	case 21 : showPane('photo'); break;
+	}
+
+	document.frmEmp.pane.value = panelNo;
+}
+
+function showPane(paneId) {
+	var allPanes = new Array('personal','job','dependents','contacts','emgcontacts','attachments','education','immigration','languages','licenses',
+				'memberships','payments','report-to','skills','work-experiance', 'tax', 'direct-debit','custom', 'photo');
+	var numPanes = allPanes.length;
+	for (i=0; i< numPanes; i++) {
+	    pane = allPanes[i];
+	    if (pane != paneId) {
+	    	var paneDiv = $(pane);
+	    	if (paneDiv!= null && paneDiv.className.indexOf('currentpanel') > -1) {
+	    		paneDiv.className = paneDiv.className.replace(/\scurrentpanel\b/,'');
+	    	}
+
+	    	// style link
+	    	var link = $(pane + 'Link');
+	    	if (link && (link.className.indexOf('current') > -1)) {
+	    	    link.className = '';
+	    	}
+	    }
+	}
+
+	var currentPanel = $(paneId);
+	if (currentPanel != null && currentPanel.className.indexOf('currentpanel') == -1) {
+		currentPanel.className += ' currentpanel';
+	}
+	var currentLink = $(paneId + 'Link');
+	if (currentLink && (currentLink.className.indexOf('current') == -1)) {
+	    currentLink.className = 'current';
+	}
+
+}
+
+function setUpdate(opt) {
+
+		switch(eval(opt)) {
+          	case 0 : document.frmEmp.main.value=1; break;
+          	case 1 : document.frmEmp.personalFlag.value=1; break;
+          	case 2 : document.frmEmp.jobFlag.value=1; break;
+            case 4 : document.frmEmp.contactFlag.value=1; break;
+            case 18: document.frmEmp.taxFlag.value=1; break;
+            case 20: document.frmEmp.customFlag.value=1; break;
+		}
+		document.frmEmp.pane.value = opt;
+}
+
+
+function showPhotoHandler() {
+	displayLayer(21);
+}
+
+function resetAdd(panel, add) {
+	document.frmEmp.action = document.frmEmp.action;
+	document.frmEmp.pane.value = panel;
+	document.frmEmp.txtShowAddPane.value = add;
+	document.frmEmp.submit();
+}
+
+function showAddPane(paneName) {
+	YAHOO.OrangeHRM.container.wait.show();
+
+	addPane = document.getElementById('addPane'+paneName);
+	editPane = document.getElementById('editPane'+paneName);
+	parentPane = document.getElementById('parentPane'+paneName);
+
+	if (addPane && addPane.style) {
+		addPane.style.display = tableDisplayStyle;
+	} else {
+
+		resetAdd(document.frmEmp.pane.value, paneName);
+		return;
+	}
+
+	if (editPane && parentPane) {
+		parentPane.removeChild(editPane);
+	}
+
+	YAHOO.OrangeHRM.container.wait.hide();
+}
+
+function showHideSubMenu(link) {
+
+    var uldisplay;
+	var newClass;
+
+	if (link.className == 'expanded') {
+
+		// Need to hide
+	    uldisplay = 'none';
+	    newClass = 'collapsed';
+
+	} else {
+
+		// Need to show
+	    uldisplay = 'block';
+	    newClass = 'expanded';
+	}
+
+    var parent = link.parentNode;
+    uls = parent.getElementsByTagName('ul');
+	for(var i=0; i<uls.length; i++) {
+	    ul = uls[i].style.display = uldisplay;
+	}
+
+	link.className = newClass;
+}
+
+tableDisplayStyle = "table";
+//--><!]]></script>
+<!--[if IE]>
+<script type="text/javaScript">
+	tableDisplayStyle = "block";
+</script>
+<![endif]-->
+
+<script type="text/javascript" src="../../themes/orange/scripts/style.js"></script>
+<link href="../../themes/orange/css/style.css" rel="stylesheet" type="text/css">
+<!--[if lte IE 6]>
+<link href="../../themes/orange/css/IE6_style.css" rel="stylesheet" type="text/css"/>
+<![endif]-->
+<!--[if IE]>
+<link href="../../themes/orange/css/IE_style.css" rel="stylesheet" type="text/css"/>
+<![endif]-->
+<style type="text/css">
+    <!--
+
+	:disabled:not([type="image"]) {
+		background-color:#FFFFFF;
+		color:#444444;
+	}
+
+	input[type=text] {
+		border-top: 0px;
+		border-left: 0px;
+		border-right: 0px;
+		border-bottom: 1px solid #888888;
+	}
+
+    table.historyTable th {
+        border-width: 0px;
+        padding: 3px 3px 3px 5px;
+        text-align: left;
+    }
+    table.historyTable td {
+        border-width: 0px;
+        padding: 3px 3px 3px 5px;
+        text-align: left;
+    }
+
+	input.fileselect {
+		margin:8px 0px 4px 10px;
+	}
+
+    .locationDeleteChkBox {
+        padding:2px 4px 2px 4px;
+        border-style: solid;
+        border-width: thin;
+        display:block;
+    }
+
+	.pimpanel {
+	    position:absolute;
+	    left:-9999px;
+	}
+	.currentpanel {
+		margin-top: 10px;
+	    left:190px;
+	}
+	#photodiv {
+		margin-top:19px;
+	    float:left;
+	    text-align:center;
+	    margin-left: 650px;
+	    padding: 2px;
+	    border: 1px solid #FAD163;
+	}
+	#photodiv span {
+	    color: black;
+	    font-weight: bold;
+	}
+
+	#empname {
+	    display:block;
+	    color: black;
+	}
+
+	#personalIcons,
+	#employmentIcons,
+	#qualificationIcons {
+	    display:block;
+	    position:absolute;
+	    left:-999px;
+	   	width:400px;
+	   	text-align:center;
+	   	padding-left:100px;
+	   	padding-right:100px;
+	}
+
+	#icons div a {
+	    display:block;
+	    float:left;
+		height: 50px;
+		width: 54px;
+	    text-decoration:none;
+		text-align:center;
+	    vertial-align:bottom;
+		padding-top: 45px;
+		outline: 0;
+		background-position: top center;
+		margin-left:8px;
+		margin-right:8px;
+	}
+
+	#icons div a:hover {
+	    color: black;
+	    text-decoration: underline;
+	}
+
+	#icons div a.current {
+	    font-weight: bold;
+	    color:black;
+	    cursor:default;
+	}
+
+	#icons div a.current:hover {
+	    color:black;
+	    text-decoration:none;
+	}
+
+	#icons {
+	    display:block;
+	    clear:both;
+	    margin-left: 130px;
+	    margin-top: 5px;
+	    margin-bottom: 2px;#FAD163
+	    width:500px;
+		height: 60px;
+	}
+	#pimleftmenu {
+	    display:block;
+	    float: left;
+	    background: #FFFBED;
+	    padding: 2px 2px 2px 2px;
+	    margin: 10px 0px 0px 5px;
+	}
+	#pimleftmenu ul {
+	    list-style-type: none;
+	    padding-left: 0;
+	    margin-left: 0;
+	    width: 12em;
+	}
+
+	#pimleftmenu ul.pimleftmenu li {
+	    list-style-type:none;
+	    margin-left: 0;
+	    margin-bottom: 1px;
+		padding-left:5px;
+	}
+
+	#pimleftmenu ul li.parent {
+	    padding-left: 0px;
+	    padding-top:4px;
+	    font-weight: bold;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a {
+	    display:block;
+	    outline: 0;
+		padding: 2px 2px 2px 4px;
+		text-decoration: none;
+		background:#FAD163 none repeat scroll 0 0;
+		border-color:#CD8500 #8B5A00 #8B5A00 #CD8500;
+		border-style:solid;
+		border-width:1px;
+		color:#d87415;
+		font-size: 11px;
+		font-weight:bold;
+		text-align: left;
+	}
+	#pimleftmenu ul.pimleftmenu li a:hover {
+		color: #FFFBED;
+		background-color: #e88d1e;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a.current {
+		color: #FFFBED;
+		background-color: #e88d1e;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a.collapsed,
+	#pimleftmenu ul.pimleftmenu li a.expanded {
+	    display:block;
+	    outline: 0;
+		padding: 2px 2px 2px 4px;
+		text-decoration: none;
+		border: 0 ;
+		color: #CC6600;
+		font-size: 11px;
+		font-weight:bold;
+		text-align: left;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a.expanded {
+		background: #FFFBED url(../../themes/orange/icons/expanded.gif) no-repeat center right;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a.collapsed {
+		background: #FFFBED url(../../themes/orange/icons/collapsed.gif) no-repeat center right;
+		border-bottom: 1px solid #d87415;
+	}
+
+	#pimleftmenu ul.pimleftmenu li a.collapsed:hover span,
+	#pimleftmenu ul.pimleftmenu li a.expanded:hover span {
+		color: #8d4700;
+	}
+
+
+	#pimleftmenu ul span {
+	    display:block;
+	}
+
+	#pimleftmenu li.parent span.parent {
+		color: #CC6600;
+	}
+
+	#pimleftmenu ul span span {
+	    display:inline;
+	    text-decoration:underline;
+	}
+
+	div.requirednotice {
+	    margin-left: 15px;
+	}
+
+	#parentPaneDependents {
+	    float:left;
+		width: 50%;
+	}
+
+	#parentPaneChildren {
+	    float:left;
+	    width: 50%;
+	}
+    -->
+</style>
+<!--[if IE]>
+<style type="text/css">
+
+	/* following style may not be needed */
+	#pimleftmenu ul.pimleftmenu {
+	    height:auto;
+	}
+
+	/* Give layout in IE (hasLayout) */
+	#pimleftmenu a {
+	    zoom: 1;
+	}
+
+</style>
+<![endif]-->
+
+</head>
+<body class=""><div class="mask" id="wait_mask" style="height: 580px; width: 1280px; display: none;">&nbsp;</div>
+<script type="text/javaScript"><!--//--><![CDATA[//><!--
+  YAHOO.OrangeHRM.container.init();
+//--><!]]></script><div class="yui-panel-container shadow" id="wait_c" style="z-index: 9001; left: 519px; top: 274px; visibility: hidden;"><div id="wait" class="yui-module yui-overlay yui-panel" style="visibility: inherit; width: 240px;"><div class="hd" style="cursor: auto;">Loading, please wait...</div><div class="bd"><img src="../../themes/beyondT/pictures/ajax-loader.gif"></div></div><div class="underlay"></div></div><iframe id="_yuiResizeMonitor" style="position: absolute; visibility: visible; width: 10em; height: 10em; top: -120px; left: -120px; border-width: 0px;"></iframe>
+<div id="cal1Container" class="yui-calcontainer single withtitle" style="display: none;"><a href="#" class="link-close"><span class="close-icon calclose"></span></a></div>
+<div align="right" id="status" style="display: none;"><img src="../../themes/beyondT/icons/loading.gif" alt="" width="20" height="20" style="vertical-align:bottom;"> <span style="vertical-align:text-top">Loading Page...</span></div>
+
+<div class="navigation">
+	<input type="button" class="backbutton" value="Back" onclick="goBack()">
+</div>
+
+<form name="frmEmp" id="frmEmp" method="post" action="/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&amp;capturemode=addmode" enctype="multipart/form-data">
+
+<input type="hidden" name="sqlState">
+<input type="hidden" name="pane" value="1">
+<input type="hidden" name="txtShowAddPane">
+
+<input type="hidden" name="main" value="0">
+<input type="hidden" name="personalFlag" value="0">
+<input type="hidden" name="jobFlag" value="0">
+
+<input type="hidden" name="dependentFlag" value="0">
+<input type="hidden" name="childrenFlag" value="0">
+<input type="hidden" name="contactFlag" value="0">
+<input type="hidden" name="econtactFlag" value="0">
+<input type="hidden" name="cash-benefitsFlag" value="0">
+<input type="hidden" name="noncash-benefitsFlag" value="0">
+<input type="hidden" name="educationFlag" value="0">
+<input type="hidden" name="immigrationFlag" value="0">
+<input type="hidden" name="languageFlag" value="0">
+<input type="hidden" name="licenseFlag" value="0">
+<input type="hidden" name="membershipFlag" value="0">
+<input type="hidden" name="paymentFlag" value="0">
+<input type="hidden" name="report-toFlag" value="0">
+<input type="hidden" name="skillsFlag" value="0">
+<input type="hidden" name="work-experianceFlag" value="0">
+<input type="hidden" name="taxFlag" value="0">
+<input type="hidden" name="direct-debitFlag" value="0">
+<input type="hidden" name="customFlag" value="0">
+<input type="hidden" name="photoFlag" value="0">
+<input type="hidden" name="attSTAT" value="">
+<input type="hidden" name="EditMode" value="0">
+
+
+
+<div class="formpage2col">
+
+	<div class="outerbox"><div class="top"><div class="left"></div><div class="right"></div><div class="middle"></div></div><div class="maincontent">
+		<div class="mainHeading"><h2>PIM : Add Employee</h2></div>
+		<label for="txtEmployeeId">Code</label>
+		<input name="txtEmployeeId" id="txtEmployeeId" class="formInputText" type="text" value="0001" maxlength="50">
+		<br class="clear">
+
+		<label for="txtEmpLastName">Last Name <span class="required">*</span></label>
+		<input type="text" name="txtEmpLastName" id="txtEmpLastName" class="formInputText" value="">
+
+		<label for="txtEmpFirstName" id="txtEmpFirstName">First Name <span class="required">*</span></label>
+		<input type="text" name="txtEmpFirstName" id="txtEmpFirstName" class="formInputText" value="">
+		<br class="clear">
+
+		<label for="txtEmpMiddleName">Middle Name</label>
+		<input type="text" name="txtEmpMiddleName" id="txtEmpMiddleName" class="formInputText" value="">
+		<label for="txtEmpNickName">Nick Name </label>
+		<input type="text" name="txtEmpNickName" id="txtEmpNickName" class="formInputText" value="">
+		<label for="photofile">Photo </label>
+		<input type="file" name="photofile" id="photofile" class="fileselect" value="">
+		<input type="hidden" name="MAX_FILE_SIZE" value="1000000">
+		<br class="clear">
+        <div class="formbuttons">
+			<input type="button" class="savebutton" id="btnEdit" onclick="addEmpMain(); return false;" onmouseover="moverButton(this);" onmouseout="moutButton(this);" value="Save" title="Save">
+			<input type="button" class="resetbutton" onclick="document.frmEmp.reset(); return false;" onmouseover="moverButton(this);" onmouseout="moutButton(this);" value="Reset">
+        </div>
+	</div><div class="bottom"><div class="left"></div><div class="right"></div><div class="middle"></div></div></div>
+	<div class="requirednotice">Fields marked with an asterisk <span class="required">*</span> are required.</div>
+</div>
+
+	</form>
+	<script type="text/javaScript"><!--//--><![CDATA[//><!--
+    	if (document.getElementById && document.createElement) {
+ 			roundBorder('outerbox');
+		}
+	displayLayer(1);
+		//--><!]]></script>
+	
+
+</body></html>
