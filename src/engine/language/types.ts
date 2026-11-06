@@ -56,6 +56,16 @@ export interface Issue {
    * so it is the suite's question, asked once. The name of the suite.
    */
   block?: string;
+  /**
+   * The question is which record is meant ("Click on Employee Name", "the same updated records"): a person decides (owner, 4 Nov
+   * 2026). The kind of record, as the sentence names it (`employee`), or `record` when it names none (E0.16).
+   */
+  record?: string;
+  /**
+   * What the data ledger offers as the answer to a `record` question: the record this case saved before the sentence (E0.16). A
+   * person confirms it; one answer covers every case with the same sentence.
+   */
+  suggested?: { record: string; answer: string; steps: string[]; values: string[] };
 }
 
 /** A value a step needs. */

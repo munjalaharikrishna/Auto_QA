@@ -624,7 +624,7 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 | Lint on the original OrangeHRM sheet | Every step has a status and the vague ones have a suggestion |
 
 #### E0.16 Setup blocks, data ledger and test data
-**Status (2026-11-05): in progress.** Item 1 built (`src/engine/context/setup.ts`, `setup.test.ts`): on Add Employee the setup question raised in 16 cases is raised in none, and the cases log in where their setup assumes it.
+**Status (2026-11-05): built, exit tests as read under PD-15.** Item 1 (`context/setup.ts`): on Add Employee the setup question raised in 16 cases is raised in none, and the cases log in where their setup assumes it. Item 2 (`context/ledger.ts`): plain references resolve through the ledger; "which employee" stays a question with the ledger's suggestion, asked once per sentence. Item 3 (`importer/workbook.ts`, `RawTestCase.stepData`): continuation rows and per-step data. Item 4 (`data/cleanup.ts`): run-seeded values and a clean-up list per run, no deletes. Item 5 (generated config and fixture): one worker by default, one account per worker, tested on the demo app (`generator/workers.test.ts`). Review reasons 37 → 27; gold 771/796 unchanged. Open: a worker's saved login is not reused across its tests (the generated tests log in themselves); the legacy route writes no clean-up list.
 
 **Decisions (PD-15, owner, 5 Nov 2026):**
 - **Clean-up (item 4) lists, it does not delete.** Each run gives created records unique names and writes the list of what it created; nothing is deleted by Auto QA in V1, and there is no nightly sweep. The exit test becomes: after a run, every record the run created is on its clean-up list.

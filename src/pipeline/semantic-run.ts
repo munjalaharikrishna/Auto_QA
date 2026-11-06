@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { auditOf, checkTrail } from '../engine/audit/index.js';
 import type { OtpSource } from '../engine/auth/index.js';
+import { type CleanupRecord, createdBy } from '../engine/data/cleanup.js';
 import { isSecret } from '../engine/data/secret.js';
 import { executePlan, keepScreens, openExecutionSession, type RunTrace } from '../engine/execute/index.js';
 import { planActions } from '../engine/execute/planner.js';
@@ -264,6 +265,8 @@ export interface SemanticRunOptions {
   /** Where each case's folder is kept: the screens a run reached are saved there, for the application's knowledge (E0.14a). */
   exploreDir?: string;
   onProgress?: (message: string) => void;
+  /** Called with the records each case saved, for the run's clean-up list (E0.16): nothing is deleted. */
+  onCreated?: (records: CleanupRecord[]) => void;
 }
 
 /**
@@ -337,6 +340,7 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
           const kept = await keepScreens(path.join(options.exploreDir, model.id), trace).catch(() => undefined);
           for (const c of kept?.changes ?? []) options.onProgress?.(`~ ${model.id}: on ${c.screen}, ${c.change}: ${c.what}`);
         }
+        options.onCreated?.(createdBy(ir, compiled.values, trace));
         const auditFile = options.screenshotDir
           ? writeAudit(path.join(options.screenshotDir, model.id), trace, planned, compiled, options.onProgress)
           : undefined;

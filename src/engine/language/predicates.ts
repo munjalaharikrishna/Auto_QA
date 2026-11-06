@@ -685,6 +685,8 @@ export function parseCheck(line: Line, clauseTokens: readonly Token[], clauseTex
           severity: 'review',
           message: `it says "${np.original}" was deleted but not which one`,
           original: clauseText,
+          // "Employee Data": an employee (E0.16 ledger); "the record": any record.
+          record: np.words.find((w) => !RECORD_WORDS.has(w) && w !== 'the') ?? 'record',
           suggestion: 'Name it: Verify "<name>" is not in the list.',
         });
       }

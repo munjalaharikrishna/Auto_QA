@@ -36,12 +36,20 @@ export interface ReviewItem extends Classified {
   message: string;
   /** The setup block the reason is about (E0.16): one question for the suite, counted once however many cases start with it. */
   block?: string;
+  /**
+   * What the data ledger suggests as the answer to a "which record" question (E0.16). One answer covers every case with the same
+   * sentence, so such a question is counted once per sentence.
+   */
+  suggested?: string;
 }
 
 /** A compile-time reason, and who can fix it. */
-export function classifyIssue(issue: Pick<Issue, 'code' | 'message' | 'suggestion'>): Classified {
+export function classifyIssue(issue: Pick<Issue, 'code' | 'message' | 'suggestion' | 'record'>): Classified {
   const cause = reasonOf(issue);
   const clearer = issue.suggestion ? `Reword it: ${issue.suggestion}` : undefined;
+  // "Which employee": a person's decision (owner, 4 Nov 2026), also when it came as a reference the engine could not settle (E0.16).
+  if (issue.record && issue.code === 'NEEDS_REFERENCE')
+    return { cause, owner: 'tester', fix: clearer ?? 'Say which record is meant, or confirm the one the data ledger suggests.' };
   switch (issue.code) {
     case 'NOT_UNDERSTOOD':
     case 'UNSUPPORTED':
@@ -90,8 +98,9 @@ export function compileItems(workbook: string, caseId: string, compile: CompileR
       ...at,
       ...classifyIssue(i),
       original: i.original,
-      message: `${i.where}: ${i.message}`,
+      message: `${i.where}: ${i.message}${i.suggested ? ` (suggested: ${i.suggested.answer})` : ''}`,
       ...(i.block ? { block: i.block } : {}),
+      ...(i.suggested ? { suggested: i.suggested.answer } : {}),
     }));
   const support = semanticSupport(compile);
   if (support.ok) return [];
@@ -239,7 +248,11 @@ export function buildReport(items: readonly ReviewItem[], cases: ReadonlyArray<{
   for (const i of sorted) {
     const k = `${i.owner}|${i.cause}`;
     const g = groups.get(k) ?? { cause: i.cause, owner: i.owner, fix: i.fix, count: 0, cases: [], examples: [] };
-    const once = i.block ? `${i.workbook}|${i.block}|${i.cause}|${i.original}` : undefined;
+    const once = i.block
+      ? `${i.workbook}|${i.block}|${i.cause}|${i.original}`
+      : i.suggested !== undefined
+        ? `${i.workbook}|record|${i.cause}|${i.original}`
+        : undefined;
     if (!once || !asked.has(once)) g.count++;
     if (once) asked.add(once);
     const c = keyOf(i.workbook, i.caseId);

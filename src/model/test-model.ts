@@ -24,6 +24,12 @@ export const RawTestCaseSchema = z.object({
    * (`stepsWithChecks`); the steps text holds only the actions.
    */
   stepExpected: z.record(z.string().regex(/^\d{1,3}$/), z.string().min(1)).optional(),
+  /**
+   * The Test Data a sheet gives to one step (its own row) rather than to the whole case (E0.16, P2): the key is the number of the step
+   * as written in `steps`. A step reads its own row's data first, so two rows can give the same key different values. `testData`
+   * still holds all of it, for anything that reads the case as one.
+   */
+  stepData: z.record(z.string().regex(/^\d{1,3}$/), z.string().min(1)).optional(),
   requirementId: z.string().optional(),
   /** Optional columns of the sheet (IN-12 to IN-14): kept with the test case, never used to decide a verdict. */
   priority: z.string().optional(),
@@ -57,6 +63,26 @@ export function stepsWithChecks(raw: Pick<RawTestCase, 'steps' | 'stepExpected'>
     if (after) out.push(`${out.length + 1}. Verify ${after.replace(/\s*\n\s*/g, ' ').trim()}`);
   }
   return out.join('\n');
+}
+
+/**
+ * The Test Data of each line of `stepsWithChecks(raw)` (E0.16): the row's own data of the step it is, or that its check follows.
+ * `undefined` for a line whose row gave none, and for every line of a case without `stepData`.
+ */
+export function stepDataOfLines(raw: Pick<RawTestCase, 'steps' | 'stepExpected' | 'stepData'>): Array<string | undefined> {
+  const lines = raw.steps
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out: Array<string | undefined> = [];
+  for (const [i, line] of lines.entries()) {
+    const m = NUMBERED_LINE.exec(line);
+    const n = String(m ? Number(m[1]) : i + 1);
+    out.push(raw.stepData?.[n]);
+    if (raw.stepExpected?.[n]) out.push(raw.stepData?.[n]);
+  }
+  return out;
 }
 
 /** Where a step's value comes from (FR-PA-10). Secrets are always `env`, never `literal`. */

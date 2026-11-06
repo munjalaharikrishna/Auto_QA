@@ -276,6 +276,8 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         severity: 'review',
         message: 'it says "preferred" but not which one: the engine does not choose for the tester',
         original,
+        // "Select preferred Employee": the kind of record is what is selected (E0.16 ledger).
+        ...(steps[0]?.target?.name ? { record: steps[0].target.name.toLowerCase() } : {}),
         suggestion: 'Write the value: Select "<value>" in the <name> dropdown, or give it in Test Data.',
       });
     }
@@ -293,6 +295,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
           severity: 'review',
           message: `"${s.target?.name}" names no ${recordOf}: which ${recordOf} to open is not said, and the engine does not choose one`,
           original,
+          record: recordOf,
           suggestion: `Name the ${recordOf}: Click on "<the name>" in the list, or give it in Test Data.`,
         });
       }
