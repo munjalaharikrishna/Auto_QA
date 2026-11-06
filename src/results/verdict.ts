@@ -75,6 +75,11 @@ export interface TestVerdict {
   executionId: string;
   /** Decisions the platform made that the tester did not state (made-up values, learned messages): NEEDS REVIEW until the tester approves them (DEC-05). */
   assumptions?: string[];
+  /**
+   * Controls the new engine chose among alike ones, the first on the page (E0.17 item 3). A person's PASS on the case keeps each as what
+   * its word means on that screen, so the next run uses it without asking; a FAIL keeps nothing.
+   */
+  picks?: Array<{ step: string; word: string; means: string; screen: string; element: string; why: string }>;
   testId: string;
   title: string;
   automationId: string;

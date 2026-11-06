@@ -23,6 +23,48 @@ export type AnchorScope =
 
 const keyOf = (frame: readonly string[], xpath: string): string => `${frame.join('>')}|${xpath}`;
 
+/** For each element, how deep the closest ancestor it shares with another element is (-1 when one is gone). Runs in the page. */
+export function sharedDepths(args: { from: string; xpaths: string[] }): number[] {
+  const at = (xpath: string): Node | null => {
+    try {
+      return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    } catch {
+      return null;
+    }
+  };
+  const depth = (n: Node): number => {
+    let d = 0;
+    for (let p = n.parentNode; p; p = p.parentNode) d++;
+    return d;
+  };
+  const from = at(args.from);
+  return args.xpaths.map((x) => {
+    const el = at(x);
+    if (!from || !el) return -1;
+    let common: Node | null = el;
+    while (common && !common.contains(from)) common = common.parentNode;
+    return common ? depth(common) : -1;
+  });
+}
+
+/**
+ * Of controls that are alike, the one in the part of the page the case is working in (E0.17 item 3, owner, 6 Nov 2026): the one that
+ * shares the deepest part of the page with the element the step before acted on. When two share it as deeply, or the element before is
+ * in another frame or gone, there is no such one, and undefined is returned.
+ */
+export async function nearestTo(page: Page, last: { frame: readonly string[]; xpath: string }, alike: readonly DomElement[]): Promise<DomElement | undefined> {
+  const same = alike.filter((e) => sameFrame(e.frame, last.frame));
+  if (same.length < 2) return same.length === 1 && alike.length > 1 ? same[0] : undefined;
+  const frame = (await visibleFrames(page)).find((f) => sameFrame(f.path, last.frame))?.frame;
+  if (!frame) return undefined;
+  await prepareFrame(frame);
+  const depths = await frame.evaluate(sharedDepths, { from: last.xpath, xpaths: same.map((e) => e.xpath) }).catch(() => undefined);
+  if (!depths) return undefined;
+  const best = Math.max(...depths);
+  if (best < 0 || depths.filter((d) => d === best).length !== 1) return undefined;
+  return same[depths.indexOf(best)];
+}
+
 export async function anchorScope(page: Page, within: string | undefined, elements: readonly DomElement[]): Promise<AnchorScope> {
   const ref = containerRef(within);
   if (!within || !ref) return { status: 'unscoped' };

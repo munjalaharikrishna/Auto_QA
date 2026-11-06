@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -260,6 +260,19 @@ for (const card of document.querySelectorAll('article')) {
   });
 }
 </script>`,
+  ),
+
+  // E0.17 item 3: one toolbar shown above and below a long form, so the same Save button is on the page twice and does the same.
+  '/ui/alike': layout(
+    'Alike',
+    `<h1>Profile</h1>
+<form id="profile" onsubmit="return false">
+<p><input type="button" value="Save" onclick="saveProfile()"></p>
+<label for="nick">Nick name</label><input id="nick">
+<p><input type="button" value="Save" onclick="saveProfile()"></p>
+</form>
+<p id="saved" role="status"></p>
+<script>function saveProfile() { document.getElementById('saved').textContent = 'Profile saved'; }</script>`,
   ),
 
   '/ui/keys': layout(

@@ -225,7 +225,16 @@ export function toTestVerdict(
     durationMs,
     ...(startedAt ? { startedAt } : {}),
     evidence: { screenshots: shots, ...(auditFile ? { audit: auditFile } : {}) },
+    ...(picksOf(trace).length ? { picks: picksOf(trace) } : {}),
   };
+}
+
+/** The controls the engine chose among alike ones (E0.17 item 3): a person's PASS on the case keeps each as what its word means there. */
+function picksOf(trace: RunTrace | undefined): NonNullable<TestVerdict['picks']> {
+  return (trace?.steps ?? []).flatMap((s) => {
+    const a = s.located?.assumed;
+    return a ? [{ step: s.step, word: a.word, means: a.means, screen: a.screen, element: a.element, why: a.why }] : [];
+  });
 }
 
 /**

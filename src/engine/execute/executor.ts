@@ -10,7 +10,7 @@ import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
 import { labelKey } from '../knowledge/labels.js';
 import { screenWord } from '../knowledge/screens.js';
-import { anchorScope } from '../locate/anchors.js';
+import { anchorScope, nearestTo } from '../locate/anchors.js';
 import { contentFrameOf, frameOffsets } from '../locate/frames.js';
 import {
   type DomElement,
@@ -92,6 +92,11 @@ export interface Located {
   row?: { page: string; cells: string[]; pagesVisited: number };
   /** A person picked the element on the screenshot, because the levels found none or several (E0.14a). */
   picked?: true;
+  /**
+   * E0.17 item 3: several controls were alike and the first on the page was used. The case cannot PASS until a person approves; the
+   * approval keeps this element as what the word means on this screen (a label of the screen, as a walkthrough pick is).
+   */
+  assumed?: { why: string; word: string; means: string; screen: string; element: string };
 }
 
 export interface Call {
@@ -271,6 +276,8 @@ class Runner {
   private readonly typed = new Set<string>();
   /** Pages the run has been on: a tab it left is not "new" when it comes up again. */
   private readonly known = new Set<Page>();
+  /** The element the last step acted on: the part of the page around it is the section the case is working in (E0.17 item 3). */
+  private lastElement: { frame: string[]; xpath: string } | undefined;
 
   constructor(
     private readonly input: ExecuteInput,
@@ -665,8 +672,19 @@ class Runner {
     const unreadNote = seen.unread.length
       ? `; a frame could not be read after the page changed (${seen.unread.map((p) => p.join(' > ')).join(', ')}), so it may be there`
       : '';
-    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true };
-    if (result.status === 'found')
+    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true; assumed?: string };
+    if (result.status === 'found' && !result.passAllowed) {
+      // Alike controls (E0.17 item 3). Owner, 6 Nov 2026: the one in the section the case is working in first; only then the first.
+      const near = this.lastElement ? await nearestTo(this.page, this.lastElement, result.alike) : undefined;
+      found = near
+        ? { element: near, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) }
+        : { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason), assumed: result.assumed };
+      rec.notes.push(
+        near
+          ? `${result.alike.length} controls called "${query.name}" are alike: the one in the part of the page the case is working in was used (nearest to the element of the step before)`
+          : result.assumed,
+      );
+    } else if (result.status === 'found')
       found = { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) };
     else {
       const code: BlockCode = result.status === 'not-found' ? 'LOCATE_NOT_FOUND' : result.status === 'ambiguous' ? 'LOCATE_AMBIGUOUS' : 'LOCATE_INACTIVE';
@@ -709,7 +727,19 @@ class Runner {
       ignored: found.ignored,
       ...(row ? { row: { page: row.label, cells: row.row.cells, pagesVisited: row.visited } } : {}),
       ...(found.picked ? { picked: true as const } : {}),
+      ...(found.assumed
+        ? {
+            assumed: {
+              why: found.assumed,
+              word: query.name,
+              means: found.element.ariaName || found.element.labels[0] || found.element.text || found.element.placeholder || found.element.nameAttr || '',
+              screen,
+              element: `${found.element.frame.join('>')}|${found.element.xpath}`,
+            },
+          }
+        : {}),
     };
+    this.lastElement = { frame: [...found.element.frame], xpath: found.element.xpath };
     return { element: found.element, selector };
   }
 

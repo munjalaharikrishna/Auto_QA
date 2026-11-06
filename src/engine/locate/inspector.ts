@@ -301,6 +301,9 @@ export function readDom(opts: {
       ...(testId ? { testId } : {}),
       ...(el.getAttribute('name') ? { nameAttr: el.getAttribute('name') as string } : {}),
       ...(el.getAttribute('id') ? { id: el.getAttribute('id') as string } : {}),
+      ...(squash(el.getAttribute('onclick') ?? el.getAttribute('href') ?? '')
+        ? { handler: squash(el.getAttribute('onclick') ?? el.getAttribute('href') ?? '').slice(0, 200) }
+        : {}),
       text,
       visible,
       ...(reason ? { hiddenReason: reason } : {}),
