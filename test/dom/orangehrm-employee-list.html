@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>
+<link href="../../themes/orange/css/style.css" rel="stylesheet" type="text/css">
+<!--[if lte IE 6]>
+<link href="../../themes/orange/css/IE6_style.css" rel="stylesheet" type="text/css"/>
+<![endif]-->
+<!--[if IE]>
+<link href="../../themes/orange/css/IE_style.css" rel="stylesheet" type="text/css"/>
+<![endif]-->
+<script type="text/javascript" src="../../themes/orange/scripts/style.js"></script>
+<title></title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script type="text/javascript" src="../../scripts/octopus.js"></script>
+<script type="text/javascript">
+//<![CDATA[
+	function nextPage() {
+		i=document.standardView.pageNO.value;
+		i++;
+		document.standardView.pageNO.value=i;
+		document.standardView.submit();
+	}
+
+	function prevPage() {
+		var i=document.standardView.pageNO.value;
+		i--;
+		document.standardView.pageNO.value=i;
+		document.standardView.submit();
+	}
+
+	function chgPage(pNO) {
+		document.standardView.pageNO.value=pNO;
+		document.standardView.submit();
+	}
+
+	function sortAndSearch(sortField, sortOrder) {
+		var uri = "/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&VIEW=MAIN&sortField=" + sortField + "&sortOrder" + sortField + "=" + sortOrder;
+		document.standardView.action = uri;
+		document.standardView.submit();
+	}
+
+	function returnAdd() {
+
+		location.href = "./CentralController.php?reqcode=EMP&capturemode=addmode";
+
+	}
+
+	function returnDelete() {
+		$check = 0;
+		with (document.standardView) {
+			for (var i=0; i < elements.length; i++) {
+				if ((elements[i].type == 'checkbox') && (elements[i].checked == true)){
+					$check = 1;
+				}
+			}
+		}
+
+		if ( $check == 1 ){
+			document.standardView.delState.value = 'DeleteMode';
+			document.standardView.pageNO.value=1;
+			document.standardView.submit();
+		}else{
+			alert("Select at least one record to delete");
+		}
+	}
+
+
+	function returnSearch() {
+		if (document.standardView.loc_code.value == -1) {
+			alert("Select the field to search!");
+			document.standardView.loc_code.Focus();
+			return;
+		};
+		document.standardView.captureState.value = 'SearchMode';
+		document.standardView.pageNO.value=1;
+		document.standardView.submit();
+	}
+
+	function doHandleAll()
+	{
+		with (document.standardView) {
+			if(elements['allCheck'].checked == false){
+				doUnCheckAll();
+			}
+			else if(elements['allCheck'].checked == true){
+				doCheckAll();
+			}
+		}
+	}
+
+	function doCheckAll() {
+		with (document.standardView) {
+			for (var i=0; i < elements.length; i++) {
+				if (elements[i].type == 'checkbox') {
+					elements[i].checked = true;
+				}
+			}
+		}
+	}
+
+	function doUnCheckAll()
+	{
+		with (document.standardView) {
+			for (var i=0; i < elements.length; i++) {
+				if (elements[i].type == 'checkbox') {
+					elements[i].checked = false;
+				}
+			}
+		}
+	}
+	
+	/**
+	 * If at least one day is unchecked, main check box would be unchecked
+	 */
+
+	function unCheckMain() {
+		noOfCheckboxes = 0;
+		noOfCheckedCheckboxes = 0;
+
+		with (document.getElementById('standardView')) {
+			for (i = 0; i < elements.length; i++) {
+				if (elements[i].type == 'checkbox' && elements[i].name != 'allCheck') {
+					noOfCheckboxes++;
+					if (elements[i].checked == true) {
+						noOfCheckedCheckboxes++;
+					}
+
+				}
+			}
+		}
+
+		document.getElementById('allCheck').checked = (noOfCheckboxes == noOfCheckedCheckboxes);
+	}
+
+	function clear_form() {
+		document.standardView.loc_code.options[0].selected=true;
+		document.standardView.loc_name.value='';
+	}
+
+	parent.scrollTo(0, 0);
+//]]>
+</script>
+</head>
+<body>
+<div class="outerbox"><div class="top"><div class="left"></div><div class="right"></div><div class="middle"></div></div><div class="maincontent">
+
+	<form name="standardView" id="standardView" method="post" action="/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&amp;VIEW=MAIN&amp;sortField=0&amp;sortOrder0=ASC">
+
+		<div class="mainHeading"><h2>Employee Information</h2></div>
+		<input type="hidden" name="captureState" value="">
+		<input type="hidden" name="delState" value="">
+		<input type="hidden" name="pageNO" value="1">
+		<input type="hidden" name="empID" value="">
+
+
+		
+		<div class="searchbox">
+			<label for="loc_code">Search By:</label>
+			<select name="loc_code" id="loc_code">
+				<option value="-1">-Select-</option><option value="0">Emp. ID</option><option value="1">Emp. First Name</option><option value="2">Emp. Last Name</option><option value="3">Emp. Middle Name</option><option value="6">Job Title</option><option value="9">Employment status</option><option value="7">Sub-Division</option><option value="8">Supervisor</option>			</select>
+			<label for="loc_name">Search For:</label>
+			<input type="text" size="20" name="loc_name" id="loc_name" value="">
+			<input type="button" class="plainbtn" onclick="returnSearch();" onmouseover="this.className='plainbtn plainbtnhov'" onmouseout="this.className='plainbtn'" value="Search">
+			<input type="button" class="plainbtn" onclick="clear_form();" onmouseover="this.className='plainbtn plainbtnhov'" onmouseout="this.className='plainbtn'" value="Reset">
+			<br class="clear">
+		</div>
+
+			<div class="actionbar">
+				<div class="actionbuttons">
+					<input type="button" class="plainbtn" onclick="returnAdd();" onmouseover="this.className='plainbtn plainbtnhov'" onmouseout="this.className='plainbtn'" value="Add">
+
+											<input type="button" class="plainbtn" onclick="returnDelete();" onmouseover="this.className='plainbtn plainbtnhov'" onmouseout="this.className='plainbtn'" value="Delete">
+
+									</div>
+				<div class="noresultsbar"></div>
+				<div class="pagingbar">
+								</div>
+			<br class="clear">
+			</div>
+			<br class="clear">
+				<table cellspacing="0" cellpadding="0" class="data-table">
+					<thead>
+					<tr>
+						<td width="50">
+														<input type="checkbox" name="allCheck" id="allCheck" class="checkbox" style="margin-left:1px" onclick="doHandleAll()">
+													</td>
+												<td scope="col">
+							<a href="#" onclick="sortAndSearch(0, 'DESC');" title="Sort in descending order" class="ASC">Employee Id							</a>
+						</td>
+												<td scope="col">
+							<a href="#" onclick="sortAndSearch(7, 'ASC');" title="Sort in ascending order" class="null">Employee Name </a>
+						</td>
+												<td scope="col">
+							<a href="#" onclick="sortAndSearch(6, 'ASC');" title="Sort in ascending order" class="null">Job Title</a>
+						</td>
+												<td scope="col">
+							<a href="#" onclick="sortAndSearch(9, 'ASC');" title="Sort in ascending order" class="null">Employment status</a>
+						</td>
+												<td scope="col">
+							<a href="#" onclick="sortAndSearch(8, 'ASC');" title="Sort in ascending order" class="null">Sub-Division</a>
+						</td>
+													<td scope="col">
+							<a href="#" onclick="sortAndSearch(10, 'ASC');" title="Sort in ascending order" class="null">Supervisor</a>
+							</td>
+											</tr>
+					</thead>
+
+					<tbody>
+													<tr class="odd">
+																	<td><input type="checkbox" class="checkbox" name="chkLocID[]" value="0001" onclick="unCheckMain();"></td>
+																	<td>0001</td>
+
+									<td>
+										<a target="_self" href="./CentralController.php?menu_no_top=hr&amp;id=0001&amp;capturemode=updatemode&amp;reqcode=EMP&amp;currentPage=1">
+										Anita Kumari Rao</a> </td>
+									<td>-</td>
+									<td>-</td>
+									<td>-</td>
+																			<td>-</td>
+																</tr>
+											</tbody>
+				</table>
+	</form>
+</div><div class="bottom"><div class="left"></div><div class="right"></div><div class="middle"></div></div></div>
+<script type="text/javascript">
+    <!--
+    	if (document.getElementById && document.createElement) {
+ 			roundBorder('outerbox');
+		}
+    -->
+</script>
+
+
+</body></html>
