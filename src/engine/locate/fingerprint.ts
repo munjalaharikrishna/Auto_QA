@@ -58,7 +58,7 @@ type Feature = keyof typeof WEIGHTS;
 
 const nameOf = (e: DomElement): string => accessibleName(e) || e.labels[0] || e.text || e.placeholder || '';
 
-const valueOf = (e: DomElement, f: Feature): string | undefined => {
+const featureValue = (e: DomElement, f: Feature): string | undefined => {
   switch (f) {
     case 'testId':
       return e.testId;
@@ -105,7 +105,7 @@ export function fingerprintOf(element: DomElement, page: readonly DomElement[]):
     if (!value) continue;
     if (page.filter((e) => of(e) === value && e.frame.join('>') === element.frame.join('>')).length === 1) locators.push({ kind, value });
   }
-  const pick = (f: Feature) => valueOf(element, f);
+  const pick = (f: Feature) => featureValue(element, f);
   const fp: Fingerprint = { locators, role: element.role, tag: element.tag, xpath: element.xpath, frame: [...element.frame] };
   const keep = (key: Exclude<keyof Fingerprint, 'locators' | 'role' | 'tag' | 'xpath' | 'frame'>, f: Feature) => {
     const v = pick(f);
@@ -149,7 +149,7 @@ export function scoreOf(fp: Fingerprint, e: DomElement): number {
     const kept = fp[KEPT[f]];
     if (typeof kept !== 'string' || !kept) continue;
     total += WEIGHTS[f];
-    const now = valueOf(e, f);
+    const now = featureValue(e, f);
     if (now !== undefined && (f === 'xpath' || f === 'handler' ? now === kept : labelKey(now) === labelKey(kept))) same += WEIGHTS[f];
   }
   return total ? Math.round((same / total) * 100) / 100 : 0;
