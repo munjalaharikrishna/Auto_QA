@@ -10,7 +10,7 @@ import type { CompileResult } from '../engine/index.js';
 import type { IrExpectation } from '../engine/ir/schema.js';
 import type { Application } from '../engine/knowledge/schema.js';
 import type { Evaluation } from '../engine/verdict/evaluate.js';
-import { dialogTextOf, judge, type Verdict } from '../engine/verdict/index.js';
+import { approvalFingerprint, dialogTextOf, judge, type LearningBook, type Verdict } from '../engine/verdict/index.js';
 import type { TestModel } from '../model/test-model.js';
 import type { CheckVerdict, ReviewReason, StepVerdict, TestVerdict } from '../results/verdict.js';
 
@@ -23,6 +23,8 @@ import type { CheckVerdict, ReviewReason, StepVerdict, TestVerdict } from '../re
 
 /** The condition types `evaluateExpectation` decides. Any other type is never run through this path. */
 const JUDGED = new Set(['VISIBILITY', 'TEXT', 'AUTHENTICATION', 'URL', 'ENABLED', 'VALUE', 'MASKED', 'HEALTH', 'LAYOUT']);
+/** The STATE checks the verdict engine judges: a ticked box (E0.17), the page shown after login and a chosen file (E0.18). "Updated" is a person's (gold, 4 Nov 2026). */
+const JUDGED_STATES: ReadonlySet<string> = new Set(['CHECKED', 'UNCHECKED', 'DEFAULT_PAGE', 'UPLOADED']);
 
 export interface SemanticJob {
   model: TestModel;
@@ -37,6 +39,10 @@ export interface SemanticJob {
   knowledge?: Application;
   /** Where the one-time code of the login comes from, for the login case and for a case that has a code step itself (AU-04, AU-05). */
   otp?: OtpSource;
+  /** What people decided on checks before (E0.18 step 5): an unchanged check a person decided is judged by that decision. */
+  learning?: LearningBook;
+  /** Pages whose address was learned without a person (E0.18): they open pages but prove no URL check. */
+  unconfirmedPages?: ReadonlySet<string>;
 }
 
 /**
@@ -59,9 +65,8 @@ export function semanticSupport(compiled: CompileResult): Support {
   const blocking = compiled.issues.find((i) => i.severity === 'blocking');
   if (blocking) return { ok: false, why: `${blocking.where}: ${blocking.message}` };
   if (compiled.ir.expectations.length === 0) return { ok: false, why: 'the case has no expected result to judge' };
-  // A state check is judged when it asks whether a box is ticked (E0.17 item 4); other states are not yet.
-  const judged = (c: { type: string; expect?: string }): boolean =>
-    JUDGED.has(c.type) || (c.type === 'STATE' && (c.expect === 'CHECKED' || c.expect === 'UNCHECKED'));
+  // A state check is judged when the verdict engine has a rule for it (JUDGED_STATES); other states are not yet.
+  const judged = (c: { type: string; expect?: string }): boolean => JUDGED.has(c.type) || (c.type === 'STATE' && JUDGED_STATES.has(c.expect ?? ''));
   const other = compiled.ir.expectations.find((e) => !judged(e.condition));
   if (other) return { ok: false, why: `${other.id} is a ${other.condition.type} check, which the verdict engine does not judge yet` };
   return { ok: true };
@@ -229,7 +234,26 @@ export function toTestVerdict(
     ...(startedAt ? { startedAt } : {}),
     evidence: { screenshots: shots, ...(auditFile ? { audit: auditFile } : {}) },
     ...(picksOf(trace).length ? { picks: picksOf(trace) } : {}),
+    ...(approvalsOf(verdict, trace, compiled).length ? { approvals: approvalsOf(verdict, trace, compiled) } : {}),
+    // Why it needs review, where the run knew it (E0.18 step 4): an element found by its fingerprint is healed, one chosen among alike
+    // ones is chosen. Other reasons are read from the stop by labelOf.
+    ...(status === 'NEEDS REVIEW' && assumedKind(trace) ? { label: assumedKind(trace) === 'fingerprint' ? ('healed' as const) : ('chosen' as const) } : {}),
   };
+}
+
+/** The checks a person decides on, with what the decision is about (E0.18 step 5): every check the run left open. */
+function approvalsOf(verdict: Verdict, trace: RunTrace | undefined, compiled: CompileResult): NonNullable<TestVerdict['approvals']> {
+  const byId = new Map((compiled.ir?.expectations ?? []).map((e) => [e.id, e]));
+  return verdict.evaluations.flatMap((ev) => {
+    const exp = byId.get(ev.expectation);
+    return ev.result === 'unproven' && exp ? [{ check: ev.expectation, clause: ev.clause, fingerprint: approvalFingerprint(exp, ev, trace) }] : [];
+  });
+}
+
+/** The kind of assumption the run made to find an element, when it made one: a fingerprint is stronger evidence than an alike choice. */
+function assumedKind(trace: RunTrace | undefined): 'alike' | 'fingerprint' | undefined {
+  const kinds = (trace?.steps ?? []).map((s) => s.located?.assumed?.kind).filter((k): k is 'alike' | 'fingerprint' => !!k);
+  return kinds.includes('fingerprint') ? 'fingerprint' : kinds[0];
 }
 
 /** The controls the engine chose among alike ones (E0.17 item 3): a person's PASS on the case keeps each as what its word means there. */
@@ -279,6 +303,8 @@ export interface SemanticRunOptions {
   onProgress?: (message: string) => void;
   /** Called with the records each case saved, for the run's clean-up list (E0.16): nothing is deleted. */
   onCreated?: (records: CleanupRecord[]) => void;
+  /** The most one case may take (E0.18 step 3), default 5 minutes or AUTO_QA_CASE_TIMEOUT_MS: a case that runs over keeps its review. */
+  caseTimeoutMs?: number;
 }
 
 /**
@@ -298,10 +324,14 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
     return out;
   }
   try {
-    for (const job of runnable) {
+    // One case may take at most this long (E0.18 step 3): a step that waits for ever must not hold up the batch. A case that runs over
+    // keeps its review with the reason, and the next case gets a fresh browser.
+    const limit = options.caseTimeoutMs ?? (Number(process.env.AUTO_QA_CASE_TIMEOUT_MS) || 5 * 60_000);
+    const overdue = new Set<string>();
+    const runOne = async (job: SemanticJob): Promise<void> => {
       const { model, compiled } = job;
       const { ir, plan } = compiled;
-      if (!ir || !plan) continue;
+      if (!ir || !plan) return;
       options.onProgress?.(`… ${model.id}: running through the new engine`);
       const origin = new URL(job.baseUrl).origin;
       const pages = Object.fromEntries(Object.entries(compiled.pages ?? {}).map(([k, v]) => [k, v?.startsWith('/') ? `${origin}${v}` : v]));
@@ -328,11 +358,11 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
           if (signedIn.status !== 'completed') {
             const why = signedIn.stoppedAt ? `${signedIn.stoppedAt.code}: ${signedIn.stoppedAt.reason}` : 'the login did not finish';
             options.onProgress?.(`? ${model.id}: the login that comes first did not work (${why}); it keeps its review`);
-            continue;
+            return;
           }
         } else if (needsLogin) {
           options.onProgress?.(`? ${model.id}: starts logged in and no login case is given; it keeps its review`);
-          continue;
+          return;
         }
         const planned = planActions(ir, plan);
         const trace = await executePlan(
@@ -356,9 +386,48 @@ export async function runSemanticJobs(jobs: readonly SemanticJob[], options: Sem
         const auditFile = options.screenshotDir
           ? writeAudit(path.join(options.screenshotDir, model.id), trace, planned, compiled, options.onProgress)
           : undefined;
-        out.set(model.id, toTestVerdict(model, judge({ compile: compiled, trace }), trace, compiled, Date.now() - started, startedAt, auditFile));
+        if (!overdue.has(model.id))
+          out.set(
+            model.id,
+            toTestVerdict(
+              model,
+              judge({
+                compile: compiled,
+                trace,
+                ...(job.learning ? { learning: job.learning } : {}),
+                ...(job.unconfirmedPages ? { unconfirmedPages: job.unconfirmedPages } : {}),
+              }),
+              trace,
+              compiled,
+              Date.now() - started,
+              startedAt,
+              auditFile,
+            ),
+          );
       } catch (e) {
         options.onProgress?.(`? ${model.id}: the new engine could not run it (${(e as Error).message.split('\n')[0]}); it keeps its review`);
+      }
+    };
+    for (const job of runnable) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const over = await Promise.race([
+        runOne(job).then(() => false),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(true), limit);
+        }),
+      ]);
+      clearTimeout(timer);
+      if (!over) continue;
+      overdue.add(job.model.id);
+      options.onProgress?.(`? ${job.model.id}: the new engine stopped it after ${Math.round(limit / 1000)} s, a step did not finish; it keeps its review`);
+      await session.close().catch(() => undefined);
+      try {
+        session = await openExecutionSession({ headless: first.headless ?? true, testIdAttribute: first.testIdAttribute });
+      } catch (e) {
+        options.onProgress?.(
+          `? the new engine could not open a browser again (${(e as Error).message.split(String.fromCharCode(10))[0]}); the cases left keep their review`,
+        );
+        return out;
       }
     }
   } finally {

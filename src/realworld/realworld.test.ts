@@ -6,6 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { DEMO_USER, startDemoApp } from '../../examples/demo-app/server.js';
 import type { Resolver } from '../explorer/controller.js';
+import type { PageStore } from '../explorer/page-store.js';
 import type { RawTestCase } from '../model/test-model.js';
 import { withRules } from '../parser/config.js';
 import { defaultParserConfig, parseTestCase } from '../parser/index.js';
@@ -23,6 +24,17 @@ const config = defaultParserConfig();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const cases: RawTestCase[] = JSON.parse(readFileSync(path.join(root, 'examples/real-world/login-cases.json'), 'utf8'));
 const asked: string[] = [];
+
+/**
+ * Where the demo's home page is, as a project that says so (E0.18, owner 7 Nov 2026): a URL check no longer names the page it is judged
+ * on by itself, so "redirected to the home page" on /dashboard is asked about unless the project knows the home page. These tests are
+ * about the login cases, not about learning page addresses.
+ */
+const knownPages = (): PageStore => ({
+  load: async () => ({ home: '/dashboard', 'home/dashboard': '/dashboard' }),
+  save: async () => {},
+  unconfirmed: async () => new Set<string>(),
+});
 const unattended: Resolver = {
   choose: async (r) => {
     asked.push(`${r.item} ${r.raw}: ${r.text}`);
@@ -51,6 +63,7 @@ describe('real-world login test cases (REAL-WORLD-TEST-CASES.md §9)', { skip: !
         baseUrl: `${app.url}/legacy`,
         env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
         resolver: unattended,
+        pages: knownPages(),
         exploreDir: path.join(base, 'explore'),
         runsDir: path.join(base, 'runs'),
         workspace: path.join(base, 'workspace'),
@@ -145,6 +158,7 @@ describe('the Strict policy asks first (D30)', { skip: !!process.env.AUTO_QA_SKI
           baseUrl: `${app.url}/legacy`,
           env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
           resolver: unattended,
+          pages: knownPages(),
           policy: 'strict',
           exploreDir: path.join(base, 'explore'),
           runsDir: path.join(base, 'runs'),
@@ -199,6 +213,7 @@ describe('project rules make a wording run, and are used the next time (R4, FR-R
           baseUrl: `${app.url}/legacy`,
           env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
           resolver: unattended,
+          pages: knownPages(),
           exploreDir: path.join(base, sub, 'explore'),
           runsDir: path.join(base, sub, 'runs'),
           workspace: path.join(base, sub, 'workspace'),
@@ -299,6 +314,7 @@ describe('picking an element can be remembered for the project (R4, FR-RULE-01)'
           baseUrl: `${app.url}/legacy`,
           env: { TEST_USERNAME: DEMO_USER.username, TEST_PASSWORD: DEMO_USER.password },
           resolver: picking,
+          pages: knownPages(),
           onRule: (r) => remembered.push(r),
           exploreDir: path.join(base, 'explore'),
           runsDir: path.join(base, 'runs'),

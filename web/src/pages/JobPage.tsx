@@ -523,6 +523,8 @@ function VerdictRow(props: {
         <td>
           <StatusBadge status={props.status} />
           {props.status === 'PASS' && !!v.assumptions?.length && <div className="muted">with assumptions</div>}
+          {/* Why it needs review, in one word (E0.18 step 4): inconclusive, healed, chosen, flaky, not-found, hidden, ambiguous, wording. */}
+          {props.status === 'NEEDS REVIEW' && v.label && <div className="muted">{v.label}</div>}
           {v.category && <div className="muted">{v.category}</div>}
           {props.decision && (
             <div className="muted">

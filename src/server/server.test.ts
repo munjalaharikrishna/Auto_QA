@@ -487,6 +487,28 @@ describe('jobs end to end (M7a)', { skip: !!process.env.AUTO_QA_SKIP_BROWSER, co
     await rm(dir, { recursive: true, force: true });
   });
 
+  it('E0.18 step 2: a single case the old parser does not read runs through the new engine, on approval and on a re-run', async () => {
+    const job = await post('/api/projects/demo/cases', {
+      title: 'Login read only by the new engine',
+      steps: '1. Open the application\n2. Enter the given valid username in the Username Text box\n3. Enter valid password\n4. Click Login',
+      expected: 'User should navigate to Dashboard page',
+    });
+    let j = await until(job.id, ['review', 'done', 'failed']);
+    assert.equal(j.status, 'review', j.error);
+    const why = JSON.stringify(j.output.review.blocked);
+    assert.ok(why.includes('Runs through the new engine'), why);
+    assert.ok(!why.includes('not yet runnable'), 'it is not told to reword anything');
+    await post(`/api/jobs/${job.id}/approve`);
+    j = await until(job.id, ['done', 'failed', 'review']);
+    assert.equal(j.status, 'done', `approve runs it (${j.status} ${j.error ?? ''})`);
+    assert.equal(j.verdicts[0].status, 'PASS', j.verdicts[0].verdict?.reason);
+
+    const rerun = await post(`/api/projects/demo/test-cases/${j.input.case.id}/run`);
+    j = await until(rerun.id, ['review', 'done', 'failed', 'waiting']);
+    assert.equal(j.status, 'done', `a saved case the new engine runs is run again without review (${j.status} ${j.error ?? ''})`);
+    assert.equal(j.verdicts[0].status, 'PASS', j.verdicts[0].verdict?.reason);
+  });
+
   it('asks, waits in review, and runs after approval (FR-RV-01…03)', async () => {
     const job = await post('/api/projects/demo/cases', {
       title: 'Security details open',

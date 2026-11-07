@@ -58,6 +58,11 @@ export interface ReviewOptions {
    * choice that cannot be kept does not undo the decision; the decision is the person's, the memory only saves asking again.
    */
   remember?: (projectId: string, pick: Pick, source: string, who: string) => Promise<unknown>;
+  /**
+   * Takes back what a PASS on this case taught (E0.18 step 5): when the decision is changed to FAIL, the elements that PASS kept for
+   * their screens are switched off. `source` is the start of the source those entries were saved with.
+   */
+  forget?: (projectId: string, source: string, who: string) => Promise<unknown>;
 }
 
 export class ReviewService {
@@ -151,6 +156,9 @@ export class ReviewService {
       evidenceSha256: evidenceHash(c.evidence),
     });
     if (saved.outcome === 'refused') return refused(saved.reason);
+    // A FAIL that replaces a PASS takes back what the PASS kept (E0.18 step 5); the FAIL itself is the decision the next run reads.
+    if (decision === 'FAIL' && saved.outcome === 'replaced' && this.options.forget)
+      await this.options.forget(projectId, `review of ${c.testId} in ${jobId} (`, reviewer).catch(() => undefined);
     // A PASS approves what the engine chose among alike controls in this run: it is remembered for that screen (E0.17 item 3).
     if (decision === 'PASS' && this.options.remember)
       for (const pick of (result.verdict as TestVerdict | undefined)?.picks ?? [])

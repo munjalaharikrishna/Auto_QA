@@ -8,6 +8,7 @@ import { type CleanupList, type CleanupRecord, writeCleanupList } from '../engin
 import { CATEGORY, type CompileResult, compileCase, type EngineKind, type Issue, preflightOf } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import type { Application } from '../engine/knowledge/schema.js';
+import type { LearningBook } from '../engine/verdict/index.js';
 import { nextExecutionId, type RunEvent, runWorkspace } from '../executor/runner.js';
 import { type ExplorationResult, explore, type Resolver } from '../explorer/controller.js';
 import { type Explanation, explain } from '../explorer/explain.js';
@@ -20,6 +21,7 @@ import type { RawTestCase, TestModel } from '../model/test-model.js';
 import type { ParserConfig } from '../parser/config.js';
 import { engineInputOf } from '../parser/original.js';
 import { mismatchedSecrets, mismatchText } from '../parser/secret-check.js';
+import { withLabels } from '../results/labels.js';
 import type { ReviewReason, TestVerdict } from '../results/verdict.js';
 import { DEFAULT_POLICY, observeUnclearChecks, type Policy } from './policy.js';
 import { runSemanticJobs, type SemanticJob, semanticSupport } from './semantic-run.js';
@@ -33,6 +35,8 @@ import { reconcile } from './shadow.js';
  */
 
 export interface PipelineOptions {
+  /** What people decided on checks before (E0.18 step 5): the new engine judges an unchanged decided check by that decision. */
+  learning?: LearningBook;
   config: ParserConfig;
   baseUrl: string;
   env: Record<string, string | undefined>;
@@ -94,6 +98,27 @@ export interface PipelineResult {
   executionId?: string;
 }
 
+/**
+ * What a run will execute (E0.18 step 2): the cases the legacy route explored, and the ones it handed to the new engine. A case in
+ * `early` that the new engine takes is not a stop: it runs.
+ */
+export function runnableOf(prepared: Pick<Prepared, 'explored' | 'early' | 'semantic'>): { runs: number; stopped: string[] } {
+  const runs = prepared.explored.length + (prepared.semantic?.size ?? 0);
+  const stopped = [...prepared.early.keys()].filter((id) => !prepared.semantic?.has(id));
+  return { runs, stopped };
+}
+
+/**
+ * A legacy PASS the new engine cannot confirm is not a PASS (E0.18 step 3, owner 7 Nov 2026): each becomes NEEDS REVIEW with why the
+ * new engine could not run it. Every other verdict stays as it is.
+ */
+export function unconfirmedPasses(ran: Map<string, TestVerdict>, unconfirmed: ReadonlyMap<string, string> | undefined): void {
+  for (const [id, why] of unconfirmed ?? []) {
+    const legacy = ran.get(id);
+    if (legacy?.status === 'PASS') ran.set(id, reconcile(legacy, { ...legacy, status: 'NEEDS REVIEW', reason: `the new engine cannot run it: ${why}` }));
+  }
+}
+
 /** What exploring and generating produced, before anything runs: the plan the tester reviews (FR-RV-01). */
 export interface Prepared {
   /** Cases that are explored and generated, ready to run. */
@@ -112,6 +137,11 @@ export interface Prepared {
   seed?: string;
   /** Cases the legacy route will run and the verdict engine can judge: a legacy PASS of each is re-judged by a run of the new engine (S6). */
   shadow?: Map<string, SemanticJob>;
+  /**
+   * Cases the legacy route will run that the new engine cannot run itself, with why (E0.18 step 3). A legacy PASS of one of them is not
+   * confirmed by fresh evidence, so it becomes NEEDS REVIEW with that reason (owner, 7 Nov 2026).
+   */
+  unconfirmed?: Map<string, string>;
 }
 
 /** parse → explore → generate → run → verdict. */
@@ -127,8 +157,11 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
   const early = new Map<string, TestVerdict>();
   const semantic = new Map<string, SemanticJob>();
   const shadow = new Map<string, SemanticJob>();
+  const unconfirmed = new Map<string, string>();
   const explored: GenerateInput[] = [];
   const pages = options.pages ?? filePageStore(options.baseUrl);
+  // Pages learned without a person open pages but prove no URL check (E0.18, owner 7 Nov 2026).
+  const unconfirmedPages = new Set<string>((await pages.unconfirmed?.()) ?? []);
   // What the application calls things, from what earlier runs saw and what testers said an element means (D1).
   const knowledge =
     options.engine === 'semantic'
@@ -187,6 +220,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         baseUrl: options.baseUrl,
         headless: options.headless,
         testIdAttribute: options.testIdAttribute,
+        ...(options.learning ? { learning: options.learning } : {}),
+        unconfirmedPages,
       });
       return true;
     };
@@ -236,18 +271,29 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     }
     const unparsed = [...model.steps, ...model.assertions].filter((x) => x.status === 'unparsed');
     if (unparsed.length && newEngineReady) {
-      // The new engine understood every step and check, but running a case is still done by the legacy parser (E1.0 switches it over).
+      // The old parser does not read these sentences; the new engine does. It runs the case when its verdict engine can judge every
+      // check (E0.18 step 2: in a single run too). The stop below is only the answer when it cannot.
+      const offered = offerSemantic(model);
+      const support = compiledOf ? semanticSupport(compiledOf) : undefined;
       const reasons: ReviewReason[] = [
-        {
-          id: model.id,
-          raw: unparsed.map((x) => x.raw).join(' | '),
-          headline: 'Understood, but not yet runnable.',
-          why: 'The new engine understands this test case. Running it still goes through the old parser, which does not read these sentences; the switch-over to the new engine (E1.0) is not done.',
-          todo: ['Nothing to rewrite for the new engine. Until the switch-over, reword these sentences in the simpler form the old parser reads.'],
-        },
+        offered
+          ? {
+              id: model.id,
+              raw: unparsed.map((x) => x.raw).join(' | '),
+              headline: 'Runs through the new engine.',
+              why: 'The old parser does not read these sentences. The new engine understands them and runs this test case; its verdict is the result.',
+              todo: ['Nothing to rewrite.'],
+            }
+          : {
+              id: model.id,
+              raw: unparsed.map((x) => x.raw).join(' | '),
+              headline: 'Understood, but not yet runnable.',
+              why: `The new engine understands this test case but cannot run it yet${support && !support.ok ? `: ${support.why}` : ''}; the old parser does not read these sentences.`,
+              todo: ['Nothing to rewrite for the new engine. Until it can run this case, reword these sentences in the simpler form the old parser reads.'],
+            },
       ];
       early.set(model.id, stopped(model, 'NEEDS REVIEW', reasonText(reasons), undefined, undefined, reasons));
-      progress(`? ${at}: understood by the new engine, not yet runnable${offerSemantic(model) ? ', offered to the new run' : ''}`);
+      progress(`? ${at}: understood by the new engine${offered ? ', runs through the new engine' : ', not yet runnable'}`);
       continue;
     }
     if (unparsed.length) {
@@ -318,7 +364,9 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
       }
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, JSON.stringify(result, null, 2));
-      await pages.save(result.learnedPageUrls);
+      await pages.save(result.learnedPageUrls, result.confirmedPages);
+      // An address this run learned without a person proves no URL check either, in this run or later.
+      for (const name of Object.keys(result.learnedPageUrls)) if (!result.confirmedPages?.includes(name)) unconfirmedPages.add(name);
       await options.onExplored?.(model, result, file);
       pageUrls = { ...pageUrls, ...result.learnedPageUrls };
       if (result.status !== 'complete') {
@@ -361,7 +409,23 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     const login = options.engine === 'semantic' && compiledOf && needsLogin(compiledOf) && !isLoginCase ? await loginFor() : undefined;
     // An element the tester picked on the screenshot cannot be picked again by the new engine: that choice is the tester's, and stands.
     const testerChose = result.items.some((i) => i.resolvedBy === 'tester');
-    if (options.engine === 'semantic' && compiledOf && !testerChose && semanticSupport(compiledOf).ok && (!needsLogin(compiledOf) || login))
+    const support = compiledOf ? semanticSupport(compiledOf) : undefined;
+    // Why the new engine cannot run this case to confirm a legacy PASS, when it cannot (E0.18 step 3).
+    const cannot =
+      options.engine !== 'semantic'
+        ? undefined
+        : !compiledOf
+          ? 'the new engine did not read this test case'
+          : testerChose
+            ? // Owner, 7 Nov 2026: a person decided the element on the screenshot; the PASS stands, it is not shadowed and not set aside.
+              undefined
+            : support && !support.ok
+              ? support.why
+              : needsLogin(compiledOf) && !login
+                ? 'the case starts logged in and the project has no login case to log in with first'
+                : undefined;
+    if (cannot) unconfirmed.set(model.id, cannot);
+    if (options.engine === 'semantic' && compiledOf && !cannot && !testerChose)
       shadow.set(model.id, {
         model,
         knowledge,
@@ -371,6 +435,8 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
         baseUrl: options.baseUrl,
         headless: options.headless,
         testIdAttribute: options.testIdAttribute,
+        ...(options.learning ? { learning: options.learning } : {}),
+        unconfirmedPages,
       });
   }
 
@@ -388,7 +454,16 @@ export async function prepareCases(models: TestModel[], options: PipelineOptions
     for (const dir of ['tests', 'pages', 'locators', 'data']) await rm(path.join(workspace, dir), { recursive: true, force: true });
     await writeProject(workspace, files);
   }
-  return { explored, early, workspace, changes, seed, ...(semantic.size ? { semantic } : {}), ...(shadow.size ? { shadow } : {}) };
+  return {
+    explored,
+    early,
+    workspace,
+    changes,
+    seed,
+    ...(semantic.size ? { semantic } : {}),
+    ...(shadow.size ? { shadow } : {}),
+    ...(unconfirmed.size ? { unconfirmed } : {}),
+  };
 }
 
 /** Runs what `prepareCases` generated and puts every case's verdict in the models' order. */
@@ -443,13 +518,17 @@ export async function executeCases(
     }
   }
 
+  // A legacy PASS the new engine cannot confirm is not a PASS (E0.18 step 3, owner 7 Nov 2026): a person decides, with the reason.
+  unconfirmedPasses(ran, prepared.unconfirmed);
+
   if (executionId && (prepared.semantic?.size || passed.length)) {
     const list: CleanupList = { executionId, seed: prepared.seed ?? 'run-1', createdAt: new Date().toISOString(), deletes: false, records: created };
     const file = await writeCleanupList(path.join(options.runsDir ?? path.join('.auto-qa', 'runs'), executionId), list);
     if (created.length) options.onProgress?.(`Clean-up list: ${created.length} record(s) this run saved, in ${file}. Nothing was deleted.`);
   }
 
-  const verdicts = models.map((m) => ran.get(m.id) ?? fromNewRun.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v);
+  // Every NEEDS REVIEW says why, in one word (E0.18 step 4).
+  const verdicts = withLabels(models.map((m) => ran.get(m.id) ?? fromNewRun.get(m.id) ?? early.get(m.id)).filter((v): v is TestVerdict => !!v));
   for (const v of verdicts) if (executionId && !ran.has(v.testId)) v.executionId = executionId;
   return { verdicts, workspace, executionId };
 }

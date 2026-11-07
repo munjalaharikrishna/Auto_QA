@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import ExcelJS from 'exceljs';
+import { LABEL_MEANING, labelOf } from '../results/labels.js';
 import type { Status, TestVerdict } from '../results/verdict.js';
 import { COLORS, localTime } from './results.js';
 
@@ -25,6 +26,8 @@ export interface ExportCase {
   /** Status when there is no verdict (e.g. the job was cancelled). */
   lastStatus?: string;
   lastRunAt?: string;
+  /** What a person decided on the review card of the last run, when they did (E0.18 step 7): shown beside the engine's verdict. */
+  decision?: { decision: 'PASS' | 'FAIL'; reviewer: string; decidedAt: string; note?: string };
 }
 
 export const EXPORT_SHEET = 'Test Results';
@@ -48,12 +51,17 @@ const HEADERS = [
   ['Test Data', 24],
   ['Expected Result', 40],
   ['Status', 15],
+  ['Review Reason', 30],
+  ['Decision', 30],
   ['Actual Result', 60],
   ['Failed Step', 28],
   ['Executed At', 18],
   ['Automation ID', 16],
   ['Screenshot', 52],
 ] as const;
+
+/** The number of a column of the sheet, from 1, by its header. */
+const column = (header: (typeof HEADERS)[number][0]): number => HEADERS.findIndex(([h]) => h === header) + 1;
 
 /** Width and height of a PNG from its header; undefined for anything else. */
 function pngSize(buf: Buffer): { width: number; height: number } | undefined {
@@ -90,6 +98,12 @@ export async function buildProjectExport(projectName: string, cases: ExportCase[
       c.testData ?? '',
       expectedText(c),
       status,
+      // Why it needs review, and what a person decided on it (E0.18 step 7). The engine's own status is never changed by the decision.
+      (() => {
+        const label = v ? labelOf(v) : undefined;
+        return label ? `${label}: ${LABEL_MEANING[label]}` : '';
+      })(),
+      c.decision ? `${c.decision.decision} by ${c.decision.reviewer}, ${localTime(c.decision.decidedAt)}${c.decision.note ? ` (${c.decision.note})` : ''}` : '',
       actualResult(c),
       v?.failedStep ?? '',
       v?.startedAt ? localTime(v.startedAt) : c.lastRunAt ? localTime(c.lastRunAt) : '',
@@ -99,14 +113,14 @@ export async function buildProjectExport(projectName: string, cases: ExportCase[
     row.alignment = { wrapText: true, vertical: 'top' };
     row.height = 60;
     if (status !== 'NOT RUN') {
-      const cell = row.getCell(8);
+      const cell = row.getCell(column('Status'));
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS[status].fill } };
       cell.font = { bold: true, color: { argb: COLORS[status].font } };
     }
 
     // The screenshot goes into its cell, so the sheet carries the evidence and not a link that breaks when it is moved.
     const shot = v?.evidence.screenshots[0];
-    const cell = row.getCell(13);
+    const cell = row.getCell(column('Screenshot'));
     if (!shot) {
       cell.value = v ? 'No screenshot was taken.' : '';
       continue;
@@ -121,7 +135,7 @@ export async function buildProjectExport(projectName: string, cases: ExportCase[
     const width = Math.min(SHOT_WIDTH, size?.width ?? SHOT_WIDTH);
     const height = size ? Math.round((size.height * width) / size.width) : Math.round(SHOT_WIDTH * 0.6);
     const imageId = workbook.addImage({ buffer: buffer as unknown as ExcelJS.Buffer, extension: 'png' });
-    ws.addImage(imageId, { tl: { col: 12.05, row: i + 1.05 }, ext: { width, height }, editAs: 'oneCell' });
+    ws.addImage(imageId, { tl: { col: column('Screenshot') - 1 + 0.05, row: i + 1.05 }, ext: { width, height }, editAs: 'oneCell' });
     row.height = Math.max(60, Math.round(height * 0.75) + 6);
   }
 
@@ -130,6 +144,7 @@ export async function buildProjectExport(projectName: string, cases: ExportCase[
   summary.addRow([`${projectName} results`]).font = { bold: true, size: 14 };
   summary.addRow(['Exported', localTime(new Date().toISOString())]);
   summary.addRow(['Test cases', cases.length]);
+  summary.addRow(['Decided by a person', cases.filter((c) => c.decision).length]);
   for (const status of [...(Object.keys(COLORS) as Status[]), 'NOT RUN'] as const) {
     const r = summary.addRow([status, totals[status] ?? 0]);
     if (status !== 'NOT RUN') {

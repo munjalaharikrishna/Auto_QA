@@ -1,5 +1,6 @@
 import { type ParserRules, ruleKey } from '../parser/rules.js';
 import type { ApprovalPayload, EntryKind, EntryStatus, LabelPayload, LearnedEntry, ReadingPayload } from './entries.js';
+import { exampleProblem } from './examples.js';
 import { labelProblem, readingProblem, validateApproval } from './validate.js';
 
 /**
@@ -37,7 +38,8 @@ export async function learnedForRun(reader: EntryReader, projectId: string): Pro
 
   for (const e of active.filter((x) => x.kind === 'reading')) {
     const p = e.payload as unknown as ReadingPayload;
-    const problem = readingProblem(p);
+    // Its worked example is read again (E0.18 step 6): a reading the engine reads otherwise now is set aside, never applied changed.
+    const problem = readingProblem(p) ?? (await exampleProblem(p));
     if (problem) {
       reject(e, problem);
       continue;

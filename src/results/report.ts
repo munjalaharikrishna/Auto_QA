@@ -1,4 +1,5 @@
 import type { RunResult } from '../executor/runner.js';
+import { labelCounts, labelOf } from './labels.js';
 import type { Status, TestVerdict } from './verdict.js';
 
 /** Terminal report for a run (FR-HI-01, FR-HI-07 summary line). */
@@ -13,7 +14,9 @@ const MARK: Record<Status, string> = {
 const STEP_MARK = { passed: '✔', failed: '✖', 'not run': '·', 'not checked': '?', 'not verified': '○' } as const;
 
 export function formatVerdict(v: TestVerdict): string {
-  const lines = [`━━ ${v.testId}  ${v.title}   ${MARK[v.status]}${v.category ? ` (${v.category})` : ''}   ${seconds(v.durationMs)}`];
+  // A NEEDS REVIEW says why in one word (E0.18 step 4); a FAIL or a BLOCKED keeps its category.
+  const why = labelOf(v) ?? v.category;
+  const lines = [`━━ ${v.testId}  ${v.title}   ${MARK[v.status]}${why ? ` (${why})` : ''}   ${seconds(v.durationMs)}`];
   lines.push(`   ${v.reason}`);
   for (const s of v.steps) lines.push(`   ${STEP_MARK[s.result]} ${s.id.padEnd(4)} ${s.raw}`);
   for (const c of v.checks) {
@@ -30,7 +33,9 @@ export function formatVerdict(v: TestVerdict): string {
 
 export function summaryLine(verdicts: TestVerdict[]): string {
   const count = (s: Status) => verdicts.filter((v) => v.status === s).length;
-  return `${count('PASS')} pass · ${count('FAIL')} fail · ${count('BLOCKED')} blocked · ${count('NEEDS REVIEW')} need review · ${count('NOT VERIFIED')} not verified`;
+  const labels = labelCounts(verdicts);
+  const why = labels.length ? ` (${labels.map(([l, n]) => `${n} ${l}`).join(', ')})` : '';
+  return `${count('PASS')} pass · ${count('FAIL')} fail · ${count('BLOCKED')} blocked · ${count('NEEDS REVIEW')} need review${why} · ${count('NOT VERIFIED')} not verified`;
 }
 
 export function formatRun(run: RunResult): string {

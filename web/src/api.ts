@@ -151,6 +151,10 @@ export interface ReviewCard {
   after?: string;
   cases: ReviewCardCase[];
   decided: boolean;
+  /** Why it needs review, in one word, and what that means (E0.18). */
+  label?: { name: string; meaning: string };
+  /** A decision here is remembered for the next run of these checks (E0.18). */
+  remembers?: number;
 }
 
 export interface DecideResult {

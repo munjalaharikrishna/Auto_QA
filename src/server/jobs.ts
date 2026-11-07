@@ -7,6 +7,7 @@ import { describeFile, type FileFacts } from '../db/artifacts.js';
 import { compileCase, engineFrom, executePlan, keepScreens, openExecutionSession, planActions, type StepHook, type StepRecord } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import { labelKey } from '../engine/knowledge/labels.js';
+import { LearningBook } from '../engine/verdict/index.js';
 import type { ExplorationResult, Resolver } from '../explorer/controller.js';
 import { explain, sentence } from '../explorer/explain.js';
 import type { PageStore } from '../explorer/page-store.js';
@@ -20,7 +21,7 @@ import type { RawTestCase, TestModel } from '../model/test-model.js';
 import { type ParserConfig, withRules } from '../parser/config.js';
 import { parseTestCase } from '../parser/index.js';
 import { runBatch } from '../pipeline/batch.js';
-import { executeCases, type Prepared, prepareCases } from '../pipeline/run-cases.js';
+import { executeCases, type Prepared, prepareCases, runnableOf } from '../pipeline/run-cases.js';
 import type { TestVerdict } from '../results/verdict.js';
 import { readEnvFile } from './credentials.js';
 import { type RecordedEvent, Recorder } from './recorder.js';
@@ -315,9 +316,12 @@ export class JobRunner extends EventEmitter {
     const env = await store.defaultEnvironmentId(project.id);
     return {
       load: async () => (env ? store.pageRoutes(env) : {}),
-      save: async (learned) => {
-        if (env) for (const [name, route] of Object.entries(learned)) await store.savePageRoute(env, name, route, 'learned');
+      // A page a person confirmed is the tester's; one learned without a person still opens pages but proves no URL check (E0.18).
+      save: async (learned, confirmed = []) => {
+        if (env)
+          for (const [name, route] of Object.entries(learned)) await store.savePageRoute(env, name, route, confirmed.includes(name) ? 'tester' : 'learned');
       },
+      unconfirmed: async () => (env ? store.unconfirmedPageRoutes(env) : new Set<string>()),
     };
   }
 
@@ -331,6 +335,8 @@ export class JobRunner extends EventEmitter {
       nextExecutionId: () => store.nextExecutionId(),
       approvedAssumptions: (await learnedForRun(store, project.id)).approvedAssumptions,
       screenWords: (await learnedForRun(store, project.id)).screenLabels,
+      // What people decided on the review cards of earlier runs (E0.18 step 5): an unchanged check is judged by that decision.
+      learning: new LearningBook({ decisions: await store.decidedChecks(project.id) }),
       // Each new exploration's steps become rows, with the file kept as the full record (FR-DB-10). A failed write must not stop the job.
       onExplored: async (model: TestModel, result: ExplorationResult, file: string) => {
         try {
@@ -1010,9 +1016,12 @@ export class JobRunner extends EventEmitter {
       const prepared = await prepareCases([model], options);
       // A cancel while exploring ends the exploration early; it must not then wait in review.
       if (this.cancelled.has(job.id)) throw new Cancelled();
-      // A saved test that is run again was approved before: when it can be generated as it is, it runs straight away.
-      const again = job.input.rerun === true && prepared.explored.length > 0 && prepared.early.size === 0;
-      const early = prepared.early.get(model.id);
+      // What will run: the cases the legacy route generated and the ones the new engine takes (E0.18 step 2). A case handed to the new
+      // engine is not stopped: it runs, and its legacy stop is not its result.
+      const runnable = runnableOf(prepared);
+      // A saved test that is run again was approved before: when it can be run as it is, it runs straight away.
+      const again = job.input.rerun === true && runnable.runs > 0 && runnable.stopped.length === 0;
+      const early = runnable.stopped.includes(model.id) ? prepared.early.get(model.id) : undefined;
       if (early) await this.options.store.recordResult(project.id, model.id, { jobId: job.id, status: early.status, at: new Date().toISOString() });
       // Web Automation "Record": explore and generate the script, keep it, and stop. Nothing runs, so there is nothing to approve here.
       if (job.input.record === true && prepared.explored.length && !prepared.early.size) {
@@ -1030,7 +1039,7 @@ export class JobRunner extends EventEmitter {
       let decision: Decision = again ? { action: 'approve' } : await this.decision(job.id);
       if (again) await this.log(job.id, 'Running the saved test again');
       // Approving a test that could not be generated changes nothing: it stays in review, with the reason.
-      while (decision.action === 'approve' && !prepared.explored.length) {
+      while (decision.action === 'approve' && runnable.runs === 0) {
         await this.log(job.id, 'Nothing to run yet: the test case could not be generated. Edit it or regenerate.');
         decision = await this.decision(job.id);
       }

@@ -1,5 +1,6 @@
 import { cacheKeyOf } from '../engine/cache/index.js';
 import { fingerprintOf } from '../engine/verdict/learn.js';
+import { LABEL_MEANING, labelOf, type ReviewLabel } from '../results/labels.js';
 import type { Status, TestVerdict } from '../results/verdict.js';
 
 /**
@@ -125,6 +126,10 @@ export interface ReviewCardView {
   cases: CardCase[];
   /** Every case has a current decision. */
   decided: boolean;
+  /** Why it needs review, in one word, with what that means (E0.18 step 7): kept beside the evidence, not in it. */
+  label?: { name: ReviewLabel; meaning: string };
+  /** A decision on this card is remembered for the next run of the same checks (E0.18 step 5): the checks it covers. */
+  remembers?: number;
 }
 
 export function buildReviewCards(rows: readonly StoredVerdict[], decisions: ReadonlyMap<string, DecisionView>): ReviewCardView[] {
@@ -157,6 +162,11 @@ export function buildReviewCards(rows: readonly StoredVerdict[], decisions: Read
       ...(evidence.after ? { after: evidence.after } : {}),
       cases: [entry],
       decided: false,
+      ...(() => {
+        const name = labelOf(r.verdict);
+        return name ? { label: { name, meaning: LABEL_MEANING[name] } } : {};
+      })(),
+      ...(r.verdict.approvals?.length ? { remembers: r.verdict.approvals.length } : {}),
     });
   }
   for (const c of cards.values()) c.decided = c.cases.every((x) => x.decision !== undefined);

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { startDemoApp } from '../../../examples/demo-app/server.js';
+import { defaultParserConfig } from '../../parser/config.js';
+import { parseTestCase } from '../../parser/index.js';
+import { toTestVerdict } from '../../pipeline/semantic-run.js';
 import { ApplicationSchema } from '../knowledge/schema.js';
 import { compileCase } from '../pipeline/compile.js';
 import { judge } from '../verdict/index.js';
@@ -37,7 +40,7 @@ describe('E0.17 item 3: alike controls, reviewed once and then remembered', { sk
       { mcp: session.port, page: session.page, baseUrl: app.url, ...(knowledge ? { knowledge } : {}) },
     );
     await session.reset();
-    return { trace, verdict: judge({ compile, trace }) };
+    return { trace, verdict: judge({ compile, trace }), compile };
   };
 
   it('the first run uses the first Save and waits for a person; once approved, the next run uses it and passes', async () => {
@@ -50,6 +53,9 @@ describe('E0.17 item 3: alike controls, reviewed once and then remembered', { sk
     assert.ok(assumed.why.includes('2 buttons'), assumed.why);
     assert.equal(first.verdict.verdict, 'NEEDS_REVIEW', first.verdict.reason);
     assert.ok(first.verdict.reason.includes('approves the choice'), first.verdict.reason);
+    // E0.18 step 4: in the results it is NEEDS REVIEW, labelled chosen.
+    const model = parseTestCase({ id: 'T-ALIKE', title: 'Save the profile', steps: '1. Open the page 2. Click Save', expected: 'x' }, defaultParserConfig());
+    assert.equal(toTestVerdict(model, first.verdict, first.trace, first.compile).label, 'chosen');
 
     // What a PASS on the review card keeps (ReviewService → LearningService.saveLabel → learnedForRun → knowledgeFromRuns).
     const knowledge = ApplicationSchema.parse({

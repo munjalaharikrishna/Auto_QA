@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type ExcelJS from 'exceljs';
+import { LABEL_MEANING, labelOf } from '../results/labels.js';
 import type { Status, TestVerdict } from '../results/verdict.js';
 import { type ImportResult, loadWorkbook } from './workbook.js';
 
@@ -9,7 +10,7 @@ import { type ImportResult, loadWorkbook } from './workbook.js';
  * The original is never changed. Running again updates the same columns.
  */
 
-export const RESULT_COLUMNS = ['Status', 'Actual Result', 'Failed Step', 'Executed At', 'Automation ID', 'Evidence'] as const;
+export const RESULT_COLUMNS = ['Status', 'Review Reason', 'Actual Result', 'Failed Step', 'Executed At', 'Automation ID', 'Evidence'] as const;
 export const SUMMARY_SHEET = 'Auto QA';
 /** Written only when a test case has a suggestion (BP-5): a clearer way to write what the pre-flight could not read. */
 export const WORDING_COLUMN = 'Suggested Wording';
@@ -102,6 +103,9 @@ export async function writeResults(imported: ImportResult, results: RowResult[],
     statusCell.value = status;
     statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS[status].fill } };
     statusCell.font = { bold: true, color: { argb: COLORS[status].font } };
+    // Why a NEEDS REVIEW needs review, in one word, and what that means (E0.18 step 4); empty for every other status.
+    const label = v ? labelOf(v) : undefined;
+    row.getCell(cols['Review Reason']).value = label ? `${label}: ${LABEL_MEANING[label]}` : null;
     const actual = row.getCell(cols['Actual Result']);
     actual.value = v
       ? v.status === 'PASS'

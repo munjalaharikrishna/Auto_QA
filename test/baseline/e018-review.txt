@@ -1,0 +1,24 @@
+E0.18 baseline, 7 Nov 2026, branch engine/e0.18-verdicts from main at eb611d2 (E0.17 done, walkthrough fixes pulled).
+Measured with: npm run engine:review -- --no-examples   (compile time, no browser; both OrangeHRM workbooks)
+
+## Before (eb611d2)
+29 test cases: 10 ready, 12 wait only for engine work, 7 need a tester, 0 need project data
+26 review reasons; 12 of them [ENGINE] STATE checks are not judged yet (DEFAULT_PAGE, UPLOADED, UPDATED).
+
+## After (E0.18 steps 1-8)
+29 test cases: 22 ready, 0 wait only for engine work, 7 need a tester, 0 need project data
+14 review reasons, all [TESTER]:
+    5  "updated the data": not what shows it (a person's, gold 4 Nov 2026)
+    3  "the same updated records": a person decides which record
+    1  "Click on Employee Name"   1 + 1  TC19   1  TC03 "User should add button…"   2  TC_LOGIN_010
+Gold unchanged: Login 60/60, Add Employee 711/736 (771 of 796). Wrong-PASS traps 10 of 10.
+
+## Live runs
+BookMarket "Signin Page" (online, login from the sheet's notes): 0 pass, 5 NEEDS REVIEW.
+  TC01 was a wrong PASS before E0.18 ("Book Market Home" = /login saved from that page by the check itself);
+  now NEEDS REVIEW until a person confirms the page once. TC05's FAIL rested on the same address; now NEEDS REVIEW.
+Local OrangeHRM 2.5 Add Employee (19 cases, login selenium): 0 pass, 4 FAIL, 15 NEEDS REVIEW.
+  Reviews: 9 login-box layout (owner's E0.17 rule, one card), 5 "Click on Employee Name" (gold: a person decides), 1 wording.
+  FAILs (TC11-TC14): "empty text boxes after Reset", read as the gold reads it; OrangeHRM puts its auto Code back (0002).
+Local OrangeHRM 2.5 Login workbook: its Test Data is for the account cypress, not on this install: 2 pass, 1 FAIL, 4 BLOCKED (S4), 3 NEEDS REVIEW.
+Single checks (step 1): "PIM as a default page" PASS, "Admin as a default page" FAIL, "Upload button should accept photo" PASS.

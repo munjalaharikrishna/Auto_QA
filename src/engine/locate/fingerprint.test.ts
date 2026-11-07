@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { startDemoApp } from '../../../examples/demo-app/server.js';
+import { defaultParserConfig } from '../../parser/config.js';
+import { parseTestCase } from '../../parser/index.js';
+import { toTestVerdict } from '../../pipeline/semantic-run.js';
 import { screensOf } from '../execute/capture.js';
 import { type ExecutionSession, executePlan, openExecutionSession } from '../execute/index.js';
 import { planActions } from '../execute/planner.js';
@@ -107,7 +110,7 @@ describe('E0.17 item 5 on a real page: the release renames a button', { skip: !!
       { mcp: session.port, page: session.page, baseUrl: app.url, ...(knowledge ? { knowledge } : {}) },
     );
     await session.reset();
-    return { trace, verdict: judge({ compile, trace }) };
+    return { trace, verdict: judge({ compile, trace }), compile };
   };
 
   it('first release: found by its name and PASS; what it was is kept with its screen', async () => {
@@ -127,6 +130,9 @@ describe('E0.17 item 5 on a real page: the release renames a button', { skip: !!
     assert.equal(renamed.trace.status, 'completed', JSON.stringify(renamed.trace.stoppedAt));
     assert.ok(click?.located?.assumed?.why.includes('found by what it was in an earlier run'), JSON.stringify(click?.notes));
     assert.equal(renamed.verdict.verdict, 'NEEDS_REVIEW', renamed.verdict.reason);
+    // E0.18 step 4: in the results it is NEEDS REVIEW, labelled healed.
+    const model = parseTestCase({ id: 'T-RENAMED', title: 'Save the profile', steps: '1. Open the page 2. Click', expected: 'x' }, defaultParserConfig());
+    assert.equal(toTestVerdict(model, renamed.verdict, renamed.trace, renamed.compile).label, 'healed');
 
     const changed = await run(3, 'The text "Profile kept" is shown', knowledge);
     assert.equal(changed.trace.stoppedAt?.code, 'LOCATE_NOT_FOUND', JSON.stringify(changed.trace.stoppedAt));

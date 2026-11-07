@@ -164,6 +164,7 @@ describe('E0.17 item 3: a run that used the first of alike controls is not a PAS
                 means: 'Save',
                 screen: '/emp',
                 element: '|/a',
+                kind: 'alike' as const,
               },
             },
           }

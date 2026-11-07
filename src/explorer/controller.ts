@@ -148,6 +148,8 @@ export interface ExplorationResult {
   pages: Record<string, { path: string; title: string }>;
   /** Page name → URL learned during this run, to save with the environment (D19). */
   learnedPageUrls: Record<string, string>;
+  /** Of those, the pages a person confirmed (E0.18): only these may prove a URL check. The others still open pages. */
+  confirmedPages?: string[];
   /** The login test case run for a "Logged in" precondition, so the setup steps can be generated on their own. */
   setup?: { testId: string; steps: Step[]; data: Record<string, string> };
 }
@@ -162,6 +164,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
   const t = { ...DEFAULT_TIMEOUTS, ...options.timeouts };
   const pageUrls = { ...options.pageUrls };
   const learned: Record<string, string> = {};
+  const confirmed: string[] = [];
   /** URL path → the page name the tester used for it, so elements found there join that Page Object (FR-LO-10). */
   const pathNames: Record<string, string> = {};
   const namePage = (url: string, title: string, hint?: string) => {
@@ -688,6 +691,27 @@ export async function explore(model: TestModel, session: Session, options: Explo
       const current = pathNames[path];
       // Not reached: the path already belongs to another page, or a saved URL for this page is elsewhere.
       const reached = (!current || current === wanted) && (!known || pathOf(new URL(known, options.baseUrl).toString()) === path);
+      // The page has no address yet and this path no name (E0.18, owner 7 Nov 2026): the check may not name the page it is judged on
+      // by itself, or it proves itself. A person confirms it once; without one, nothing is learned and the check stays open.
+      // An address that names the page ("/dashboard" for "Dashboard") is evidence of it, not the check naming its own page.
+      const letters = (t: string): string => [...t.toLowerCase()].filter((ch) => ch.toLowerCase() !== ch.toUpperCase() || (ch >= '0' && ch <= '9')).join('');
+      const addressNames = letters(path).includes(letters(assertion.expected));
+      if (reached && !known && !current && !addressNames) {
+        const yes = await options.resolver.confirm({
+          item: item.id,
+          code: 'PAGE_ADDRESS_UNKNOWN',
+          page: assertion.expected,
+          text: `The address of the ${assertion.expected} page is not known yet. The browser is on ${path}. Is this the ${assertion.expected} page?`,
+        });
+        if (!yes) {
+          item.status = 'skipped';
+          item.warnings.push(
+            `The address of the ${assertion.expected} page is not known, and nobody confirmed that ${path} is it: the check is not made from the page it is judged on.`,
+          );
+          return;
+        }
+        confirmed.push(assertion.expected);
+      }
       if (!reached) {
         const shown = await pageMessages(state.url);
         const ok = await options.resolver.confirm({
@@ -703,6 +727,7 @@ export async function explore(model: TestModel, session: Session, options: Explo
         }
         // The tester says it is: this path is the expected page from now on.
         pathNames[path] = wanted;
+        confirmed.push(assertion.expected);
       }
       namePage(state.url, state.title, assertion.expected);
       if (!known) learned[assertion.expected] = pageUrls[assertion.expected] = path;
@@ -863,6 +888,8 @@ export async function explore(model: TestModel, session: Session, options: Explo
   }
 
   if (result.status === 'complete' && result.items.some((i) => i.status !== 'done')) result.status = 'incomplete';
+  // The pages a person confirmed during this exploration (E0.18): set at the end, when they are known.
+  if (confirmed.length) result.confirmedPages = [...confirmed];
   result.finishedAt = new Date().toISOString();
   return result;
 }

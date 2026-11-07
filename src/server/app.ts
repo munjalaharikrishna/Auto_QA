@@ -605,6 +605,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const review = new ReviewService(store, {
     remember: (projectId, pick, source, who) =>
       learning.saveLabel(projectId, { label: pick.word, means: pick.means, screen: pick.screen, element: pick.element }, source, who, { seenOnScreen: true }),
+    // A PASS changed to FAIL takes back the elements that PASS kept (E0.18 step 5).
+    forget: async (projectId, source, who) => {
+      for (const e of await store.learnedEntries(projectId, { kind: 'label', status: 'active' }))
+        if (e.source.startsWith(source)) await learning.disable(projectId, e.id, who, 'the PASS that kept it was changed to FAIL');
+    },
   });
   const reviewFailed = (e: unknown): never => {
     if (e instanceof ReviewRefused) throw e.status === 404 ? notFound(e.message.includes('card') ? 'Card' : 'Job') : bad(e.message);
@@ -641,14 +646,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.get('/api/projects/:id/export', async (req, reply) => {
     const project = await projectOf((req.params as { id: string }).id);
     const byJob = new Map<string, Awaited<ReturnType<typeof store.verdicts>>>();
+    const decisionsOf = new Map<string, Awaited<ReturnType<typeof store.reviewDecisions>>>();
     const cases: ExportCase[] = [];
     for (const c of await store.testCases(project.id)) {
       let verdict: TestVerdict | undefined;
+      let decision: ExportCase['decision'];
       if (c.lastJobId) {
         if (!byJob.has(c.lastJobId)) byJob.set(c.lastJobId, await store.verdicts(c.lastJobId));
         verdict = byJob.get(c.lastJobId)?.find((v) => v.testId === c.extId)?.verdict as TestVerdict | undefined;
+        // The decision a person made on the last run's review card, beside the engine's verdict (E0.18 step 7).
+        if (!decisionsOf.has(c.lastJobId)) decisionsOf.set(c.lastJobId, await store.reviewDecisions(c.lastJobId));
+        const d = decisionsOf.get(c.lastJobId)?.find((x) => x.testId === c.extId);
+        if (d) decision = { decision: d.decision, reviewer: d.reviewer, decidedAt: d.decidedAt, ...(d.note ? { note: d.note } : {}) };
       }
-      cases.push({ ...c.raw, extId: c.extId, title: c.title, verdict, lastStatus: c.lastStatus, lastRunAt: c.lastRunAt });
+      cases.push({ ...c.raw, extId: c.extId, title: c.title, verdict, lastStatus: c.lastStatus, lastRunAt: c.lastRunAt, ...(decision ? { decision } : {}) });
     }
     if (!cases.length) throw bad('There are no test cases in this project yet.');
     cases.sort((a, b) => a.extId.localeCompare(b.extId, undefined, { numeric: true }));

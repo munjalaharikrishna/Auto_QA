@@ -24,6 +24,8 @@ if (asked > workers)
 export default defineConfig({
   testDir: './tests',
   workers,
+  // A failed test is run once more (AUTO_QA_RETRIES, 0 to switch off); one that passes only then is reported as flaky, never PASS.
+  retries: Number(process.env.AUTO_QA_RETRIES ?? 1),
   fullyParallel: false,
   outputDir: './reports/test-results',
   reporter: [

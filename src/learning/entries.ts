@@ -38,6 +38,11 @@ export interface ReadingPayload {
   to: string;
   /** A test case and sentence it was made for, so a person can see what it was about. */
   example?: string;
+  /**
+   * The worked example (E0.18 step 6): what the engine read `to` as when the reading was saved. Each run reads `to` again; a reading
+   * the engine now reads otherwise is set aside (`examples.ts`).
+   */
+  readsAs?: string;
 }
 
 /**

@@ -3,7 +3,9 @@ import type { Project, Store } from '../db/store.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import { workspaceName } from '../generator/index.js';
 import { ruleKey } from '../parser/rules.js';
+import { labelConflict, readingConflict } from './conflicts.js';
 import type { ApprovalPayload, LabelPayload, LearnedEntry, ReadingPayload } from './entries.js';
+import { readsAs } from './examples.js';
 import { type MigrationContext, type MigrationSummary, type PlannedEntry, planRuleMigration, summarize } from './plan.js';
 import { approvalParts, norm, type Outcome, validateApproval, validateLabel, validateReading } from './validate.js';
 
@@ -48,6 +50,10 @@ export class LearningService {
     const given = { ...payload, label: ruleKey(payload.label) };
     const outcome = validateLabel(given, known);
     if (outcome.status === 'quarantined') throw new EntryRefused(outcome.validation.problem);
+    // A word that would not mean one thing with the labels already active is refused (E0.18 step 6).
+    const others = (await this.store.learnedEntries(projectId, { kind: 'label', status: 'active' })).map((e) => e.payload as unknown as LabelPayload);
+    const conflict = labelConflict(given, others);
+    if (conflict) throw new EntryRefused(conflict);
     // A word given on one screen (E0.14b) is its own entry: the same word may mean another element on another screen.
     const where = given.screen ? `screen:${given.screen}` : norm(given.page ?? '');
     return this.keep(projectId, 'label', `${norm(given.label)}|${where}`, given, outcome, source, actor);
@@ -55,9 +61,14 @@ export class LearningService {
 
   /** A sentence read as another one. Refused when it does not read as a real step or a check that judges something. */
   async saveReading(projectId: string, payload: ReadingPayload, source: string, actor: string): Promise<LearnedEntry> {
-    const given = { ...payload, from: ruleKey(payload.from) };
-    const outcome = validateReading(given);
+    const outcome = validateReading({ ...payload, from: ruleKey(payload.from) });
     if (outcome.status === 'quarantined') throw new EntryRefused(outcome.validation.problem);
+    // A reading that would chain with or undo an active one is refused, and what its new sentence reads as is kept as its worked example
+    // (E0.18 step 6): a run sets the reading aside when the engine reads that sentence otherwise later.
+    const conflict = readingConflict(payload, await this.activeReadings(projectId));
+    if (conflict) throw new EntryRefused(conflict);
+    const example = await readsAs(payload.readingKind, payload.to);
+    const given = { ...payload, from: ruleKey(payload.from), ...(example ? { readsAs: example } : {}) };
     return this.keep(projectId, 'reading', `${given.readingKind}|${given.from}`, given, outcome, source, actor);
   }
 

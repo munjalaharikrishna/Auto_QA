@@ -98,12 +98,21 @@ describe('whole flow: test case → verdict (M6)', { skip: !!process.env.AUTO_QA
   });
 
   it('reuses explorations, and fails or blocks when the credentials change', async () => {
-    const started = Date.now();
-    const wrong = await run({ env: { ...env, TEST_PASSWORD: 'wrong' } }, [demo('TC-DEMO-001')]);
+    // Counted, not timed: a failing test now runs once more (E0.18 step 4), so how long the run takes says nothing about exploring.
+    let explored = 0;
+    const wrong = await run(
+      {
+        env: { ...env, TEST_PASSWORD: 'wrong' },
+        onExplored: async () => {
+          explored++;
+        },
+      },
+      [demo('TC-DEMO-001')],
+    );
     const v = wrong.verdicts[0];
     assert.deepEqual([v.status, v.category], ['FAIL', 'Assertion']);
     assert.match(v.actual, /Page was \/\. The page showed heading "Sign in to Demo"; message "Invalid username or password"\./);
-    assert.ok(Date.now() - started < 30_000, 'no second exploration');
+    assert.equal(explored, 0, 'no second exploration');
 
     const blocked = await run({ env: { TEST_USERNAME: 'demo' } }, [demo('TC-DEMO-001')]);
     assert.deepEqual([blocked.verdicts[0].status, blocked.verdicts[0].category], ['BLOCKED', 'Test Data']);
