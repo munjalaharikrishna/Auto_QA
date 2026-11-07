@@ -98,7 +98,7 @@ export interface Located {
    * E0.17 item 3: several controls were alike and the first on the page was used. The case cannot PASS until a person approves; the
    * approval keeps this element as what the word means on this screen (a label of the screen, as a walkthrough pick is).
    */
-  assumed?: { why: string; word: string; means: string; screen: string; element: string };
+  assumed?: { why: string; word: string; means: string; screen: string; element: string; kind: 'alike' | 'fingerprint' };
   /** The screen it was found on, and what it was there (E0.17 item 5): kept with the screen, for the fallback of a later run. */
   screen?: string;
   fingerprint?: Fingerprint;
@@ -236,6 +236,12 @@ export interface StepHook {
 }
 
 const MASK = '••••';
+
+/** The names of a login page (E0.18 step 3): with no address known, the application's own address is where it is shown. */
+const LOGIN_PAGES: ReadonlySet<string> = new Set(['login', 'loginpage', 'signin', 'signinpage', 'logon', 'logonpage']);
+
+/** What a step calls a control by what it does, not by its name: the upload button, browse, choose file (E0.18). */
+const UPLOAD_WORDS: ReadonlySet<string> = new Set(['upload', 'uploadbutton', 'uploadfile', 'browse', 'choosefile', 'selectfile', 'attach', 'attachfile']);
 
 /** What a person can pick on the screenshot: what a step can act on, and what a check can look at. */
 const PICKABLE: ReadonlySet<string> = new Set([
@@ -706,13 +712,20 @@ class Runner {
     const unreadNote = seen.unread.length
       ? `; a frame could not be read after the page changed (${seen.unread.map((p) => p.join(' > ')).join(', ')}), so it may be there`
       : '';
-    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true; assumed?: string };
+    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true; assumed?: string; assumedKind?: 'alike' | 'fingerprint' };
     if (result.status === 'found' && !result.passAllowed) {
       // Alike controls (E0.17 item 3). Owner, 6 Nov 2026: the one in the section the case is working in first; only then the first.
       const near = this.lastElement ? await nearestTo(this.page, this.lastElement, result.alike) : undefined;
       found = near
         ? { element: near, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) }
-        : { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason), assumed: result.assumed };
+        : {
+            element: result.element,
+            level: result.level,
+            weight: result.weight,
+            ignored: result.ignored.map((i) => i.reason),
+            assumed: result.assumed,
+            assumedKind: 'alike',
+          };
       rec.notes.push(
         near
           ? `${result.alike.length} controls called "${query.name}" are alike: the one in the part of the page the case is working in was used (nearest to the element of the step before)`
@@ -726,32 +739,47 @@ class Runner {
         result.status === 'not-found'
           ? `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`
           : result.reason;
-      // E0.17 item 5: nothing by any level, to act on it: what the element was in an earlier run on this screen, as an assumption.
-      const kept =
-        result.status === 'not-found' && purpose === 'act' && !row
-          ? screenFound(
-              this.o.knowledge?.screens?.find((s) => s.key === screen),
-              query.name,
-            )
-          : undefined;
-      const again = kept ? matchFingerprint(kept as unknown as Fingerprint, elements) : undefined;
-      if (again?.status === 'none') rec.notes.push(`an earlier fingerprint of "${query.name}" was compared: ${again.why}`);
-      if (again?.status === 'found') {
-        found = {
-          element: again.element,
-          level: 'inspection',
-          weight: again.score,
-          ignored: [],
-          assumed: `"${query.name}" was not found by any level; ${again.why}`,
-        };
-        rec.notes.push(found.assumed as string);
+      // "Upload a photo by clicking the upload button" (E0.18): the step names the control only by what it does. The one file field a
+      // person could use on the page is that control; none or several stay a stop.
+      const fileFields =
+        result.status === 'not-found' && purpose === 'act' && UPLOAD_WORDS.has(labelKey(query.name))
+          ? elements.filter((e) => e.tag === 'input' && e.type === 'file' && e.visible && !e.disabled)
+          : [];
+      if (fileFields.length === 1) {
+        const field = fileFields[0] as DomElement;
+        rec.notes.push(
+          `"${query.name}" names what the control does: the one file field on the page ("${field.ariaName || field.labels[0] || field.nameAttr || 'file'}") is used`,
+        );
+        found = { element: field, level: 'role', weight: WEIGHT.role, ignored: [] };
       } else {
-        // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
-        const candidates = result.status === 'ambiguous' ? result.candidates : [];
-        const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
-        if (!picked) throw new Block(code, reason);
-        found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
-        rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+        // E0.17 item 5: nothing by any level, to act on it: what the element was in an earlier run on this screen, as an assumption.
+        const kept =
+          result.status === 'not-found' && purpose === 'act' && !row
+            ? screenFound(
+                this.o.knowledge?.screens?.find((s) => s.key === screen),
+                query.name,
+              )
+            : undefined;
+        const again = kept ? matchFingerprint(kept as unknown as Fingerprint, elements) : undefined;
+        if (again?.status === 'none') rec.notes.push(`an earlier fingerprint of "${query.name}" was compared: ${again.why}`);
+        if (again?.status === 'found') {
+          found = {
+            element: again.element,
+            level: 'inspection',
+            weight: again.score,
+            ignored: [],
+            assumed: `"${query.name}" was not found by any level; ${again.why}`,
+            assumedKind: 'fingerprint',
+          };
+          rec.notes.push(found.assumed as string);
+        } else {
+          // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
+          const candidates = result.status === 'ambiguous' ? result.candidates : [];
+          const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
+          if (!picked) throw new Block(code, reason);
+          found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
+          rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+        }
       }
     }
     const selector = selectorIn(found.element.frame, found.element.xpath);
@@ -786,6 +814,7 @@ class Runner {
         ? {
             assumed: {
               why: found.assumed,
+              kind: found.assumedKind ?? 'alike',
               word: query.name,
               means: found.element.ariaName || found.element.labels[0] || found.element.text || found.element.placeholder || found.element.nameAttr || '',
               screen,
@@ -1038,6 +1067,12 @@ class Runner {
     if (!url && this.o.knowledge) {
       const page = this.o.knowledge.pages.find((p) => p.name === name || p.aliases.includes(name));
       if (page?.route !== undefined) url = `${this.o.knowledge.baseUrl ?? this.o.baseUrl ?? ''}${page.route}`;
+    }
+    // "Open the Login page" with no address known for it (E0.18 step 3): an application shows its login at its own address to someone
+    // who is not logged in. The run opens that address and says so; when it is not the login, the next steps find no login fields and stop.
+    if (!url && LOGIN_PAGES.has(labelKey(name)) && this.o.baseUrl) {
+      url = this.o.baseUrl;
+      rec.notes.push(`no address is known for the page "${name}": the application's own address was opened, where it shows its login`);
     }
     if (!url) throw new Block('PAGE_UNKNOWN', `no address is known for the page "${name}": give it in the application knowledge, or open it by its address`);
     if (!url.startsWith('http')) {

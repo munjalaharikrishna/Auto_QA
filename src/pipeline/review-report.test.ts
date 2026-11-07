@@ -74,9 +74,9 @@ describe('who can fix a reason found in a run', () => {
     ],
     ['ACTION_FAILED at S4: the click did not work', 'engine', 'the executor cannot do a step'],
     [
-      'Understood, but not yet runnable. The new engine understands this test case. Running it still goes through the old parser',
+      'Understood, but not yet runnable. The new engine understands this test case but cannot run it yet: E1 is a COUNT check',
       'engine',
-      'understood, but the old parser still runs it',
+      'understood, but the new engine cannot run it yet',
     ],
     [
       'expected result "The system handles the whitespace": not understood: the sentence fits none of the grammar models. To fix: Say what should be true',

@@ -33,6 +33,10 @@ interface TestRecord {
   stepScreenshots: Array<{ step: string; file: string }>;
   trace?: string;
   video?: string;
+  /** Which attempt this is, from 0: a test that is run again after a failure has one record, of its last attempt. */
+  retry: number;
+  /** It passed only when it was run again. */
+  flaky: boolean;
 }
 
 const root = path.dirname(__dirname);
@@ -96,9 +100,14 @@ export default class AutoQaReporter implements Reporter {
       }),
       trace: result.attachments.find((a) => a.name === 'trace' && a.path)?.path,
       video: result.attachments.find((a) => a.name === 'video' && a.path)?.path,
+      retry: result.retry,
+      flaky: test.outcome() === 'flaky',
     };
     if (record.trace) record.trace = rel(record.trace);
     if (record.video) record.video = rel(record.video);
+    // One record per test: a retry replaces the attempt before it.
+    const before = this.tests.findIndex((t) => t.testId === record.testId);
+    if (before >= 0) this.tests.splice(before, 1);
     this.tests.push(record);
     this.emit({ event: 'test-end', testId: record.testId, status: record.status, duration: record.duration });
   }

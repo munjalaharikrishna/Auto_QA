@@ -403,6 +403,12 @@ export class Store {
     return Object.fromEntries(rows.map((r) => [r.page_name, r.path]));
   }
 
+  /** The pages of an environment whose address was learned without a person (E0.18): they open pages but prove no URL check. */
+  async unconfirmedPageRoutes(environmentId: string): Promise<Set<string>> {
+    const rows = await this.db.all<{ page_name: string }>("SELECT page_name FROM page_routes WHERE environment_id = ? AND source = 'learned'", [environmentId]);
+    return new Set(rows.map((r) => r.page_name));
+  }
+
   async savePageRoute(environmentId: string, pageName: string, path: string, source: 'learned' | 'tester' | 'check'): Promise<void> {
     const at = now();
     await this.db.run(
@@ -1436,6 +1442,44 @@ export class Store {
   async currentUserName(): Promise<string> {
     const r = await this.db.get<Row>('SELECT name FROM users WHERE id = 1');
     return r ? String(r.name) : 'Owner';
+  }
+
+  /**
+   * The checks people have decided on in a project, each with its current decision (E0.18 step 5): the fingerprints a decided case's
+   * verdict kept, with the decision that stands now, who made it and when. When the same check was decided more than once, the latest
+   * decision wins. A superseded decision is not here: changing a PASS to FAIL takes the PASS back.
+   */
+  async decidedChecks(
+    projectId: string,
+  ): Promise<Array<{ fingerprint: string; testId: string; clause: string; decision: 'PASS' | 'FAIL'; who: string; when: string; note?: string }>> {
+    const rows = await this.db.all<Row>(
+      `SELECT d.ext_id, d.decision, d.reviewer, d.note, d.decided_at, r.verdict
+         FROM review_decisions d JOIN test_results r ON r.id = d.test_result_id
+        WHERE d.project_id = ? AND d.status = 'current'
+        ORDER BY d.decided_at, d.id`,
+      [projectId],
+    );
+    const out = new Map<string, { fingerprint: string; testId: string; clause: string; decision: 'PASS' | 'FAIL'; who: string; when: string; note?: string }>();
+    for (const r of rows) {
+      let approvals: Array<{ clause?: string; fingerprint?: string }> = [];
+      try {
+        approvals = (JSON.parse(String(r.verdict)) as { approvals?: typeof approvals }).approvals ?? [];
+      } catch {
+        approvals = [];
+      }
+      for (const a of approvals)
+        if (a.fingerprint)
+          out.set(a.fingerprint, {
+            fingerprint: a.fingerprint,
+            testId: String(r.ext_id),
+            clause: a.clause ?? '',
+            decision: r.decision as 'PASS' | 'FAIL',
+            who: String(r.reviewer),
+            when: String(r.decided_at),
+            ...(r.note ? { note: String(r.note) } : {}),
+          });
+    }
+    return [...out.values()];
   }
 
   async reviewDecisions(

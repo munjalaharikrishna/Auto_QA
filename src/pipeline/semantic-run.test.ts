@@ -486,9 +486,9 @@ describe('semantic runs on the demo app', { skip }, () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
-  it('executeCases without semantic jobs returns exactly the legacy verdicts', async () => {
+  it('executeCases without semantic jobs returns exactly the legacy verdicts, with the reason label of E0.18 step 4', async () => {
     const model = parseTestCase(raw('T-L', ['Open the login page'], 'x'), config);
     const result = await executeCases([model], { explored: [], early: new Map([['T-L', legacyStop('T-L')]]), changes: [] }, { env: {} });
-    assert.deepEqual(result.verdicts, [legacyStop('T-L')]);
+    assert.deepEqual(result.verdicts, [{ ...legacyStop('T-L'), label: 'inconclusive' }]);
   });
 });

@@ -66,6 +66,8 @@ export interface JudgeInput {
   trace?: RunTrace;
   /** What people decided before (BP-4). */
   learning?: LearningBook;
+  /** Pages whose address was learned without a person (E0.18): they never prove or disprove a URL check. */
+  unconfirmedPages?: ReadonlySet<string>;
 }
 
 const ENVIRONMENT_WORDS = [
@@ -269,7 +271,15 @@ export function judge(input: JudgeInput): Verdict {
   const inPlan = new Set(plan.items.filter((i) => i.kind === 'expect').map((i) => i.ref));
   for (const e of ir.expectations) if (inPlan.has(e.id) && !stepOf.has(e.id)) stepOf.set(e.id, e.afterStep ?? last);
   const seen = everySeen(trace.steps);
-  const ctx = { steps: trace.steps, stepOf, seen, clause: caseClause(compile), pages: compile.pages, ...(compile.values ? { values: compile.values } : {}) };
+  const ctx = {
+    steps: trace.steps,
+    stepOf,
+    seen,
+    clause: caseClause(compile),
+    pages: compile.pages,
+    ...(compile.values ? { values: compile.values } : {}),
+    ...(input.unconfirmedPages?.size ? { unconfirmedPages: input.unconfirmedPages } : {}),
+  };
   const evaluations: Evaluation[] = [];
   const learnedUsed: string[] = [];
   let decided: Verdict['decidedByUser'];
@@ -377,5 +387,27 @@ function learnedFor(exp: IrExpectation, ev: Evaluation, book: LearningBook, trac
   const shown = page ? [...page.messages, ...page.fieldErrors.map((f) => f.message)] : [];
   const byMessage = book.checkFor(exp.clause, shown, saysTheSame);
   if (byMessage) return byMessage;
-  return book.decisionFor(fingerprintOf(exp.clause, ev.actual));
+  // The same check on the same element, with the same expected value and the same page, was decided before (E0.18 step 5).
+  return book.decisionFor(approvalFingerprint(exp, ev, trace)) ?? book.decisionFor(fingerprintOf(exp.clause, ev.actual));
+}
+
+/**
+ * What a person's decision on a check is about (E0.18 step 5): the sentence, the condition (its kind, target and expected value), the
+ * action of the step it is judged after and the element that step used, and what the page showed. A decision holds for the next run
+ * only while all of these are the same: another expected value, another element or another page asks again.
+ */
+export function approvalFingerprint(exp: IrExpectation, ev: Evaluation, trace: RunTrace | undefined): string {
+  const step = trace?.steps.find((s) => s.step === ev.step);
+  const c = exp.condition;
+  const condition = [
+    c.type,
+    c.target?.ontology ?? '',
+    c.target?.name ?? c.target?.label ?? '',
+    c.target?.within ?? '',
+    (c.target?.row ?? []).join(','),
+    c.expect ?? '',
+    exp.negated ? 'not' : '',
+  ].join('|');
+  const where = step ? `${step.action}|${step.located?.selector ?? ''}` : '';
+  return fingerprintOf(`${exp.clause}|${condition}|${where}`, ev.actual);
 }

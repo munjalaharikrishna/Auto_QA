@@ -25,6 +25,8 @@ export function reconcile(legacy: TestVerdict, shadow: TestVerdict | undefined):
   return {
     ...legacy,
     status: 'NEEDS REVIEW',
+    // The second engine could not confirm the PASS, or disagreed with it (E0.18 step 4).
+    label: 'inconclusive',
     category: undefined,
     reason: `${disagrees ? 'The two engines disagree' : 'The new engine could not confirm the PASS'}. ${why}`,
     review: [...(legacy.review ?? []), reason],

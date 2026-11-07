@@ -91,6 +91,11 @@ export interface Observation {
   holders?: PageHolder[];
   /** The size of the window the page is shown in: what "in the middle of the page" is measured against. */
   viewport?: { width: number; height: number };
+  /**
+   * The menus of the page (E0.18): each item that holds a list of links, by its own words, with the addresses it and its links open
+   * (the hidden ones too). "PIM is the default page" is proven when the screen shown is one the PIM menu opens.
+   */
+  menus?: Array<{ name: string; targets: string[] }>;
 }
 
 const MESSAGE_ROLES: ReadonlySet<string> = new Set(['alert', 'status', 'alertdialog', 'log']);
@@ -134,6 +139,7 @@ export function observed(
     tables?: string[][];
     holders?: PageHolder[];
     viewport?: { width: number; height: number };
+    menus?: Array<{ name: string; targets: string[] }>;
   } = {},
 ): Observation {
   const shown = elements.filter((e) => e.visible);
@@ -183,7 +189,32 @@ export function observed(
     ...(dialog ? { dialog } : {}),
     ...(frames.holders?.length ? { holders: frames.holders } : {}),
     ...(frames.viewport ? { viewport: frames.viewport } : {}),
+    ...(frames.menus?.length ? { menus: frames.menus } : {}),
   };
+}
+
+/**
+ * The menus of a frame (E0.18): a list item with a link of its own and a list of links under it is a menu item; its name is its own
+ * link's words, its targets the absolute addresses of its link and the links under it (also those hidden until the pointer is on it).
+ * Runs in the page.
+ */
+function readMenus(): Array<{ name: string; targets: string[] }> {
+  const out: Array<{ name: string; targets: string[] }> = [];
+  for (const li of Array.from(document.querySelectorAll('li'))) {
+    const own = Array.from(li.children).find((c) => c.tagName === 'A') as HTMLAnchorElement | undefined;
+    const list = Array.from(li.children).find((c) => c.tagName === 'UL' || c.tagName === 'OL');
+    if (!own || !list) continue;
+    const name = (own.textContent ?? '').trim();
+    if (!name || name.length > 60) continue;
+    const targets = [own, ...Array.from(list.querySelectorAll('a'))]
+      .map((a) => (a as HTMLAnchorElement).getAttribute('href') ?? '')
+      .filter((h) => h && h !== '#' && !h.startsWith('javascript:'))
+      .map((h) => new URL(h, document.baseURI).href)
+      .slice(0, 80);
+    if (targets.length) out.push({ name, targets: [...new Set(targets)] });
+    if (out.length >= 40) break;
+  }
+  return out;
 }
 
 /** The column headers of every table that is shown. Runs in the page. */
@@ -296,6 +327,11 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
     if (read?.ok) holders.push(...read.value.map((h) => ({ ...h, frame: [...path], box: { ...h.box, x: h.box.x + at.x, y: h.box.y + at.y } })));
   }
   const viewport = page.viewportSize() ?? (await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })));
+  const menus: Array<{ name: string; targets: string[] }> = [];
+  for (const { frame } of frames) {
+    const read = await readSettled(frame, () => frame.evaluate(readMenus)).catch(() => undefined);
+    if (read?.ok) menus.push(...read.value);
+  }
   const seen = await inspectPageDetailed(page, { testIdAttribute: options.testIdAttribute, includeText: false });
   for (const path of seen.unread) unread.add(path.join(' > '));
   const content = contentFrameOf(seen.frames);
@@ -306,5 +342,6 @@ export async function observe(page: Page, options: ObserveOptions = {}): Promise
     tables,
     holders,
     viewport,
+    menus,
   });
 }

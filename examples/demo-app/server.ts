@@ -167,6 +167,7 @@ function go() {
 
 export async function startDemoApp(port = 0, otp: OtpDemoOptions = {}): Promise<{ url: string; close(): Promise<void> }> {
   const otpRoutes = otpApi(otp);
+  let flakyLoads = 0;
   const server = http.createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
     if (otpRoutes(req, res, path)) return;
@@ -176,6 +177,17 @@ export async function startDemoApp(port = 0, otp: OtpDemoOptions = {}): Promise<
       return;
     }
     if (path === '/api/ping') return res.writeHead(201, { 'content-type': 'application/json' }).end('{"ok":true}');
+    // E0.18 step 4: a page that is not steady. Its second load says "Busy"; every other load says "Ready". The exploration loads it
+    // first, the generated test's first attempt second (and fails), its retry third (and passes): a flaky test.
+    if (path === '/ui/flaky') {
+      flakyLoads++;
+      const text = flakyLoads === 2 ? 'Busy' : 'Ready';
+      return res
+        .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        .end(
+          `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Flaky</title></head><body><h1>Status</h1><p role="status">${text}</p></body></html>`,
+        );
+    }
     if (path === '/report.csv') {
       return res
         .writeHead(200, { 'content-type': 'text/csv', 'content-disposition': 'attachment; filename="report.csv"' })

@@ -112,10 +112,20 @@ function Card({
     <article className="panel stack" aria-label={`Review card: ${card.clause || card.why}`}>
       <div className="row">
         <StatusBadge status="NEEDS REVIEW" />
+        {card.label && (
+          <span className="muted" title={card.label.meaning}>
+            {card.label.name}
+          </span>
+        )}
         <strong className="grow">{card.clause || 'The run could not be judged'}</strong>
         <span className="muted">covers {card.cases.map((c) => c.testId).join(', ')}</span>
       </div>
       <p style={{ margin: 0 }}>{card.why}</p>
+      {card.label && (
+        <p className="muted" style={{ margin: 0 }}>
+          Why it needs you: {card.label.meaning}.
+        </p>
+      )}
       <div className="row" style={{ alignItems: 'stretch' }}>
         <div className="notice grow">
           <strong>Expected</strong>
@@ -206,6 +216,12 @@ function Card({
         </button>
         {refusal && <span className="muted">PASS is not offered: {refusal}</span>}
       </div>
+      {!!card.remembers && (
+        <p className="muted" style={{ margin: 0 }}>
+          Your decision is remembered: the next run of {card.remembers === 1 ? 'this check' : `these ${card.remembers} checks`} does not ask again while the
+          check, its element and what the page shows stay the same. Changing it to FAIL later takes back what a PASS taught.
+        </p>
+      )}
       <ErrorNote error={error} />
       {result && (
         <ul className="muted" style={{ margin: 0 }} aria-label="What was recorded">

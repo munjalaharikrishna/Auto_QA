@@ -135,9 +135,9 @@ const PATTERNS: Array<[RegExp, (text: string) => Classified]> = [
   [
     /not yet runnable|switch-over/i,
     () => ({
-      cause: 'understood, but the old parser still runs it',
+      cause: 'understood, but the new engine cannot run it yet',
       owner: 'engine',
-      fix: 'Run it through the new engine (E1.0 switch-over), or add the check type to the verdict engine.',
+      fix: 'Add the check type to the verdict engine, so the new engine runs it (the old parser does not read it).',
     }),
   ],
   [

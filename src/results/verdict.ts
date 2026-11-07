@@ -29,6 +29,10 @@ export interface ReportedTest {
   stepScreenshots?: Array<{ step: string; file: string }>;
   trace?: string;
   video?: string;
+  /** Which attempt this is, from 0 (E0.18 step 4). Missing in results from older runs. */
+  retry?: number;
+  /** It passed only when it was run again (Playwright's "flaky" outcome). */
+  flaky?: boolean;
 }
 
 export interface PageFacts {
@@ -80,10 +84,17 @@ export interface TestVerdict {
    * its word means on that screen, so the next run uses it without asking; a FAIL keeps nothing.
    */
   picks?: Array<{ step: string; word: string; means: string; screen: string; element: string; why: string }>;
+  /**
+   * What a person's decision on this case is about, check by check (E0.18 step 5): a fingerprint of each check left open. A PASS or FAIL
+   * on the review card holds for the next run of any check with the same fingerprint, so an unchanged step is not asked again.
+   */
+  approvals?: Array<{ check: string; clause: string; fingerprint: string }>;
   testId: string;
   title: string;
   automationId: string;
   status: Status;
+  /** Why a NEEDS REVIEW needs review, in one word (E0.18 step 4, `labels.ts`): inconclusive, healed, chosen, flaky, not-found, … */
+  label?: import('./labels.js').ReviewLabel;
   category?: Category;
   /** e.g. `S4 Click Login` or `A1 User is redirected to Dashboard page`. */
   failedStep?: string;
@@ -237,10 +248,21 @@ export function verdictFor(test: ManifestTest, reported: ReportedTest | undefine
         actual: `${summary(checks)} Not verified: ${unverified.map((c) => `${c.id} "${c.raw}"`).join('; ')}. ${describePage(facts)}`.trim(),
       };
     }
+    // Passed only on a retry (E0.18 step 4): the application, the test or the environment is not steady. Never a PASS.
+    if (reported.flaky || (reported.retry ?? 0) > 0)
+      return {
+        ...common,
+        status: 'NEEDS REVIEW',
+        label: 'flaky',
+        assumptions,
+        reason: `Every check passed, but only on attempt ${(reported.retry ?? 1) + 1}: it passed only on retry, so the result is not steady.`,
+        actual: summary(checks),
+      };
     if (open.length)
       return {
         ...common,
         status: 'NEEDS REVIEW',
+        label: 'chosen',
         assumptions,
         reason: `Every check passed, but the result rests on ${open.length === 1 ? 'an assumption' : `${open.length} assumptions`} the tester has not approved. Approve ${open.length === 1 ? 'it' : 'them'} to make this a PASS.`,
         actual: `${summary(checks)} Assumed or learned: ${open.join(' ')}`,

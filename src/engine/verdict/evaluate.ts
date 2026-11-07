@@ -3,6 +3,7 @@ import type { Observation, ObservedContainer, ObservedElement } from '../execute
 import { rowHolds } from '../execute/row-match.js';
 import { containerRef, matchContainers } from '../ir/container.js';
 import type { IrCondition, IrExpectation, IrTarget } from '../ir/schema.js';
+import { labelKey } from '../knowledge/labels.js';
 import { findHolder } from '../locate/holders.js';
 import { pageIdentityOf } from '../locate/page-identity.js';
 import { compactKey } from '../text/compound.js';
@@ -51,6 +52,11 @@ export interface JudgeContext {
   pages?: Readonly<Record<string, string | null | undefined>>;
   /** The values of the run by data key: what a check that names a value ("$data.First_Name") compares with. A secret is not a string here. */
   values?: Readonly<Record<string, { value: unknown }>>;
+  /**
+   * Pages whose address was learned without a person (E0.18, owner 7 Nov 2026): a check could have named the page it was judged on by
+   * itself ("Book Market Home" = /login). They prove nothing and disprove nothing until a person confirms them.
+   */
+  unconfirmedPages?: ReadonlySet<string>;
 }
 
 const ROLES: Record<string, readonly string[]> = {
@@ -389,6 +395,122 @@ function areaOf(box: { x: number; y: number; width: number; height: number }, vp
   return { row, col };
 }
 
+/** Two addresses show the same screen: the same path and the same parameters that choose a screen (pageIdentityOf), each once. */
+function sameScreen(a: string, b: string): boolean {
+  const parts = (u: string): { path: string; params: string } => {
+    const [path = '', query = ''] = pageIdentityOf(u).split('?');
+    return { path, params: [...new Set(query.split('&').filter(Boolean))].sort().join('&') };
+  };
+  const x = parts(a);
+  const y = parts(b);
+  return x.path === y.path && x.params === y.params;
+}
+
+/** The words of a login step: the step that opens the page a person sees first. */
+const LOGIN_WORDS: ReadonlySet<string> = new Set(['login', 'signin', 'logon', 'submit']);
+
+/**
+ * "PIM is the default page" (E0.18): the page a person sees first after logging in is the one named. Judged only on the page the login
+ * left: a check after another step says nothing about what is shown by default. The screen is the page named when one of that menu's
+ * own links opens it (OrangeHRM 2.5: PIM's Employee List is the screen after login), or when its address names it; it is another page
+ * when another menu's links open it. Anything else is not decided.
+ */
+function judgeDefaultPage(exp: IrExpectation, c: IrCondition, after: Observation, ctx: JudgeContext, expected: string, step?: string): Evaluation {
+  const name = c.target?.name ?? c.target?.label ?? '';
+  const record = ctx.steps.find((s) => s.step === step);
+  const words = labelKey(record?.located?.name ?? '');
+  const afterLogin = record?.action === 'LOGIN' || (record?.action === 'CLICK' && LOGIN_WORDS.has(words));
+  if (!afterLogin)
+    return unproven(
+      exp,
+      'NOT_OBSERVABLE',
+      expected,
+      `judged after ${step ?? 'no step'} "${record?.original ?? ''}", not after logging in`,
+      'the default page is the one shown right after logging in; this check is not on that page',
+      step,
+    );
+  const addresses = [after.contentUrl, after.url].filter((u): u is string => !!u);
+  const menus = after.menus ?? [];
+  const named = menus.filter((m) => labelKey(m.name) === labelKey(name));
+  const opens = (m: { targets: string[] }): boolean => m.targets.some((t) => addresses.some((a) => sameScreen(a, t)));
+  const byMenu = named.find(opens);
+  const byAddress = addresses.some((a) => compactKey(pageIdentityOf(a)).includes(compactKey(name)));
+  if (byMenu || byAddress)
+    return settled(
+      exp,
+      !exp.negated,
+      expected,
+      byMenu
+        ? `the screen after login is one the ${byMenu.name} menu opens (${pageIdentityOf(addresses[0] ?? '')})`
+        : `the address after login names ${name}: ${addresses[0]}`,
+      'the page shown after logging in is that page',
+      true,
+      step,
+    );
+  const other = menus.find((m) => labelKey(m.name) !== labelKey(name) && opens(m));
+  if (other && named.length)
+    return settled(
+      exp,
+      exp.negated,
+      expected,
+      `the screen after login is one the ${other.name} menu opens, not ${name}`,
+      'another page is shown first',
+      true,
+      step,
+    );
+  return unproven(
+    exp,
+    named.length ? 'UNRESOLVED' : 'NOT_FOUND',
+    expected,
+    named.length
+      ? `the screen after login (${pageIdentityOf(addresses[0] ?? '')}) is not one a menu of the page opens`
+      : `no menu item called "${name}" on the page`,
+    'nothing on the page shows which page this is',
+    step,
+  );
+}
+
+/**
+ * "Upload button should accept photo" (E0.18): the file field holds a file. Proven when it does; disproven when it is empty on the
+ * screen the upload was made on; after the page changed (a Save), an empty field says nothing, so it is not decided.
+ */
+function judgeUploaded(exp: IrExpectation, c: IrCondition, after: Observation, ctx: JudgeContext, expected: string, step?: string): Evaluation {
+  const files = after.elements.filter((e) => e.type === 'file');
+  const name = c.target?.name;
+  const named = name ? files.filter((e) => nameMatches(e, name)) : [];
+  const field = named.length === 1 ? named[0] : files.length === 1 ? files[0] : undefined;
+  if (!field)
+    return unproven(
+      exp,
+      files.length ? 'AMBIGUOUS' : 'NOT_OBSERVABLE',
+      expected,
+      files.length ? `${files.length} file fields on the page` : 'no file field on the page',
+      files.length ? 'the engine does not choose between file fields' : 'whether the file was kept is not shown by a file field here',
+      step,
+    );
+  const held = !!field.value;
+  const upload = [...ctx.steps].reverse().find((s) => s.action === 'UPLOAD' && ctx.steps.indexOf(s) <= ctx.steps.findIndex((x) => x.step === step));
+  const sameScreenAsUpload = !!upload?.after?.screen && upload.after.screen === after.screen;
+  if (!held && !sameScreenAsUpload)
+    return unproven(
+      exp,
+      'NOT_OBSERVABLE',
+      expected,
+      `the file field "${field.name}" is empty, on another screen than the upload`,
+      'after the page changed, an empty file field does not say the file was not kept',
+      step,
+    );
+  return settled(
+    exp,
+    held !== exp.negated,
+    expected,
+    held ? `the file field "${field.name}" holds a file` : `the file field "${field.name}" is empty`,
+    held ? 'a file was chosen' : 'no file is chosen',
+    true,
+    step,
+  );
+}
+
 /**
  * Whether a box is ticked (E0.17 item 4): "The checkbox in the row for Anita Kumari Rao is checked". The box is found by its name, or,
  * in a row the check names, as the one box of that row; the row is matched by the same rules as the run's (`rowHolds`). One box: its
@@ -566,6 +688,8 @@ function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
       return judgeLayout(exp, c, page.after, p.step);
     case 'STATE':
       if (c.expect === 'CHECKED' || c.expect === 'UNCHECKED') return judgeChecked(exp, c, page.after, expectedText, p.step);
+      if (c.expect === 'DEFAULT_PAGE') return judgeDefaultPage(exp, c, page.after, ctx, expectedText, p.step);
+      if (c.expect === 'UPLOADED') return judgeUploaded(exp, c, page.after, ctx, expectedText, p.step);
       return unproven(exp, 'NOT_OBSERVABLE', expectedText, 'not judged', `a ${c.expect ?? 'state'} check is not judged by this engine yet`, p.step);
     case 'URL': {
       const wanted = c.expect ?? '';
@@ -611,7 +735,9 @@ function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
                 .filter(Boolean),
             ]
           : [wanted];
-      const routes = names.map((n) => routeOf(n, ctx.pages)).filter((r): r is string => r !== undefined);
+      // Only an address a person gave or confirmed proves the page (E0.18): one learned in silence may be the page the check named itself.
+      const confirmedPages = Object.fromEntries(Object.entries(ctx.pages ?? {}).filter(([n]) => !ctx.unconfirmedPages?.has(n)));
+      const routes = names.map((n) => routeOf(n, confirmedPages)).filter((r): r is string => r !== undefined);
       const exact = c.check === 'equals' || c.check === 'exact-text';
       // The address of the page, and when the page is a shell around a frame, the address of the screen in it (E8).
       const addresses = [page.after.url, ...(page.after.contentUrl ? [page.after.contentUrl] : [])];
@@ -622,7 +748,7 @@ function judgeExpectation(exp: IrExpectation, ctx: JudgeContext): Evaluation {
           : names.some((n) => addresses.some((a) => compactKey(a).includes(compactKey(n)))); // a page name is not a path: "Dashboard" is /dashboard, "Add Employee" is /add-employee
       // The address says a page IS the one named when it matches. It says it is NOT only when the engine knows where the named page is,
       // or knows the page it is on is another one: a name it cannot place is not a reason to call the address wrong.
-      const onAnotherKnownPage = Object.entries(ctx.pages ?? {}).some(
+      const onAnotherKnownPage = Object.entries(confirmedPages).some(
         ([n, where]) => where && addresses.some((a) => pathOf(a) === pathOf(where)) && !names.some((x) => compactKey(x) === compactKey(n)),
       );
       if (!has && !exact && routes.length === 0 && !onAnotherKnownPage)
