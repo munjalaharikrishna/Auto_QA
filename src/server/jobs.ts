@@ -702,7 +702,7 @@ export class JobRunner extends EventEmitter {
         };
         /** Waits for the person, recording what they do in the browser meanwhile. */
         const recording = async <T>(where: { afterStep: string } | { replaces: string }, wait: () => Promise<T>): Promise<T> => {
-          recorder.listen(keep(where));
+          await recorder.listen(keep(where));
           try {
             return await wait();
           } finally {

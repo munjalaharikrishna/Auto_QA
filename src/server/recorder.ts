@@ -79,6 +79,12 @@ function listenInPage(
 
   // A value is recorded once, when it is final: on change, or on Enter before the form is sent.
   const kept = new WeakMap<Element, string>();
+  // When the recorder starts listening, the values in the fields are where the person starts from. What the engine typed before is
+  // not theirs: its "change" event comes late, when the field loses focus (the person going to the Auto QA page is enough), and
+  // would otherwise be recorded as if they had typed it.
+  w.__autoQaRebase = (): void => {
+    for (const el of document.querySelectorAll('input, textarea')) if (isText(el)) kept.set(el, el.value);
+  };
   const fill = (el: HTMLInputElement | HTMLTextAreaElement): void => {
     if (kept.get(el) === el.value) return;
     kept.set(el, el.value);
@@ -155,11 +161,14 @@ export class Recorder {
   /** The actions still being read, in the order they were done. */
   private queue: Promise<void> = Promise.resolve();
 
-  private constructor(private readonly onError: (e: unknown) => void) {}
+  private constructor(
+    private readonly onError: (e: unknown) => void,
+    private readonly context?: BrowserContext,
+  ) {}
 
   /** Puts the recorder in every page of the browser, now and later. It records nothing until `listen`. */
   static async attach(context: BrowserContext, options: { testIdAttribute?: string; onError?: (e: unknown) => void } = {}): Promise<Recorder> {
-    const recorder = new Recorder(options.onError ?? (() => undefined));
+    const recorder = new Recorder(options.onError ?? (() => undefined), context);
     const script = pageScript(options.testIdAttribute ?? 'data-testid');
     await context.exposeBinding(BINDING, (source, ev: PageEvent) => recorder.fromPage(source.frame, ev));
     await context.addInitScript(script);
@@ -175,7 +184,12 @@ export class Recorder {
   }
 
   /** From now on, what the person does is given to `into`, in the order it was done. */
-  listen(into: (event: RecordedEvent) => Promise<void> | void): void {
+  async listen(into: (event: RecordedEvent) => Promise<void> | void): Promise<void> {
+    // The values the fields hold now are not the person's doing: only what they change from here is recorded.
+    const frames = this.context?.pages().flatMap((p) => p.frames()) ?? [];
+    await Promise.all(
+      frames.map((f) => f.evaluate(() => (globalThis as unknown as { __autoQaRebase?: () => void }).__autoQaRebase?.()).catch(() => undefined)),
+    );
     this.into = into;
     this.lastActionAt = Date.now();
   }

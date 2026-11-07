@@ -422,6 +422,24 @@ describe('E0.14b: the guided walkthrough, end to end', { skip: !!process.env.AUT
     assert.equal((await store.testCase('demo', 'TC-PANEL'))?.raw.steps, RECORDED_LOGIN());
   });
 
+  it('what the engine typed is not recorded when the field loses focus later, as when the person goes to the Auto QA page (E0.14c)', async () => {
+    await store.upsertTestCase('demo', LOGIN_CASE('TC-PHANTOM'), { kind: 'form' }, 'written');
+    const job = await post('/api/projects/demo/test-cases/TC-PHANTOM/walkthrough');
+    const done = await driveAs(job.id, async (q) => {
+      if (q.kind === 'step' && (q.payload.step === 'S2' || q.payload.step === 'S3')) {
+        // The field the engine just typed in loses focus: the browser sends its "change" now, while the walkthrough listens.
+        await appTab(job.id).evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+        await new Promise((r) => setTimeout(r, 700));
+        const walk = ((await get(`/api/jobs/${job.id}`)) as J).output.walk as { pending: unknown[] };
+        assert.deepEqual(walk.pending, [], `nothing was done by the person after ${String(q.payload.step)}`);
+      }
+      return q.kind === 'confirm' ? true : 'next';
+    });
+    assert.equal(done.status, 'done', done.error ?? '');
+    assert.ok(!done.logs.some((l) => l.message.includes('● recorded')), JSON.stringify(done.logs.map((l) => l.message)));
+    assert.equal((await store.testCase('demo', 'TC-PHANTOM'))?.version, 1, 'nothing to save, so nothing saved');
+  });
+
   it('serves the screenshots of a walkthrough, and only from the data folder', async () => {
     const shots = path.join(dir, 'data', 'projects', 'demo', 'walkthroughs');
     assert.ok(existsSync(shots));
