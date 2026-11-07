@@ -13,7 +13,7 @@
 export const REPEATED_NOUNS: ReadonlySet<string> = new Set(['card', 'tile', 'item', 'entry', 'listing']);
 
 /** Areas of a page that group things. */
-export const AREA_NOUNS: ReadonlySet<string> = new Set(['section', 'panel', 'box', 'group', 'widget', 'area', 'block']);
+export const AREA_NOUNS: ReadonlySet<string> = new Set(['section', 'panel', 'box', 'group', 'widget', 'area', 'block', 'tab']);
 
 const DETERMINERS: ReadonlySet<string> = new Set(['the', 'a', 'an']);
 
@@ -56,6 +56,23 @@ export function containerRef(within: string | undefined): ContainerRef | undefin
   if (noun === 'item' && core[core.length - 1] === 'list') core.pop();
   if (!core.length) return undefined;
   return { text: core.join(' '), words: core, noun, repeated: REPEATED_NOUNS.has(noun) };
+}
+
+/** The words after "row" that say what the row holds: "the row for Anita", "the row with 0001". */
+const ROW_OF: ReadonlySet<string> = new Set(['for', 'of', 'with', 'containing', 'having', 'named', 'called', 'labelled', 'labeled']);
+
+/**
+ * The values a place names a table row by, or undefined when it names none (E0.17 item 4): "the row for Anita Kumari Rao" and "the
+ * Anita Kumari Rao row" are the row that holds Anita Kumari Rao. Steps read this in the grammar; checks read their place with this,
+ * so "The checkbox in the row for Anita Kumari Rao is checked" is about the same row as the step that ticked it.
+ */
+export function rowOfPlace(within: string | undefined): string | undefined {
+  if (!within) return undefined;
+  const words = wordsOf(within);
+  while (words.length && DETERMINERS.has(words[0] as string)) words.shift();
+  if (words[0] === 'row' && ROW_OF.has(words[1] ?? '') && words.length > 2) return words.slice(2).join(' ');
+  if (words[words.length - 1] === 'row' && words.length > 1) return words.slice(0, -1).join(' ');
+  return undefined;
 }
 
 const holdsRun = (haystack: readonly string[], run: readonly string[]): boolean => {

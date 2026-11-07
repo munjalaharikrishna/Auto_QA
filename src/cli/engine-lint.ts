@@ -11,6 +11,7 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { suiteSetups } from '../engine/context/setup.js';
 import { compileCase } from '../engine/index.js';
 import { knowledgeFromRuns } from '../engine/knowledge/from-runs.js';
 import { type LintLine, lintCase, lintCounts, lintText } from '../engine/language/lint.js';
@@ -32,8 +33,13 @@ const everything: LintLine[] = [];
 for (const file of targets) {
   const imported = await readWorkbook(file);
   console.log(`${'='.repeat(78)}\n${path.basename(file)}\n${'='.repeat(78)}`);
+  const setups = suiteSetups(
+    path.basename(file),
+    imported.cases.map((c) => c.raw),
+  );
   for (const c of imported.cases) {
-    const lines = lintCase(await compileCase(c.raw, { ...(knowledge ? { knowledge } : {}) }), knowledge);
+    const setup = c.raw.id ? setups.get(c.raw.id) : undefined;
+    const lines = lintCase(await compileCase(c.raw, { ...(knowledge ? { knowledge } : {}), ...(setup ? { setup } : {}) }), knowledge);
     everything.push(...lines);
     const shown = all ? lines : lines.filter((l) => l.status !== 'understood' && l.status !== 'matched');
     if (shown.length) console.log(`\n${c.raw.id}  ${c.raw.title.split('\n').join(' ')}\n${lintText(shown)}`);

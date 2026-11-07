@@ -604,6 +604,8 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 **After the owner's first use (3 Nov):** a panel in the window (steps, what was recorded, Add or Remove, Next step, Finish, save), shown only while the walkthrough waits; one window; closing it keeps what was recorded and asks to save on the Auto QA page; when saving, recorded steps can replace the steps not run. Exit tests: the window is closed after a login done by hand and the save keeps it without the old steps; a whole walkthrough is done from the panel with one tab open.
 
 #### E0.15 Grammar and lint
+**Status (2026-11-05): done.** All three exit tests re-run on 5 Nov: gold 771 of 796 clauses read as approved (97%; Login 60/60, Add Employee 711/736), the earlier failing sentences read correctly (`e015.test.ts`, `parser-defects.test.ts`), and the lint gives all 506 lines of the original sheets a status with a suggestion under every vague one. Measurements in `test/baseline/e015-gold.txt`. Open: 25 Add Employee clauses still read wrongly, most in TC18/TC19 where a person should be asked.
+
 **Builds:**
 1. A **slot grammar**: patterns with slots (action, target, value, ordinal, relation, anchor), optional words and alternatives; replaces the phrase lists.
 2. **One vocabulary** (merge PREDICATES and synonyms); verb table with word forms (hides → not visible; return to → navigate; enter or update → enter).
@@ -622,6 +624,14 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 | Lint on the original OrangeHRM sheet | Every step has a status and the vague ones have a suggestion |
 
 #### E0.16 Setup blocks, data ledger and test data
+**Status (2026-11-05): built, exit tests as read under PD-15.** Item 1 (`context/setup.ts`): on Add Employee the setup question raised in 16 cases is raised in none, and the cases log in where their setup assumes it. Item 2 (`context/ledger.ts`): plain references resolve through the ledger; "which employee" stays a question with the ledger's suggestion, asked once per sentence. Item 3 (`importer/workbook.ts`, `RawTestCase.stepData`): continuation rows and per-step data. Item 4 (`data/cleanup.ts`): run-seeded values and a clean-up list per run, no deletes. Item 5 (generated config and fixture): one worker by default, one account per worker, tested on the demo app (`generator/workers.test.ts`). Review reasons 37 → 27; gold 771/796 unchanged. Open: a worker's saved login is not reused across its tests (the generated tests log in themselves); the legacy route writes no clean-up list.
+
+**Decisions (PD-15, owner, 5 Nov 2026):**
+- **Clean-up (item 4) lists, it does not delete.** Each run gives created records unique names and writes the list of what it created; nothing is deleted by Auto QA in V1, and there is no nightly sweep. The exit test becomes: after a run, every record the run created is on its clean-up list.
+- **One worker (item 5).** OrangeHRM allows one session per user and there is one test account. One account per worker with its own saved login is built and tested on the demo app, and runs default to one worker until more accounts exist.
+- **Setup login.** The login a setup block assumes is the project's (`TEST_USERNAME`, `TEST_PASSWORD`), never the Excel credentials of a case (S4).
+- **The ledger suggests, a person confirms (item 2).** The owner's signed gold (4 Nov) keeps "which employee to click, select, delete or look for" a person's decision, so "Click on Employee Name" and "the same updated records" stay questions. The ledger offers the record this case created or changed as the answer, and one answer covers every case with the same sentence. Words that name the record plainly ("the added employee", "the updated record", "the entered details") resolve on their own. The exit test "added data / updated records resolve" is read this way.
+
 **Builds:**
 1. Detect setup lines (open browser, open the application, log in, "see tabs") and turn them into one setup block per suite; executed for "Logged in" preconditions in the new engine (E7).
 2. **Data ledger**: every entered or created value recorded with its entity and step; "the entered details", "the added employee", "the updated record", "previous page" resolve through it, including rows in lists (U5).
@@ -638,6 +648,19 @@ Asked for by the owner after using the walkthrough on BookMarket: the window cou
 | Parallel run with 2 workers | No session conflicts |
 
 #### E0.17 Locating like a person
+**Status (2026-11-06): built, exit tests run on local OrangeHRM 2.5.0.2** (user `selenium`; test employee Anita Kumari Rao, Id 0001; captured pages in `test/dom/orangehrm-*.html`).
+- Item 2 (`locate/holders.ts`): TC01 "Login section should be middle of the page" finds the login box without a question (the innermost of 4 nested holders). Its verdict is NEEDS REVIEW: the box is 296 px left of the middle and the panel around it 26 px off, and they disagree (owner decision below); the draft answer key expects NEEDS REVIEW.
+- Item 1 (`locate/anchors.ts`): "Click Edit in the Job section" is done inside the part titled Job; live PASS. Closed tabs parked at x -9999 are now hidden ("off the page"), which removed the 4 equal Edit buttons and 2 equal Job links.
+- Item 3 (`candidates.ts` `identical`, `anchors.ts` `nearestTo`): on the live Job tab a person sees one Edit button, so plain "Click Edit" passes and the "5 identical buttons" of the audit no longer reach the rule. The rule's cycle (NEEDS REVIEW, PASS on the card kept as a screen label, next run PASS) is tested on demo `/ui/alike`.
+- Item 4 (`row-match.ts`, `onlyOfKind`, `rowOfPlace`, judge of checked boxes): "Check the checkbox in the row for Anita Kumari Rao … is checked": live PASS.
+- Item 5 (`locate/fingerprint.ts`, `Screen.found`): tested on demo `/ui/renamed`; a fallback find is NEEDS REVIEW, never for a check.
+- From E0.14: a label with its field's id still names the field; a hover-menu link ("Add Employee" under PIM) is reached by hovering its item once; live PASS.
+- Measured: review reasons 27 → 26, ready cases 9 → 10; gold unchanged (771 of 796); traps 10 of 10. Removing the LAYOUT blocker shows the next one: 12 cases wait for STATE checks the verdict engine does not judge (DEFAULT_PAGE, UPLOADED, UPDATED), for E0.18.
+
+**Decisions (owner, 6 Nov 2026):**
+- **Identical elements (item 3):** narrow to the section the step names, then to the part of the page the case is working in (nearest to the element of the step before); only then the first visible one, as review-needed.
+- **Layout of a nested part (item 2):** the innermost holder and the holders of the same words around it (not as wide as the window) are all measured: all in place PASS, none FAIL, they disagree NEEDS REVIEW with each measurement.
+
 **Builds:**
 1. **Container anchors**: an element in a repeated widget is located inside its row, card or section; position inside the anchor only as a logged tie-breaker.
 2. **Nested containers** with the same name: use the innermost that contains the target.

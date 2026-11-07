@@ -189,6 +189,8 @@ export function readDom(opts: {
     }
     if (Number(getComputedStyle(el).opacity) === 0) return 'opacity:0';
     if (rect.width === 0 || rect.height === 0) return 'no size';
+    // Left or above the start of the page: nobody can scroll to it. OrangeHRM 2.5 hides its other tabs at x -9999 (E0.17).
+    if (rect.right + window.scrollX <= 0 || rect.bottom + window.scrollY <= 0) return 'off the page';
     return undefined;
   };
 
@@ -248,6 +250,14 @@ export function readDom(opts: {
     const labels: string[] = [];
     const controlLabels = (el as HTMLInputElement).labels;
     if (controlLabels) for (const l of Array.from(controlLabels)) labels.push(squash(l.textContent));
+    // A <label for="x"> the browser did not tie to the field, because the label has the id "x" too (OrangeHRM 2.5, E0.17): the label
+    // still names the field it is written for, when that field is the only control with the id.
+    const ownId = el.getAttribute('id');
+    if (!labels.length && ownId && ['input', 'select', 'textarea'].includes(el.tagName.toLowerCase())) {
+      const controls = Array.from(document.querySelectorAll(`[id="${CSS.escape(ownId)}"]`)).filter((x) => ['INPUT', 'SELECT', 'TEXTAREA'].includes(x.tagName));
+      if (controls.length === 1)
+        for (const l of Array.from(document.querySelectorAll(`label[for="${CSS.escape(ownId)}"]`))) if (l !== el) labels.push(squash(l.textContent));
+    }
     const ariaName =
       squash(ariaLabel) ||
       squash(textOfIds(el.getAttribute('aria-labelledby'))) ||
@@ -299,7 +309,20 @@ export function readDom(opts: {
       ...(testId ? { testId } : {}),
       ...(el.getAttribute('name') ? { nameAttr: el.getAttribute('name') as string } : {}),
       ...(el.getAttribute('id') ? { id: el.getAttribute('id') as string } : {}),
+      ...(squash(el.getAttribute('onclick') ?? el.getAttribute('href') ?? '')
+        ? { handler: squash(el.getAttribute('onclick') ?? el.getAttribute('href') ?? '').slice(0, 200) }
+        : {}),
       text,
+      ...(() => {
+        // The cells of the table row it is in (E0.17 item 4): a check about "the checkbox in the row for Anita" is judged on that row.
+        const tr = el.closest('tr');
+        if (!tr) return {};
+        const cells = Array.from(tr.children)
+          .filter((c) => c.tagName === 'TD' || c.tagName === 'TH')
+          .slice(0, 12)
+          .map((c) => squash((c as HTMLElement).innerText ?? c.textContent).slice(0, 80));
+        return cells.length ? { rowCells: cells } : {};
+      })(),
       visible,
       ...(reason ? { hiddenReason: reason } : {}),
       disabled: (el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true' || el.closest('fieldset[disabled]') !== null,

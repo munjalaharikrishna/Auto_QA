@@ -917,6 +917,7 @@ export class Store {
           kept.expected,
           kept.requirementId,
           ...(kept.stepExpected ? [kept.stepExpected] : []),
+          ...(kept.stepData ? [{ stepData: kept.stepData }] : []),
         ]),
       )
       .digest('hex')

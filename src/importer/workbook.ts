@@ -200,16 +200,20 @@ function readSheet(file: string, sheet: ExcelJS.Worksheet, options: ImportOption
     const steps = cell(row, 'steps');
     const expected = cell(row, 'expected');
 
+    const testData = cell(row, 'testData');
+    // The rest of a test case above: no id of its own, or the id/title cell is merged down from it (RW-I01, RW-I02).
+    const mergedDown = (field: Field) => !!match.map[field] && slaves[i]?.[(match.map[field] as number) - 1] === true;
+    const ownsNothing = (!id && !title) || mergedDown('id') || mergedDown('title');
+    // A row with only an expected result or only test data belongs to the step above it (P2, E0.16): it starts no case.
+    const extra = !steps && (!!expected || !!testData);
     // "LOGIN MODULE": a heading row between groups of test cases (RW-I07). It ends the case above and starts nothing.
-    if (filled === 1 && !steps && !expected) {
+    if (filled === 1 && !steps && !expected && !(pending && testData)) {
       flush();
       warnings.push(`Row ${sheetRow} ("${row.find((c) => c?.trim())?.trim()}") is a heading, not a test case, and was skipped.`);
       continue;
     }
-    // The rest of a test case above: no id of its own, or the id/title cell is merged down from it (RW-I01, RW-I02).
-    const mergedDown = (field: Field) => !!match.map[field] && slaves[i]?.[(match.map[field] as number) - 1] === true;
-    const part: Part = { row: sheetRow, steps, expected, testData: cell(row, 'testData'), stepNo: cell(row, 'stepNo') };
-    const continues = !!pending && !!steps && ((!id && !title) || mergedDown('id') || mergedDown('title'));
+    const part: Part = { row: sheetRow, steps, expected, testData, stepNo: cell(row, 'stepNo') };
+    const continues = !!pending && ownsNothing && (!!steps || extra);
     if (continues && pending) {
       pending.parts.push(part);
       continue;
@@ -299,8 +303,11 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
   const label = p.id ?? p.title ?? `row ${p.row}`;
   const warnings: string[] = [];
   const first = p.parts[0];
+  // A row with no step of its own adds its expected result and test data to the step above it (P2, E0.16).
+  const folded = foldExtras(p.parts);
+  for (const n of folded.notes) warnings.push(`${label}: ${n}`);
   // Steps are put in the order of their numbers, and a skipped number is reported (IN-18).
-  const ordered = orderParts(p.parts.filter((x) => x.steps));
+  const ordered = orderParts(folded.parts.filter((x) => x.steps));
   if (ordered.reordered) warnings.push(`${label}: the steps were out of order and were put in the order of their numbers.`);
   for (const gap of ordered.gaps) warnings.push(`${label}: ${gap}`);
   const withSteps = ordered.parts;
@@ -308,7 +315,10 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
   const stepLine = (text: string) => lines.push(`${lines.length + 1}. ${text}`);
   let finalExpected: string | undefined;
   const stepExpected: Record<string, string> = {};
+  /** Each row's own test data, by the number of the steps it holds (E0.16): a step reads its own row's data first. */
+  const stepData: Record<string, string> = {};
   for (const [k, part] of withSteps.entries()) {
+    const from = lines.length + 1;
     if (part.stepNo !== undefined) {
       // The sheet gives every row its own step number: the row is one step, however many lines its cell has (IN-17).
       stepLine((part.steps as string).replace(/\s*\n\s*/g, ' ').trim());
@@ -319,13 +329,14 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
       for (const gap of cell.gaps) warnings.push(`${label}: ${gap}`);
       for (const line of splitNumbered(cell.text)) stepLine(line.text);
     }
+    if (part.testData && p.parts.length > 1) for (let n = from; n <= lines.length; n++) stepData[String(n)] = part.testData;
     const last = k === withSteps.length - 1;
     if (part.expected) {
       if (last || withSteps.length === 1) finalExpected = part.expected;
       else stepExpected[String(lines.length)] = part.expected.replace(/\s*\n\s*/g, ' ').trim();
     }
   }
-  finalExpected ??= [...p.parts].reverse().find((x) => x.expected)?.expected;
+  finalExpected ??= [...folded.parts].reverse().find((x) => x.expected)?.expected;
   const empty = [!p.title && 'Title', !withSteps.length && 'Steps', !finalExpected && 'Expected Result'].filter(Boolean) as string[];
   if (empty.length) return { problem: { row: p.row, id: p.id, title: p.title, text: `Row ${p.row} has no ${empty.join(', ')}.` } };
   const testData = p.parts
@@ -345,6 +356,7 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
       testData: testData || undefined,
       expected: finalExpected as string,
       ...(Object.keys(stepExpected).length ? { stepExpected } : {}),
+      ...(Object.keys(stepData).length && new Set(Object.values(stepData)).size > 1 ? { stepData } : {}),
       requirementId: p.requirementId,
       priority: p.priority,
       tags: tagsOf(p.tags),
@@ -352,6 +364,36 @@ function buildCase(p: Pending): { row: number; raw: RawTestCase; warnings: strin
       row: p.row,
     },
   };
+}
+
+/**
+ * Rows with no step of their own (only an expected result, only test data) are added to the row above that has a step: the
+ * expected result after its own, the data after its own. A leading such row (before any step) is kept as it is.
+ */
+function foldExtras(parts: readonly Part[]): { parts: Part[]; notes: string[] } {
+  const out: Part[] = [];
+  const notes: string[] = [];
+  for (const part of parts) {
+    const host = [...out].reverse().find((x) => x.steps);
+    if (part.steps || !host || out.length === 0) {
+      out.push({ ...part });
+      continue;
+    }
+    if (part.expected)
+      host.expected = host.expected
+        ? `${host.expected}
+${part.expected}`
+        : part.expected;
+    if (part.testData)
+      host.testData = host.testData
+        ? `${host.testData}
+${part.testData}`
+        : part.testData;
+    notes.push(
+      `row ${part.row} has no step of its own: its ${[part.expected && 'expected result', part.testData && 'test data'].filter(Boolean).join(' and ')} belong to the step of row ${host.row}.`,
+    );
+  }
+  return { parts: out, notes };
 }
 
 const signature = (c: ImportedCase): string =>

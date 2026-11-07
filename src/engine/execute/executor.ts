@@ -9,8 +9,10 @@ import { isMasked, maskDeep, Secret } from '../data/secret.js';
 import type { IrTarget } from '../ir/schema.js';
 import { type Application, CORE_LABELS, consolidate } from '../knowledge/index.js';
 import { labelKey } from '../knowledge/labels.js';
-import { screenWord } from '../knowledge/screens.js';
-import { contentFrameOf, frameOffsets } from '../locate/frames.js';
+import { screenFound, screenWord } from '../knowledge/screens.js';
+import { anchorScope, nearestTo } from '../locate/anchors.js';
+import { type Fingerprint, fingerprintOf, matchFingerprint } from '../locate/fingerprint.js';
+import { contentFrameOf, frameOffsets, visibleFrames } from '../locate/frames.js';
 import {
   type DomElement,
   inspectPage,
@@ -25,6 +27,7 @@ import {
   type Tried,
   WEIGHT,
 } from '../locate/index.js';
+import { menuOpenerOf } from '../locate/menus.js';
 import { screenKeyOf } from '../locate/page-identity.js';
 import { refusesOtp } from '../patterns/index.js';
 import { blockers, type Capabilities, discover, type FunctionName, type McpPort } from './capabilities.js';
@@ -91,6 +94,14 @@ export interface Located {
   row?: { page: string; cells: string[]; pagesVisited: number };
   /** A person picked the element on the screenshot, because the levels found none or several (E0.14a). */
   picked?: true;
+  /**
+   * E0.17 item 3: several controls were alike and the first on the page was used. The case cannot PASS until a person approves; the
+   * approval keeps this element as what the word means on this screen (a label of the screen, as a walkthrough pick is).
+   */
+  assumed?: { why: string; word: string; means: string; screen: string; element: string };
+  /** The screen it was found on, and what it was there (E0.17 item 5): kept with the screen, for the fallback of a later run. */
+  screen?: string;
+  fingerprint?: Fingerprint;
 }
 
 export interface Call {
@@ -270,6 +281,8 @@ class Runner {
   private readonly typed = new Set<string>();
   /** Pages the run has been on: a tab it left is not "new" when it comes up again. */
   private readonly known = new Set<Page>();
+  /** The element the last step acted on: the part of the page around it is the section the case is working in (E0.17 item 3). */
+  private lastElement: { frame: string[]; xpath: string } | undefined;
 
   constructor(
     private readonly input: ExecuteInput,
@@ -603,7 +616,12 @@ class Runner {
   }
 
   /** Finds the one element a target means, or blocks with the reason (LC-01, LA-01). */
-  private async find(target: IrTarget | undefined, rec: StepRecord, purpose: 'act' | 'inspect' = 'act'): Promise<{ element: DomElement; selector: string }> {
+  private async find(
+    target: IrTarget | undefined,
+    rec: StepRecord,
+    purpose: 'act' | 'inspect' = 'act',
+    revealed = false,
+  ): Promise<{ element: DomElement; selector: string }> {
     let row: { row: TableRow; label: string; visited: number; frame: readonly string[] } | undefined;
     if (target?.row?.length) {
       const wanted = target.row.map((r) => {
@@ -624,7 +642,24 @@ class Runner {
     const seen = await inspectPageDetailed(this.page, { testIdAttribute: this.testIdAttribute, includeText: true });
     let elements = seen.elements;
     if (row) elements = elements.filter((e) => sameFrame(e.frame, row.frame) && e.xpath.startsWith(`${row.row.xpath}/`));
-    const query = this.query(target, purpose);
+    let query = this.query(target, purpose);
+    // "The checkbox in the row for Anita": the row is the place, and the only control of that kind in it is meant (E0.17 item 4).
+    // A target with no name of its own ("the checkbox", "the box"): only its kind, whatever word says the kind.
+    if (row && !target?.name && query.ontology && query.ontology !== 'Element') {
+      query = { ...query, name: '', aliases: [], onlyOfKind: true };
+      rec.notes.push(
+        `the step names no ${query.ontology ?? 'control'}, only its kind: the only one of that kind in the row "${row.row.cells.join(' | ')}" is meant`,
+      );
+    }
+    // "Click Edit in the Job section" on a page that marks no sections: the part titled Job is the anchor (E0.17 item 1).
+    const scope = row ? ({ status: 'unscoped' } as const) : await anchorScope(this.page, query.within, elements);
+    if (scope.status === 'ambiguous') throw new Block('LOCATE_AMBIGUOUS', scope.why);
+    if (scope.status === 'scoped' || scope.status === 'whole-page') {
+      const { within: _scoped, ...rest } = query;
+      query = rest;
+      rec.notes.push(scope.note);
+      if (scope.status === 'scoped') elements = scope.elements;
+    }
     // The screen this is on (E0.14), and what a person said the step's word means on it in a walkthrough: that is tried first.
     const screen = screenKeyOf(
       contentFrameOf(seen.frames)?.url ?? this.page.url(),
@@ -650,13 +685,40 @@ class Runner {
         `on this screen a person said "${query.name}" is ${pickedBefore ? 'the element they picked' : `"${said.means}"`}${bySaid?.status === 'found' ? '' : ', which is not on the page now: found as usual'}`,
       );
     const result = bySaid?.status === 'found' ? bySaid : locate(query, elements);
+    // A link of a hover menu parked off the page ("Add Employee" under PIM): the item it hangs from is hovered once, as a person does.
+    if (result.status === 'inactive' && purpose === 'act' && !row && !revealed) {
+      const hidden = result.candidates.find((c) => c.element.hiddenReason === 'off the page' || c.element.hiddenReason?.startsWith('display:none'));
+      const frame = hidden ? (await visibleFrames(this.page)).find((f) => sameFrame(f.path, hidden.element.frame))?.frame : undefined;
+      const opener = hidden && frame ? await frame.evaluate(menuOpenerOf, { xpath: hidden.element.xpath }).catch(() => undefined) : undefined;
+      if (hidden && opener) {
+        const where = selectorIn(hidden.element.frame, opener);
+        if ((await this.tool('hover', { target: where, element: `the menu of "${query.name}"` }, rec)) === 'fallback') {
+          await this.page.locator(where).hover();
+          this.viaPage('hover', { target: where }, rec);
+        }
+        await waitUntilIdle(this.page, 2000).catch(() => undefined);
+        rec.notes.push(`"${query.name}" is in a menu that opens on the pointer: the item it hangs from was hovered first`);
+        return this.find(target, rec, purpose, true);
+      }
+    }
     const tried = result.tried;
     // A frame that could not be read is not a frame without the element: the run says so, and the case is set aside, not failed.
     const unreadNote = seen.unread.length
       ? `; a frame could not be read after the page changed (${seen.unread.map((p) => p.join(' > ')).join(', ')}), so it may be there`
       : '';
-    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true };
-    if (result.status === 'found')
+    let found: { element: DomElement; level: Level; weight: number; ignored: string[]; picked?: true; assumed?: string };
+    if (result.status === 'found' && !result.passAllowed) {
+      // Alike controls (E0.17 item 3). Owner, 6 Nov 2026: the one in the section the case is working in first; only then the first.
+      const near = this.lastElement ? await nearestTo(this.page, this.lastElement, result.alike) : undefined;
+      found = near
+        ? { element: near, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) }
+        : { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason), assumed: result.assumed };
+      rec.notes.push(
+        near
+          ? `${result.alike.length} controls called "${query.name}" are alike: the one in the part of the page the case is working in was used (nearest to the element of the step before)`
+          : result.assumed,
+      );
+    } else if (result.status === 'found')
       found = { element: result.element, level: result.level, weight: result.weight, ignored: result.ignored.map((i) => i.reason) };
     else {
       const code: BlockCode = result.status === 'not-found' ? 'LOCATE_NOT_FOUND' : result.status === 'ambiguous' ? 'LOCATE_AMBIGUOUS' : 'LOCATE_INACTIVE';
@@ -664,12 +726,33 @@ class Runner {
         result.status === 'not-found'
           ? `${result.reason}${row ? ` in the row "${row.row.cells.join(' | ')}"` : ''} (${tried.length} levels tried)${unreadNote}`
           : result.reason;
-      // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
-      const candidates = result.status === 'ambiguous' ? result.candidates : [];
-      const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
-      if (!picked) throw new Block(code, reason);
-      found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
-      rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+      // E0.17 item 5: nothing by any level, to act on it: what the element was in an earlier run on this screen, as an assumption.
+      const kept =
+        result.status === 'not-found' && purpose === 'act' && !row
+          ? screenFound(
+              this.o.knowledge?.screens?.find((s) => s.key === screen),
+              query.name,
+            )
+          : undefined;
+      const again = kept ? matchFingerprint(kept as unknown as Fingerprint, elements) : undefined;
+      if (again?.status === 'none') rec.notes.push(`an earlier fingerprint of "${query.name}" was compared: ${again.why}`);
+      if (again?.status === 'found') {
+        found = {
+          element: again.element,
+          level: 'inspection',
+          weight: again.score,
+          ignored: [],
+          assumed: `"${query.name}" was not found by any level; ${again.why}`,
+        };
+        rec.notes.push(found.assumed as string);
+      } else {
+        // A person stepping through the run is asked to point at it; without one, or without an answer, the step stops as always.
+        const candidates = result.status === 'ambiguous' ? result.candidates : [];
+        const picked = row ? undefined : await this.askPick(rec, query.name, code, reason, elements, candidates, screen);
+        if (!picked) throw new Block(code, reason);
+        found = { element: picked, level: 'inspection', weight: 0, ignored: [], picked: true };
+        rec.notes.push(`"${query.name}" was picked on the screenshot by a person (${code})`);
+      }
     }
     const selector = selectorIn(found.element.frame, found.element.xpath);
     const count = await this.page.locator(selector).count();
@@ -699,7 +782,21 @@ class Runner {
       ignored: found.ignored,
       ...(row ? { row: { page: row.label, cells: row.row.cells, pagesVisited: row.visited } } : {}),
       ...(found.picked ? { picked: true as const } : {}),
+      ...(found.assumed
+        ? {
+            assumed: {
+              why: found.assumed,
+              word: query.name,
+              means: found.element.ariaName || found.element.labels[0] || found.element.text || found.element.placeholder || found.element.nameAttr || '',
+              screen,
+              element: `${found.element.frame.join('>')}|${found.element.xpath}`,
+            },
+          }
+        : {}),
     };
+    // What the element is, for a later run that cannot find it by its name or id (E0.17 item 5). Only what a level found plainly.
+    if (!found.assumed && !found.picked) rec.located = { ...rec.located, screen, fingerprint: fingerprintOf(found.element, seen.elements) };
+    this.lastElement = { frame: [...found.element.frame], xpath: found.element.xpath };
     return { element: found.element, selector };
   }
 

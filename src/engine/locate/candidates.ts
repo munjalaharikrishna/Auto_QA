@@ -157,6 +157,30 @@ function matchesAt(level: Level, query: LocateQuery, names: ReadonlySet<string>,
   }
 }
 
+/**
+ * Whether candidates are alike in every way a person or the page can tell (E0.17 item 3): the same role, the same name, the same
+ * handler (what a click does), in the same form and frame, and none with a test id or a name of its own that sets it apart.
+ * Candidates that differ in any of these are different controls, and stay a question. Candidates inside named containers (two cards
+ * titled "Backpack") are not alike: each container is a record of its own, and which one is meant is a person's choice (UI-07).
+ */
+export function identical(candidates: readonly DomElement[]): boolean {
+  if (candidates.some((c) => c.containers?.length)) return false;
+  const key = (e: DomElement): string =>
+    [
+      e.role,
+      labelKey(accessibleName(e) || e.text),
+      e.handler ?? '',
+      e.containers?.[0] ?? '',
+      e.form ?? '',
+      e.frame.join('>'),
+      e.testId ?? '',
+      e.nameAttr ?? '',
+      e.type ?? '',
+    ].join('|');
+  const first = candidates[0];
+  return !!first && candidates.length > 1 && candidates.every((c) => key(c) === key(first));
+}
+
 const inContainer = (e: DomElement, within: string | undefined, named: Set<string> | undefined): boolean => {
   if (!within) return true;
   // The title of a container the element is inside names it: "on the Backpack card" is the card whose title is Backpack (UI-07).
@@ -175,6 +199,40 @@ export function locate(query: LocateQuery, page: readonly DomElement[], options:
   )?.names;
   const elements = page.filter((e) => inContainer(e, query.within, named));
   const tried: Tried[] = [];
+
+  // "Check the checkbox in the row for Anita": no name, only a kind, and the row is the place. The only one of its kind there is meant.
+  if (names.size === 0 && query.onlyOfKind && query.ontology && query.ontology !== 'Element') {
+    const kind = elements.filter((e) => roleFits(query.ontology, e));
+    const usableOnes = kind.filter((e) => usable(e, purpose));
+    const weight = WEIGHT.role;
+    if (usableOnes.length === 1) {
+      tried.push({ level: 'role', weight, matches: kind.length, active: 1, outcome: 'used' });
+      const one = usableOnes[0] as DomElement;
+      return {
+        status: 'found',
+        element: one,
+        level: 'role',
+        weight,
+        tried,
+        ignored: kind.filter((e) => e !== one).map((element) => ({ element, reason: hiddenWhy(element) ?? 'another match was used' })),
+        passAllowed: true,
+      };
+    }
+    if (usableOnes.length > 1) {
+      tried.push({ level: 'role', weight, matches: kind.length, active: usableOnes.length, outcome: 'ambiguous' });
+      return {
+        status: 'ambiguous',
+        candidates: usableOnes,
+        level: 'role',
+        reason: `${usableOnes.length} controls of the kind ${query.ontology} are in the row, and the step does not name one`,
+        tried,
+        ignored: [],
+        passAllowed: false,
+      };
+    }
+    tried.push({ level: 'role', weight, matches: kind.length, active: 0, outcome: kind.length ? 'inactive' : 'nothing' });
+    return { status: 'not-found', tried, reason: `there is no usable control of the kind ${query.ontology} in the row`, passAllowed: false };
+  }
 
   for (const level of LEVELS) {
     const matches = matchesAt(level, query, names, elements, options);
@@ -203,6 +261,28 @@ export function locate(query: LocateQuery, page: readonly DomElement[], options:
     let chosen = active;
     // A dialog that is open holds the user: when some matches are in it and some are not, the ones in it are meant (CX-06).
     if (chosen.length > 1 && chosen.some((e) => e.inDialog) && chosen.some((e) => !e.inDialog)) chosen = chosen.filter((e) => e.inDialog);
+
+    // E0.17 item 3: candidates alike in every way a person or the page can tell are one control shown more than once. The first on the
+    // page is used, as an assumption a person approves; it is never a PASS on its own.
+    if (chosen.length > 1 && purpose === 'act' && identical(chosen)) {
+      const alike = [...chosen].sort((a, b) => a.index - b.index);
+      const one = alike[0] as DomElement;
+      tried.push({ level, weight, matches: matches.length, active: active.length, outcome: 'used' });
+      return {
+        status: 'found',
+        element: one,
+        level,
+        weight,
+        tried,
+        ignored: [
+          ...alike.slice(1).map((element) => ({ element, reason: 'alike in role, name, handler and container: the first on the page was used' })),
+          ...ignored(alike),
+        ],
+        passAllowed: false,
+        assumed: `${alike.length} ${one.role}s called "${accessibleName(one) || one.text}" are alike in role, name, handler and container: the first on the page was used`,
+        alike,
+      };
+    }
 
     if (chosen.length > 1) {
       tried.push({ level, weight, matches: matches.length, active: active.length, outcome: 'ambiguous' });

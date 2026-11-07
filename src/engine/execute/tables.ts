@@ -1,6 +1,9 @@
 import type { Page } from 'playwright';
 import { prepareFrame, visibleFrames } from '../locate/frames.js';
-import { compactKey } from '../text/compound.js';
+
+export { cellHolds, cellsHold, rowHolds } from './row-match.js';
+
+import { rowHolds } from './row-match.js';
 import { waitSettled } from './waits.js';
 
 /**
@@ -175,33 +178,6 @@ export const tablesOf = async (page: Page): Promise<TableModel[]> => {
   }
   return out;
 };
-
-const wordsOf = (text: string): string[] => {
-  const words: string[] = [];
-  let current = '';
-  for (const ch of text.toLowerCase()) {
-    if (ch.toLowerCase() !== ch.toUpperCase() || (ch >= '0' && ch <= '9')) current += ch;
-    else if (current) {
-      words.push(current);
-      current = '';
-    }
-  }
-  if (current) words.push(current);
-  return words;
-};
-
-/**
- * Whether a cell holds a value: the same words, or the value's words are all among the cell's ("John" is in "John
- * Smith"). A value that is a part of a word is not in it ("5" is not in "15").
- */
-export function cellHolds(cell: string, value: string): boolean {
-  if (compactKey(cell) === compactKey(value)) return true;
-  const want = wordsOf(value);
-  const have = wordsOf(cell);
-  return want.length > 0 && want.every((w) => have.includes(w));
-}
-
-export const rowHolds = (row: Pick<TableRow, 'cells'>, values: readonly string[]): boolean => values.every((v) => row.cells.some((c) => cellHolds(c, v)));
 
 export type RowSearch =
   | { status: 'found'; row: TableRow; table: TableModel; pageLabel: string; pagesVisited: number }

@@ -14,7 +14,27 @@ import { errorMessagesInPage } from '../utils/observe';
  *   explored), so they never block the test and a check can say what they said.
  * - Evidence: `step()` takes a screenshot when each step ends, passed or failed.
  */
-export const test = base.extend<{ autoQa: void }>({
+export const test = base.extend<{ autoQa: void }, { account: { worker: number; username?: string } }>({
+  /**
+   * The account of this worker (E0.16, audit P5). With TEST_USERNAME_n / TEST_PASSWORD_n given, worker n logs in as account n, so
+   * two workers never share a session. Each worker is a process of its own: what is set here is seen only by its tests.
+   */
+  account: [
+    async ({}, use, workerInfo) => {
+      const n = workerInfo.parallelIndex + 1;
+      const username = process.env[`TEST_USERNAME_${n}`];
+      const password = process.env[`TEST_PASSWORD_${n}`];
+      if (username && password) {
+        process.env.TEST_USERNAME = username;
+        process.env.TEST_PASSWORD = password;
+      } else if (workerInfo.parallelIndex > 0) {
+        throw new Error(`Worker ${n} has no account of its own: set TEST_USERNAME_${n} and TEST_PASSWORD_${n}, or run with one worker.`);
+      }
+      await use({ worker: n, ...(process.env.TEST_USERNAME ? { username: process.env.TEST_USERNAME } : {}) });
+    },
+    { scope: 'worker', auto: true },
+  ],
+
   autoQa: [
     async ({ page }, use, testInfo) => {
       const problems: string[] = [];

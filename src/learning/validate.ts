@@ -79,7 +79,9 @@ export function labelProblem(p: LabelPayload): string | undefined {
   if (p.screen && p.element !== undefined && !p.element.trim()) return 'The element that was picked is empty.';
   if (label === means && !(p.screen && p.element)) return 'The label says the same thing as the name it is for.';
   if (p.means.length > 80 || means.split(' ').length > MAX_MEANS_WORDS) return `"${p.means}" is too long to be the name of one element.`;
-  if (ACTION_WORDS.has(label) && ACTION_WORDS.has(means)) return `"${p.label}" is an action; it cannot be the name of a different action, "${p.means}".`;
+  // "Edit" meaning the Edit button picked on one screen (E0.17 item 3) names the same action, not a different one.
+  if (label !== means && ACTION_WORDS.has(label) && ACTION_WORDS.has(means))
+    return `"${p.label}" is an action; it cannot be the name of a different action, "${p.means}".`;
   return undefined;
 }
 

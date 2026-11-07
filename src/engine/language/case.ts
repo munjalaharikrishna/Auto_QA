@@ -1,5 +1,6 @@
-import { type RawTestCase, stepsWithChecks } from '../../model/test-model.js';
+import { type RawTestCase, stepDataOfLines, stepsWithChecks } from '../../model/test-model.js';
 import { resolveReferences } from '../context/references.js';
+import { type CaseSetup, loginPoint } from '../context/setup.js';
 import { validateStates } from '../context/states.js';
 import { type FieldFormat, formatKeyOf } from '../data/formats.js';
 import { Secret } from '../data/secret.js';
@@ -60,6 +61,8 @@ export interface CaseLanguage {
 
 export interface CaseOptions {
   source?: { file?: string; sheet?: string };
+  /** The case's part of its suite's setup block (E0.16): which leading lines are setup, and the login they may need. */
+  setup?: CaseSetup;
 }
 
 /**
@@ -94,6 +97,14 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const units: Unit[] = [];
   const models: CaseLanguage['models'] = {};
   const dataEntries: DataEntry[] = parseTestData(raw.testData);
+  /**
+   * The Test Data the line being read sees (E0.16, P2): its own row's data first, then the case's. Two rows can give the same key
+   * different values ("Username: admin" on one step, "Username: wrong" on another): each step gets its own.
+   */
+  const dataOfLines = stepDataOfLines(given);
+  let lineData: DataEntry[] = dataEntries;
+  /** The entry each data key was made from: its secret is the one a run types for that key. */
+  const entryOfKey = new Map<string, DataEntry>();
   const data: Record<string, IrData> = {};
   const facts = new Map<string, string>();
   for (const d of dataEntries) if (d.blank) facts.set(compactKey(d.key), 'BLANK');
@@ -120,7 +131,8 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
       });
       return '$ref.previous';
     }
-    const cacheKey = JSON.stringify([spec, target?.name]);
+    const ownEntry = spec.kind === 'data' ? (lineData.find((d) => d.key === spec.key) ?? dataEntries.find((d) => d.key === spec.key)) : undefined;
+    const cacheKey = JSON.stringify([spec, target?.name, ownEntry?.value]);
     const cached = keyOfValue.get(cacheKey);
     if (cached) return cached;
     let key: string;
@@ -135,8 +147,15 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
         break;
       }
       case 'data': {
-        const entry = dataEntries.find((d) => d.key === spec.key) as DataEntry;
+        const entry = ownEntry as DataEntry;
         key = dataKeyOf(entry.key);
+        // The same key with another value in another row: this row's value gets a key of its own.
+        const before = entryOfKey.get(key);
+        if (before && (before.value !== entry.value || before.blank !== entry.blank)) {
+          key = UNIQUE_KEY(data, key);
+          decisions.push({ kind: 'decision', message: `${key}: the Test Data of this step's own row gives "${entry.key}" another value`, data: { where } });
+        }
+        entryOfKey.set(key, entry);
         data[key] = entry.blank
           ? { class: 'BLANK', source: 'EXCEL', value: '', ...(spec.intent ? { intent: spec.intent } : {}) }
           : entry.secret
@@ -186,13 +205,40 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   const stepLines = nonBlankLines(raw.steps).map((l) => splitStepLine(l));
   const numbered = stepLines.every((l) => l.number !== undefined) && new Set(stepLines.map((l) => l.number)).size === stepLines.length;
 
-  const take = (result: LineResult, where: string, lineNo: string, kind: Unit['kind'], original: string): void => {
+  const caseSetup = options.setup;
+  /** The checks made on setup lines (E0.16), and those the line before the current one made. */
+  const setupChecks = new Set<string>();
+  let checksOfLineBefore: string[] = [];
+
+  const take = (result: LineResult, where: string, lineNo: string, kind: Unit['kind'], original: string, setupLine = false): void => {
     const first = issues.length;
     const stepsBefore = steps.length;
     const expectationsBefore = expectations.length;
     for (const f of result.formats) formats[formatKeyOf(f.field)] = f.format;
     for (const note of result.notes) decisions.push({ kind: 'info', message: `note kept, not verified: ${note}`, data: { where } });
     for (const i of result.issues) issues.push({ ...i, where });
+    if (setupLine && caseSetup) {
+      for (const i of issues.slice(first)) {
+        // A question about a setup line is the suite's: it stands in every case that starts with the block (U4).
+        if (caseSetup.member) i.block = caseSetup.suite;
+        // "Verify User should add button…" right after "there should be add button": a setup line that cannot be read and only
+        // restates the line before it, which is checked. It is set aside, said so, and the check before it still runs.
+        if (
+          caseSetup.member &&
+          i.code === 'NOT_UNDERSTOOD' &&
+          i.severity === 'review' &&
+          !result.steps.length &&
+          !result.expectations.length &&
+          checksOfLineBefore.length
+        ) {
+          i.code = 'NOT_CHECKED';
+          i.severity = 'info';
+          i.setup = 'check';
+          i.message = `a setup line of "${caseSetup.suite}" that cannot be read, set aside: the line before it already checks ${checksOfLineBefore.map((c) => `"${c}"`).join(', ')}`;
+          i.suggestion = 'Nothing to do: the setup is checked by the line before. To check something more, say what should be true.';
+        }
+      }
+    }
 
     const stepOf = new Map<number, string>();
     const expectOf = new Map<number, string>();
@@ -264,6 +310,8 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
       if (i.code !== 'NEEDS_REFERENCE' || i.item) continue;
       i.item = made.expectations.find((e) => e.clause === i.original)?.id ?? made.steps.find((s) => s.original === i.original)?.id;
     }
+    if (setupLine) for (const e of made.expectations) setupChecks.add(e.id);
+    checksOfLineBefore = made.expectations.map((e) => e.clause);
     for (const m of result.models) models[m] = (models[m] ?? 0) + 1;
     const produced = result.steps.length + result.expectations.length;
     const blocking = issues.slice(first).some((i) => i.severity === 'blocking');
@@ -276,12 +324,15 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     units.push({ kind: actual, original, where, produced, categories, understood, models: [...new Set(result.models)] });
   };
 
-  const context = (mode: 'step' | 'expected'): LineContext => ({ data: dataEntries, facts, mode });
+  const context = (mode: 'step' | 'expected'): LineContext => ({ data: lineData, facts, mode });
 
   stepLines.forEach((line, k) => {
     const lineNo = String(numbered ? line.number : k + 1);
-    take(understandLine(line.text, context('step')), `step ${lineNo}`, lineNo, 'step', line.text);
+    const own = dataOfLines[k];
+    lineData = own ? [...parseTestData(own), ...dataEntries] : dataEntries;
+    take(understandLine(line.text, context('step')), `step ${lineNo}`, lineNo, 'step', line.text, !!caseSetup && k < caseSetup.lines);
   });
+  lineData = dataEntries;
   // The expected result is checked after the last step. A line break inside a sentence does not end it.
   sentencesOf(raw.expected).forEach((line, k) => {
     const lineNo = String(stepLines.length + 1 + k);
@@ -341,6 +392,42 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
     });
   }
 
+  // ---- the login the setup needs (E0.16, E7), after the name conflicts: the project's login button is not one of the tester's names: the tabs are checked after the login page, and no line logs in ----
+  const point = caseSetup?.login ? loginPoint(steps, expectations, (e) => setupChecks.has(e.id)) : undefined;
+  if (caseSetup?.login && point) {
+    const login = caseSetup.login;
+    const base = point.after.id.split('.')[0] as string;
+    let sub = Math.max(1, ...steps.filter((s) => s.id.split('.')[0] === base).map((s) => Number(s.id.split('.')[1] ?? 1)));
+    const why = `the setup of "${caseSetup.suite}" checks "${point.first.clause}" after the login page, and no line logs in`;
+    const where = `step ${base.slice(1)}`;
+    const field = (t: { name?: string; label?: string }): string => t.name ?? t.label ?? 'login';
+    const made: IrStep[] = [
+      {
+        id: `${base}.${++sub}`,
+        action: 'ENTER_VALUE',
+        target: login.username,
+        value: valueText({ kind: 'env', name: 'TEST_USERNAME', secret: false }, login.username, where, why) as string,
+        original: `Enter the project's username in the "${field(login.username)}" field (setup login)`,
+      },
+      {
+        id: `${base}.${++sub}`,
+        action: 'ENTER_VALUE',
+        target: login.password,
+        value: valueText({ kind: 'env', name: 'TEST_PASSWORD', secret: true }, login.password, where, why) as string,
+        original: `Enter the project's password in the "${field(login.password)}" field (setup login)`,
+      },
+      { id: `${base}.${++sub}`, action: 'CLICK', target: login.submit, original: `Click the "${field(login.submit)}" button (setup login)` },
+    ];
+    steps.splice(steps.indexOf(point.after) + 1, 0, ...made);
+    const last = (made.at(-1) as IrStep).id;
+    for (const e of expectations.slice(expectations.indexOf(point.first))) if (e.afterStep === point.after.id) e.afterStep = last;
+    decisions.push({
+      kind: 'decision',
+      message: `${made.map((s) => s.id).join(', ')}: logs in with the project's login${login.from ? ` (the fields and button of ${login.from})` : ''}, because ${why}`,
+      data: { step: point.after.id },
+    });
+  }
+
   // ---- context (E0.5): what "it", "the same field" and "the added data" stand for, and the states the test case goes through ----
   const loggedIn = preconditions.some((p) => p.type === 'LOGGED_IN');
   const refs = resolveReferences({ testId, steps, expectations, issues, loggedIn, checkSteps });
@@ -387,7 +474,12 @@ export function understandCase(given: RawTestCase, options: CaseOptions = {}): C
   }
 
   const excel = dataEntries.map((e) => (e.secret ? { ...e, value: '' } : e));
-  const excelSecrets = Object.fromEntries(dataEntries.filter((e) => e.secret && !e.blank).map((e) => [dataKeyOf(e.key), new Secret(e.value)]));
+  // A repeated key keeps its first value; a key made for a row's own value (`password_2`) keeps that row's (E0.16).
+  const excelSecrets = Object.fromEntries(
+    [...[...dataEntries].reverse().map((e) => [dataKeyOf(e.key), e] as const), ...entryOfKey.entries()]
+      .filter(([, e]) => e.secret && !e.blank)
+      .map(([k, e]) => [k, new Secret(e.value)]),
+  );
   if (!secretLiterals.size) return { testId, ir, irProblems, issues, units, decisions, models, excel, excelSecrets, formats };
   // The tester's own words keep their quotes around a value; the value is taken out of them.
   const scrub = (text: string): string => {

@@ -3,6 +3,7 @@ import { type RawTestCase, RawTestCaseSchema } from '../../model/test-model.js';
 import type { ParserConfig } from '../../parser/index.js';
 import { cacheEnabled, cacheKeyOf, copyOf, memo, readingVersions } from '../cache/index.js';
 import { buildContexts } from '../context/context.js';
+import type { CaseSetup } from '../context/setup.js';
 import { type ResolvedValue, resolveData as resolveDataValues } from '../data/resolver.js';
 import type { CredentialStore } from '../data/store.js';
 import type { IrSource } from '../ir/from-model.js';
@@ -50,6 +51,8 @@ export interface CompileOptions {
   otpAtRun?: boolean;
   /** Reuse what was worked out from the same text before (GV-11). Default: on, unless `AUTO_QA_CACHE=off`. The result is the same either way. */
   cache?: boolean;
+  /** The case's part of its suite's setup block (E0.16), from `findSetupBlock` and `setupOf`. */
+  setup?: CaseSetup;
 }
 
 /**
@@ -57,12 +60,13 @@ export interface CompileOptions {
  * per process (GV-11). What the data of the test needs from the environment is not part of it and is resolved on every compile.
  */
 function understood(raw: RawTestCase, options: CompileOptions): CaseLanguage {
-  if (!cacheEnabled(options.cache)) return understandCase(raw, { source: options.source });
+  const how = { source: options.source, ...(options.setup ? { setup: options.setup } : {}) };
+  if (!cacheEnabled(options.cache)) return understandCase(raw, how);
   const cache = memo<CaseLanguage>('understand', 2000);
-  const key = cacheKeyOf({ raw, source: options.source ?? null, reads: readingVersions() });
+  const key = cacheKeyOf({ raw, source: options.source ?? null, ...(options.setup ? { setup: options.setup } : {}), reads: readingVersions() });
   const hit = cache.get(key);
   if (hit) return copyOf(hit);
-  const language = understandCase(raw, { source: options.source });
+  const language = understandCase(raw, how);
   cache.set(key, copyOf(language));
   return language;
 }

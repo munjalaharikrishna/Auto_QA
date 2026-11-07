@@ -12,6 +12,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
+import { suiteSetups } from '../engine/context/setup.js';
 import { compileCase } from '../engine/index.js';
 import { readWorkbook } from '../importer/workbook.js';
 import { buildReport, compileItems, type ReviewItem, reportText, runItems } from '../pipeline/review-report.js';
@@ -35,10 +36,16 @@ if (resultFiles.length === 0) {
   for (const file of targets) {
     const imported = await readWorkbook(file);
     const label = path.basename(file);
+    // The setup block of the sheet (E0.16): its questions are asked once for the sheet.
+    const setups = suiteSetups(
+      label,
+      imported.cases.map((c) => c.raw),
+    );
     for (const c of imported.cases) {
       const id = c.raw.id ?? '';
       cases.push({ workbook: label, caseId: id });
-      items.push(...compileItems(label, id, await compileCase(c.raw, { source: { file: label, sheet: imported.sheet } })));
+      const setup = setups.get(id);
+      items.push(...compileItems(label, id, await compileCase(c.raw, { source: { file: label, sheet: imported.sheet }, ...(setup ? { setup } : {}) })));
     }
   }
   console.log('Compile time: what is left after the text is read (no browser).\n');

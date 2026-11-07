@@ -48,7 +48,7 @@ export const EMPLOYEES = [
 export const UI_PAGES: Record<string, string> = {
   '/ui': layout(
     'UI pages',
-    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
+    `<h1>UI pages</h1><ul>${['controls', 'forms', 'dialogs', 'tabs', 'table', 'waits', 'keys', 'cards', 'cards-twins', 'alike', 'rows', 'renamed', 'menu'].map((p) => `<li><a href="/ui/${p}">${p}</a></li>`).join('')}</ul>`,
   ),
 
   '/ui/controls': layout(
@@ -260,6 +260,68 @@ for (const card of document.querySelectorAll('article')) {
   });
 }
 </script>`,
+  ),
+
+  // E0.17, left from E0.14: a hover menu as OrangeHRM 2.5 builds it, its entries parked off the page until the pointer is on the item.
+  '/ui/menu': layout(
+    'Menu',
+    `<style>#nav li ul{position:absolute;left:-9999px} #nav li.open ul{left:auto}</style>
+<ul id="nav"><li id="people" onmouseover="this.classList.add('open')" onmouseout="this.classList.remove('open')"><a href="#">People</a>
+  <ul><li><a href="#" onclick="go('Add person'); return false;">Add person</a></li><li><a href="#" onclick="go('Person list'); return false;">Person list</a></li></ul></li></ul>
+<p><button type="button" style="display:none" onclick="go('Secret')">Secret</button></p>
+<p id="where" role="status"></p>
+<script>function go(t) { document.getElementById('where').textContent = 'Opened ' + t; }</script>`,
+  ),
+
+  // E0.17 item 5: a release renames a button (?v=2): its id and what it does stay, its words change. ?v=3 also gives it a new id.
+  '/ui/renamed': layout(
+    'Renamed',
+    `<h1>Profile</h1>
+<p><button type="button" id="profile-primary" onclick="done('Profile stored')">Save profile</button>
+<button type="button" id="profile-secondary" onclick="done('Cancelled')">Cancel</button></p>
+<p id="out" role="status"></p>
+<script>
+function done(text) { document.getElementById('out').textContent = text; }
+const v = new URLSearchParams(location.search).get('v');
+const b = document.getElementById('profile-primary');
+if (v === '2' || v === '3') b.textContent = 'Store profile';
+if (v === '3') { b.id = 'profile-main'; b.setAttribute('onclick', "done('Profile kept')"); }
+</script>`,
+  ),
+
+  // E0.17 item 4: rows with a name kept in three columns and an unnamed checkbox each; one row has two checkboxes.
+  '/ui/rows': layout(
+    'Rows',
+    `<h1>People</h1>
+<p id="picked" role="status"></p>
+<table id="people" aria-label="People">
+  <thead><tr><th></th><th>First</th><th>Middle</th><th>Last</th><th>Actions</th></tr></thead>
+  <tbody>
+    <tr><td><input type="checkbox" name="pick[]" value="1"></td><td>Anita</td><td>Kumari</td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="2"></td><td>Anita</td><td></td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="3"></td><td>Kumari</td><td>Anita</td><td>Rao</td><td><button type="button" class="delete">Delete</button></td></tr>
+    <tr><td><input type="checkbox" name="pick[]" value="4"><input type="checkbox" name="star[]" value="4"></td><td>Ravi</td><td></td><td>Shah</td><td><button type="button" class="delete">Delete</button></td></tr>
+  </tbody>
+</table>
+<script>
+for (const box of document.querySelectorAll('#people input[type=checkbox]')) box.addEventListener('change', () => {
+  picked.textContent = 'Picked: ' + [...document.querySelectorAll('#people input[name="pick[]"]:checked')].map((b) => b.value).join(', ');
+});
+for (const del of document.querySelectorAll('#people .delete')) del.onclick = () => { picked.textContent = 'Deleted row ' + del.closest('tr').querySelector('input').value; };
+</script>`,
+  ),
+
+  // E0.17 item 3: one toolbar shown above and below a long form, so the same Save button is on the page twice and does the same.
+  '/ui/alike': layout(
+    'Alike',
+    `<h1>Profile</h1>
+<form id="profile" onsubmit="return false">
+<p><input type="button" value="Save" onclick="saveProfile()"></p>
+<label for="nick">Nick name</label><input id="nick">
+<p><input type="button" value="Save" onclick="saveProfile()"></p>
+</form>
+<p id="saved" role="status"></p>
+<script>function saveProfile() { document.getElementById('saved').textContent = 'Profile saved'; }</script>`,
   ),
 
   '/ui/keys': layout(

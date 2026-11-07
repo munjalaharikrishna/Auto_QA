@@ -276,6 +276,8 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         severity: 'review',
         message: 'it says "preferred" but not which one: the engine does not choose for the tester',
         original,
+        // "Select preferred Employee": the kind of record is what is selected (E0.16 ledger).
+        ...(steps[0]?.target?.name ? { record: steps[0].target.name.toLowerCase() } : {}),
         suggestion: 'Write the value: Select "<value>" in the <name> dropdown, or give it in Test Data.',
       });
     }
@@ -293,6 +295,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
           severity: 'review',
           message: `"${s.target?.name}" names no ${recordOf}: which ${recordOf} to open is not said, and the engine does not choose one`,
           original,
+          record: recordOf,
           suggestion: `Name the ${recordOf}: Click on "<the name>" in the list, or give it in Test Data.`,
         });
       }
@@ -449,7 +452,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         const bound = bindValue(line, filled.value ?? [], ctx.data, np.targets[0]?.name);
         decisions.push(...bound.decisions);
         return done(
-          np.targets.map((t) => step('ENTER_VALUE', t, bound.spec)),
+          inContainerOf(np).map((t) => step('ENTER_VALUE', t, bound.spec)),
           'GR-02',
         );
       }
@@ -478,7 +481,7 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
         const bound = bindValue(line, valueTokens, ctx.data, target.name);
         decisions.push(...bound.decisions);
         return done(
-          place.targets.map((t) => step('ENTER_VALUE', t, bound.spec)),
+          inContainerOf(place).map((t) => step('ENTER_VALUE', t, bound.spec)),
           'GR-02',
         );
       }
@@ -620,15 +623,19 @@ function readAction(line: Line, clause: Clause, ctx: LineContext): ReadAction {
       if (np.headClass === undefined && action !== 'CLICK') decisions.push(`no kind of element named: read as a ${np.targets[0]?.ontology}`);
       // "Edit for John Smith": the row of a table that holds those values, not a container of the page (UI-06).
       const inRow = ofRow.row ? [ofRow.row] : np.placeWord === 'for' && np.within ? [np.within] : undefined;
-      // "Click Add to cart on the 'Backpack' card": the step is about that card and no other (UI-07). A place that is not a repeated
-      // widget ("on the Login page") is read as it always was.
-      const inCard =
-        !inRow && np.within && np.placeWord && ['on', 'in', 'within', 'inside', 'at'].includes(np.placeWord) && containerRef(np.within)?.repeated
-          ? np.within
-          : undefined;
+      // "Click Add to cart on the 'Backpack' card": the step is about that card and no other (UI-07). "Click Edit in the Job section"
+      // is about that section (E0.17 item 1): the run looks inside it, or on the whole page when the page has no part with that title.
+      // A place that is not a container ("on the Login page") is read as it always was.
+      const inCard = inRow ? undefined : containerOfNp(np);
       if (inCard) decisions.push(`the step is about the "${containerRef(inCard)?.text}" ${containerRef(inCard)?.noun}, and nothing else on the page (UI-07)`);
+      // "Tick the box in the Anita row": a box that is ticked is a checkbox, not a text box (E0.17 item 4).
+      const ticked = (action === 'CHECK' || action === 'UNCHECK') && tickedBox(np);
+      if (ticked) decisions.push('a box that is ticked is a checkbox');
       return done(
-        np.targets.map((t) => step(action, inRow ? { ...t, row: inRow } : inCard ? { ...t, within: inCard } : t)),
+        np.targets.map((t) => {
+          const kind = ticked && t.ontology === 'Field' ? { ...t, ontology: 'Checkbox' } : t;
+          return step(action, inRow ? { ...kind, row: inRow } : inCard ? { ...kind, within: inCard } : kind);
+        }),
         'GR-01',
       );
     }
@@ -1023,6 +1030,30 @@ function takeRow(rest: readonly Token[]): { rest: Token[]; row?: string } {
       };
   }
   return { rest: rest as Token[] };
+}
+
+/** Words before "box" that make it a box to type in: "text box", "search box". */
+const TYPED_BOXES: ReadonlySet<string> = new Set(['text', 'input', 'edit', 'search', 'entry', 'combo', 'list']);
+
+/** "the box", "the Remember me box": a box ticked or unticked, not a "text box" (E0.17 item 4). */
+function tickedBox(np: NounPhrase): boolean {
+  const words = np.words;
+  if (words[words.length - 1] !== 'box') return false;
+  return !TYPED_BOXES.has(words[words.length - 2] ?? '');
+}
+
+/** The words before a place that put a target inside a container: "in the Job section", "under Dependents section". */
+const CONTAINER_PLACES: ReadonlySet<string> = new Set(['on', 'in', 'within', 'inside', 'at', 'under']);
+
+/** The container a noun phrase puts its target in (UI-07, E0.17 item 1), or undefined when its place is not a container. */
+function containerOfNp(np: NounPhrase): string | undefined {
+  return np.within && np.placeWord && CONTAINER_PLACES.has(np.placeWord) && containerRef(np.within) ? np.within : undefined;
+}
+
+/** The targets of a phrase, each placed in the container the phrase names. */
+function inContainerOf(np: NounPhrase): IrTarget[] {
+  const within = containerOfNp(np);
+  return within ? np.targets.map((t) => (t.within ? t : { ...t, within })) : np.targets;
 }
 
 const SCOPE_PREPS: ReadonlySet<string> = new Set(['in', 'on', 'under', 'within', 'inside']);

@@ -34,12 +34,22 @@ export interface ReviewItem extends Classified {
   original: string;
   /** What the engine said. */
   message: string;
+  /** The setup block the reason is about (E0.16): one question for the suite, counted once however many cases start with it. */
+  block?: string;
+  /**
+   * What the data ledger suggests as the answer to a "which record" question (E0.16). One answer covers every case with the same
+   * sentence, so such a question is counted once per sentence.
+   */
+  suggested?: string;
 }
 
 /** A compile-time reason, and who can fix it. */
-export function classifyIssue(issue: Pick<Issue, 'code' | 'message' | 'suggestion'>): Classified {
+export function classifyIssue(issue: Pick<Issue, 'code' | 'message' | 'suggestion' | 'record'>): Classified {
   const cause = reasonOf(issue);
   const clearer = issue.suggestion ? `Reword it: ${issue.suggestion}` : undefined;
+  // "Which employee": a person's decision (owner, 4 Nov 2026), also when it came as a reference the engine could not settle (E0.16).
+  if (issue.record && issue.code === 'NEEDS_REFERENCE')
+    return { cause, owner: 'tester', fix: clearer ?? 'Say which record is meant, or confirm the one the data ledger suggests.' };
   switch (issue.code) {
     case 'NOT_UNDERSTOOD':
     case 'UNSUPPORTED':
@@ -83,7 +93,15 @@ export function compileItems(workbook: string, caseId: string, compile: CompileR
     ];
   }
   const issues = compile.issues.filter((i) => i.severity !== 'info');
-  if (issues.length > 0) return issues.map((i) => ({ ...at, ...classifyIssue(i), original: i.original, message: `${i.where}: ${i.message}` }));
+  if (issues.length > 0)
+    return issues.map((i) => ({
+      ...at,
+      ...classifyIssue(i),
+      original: i.original,
+      message: `${i.where}: ${i.message}${i.suggested ? ` (suggested: ${i.suggested.answer})` : ''}`,
+      ...(i.block ? { block: i.block } : {}),
+      ...(i.suggested ? { suggested: i.suggested.answer } : {}),
+    }));
   const support = semanticSupport(compile);
   if (support.ok) return [];
   const type = /is a ([A-Z_]+) check/.exec(support.why)?.[1];
@@ -225,10 +243,18 @@ export function buildReport(items: readonly ReviewItem[], cases: ReadonlyArray<{
       cmp(keyOf(a.workbook, a.caseId), keyOf(b.workbook, b.caseId)) || cmp(a.cause, b.cause) || cmp(a.original, b.original) || cmp(a.message, b.message),
   );
   const groups = new Map<string, ReviewGroup>();
+  /** A question about a setup line is asked once for its suite (E0.16): the cases that start with the block share the answer. */
+  const asked = new Set<string>();
   for (const i of sorted) {
     const k = `${i.owner}|${i.cause}`;
     const g = groups.get(k) ?? { cause: i.cause, owner: i.owner, fix: i.fix, count: 0, cases: [], examples: [] };
-    g.count++;
+    const once = i.block
+      ? `${i.workbook}|${i.block}|${i.cause}|${i.original}`
+      : i.suggested !== undefined
+        ? `${i.workbook}|record|${i.cause}|${i.original}`
+        : undefined;
+    if (!once || !asked.has(once)) g.count++;
+    if (once) asked.add(once);
     const c = keyOf(i.workbook, i.caseId);
     if (!g.cases.includes(c)) g.cases.push(c);
     if (g.examples.length < 3) g.examples.push({ case: c, original: i.original, message: i.message });
@@ -245,7 +271,7 @@ export function buildReport(items: readonly ReviewItem[], cases: ReadonlyArray<{
     });
   const count = (s: CaseState): number => perCase.filter((c) => c.state === s).length;
   return {
-    items: items.length,
+    items: [...groups.values()].reduce((n, g) => n + g.count, 0),
     cases: { total: perCase.length, ready: count('ready'), engineOnly: count('engineOnly'), needsTester: count('needsTester'), needsData: count('needsData') },
     perCase,
     groups: [...groups.values()].sort((a, b) => b.count - a.count || cmp(a.cause, b.cause) || cmp(a.owner, b.owner)),

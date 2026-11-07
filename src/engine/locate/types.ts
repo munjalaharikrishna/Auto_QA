@@ -30,6 +30,10 @@ export interface DomElement {
   /** The `name` attribute. */
   nameAttr?: string;
   id?: string;
+  /** What a click on it does, as the page wrote it: its `onclick`, or the `href` of a link. Two elements alike in every way do the same (E0.17). */
+  handler?: string;
+  /** The text of the cells of the table row it is in, when it is in one (E0.17 item 4). */
+  rowCells?: string[];
   /** Visible text: all of it for a button or a link, its own text for anything else. */
   text: string;
   visible: boolean;
@@ -118,6 +122,11 @@ export interface LocateQuery {
   within?: string;
   /** `act`: the element is to be clicked or typed into. `inspect`: a check looks at it, so a disabled one is the right one. */
   purpose?: 'act' | 'inspect';
+  /**
+   * The elements are those of one table row, and the step names no control, only its kind ("the checkbox in the row for Anita"): the
+   * only control of that kind in the row is meant (E0.17 item 4). Several of that kind are a question; none is not found.
+   */
+  onlyOfKind?: boolean;
 }
 
 export interface Tried {
@@ -137,6 +146,22 @@ export interface Ignored {
 
 export type LocateResult =
   | { status: 'found'; element: DomElement; level: Level; weight: number; tried: Tried[]; ignored: Ignored[]; passAllowed: true }
+  /**
+   * E0.17 item 3: several candidates alike in role, name, handler and container. The first on the page was used, which is an
+   * assumption: the case cannot PASS until a person approves the choice (owner, 6 Nov 2026: narrow to the section first).
+   */
+  | {
+      status: 'found';
+      element: DomElement;
+      level: Level;
+      weight: number;
+      tried: Tried[];
+      ignored: Ignored[];
+      passAllowed: false;
+      assumed: string;
+      /** All the alike candidates, the one used first. */
+      alike: DomElement[];
+    }
   | { status: 'ambiguous'; candidates: DomElement[]; level: Level; reason: string; tried: Tried[]; ignored: Ignored[]; passAllowed: false }
   | { status: 'inactive'; candidates: Ignored[]; level: Level; reason: string; tried: Tried[]; passAllowed: false }
   | { status: 'not-found'; tried: Tried[]; reason: string; passAllowed: false };

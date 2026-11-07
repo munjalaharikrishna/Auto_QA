@@ -6,8 +6,25 @@ import { defineConfig, devices } from '@playwright/test';
 const envFile = path.join(__dirname, '.env');
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
+// Workers (E0.16, audit P5): one by default. Many applications allow one session per user (OrangeHRM does), so tests run side by
+// side only with an account each: TEST_USERNAME_1 / TEST_PASSWORD_1, TEST_USERNAME_2 / TEST_PASSWORD_2, … Ask for more with
+// AUTO_QA_WORKERS; there are never more workers than accounts. Each worker logs in with its own (fixtures/test.fixture.ts).
+const accounts = (() => {
+  let n = 0;
+  while (process.env[`TEST_USERNAME_${n + 1}`] && process.env[`TEST_PASSWORD_${n + 1}`]) n++;
+  return n;
+})();
+const asked = Math.max(1, Number.parseInt(process.env.AUTO_QA_WORKERS ?? '1', 10) || 1);
+const workers = Math.min(asked, Math.max(1, accounts));
+if (asked > workers)
+  console.warn(
+    `Auto QA: ${asked} workers asked, ${accounts} account(s) given (TEST_USERNAME_n): running with ${workers}.`,
+  );
+
 export default defineConfig({
   testDir: './tests',
+  workers,
+  fullyParallel: false,
   outputDir: './reports/test-results',
   reporter: [
     ['list'],
@@ -17,6 +34,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL ?? 'http://127.0.0.1:4173',
+    // Every test starts in a new browser context with no saved login: a wrong-login test is never already signed in.
     testIdAttribute: 'data-testid',
     // Evidence for every run (FR-EV-01): a screenshot after each step, a video and a trace.
     screenshot: 'on',
