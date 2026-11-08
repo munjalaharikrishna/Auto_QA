@@ -52,7 +52,7 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
 
   it('creates a project with its run settings, without showing the password again', async () => {
     await page.goto(`${url}/projects`);
-    await page.getByRole('button', { name: 'New project' }).click();
+    await page.getByRole('button', { name: 'New project', exact: true }).click();
     await page.getByLabel('Project name').fill('Demo app');
     await page.getByLabel('Application URL').fill(demo.url);
     await page.getByLabel('Username').fill(DEMO_USER.username);
@@ -62,7 +62,8 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.getByLabel('TEST_WRONG_PASSWORD value').fill('nope');
     await page.getByRole('button', { name: 'Create project' }).click();
     await page.getByRole('heading', { name: 'Demo app' }).waitFor();
-    await page.getByRole('tab', { name: 'Settings' }).click();
+    // U1: the project's sections are in its sidebar.
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
     const password = page.getByLabel('Password', { exact: true });
     assert.equal(await password.inputValue(), '');
     assert.equal(await password.getAttribute('placeholder'), 'Saved — leave blank to keep it');
@@ -72,7 +73,10 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
   it('uploads a workbook, maps its columns, runs it and shows the results', async () => {
     const file = path.join(dir, 'suite.xlsx');
     await buildDemoWorkbook(file, 12);
-    await page.getByRole('tab', { name: 'Run a workbook' }).click();
+    // U1 step 3: uploading a workbook is its own page, reached from the overview.
+    await page.getByRole('link', { name: 'Overview', exact: true }).click();
+    await page.getByRole('link', { name: 'Upload workbook' }).first().click();
+    await page.getByRole('heading', { name: 'Upload a workbook' }).waitFor();
     await page.locator('input[type=file]').setInputFiles(file);
     await page.getByText('12 test case(s).', { exact: false }).waitFor();
     assert.equal(await page.getByLabel('Steps *').inputValue(), 'Test Steps');
@@ -92,8 +96,9 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
   });
 
   it('asks about an ambiguous step, lets the tester pick it on the screenshot, then reviews and runs it', async () => {
-    await page.getByRole('link', { name: 'demo-app' }).click();
-    await page.getByRole('tab', { name: 'Single test case' }).click();
+    await page.getByRole('link', { name: 'Overview', exact: true }).click();
+    await page.getByRole('link', { name: 'New test case' }).first().click();
+    await page.getByRole('heading', { name: 'New test case' }).waitFor();
     await page.getByLabel('Title').fill('Security details open');
     await page
       .getByLabel('Steps', { exact: true })
@@ -121,16 +126,36 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.locator('video').first().waitFor({ state: 'attached' });
   });
 
-  it('has a left menu: approve a test case, find it in Web Automation, add an assertion, plan a release', async () => {
+  it('has a project sidebar: approve a test case, find it in Automation, add an assertion, plan a release (old addresses still work)', async () => {
+    // The old address of the test case list opens the project's Test cases section.
     await page.goto(`${url}/test-cases`);
-    await page.getByRole('heading', { name: 'Test Cases' }).waitFor();
+    await page.waitForURL((u) => u.pathname === '/projects/demo-app/cases');
+    await page.getByRole('heading', { name: 'Test cases', exact: true }).waitFor();
     await page
       .getByRole('row', { name: /Security details open/ })
       .getByRole('button', { name: 'Approve', exact: true })
       .click();
     await page.getByText('Approved', { exact: true }).first().waitFor();
+    // U1 step 3: search and filters narrow the list; the case page asks before it removes, in the page.
+    await page.getByLabel('Search test cases').fill('Security');
+    await page.getByRole('row', { name: /Security details open/ }).waitFor();
+    await page.getByLabel('Search test cases').fill('no such case');
+    await page.getByText('No test case matches.').waitFor();
+    await page.getByLabel('Search test cases').fill('');
+    await page.getByRole('tab', { name: /^Passed/ }).click();
+    await page.getByRole('row', { name: /Security details open/ }).waitFor();
+    await page.getByRole('tab', { name: /^All/ }).click();
+    await page
+      .getByRole('row', { name: /Security details open/ })
+      .getByRole('link')
+      .first()
+      .click();
+    await page.getByRole('heading', { name: 'Security details open' }).waitFor();
+    await page.getByRole('button', { name: /Remove from the list/ }).click();
+    await page.getByRole('button', { name: 'Keep it' }).click();
+    await page.getByRole('link', { name: 'Test cases', exact: true }).first().click();
 
-    await page.getByRole('link', { name: 'Web Automation' }).click();
+    await page.getByRole('link', { name: 'Automation', exact: true }).click();
     const row = page.getByRole('row', { name: /Security details open/ });
     await row.waitFor();
     await row.getByRole('button', { name: 'Assertions' }).click();
@@ -143,7 +168,7 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.getByRole('button', { name: 'Add assertion' }).click();
     await page.getByText('Record it again', { exact: false }).waitFor();
 
-    await page.getByRole('link', { name: 'Releases' }).click();
+    await page.getByRole('link', { name: 'Releases', exact: true }).click();
     await page.getByRole('button', { name: 'New release' }).click();
     await page.getByLabel('Name', { exact: true }).fill('R1');
     await page.getByLabel('Release date').fill('2030-01-31');
@@ -157,9 +182,53 @@ describe('web UI (M7b)', { skip, concurrency: false }, () => {
     await page.getByRole('button', { name: 'Add requirement and update the date' }).click();
     await page.getByText('added after lock').first().waitFor();
 
-    await page.getByRole('link', { name: 'Dashboard' }).click();
+    await page.getByRole('link', { name: 'All projects' }).click();
     await page.getByRole('heading', { name: 'Releases in progress' }).waitFor();
     await page.getByRole('link', { name: 'R1' }).waitFor();
+    // U1 step 2: the start page has a card for the project, and its filters keep it under Needs you or All.
+    await page.getByRole('heading', { name: 'Your projects' }).waitFor();
+    await page.getByRole('link', { name: /Demo app/ }).waitFor();
+    await page.getByRole('tab', { name: /^All \d/ }).click();
+    await page.getByRole('button', { name: 'Create a new project' }).click();
+    await page.getByRole('dialog', { name: 'New project' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'New project' }).waitFor({ state: 'hidden' });
+  });
+
+  it('settings have three parts; what the engine learned can be added, changed, switched off and removed (U1 step 7)', async () => {
+    await page.goto(`${url}/projects/demo-app/settings`);
+    await page.getByRole('tab', { name: 'What the engine learned' }).click();
+    await page.getByRole('heading', { name: 'What the engine learned' }).waitFor();
+    await page.getByLabel('Kind of rule').selectOption('step');
+    await page.getByLabel('When the test case says').fill('Press the magic thing');
+    await page.getByLabel('It means', { exact: true }).fill('Click the Login button');
+    await page.getByRole('button', { name: 'Add a rule' }).click();
+    const row = page.getByRole('row', { name: /press the magic thing/i });
+    await row.getByText('Click the Login button').waitFor();
+    await row.getByRole('button', { name: /Change the meaning/ }).click();
+    await row.getByRole('textbox').fill('Click the Details button');
+    await row.getByRole('button', { name: 'Save' }).click();
+    await page
+      .getByRole('row', { name: /press the magic thing/i })
+      .getByText('Click the Details button')
+      .waitFor();
+    await page
+      .getByRole('row', { name: /press the magic thing/i })
+      .getByRole('checkbox')
+      .click();
+    await page.locator('tr.rule-off').first().waitFor();
+    await page
+      .getByRole('row', { name: /press the magic thing/i })
+      .getByRole('button', { name: /Remove the rule/ })
+      .click();
+    await page
+      .getByRole('row', { name: /press the magic thing/i })
+      .getByRole('button', { name: 'Remove', exact: true })
+      .click();
+    await page.getByRole('row', { name: /press the magic thing/i }).waitFor({ state: 'detached' });
+    await page.getByRole('tab', { name: 'Danger zone' }).click();
+    await page.getByRole('button', { name: 'Delete project' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Delete project' }).isDisabled(), true, 'the name must be typed first');
   });
 
   it('had no errors in the page', () => {

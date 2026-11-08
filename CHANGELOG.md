@@ -4,6 +4,18 @@ Code changes by milestone. Specification changes are in [docs/SPEC.md §14](docs
 
 ## Unreleased
 
+### UI (U1 project-first)
+- **Everything about a project is under the project.** A sidebar with a project switcher and the sections Overview, Test cases, Runs, Review (with the count of open questions), Automation, Releases and Settings, at `/projects/:id/<section>`. The old addresses (`/test-cases`, `/automation`, `/releases`, `?tab=…`) open the page they meant. Plan and status in `docs/UI-PLAN.md`; the mock-ups in `docs/ui-redesign/`.
+- **A new look**, light and dark from one token set: soft violet with green, coral and amber for the results; Inter and Space Grotesk; motion that stops under "reduce motion".
+- **All projects** replaces the Dashboard and the Projects list: a welcome box with Today's focus (the question that settles the most test cases), a ring of every test case by its last result, a card per project, releases in progress, and New project in a drawer with a tile colour and a live check of the address (`POST /api/probe`).
+- **Overview, Test cases** (filters, search), **Upload**, **New test case** and a new **test case page** (steps with their expected results, runs, versions, Automation; Remove asks in the page).
+- **Runs:** a live run shows its progress and each case from the run's log, with its questions; the result has five status tiles and a way to Review.
+- **One Review for the project** (`GET /api/projects/:id/review`): the open questions of all its latest runs, filters Needs you / Held / Decided / Answered. The review card leads with what answers it. A wording card can also **remove the step** from its test cases, as new versions (`POST /api/jobs/:id/review-queue/remove-step`).
+- **Focus review with the Ripple map:** one question at a time, answered with keys (1–4, P, F, S, W, Z). Beside it, every test case of the project as a tile, the ones the answer settles lit before it is given (`GET /api/jobs/:id/review-queue/ripple`).
+- **Settings** in three tabs. "What the engine learned" can switch an answer off, change its meaning, or remove it.
+- **Automation and Releases** in the new look. Their browser pop-ups are asked in the page.
+- **Checked** on every screen in light, dark and at phone width: no sideways scrolling, every control named and labelled, text contrast 4.5:1.
+
 ### Engine (E0.19 measure honestly, and fewer reviews)
 - **Review KPIs at run time (step 1).** `npm run engine:kpi` measures a run (a batch file, a job, or a project's last run) against one frozen baseline (`test/baseline/kpi-baseline.json`): cases set aside, questions (one per review card), reviews per 100 written steps, flaky rate, wrong PASS and wrong FAIL against an answer key, active review time and walkthroughs. Opening a review is noted once a minute (`review.view`), so review time is measured.
 - **One card per real question (step 2).** A card is the sentence the engine could not decide and why; cases that ask the same are one card, and the headline is that sentence (it was the first check that had not run, e.g. "Verify User should open browser"). Add Employee: 7 cards → 3.

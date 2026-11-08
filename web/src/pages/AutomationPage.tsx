@@ -7,11 +7,12 @@ import { Link, navigate } from '../router';
 const SCRIPT_LABEL: Record<ScriptState, string> = { none: 'Not recorded', ready: 'Script ready', 'out-of-date': 'Out of date' };
 
 /** The approved test cases: record the script, run it, download it, add assertions. */
-export function AutomationPage() {
+/** With `projectId` (U1: the project's Automation section), only that project's approved test cases, with no project filter. */
+export function AutomationPage({ projectId }: { projectId?: string } = {}) {
   const [cases, setCases] = useState<AutomationCase[]>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
-  const [project, setProject] = useState('');
+  const [project, setProject] = useState(projectId ?? '');
   const [open, setOpen] = useState<{ key: string; panel: 'assertions' | 'script' }>();
   const [busy, setBusy] = useState<string>();
 
@@ -48,11 +49,16 @@ export function AutomationPage() {
 
   return (
     <>
-      <div className="row" style={{ marginBottom: '0.25rem' }}>
-        <h1 className="grow" style={{ margin: 0 }}>
-          Web Automation
-        </h1>
-        {projects.length > 1 && (
+      <header className="page-head with-actions">
+        <div className="page-head-text">
+          <h1>{projectId ? 'Automation' : 'Web Automation'}</h1>
+          <p className="muted">
+            The approved test cases and their Playwright scripts. <strong>Record</strong> explores the application from the written steps and keeps the script;{' '}
+            <strong>Execute</strong> runs it; <strong>Download</strong> gives you the script to run yourself; <strong>Assertions</strong> adds checks from the
+            full list of validations.
+          </p>
+        </div>
+        {!projectId && projects.length > 1 && (
           <label className="row" style={{ gap: '0.5rem' }}>
             <span className="muted">Project</span>
             <select value={project} onChange={(e) => setProject(e.target.value)}>
@@ -65,18 +71,31 @@ export function AutomationPage() {
             </select>
           </label>
         )}
-      </div>
-      <p className="muted">
-        The approved test cases. <strong>Record</strong> explores the application from the written steps and keeps the Playwright script.{' '}
-        <strong>Execute</strong> runs it. <strong>Download</strong> gives you the script to run yourself. <strong>Assertions</strong> adds checks from the full
-        list of validations.
-      </p>
+      </header>
+      {shown.length > 0 && (
+        <div className="tiles status-tiles automation-tiles">
+          <div className="tile status-tile s-NOTV">
+            <strong>{shown.length}</strong>approved
+          </div>
+          <div className="tile status-tile s-PASS">
+            <strong>{shown.filter((c) => c.script === 'ready').length}</strong>scripts ready
+          </div>
+          <div className="tile status-tile s-NEEDS">
+            <strong>{shown.filter((c) => c.script === 'out-of-date').length}</strong>out of date
+          </div>
+          <div className="tile status-tile s-BLOCKED">
+            <strong>{shown.filter((c) => c.script === 'none').length}</strong>not recorded
+          </div>
+        </div>
+      )}
       <ErrorNote error={error} />
       {notice && <p className="notice">{notice}</p>}
       {!shown.length ? (
-        <section className="panel">
-          <p>
-            No approved test cases yet. Open <Link to="/test-cases">Test Cases</Link> and approve the ones that are ready.
+        <section className="panel empty">
+          <h2>Nothing to automate yet</h2>
+          <p className="muted">
+            No approved test cases yet. Open <Link to={projectId ? `/projects/${projectId}/cases` : '/test-cases'}>Test cases</Link> and approve the ones that
+            are ready.
           </p>
         </section>
       ) : (
@@ -102,10 +121,10 @@ export function AutomationPage() {
                           <strong>{c.extId}</strong>
                         </Link>
                         <span className="case-title">{c.title}</span>
-                        <span className="muted">{c.projectName}</span>
+                        {!projectId && <span className="muted">{c.projectName}</span>}
                       </td>
                       <td>
-                        <span className={`badge ${c.script === 'ready' ? 'PASS' : c.script === 'out-of-date' ? 'review' : 'job'}`}>
+                        <span className={`badge ${c.script === 'ready' ? 'PASS' : c.script === 'out-of-date' ? 'NEEDS' : 'job'}`}>
                           {SCRIPT_LABEL[c.script]}
                         </span>
                         {c.recordedAt && <div className="muted">{when(c.recordedAt)}</div>}
@@ -116,7 +135,7 @@ export function AutomationPage() {
                         {c.lastRunAt && <div className="muted">{when(c.lastRunAt)}</div>}
                       </td>
                       <td>
-                        <div className="row" style={{ gap: '0.4rem' }}>
+                        <div className="row tight automation-actions">
                           <button
                             type="button"
                             disabled={c.running || busy === `${key}:record`}
@@ -173,7 +192,7 @@ export function AutomationPage() {
                     </tr>
                     {panel && (
                       <tr>
-                        <td colSpan={4} style={{ background: 'var(--sunk)' }}>
+                        <td colSpan={4} className="expansion">
                           {panel === 'assertions' ? (
                             <AssertionPanel
                               c={c}

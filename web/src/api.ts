@@ -51,7 +51,12 @@ export interface ReviewGroups {
   assumptions: Array<{ text: string; testIds: string[] }>;
 }
 
+/** The colour of a project's tile (U1). */
+export const TILES = ['lavender', 'mint', 'apricot', 'sky', 'rose'] as const;
+export type Tile = (typeof TILES)[number];
+
 export interface ProjectView extends Project {
+  tile?: Tile;
   /** How much may be decided without asking (D30). */
   policy: Policy;
   env: { username?: string; hasPassword: boolean; variables: Array<{ name: string; secret: boolean; value?: string }> };
@@ -66,6 +71,30 @@ export interface ProjectInput {
   password?: string;
   variables?: Record<string, string | null>;
   policy?: Policy;
+  tile?: Tile;
+}
+
+/** Whether an address answers and shows a login form (U1 step 2). */
+export interface Probe {
+  ok: boolean;
+  status?: number;
+  finalUrl?: string;
+  title?: string;
+  loginForm: boolean;
+  error?: string;
+}
+
+/** What waits for a person in each project (U1 step 2). */
+export interface ReviewSummary {
+  projects: Array<{
+    projectId: string;
+    projectName: string;
+    jobId?: string;
+    questions: number;
+    held: number;
+    biggest?: { cardId: string; clause: string; cases: number; label?: string };
+  }>;
+  remembered: number;
 }
 
 export type Field = 'id' | 'title' | 'type' | 'preconditions' | 'steps' | 'testData' | 'expected' | 'requirementId' | 'stepNo' | 'actual' | 'priority' | 'tags';
@@ -242,10 +271,10 @@ export interface Impact {
   scopeGrowthPercentAfter: number;
 }
 export interface Dashboard {
-  totals: { projects: number; cases: number; approved: number; scripts: number; pass: number; fail: number; notRun: number };
+  totals: { projects: number; cases: number; approved: number; scripts: number; pass: number; fail: number; notRun: number; needs: number; blocked: number };
   projects: Array<{
-    project: { id: string; name: string; baseUrl: string };
-    cases: { total: number; approved: number; draft: number; scripts: number; pass: number; fail: number; notRun: number };
+    project: { id: string; name: string; baseUrl: string; tile?: string };
+    cases: { total: number; approved: number; draft: number; scripts: number; pass: number; fail: number; notRun: number; needs: number; blocked: number };
     executions: Array<{ execId: string; status: string; totals: Record<string, number>; startedAt?: string }>;
     releases: Array<ReleaseRecord & { summary: ReleaseSummary }>;
   }>;
@@ -294,6 +323,16 @@ export const api = {
   heldCases: (projectId: string) => call<HeldCase[]>(`/api/projects/${projectId}/held`),
   releaseHold: (projectId: string, testId: string, body: { note?: string; who?: string }) =>
     call<HeldCase>(`/api/projects/${projectId}/held/${encodeURIComponent(testId)}/release`, json('POST', body)),
+  removeStep: (id: string, body: { cardId: string; who?: string }) =>
+    call<{ cardId: string; sentence: string; changed: string[]; unchanged: string[] }>(`/api/jobs/${id}/review-queue/remove-step`, json('POST', body)),
+  ripple: (jobId: string, cardId: string) =>
+    call<{ settles: string[]; sheets: Array<{ name: string; cases: Array<{ id: string; title: string; status?: string }> }> }>(
+      `/api/jobs/${jobId}/review-queue/ripple?cardId=${encodeURIComponent(cardId)}`,
+    ),
+  projectReview: (projectId: string) =>
+    call<{ cards: Array<ReviewCard & { jobId: string; executionId?: string; runAt: string }>; held: Array<HeldCase & { overdue: boolean }> }>(
+      `/api/projects/${projectId}/review`,
+    ),
   answerCard: (id: string, body: { cardId: string; means: string; who?: string }) =>
     call<AnswerResult>(`/api/jobs/${id}/review-queue/answers`, json('POST', body)),
   testCases: (projectId: string) => call<TestCaseRecord[]>(`/api/projects/${projectId}/test-cases`),
@@ -323,6 +362,8 @@ export const api = {
   addAssertion: (projectId: string, id: string, text: string) =>
     call<TestCaseRecord>(`/api/projects/${projectId}/test-cases/${encodeURIComponent(id)}/assertions`, json('POST', { text })),
   dashboard: () => call<Dashboard>('/api/dashboard'),
+  reviewSummary: () => call<ReviewSummary>('/api/review-summary'),
+  probe: (url: string) => call<Probe>('/api/probe', json('POST', { url })),
   allReleases: () => call<Array<ReleaseRecord & { projectName: string; summary: ReleaseSummary }>>('/api/releases'),
   releases: (projectId: string) => call<ReleaseDetail[]>(`/api/projects/${projectId}/releases`),
   createRelease: (projectId: string, r: ReleaseInput) => call<ReleaseDetail>(`/api/projects/${projectId}/releases`, json('POST', r)),

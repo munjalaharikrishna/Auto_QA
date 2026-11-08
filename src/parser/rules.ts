@@ -56,7 +56,7 @@ export function rulesFor(rules: Iterable<Pick<ProjectRule, 'kind' | 'pattern' | 
 }
 
 /** A step line split into its number ("17. ") and its sentence, so a reading matches the sentence however the line is numbered. */
-function numbered(line: string): { lead: string; text: string } {
+export function numbered(line: string): { lead: string; text: string } {
   let i = 0;
   while (i < line.length && line[i] === ' ') i += 1;
   const start = i;

@@ -1,77 +1,80 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { api } from './api';
 import { AutomationPage } from './pages/AutomationPage';
 import { CasePage } from './pages/CasePage';
-import { DashboardPage } from './pages/DashboardPage';
 import { GuidePage } from './pages/GuidePage';
+import { HomePage } from './pages/HomePage';
 import { JobPage } from './pages/JobPage';
 import { ProjectPage } from './pages/ProjectPage';
-import { ProjectsPage } from './pages/ProjectsPage';
 import { ReleasesPage } from './pages/ReleasesPage';
-import { TestCasesPage } from './pages/TestCasesPage';
-import { Link, usePath } from './router';
+import { usePath } from './router';
+import { ProjectShell, Redirect, routeOf, TopShell } from './shell';
 import './styles.css';
 
-/** The left menu. `match` says which paths light the item up: a test case opened from the list still belongs to Test Cases. */
-const MENU: Array<{ to: string; label: string; icon: string; match: (path: string) => boolean }> = [
-  { to: '/', label: 'Dashboard', icon: '▦', match: (p) => p === '/' },
-  { to: '/test-cases', label: 'Test Cases', icon: '☰', match: (p) => p === '/test-cases' || /^\/projects\/[\w-]+\/cases\//.test(p) },
-  { to: '/automation', label: 'Web Automation', icon: '▶', match: (p) => p === '/automation' || p.startsWith('/jobs/') },
-  { to: '/releases', label: 'Releases', icon: '⚑', match: (p) => p === '/releases' },
-];
-const MORE: typeof MENU = [
-  { to: '/projects', label: 'Projects & settings', icon: '⚙', match: (p) => p === '/projects' || /^\/projects\/[\w-]+\/?$/.test(p) },
-  { to: '/guide', label: 'Writing guide', icon: '?', match: (p) => p === '/guide' },
-];
+/** A run's page sits in its project's shell: the job says which project it belongs to. */
+function JobRoute({ id }: { id: string }) {
+  const [projectId, setProjectId] = useState<string>();
+  useEffect(() => {
+    api.job(id).then(
+      (j) => setProjectId(j.projectId),
+      () => setProjectId(undefined),
+    );
+  }, [id]);
+  return (
+    <ProjectShell projectId={projectId} section="runs">
+      <JobPage key={id} id={id} />
+    </ProjectShell>
+  );
+}
 
 function App() {
   const path = usePath();
-  const testCase = /^\/projects\/([\w-]+)\/cases\/(.+)$/.exec(path);
-  const project = /^\/projects\/([\w-]+)/.exec(path);
-  const job = /^\/jobs\/([\w-]+)/.exec(path);
-  const item = (m: (typeof MENU)[number]) => (
-    <Link key={m.to} to={m.to} className={m.match(path) ? 'active' : undefined}>
-      <span aria-hidden="true" className="icon">
-        {m.icon}
-      </span>
-      {m.label}
-    </Link>
-  );
-  return (
-    <div className="shell">
-      <aside className="side">
-        <Link to="/" className="brand">
-          Auto QA
-        </Link>
-        <span className="muted tagline">Manual test cases → Playwright automation</span>
-        <nav aria-label="Main">{MENU.map(item)}</nav>
-        <nav aria-label="More" className="more">
-          {MORE.map(item)}
-        </nav>
-      </aside>
-      <main>
-        {testCase ? (
-          <CasePage key={`${testCase[1]}/${testCase[2]}`} projectId={testCase[1]} caseId={decodeURIComponent(testCase[2])} />
-        ) : path === '/projects' ? (
-          <ProjectsPage />
-        ) : project ? (
-          <ProjectPage key={project[1]} id={project[1]} />
-        ) : job ? (
-          <JobPage key={job[1]} id={job[1]} />
-        ) : path === '/guide' ? (
+  const route = routeOf(location.pathname, location.search);
+  // `path` changes on every navigation, so the route above is read again.
+  void path;
+  switch (route.kind) {
+    case 'redirect':
+      return <Redirect to={route.to} />;
+    case 'guide':
+      return (
+        <TopShell>
           <GuidePage />
-        ) : path === '/test-cases' ? (
-          <TestCasesPage />
-        ) : path === '/automation' ? (
-          <AutomationPage />
-        ) : path === '/releases' ? (
-          <ReleasesPage />
-        ) : (
-          <DashboardPage />
-        )}
-      </main>
-    </div>
-  );
+        </TopShell>
+      );
+    case 'projects':
+      return (
+        <TopShell>
+          <HomePage />
+        </TopShell>
+      );
+    case 'home':
+      return (
+        <TopShell>
+          <HomePage />
+        </TopShell>
+      );
+    case 'job':
+      return <JobRoute id={route.jobId} />;
+    case 'case':
+      return (
+        <ProjectShell projectId={route.projectId} section="cases">
+          <CasePage key={`${route.projectId}/${route.caseId}`} projectId={route.projectId} caseId={route.caseId} />
+        </ProjectShell>
+      );
+    case 'project':
+      return (
+        <ProjectShell projectId={route.projectId} section={route.section}>
+          {route.section === 'automation' ? (
+            <AutomationPage key={route.projectId} projectId={route.projectId} />
+          ) : route.section === 'releases' ? (
+            <ReleasesPage key={route.projectId} projectId={route.projectId} />
+          ) : (
+            <ProjectPage key={`${route.projectId}/${route.section}`} id={route.projectId} section={route.section} />
+          )}
+        </ProjectShell>
+      );
+  }
 }
 
 createRoot(document.getElementById('root')!).render(
