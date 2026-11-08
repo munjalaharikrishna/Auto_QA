@@ -7,6 +7,7 @@
     "parse": "tsx src/cli/parse.ts",
     "engine:report": "tsx src/cli/engine-report.ts",
     "engine:gate": "tsx src/cli/engine-gate.ts",
+    "engine:kpi": "tsx src/cli/engine-kpi.ts",
     "engine:review": "tsx src/cli/engine-review.ts",
     "engine:compare": "tsx src/cli/engine-compare.ts",
     "engine:mutate": "tsx src/cli/engine-mutate.ts",

@@ -1,0 +1,4163 @@
+{
+ "run": "e019-orangehrm-add-employee",
+ "recordedOn": "2026-11-08",
+ "about": "A live run at the end of E0.19 (test/baseline/e019-kpi-after.txt), kept for the run-time gate: the verdicts only, no pictures.",
+ "verdicts": {
+  "21022024_1": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_1",
+   "title": "TC01_Verify the functionality of Login section",
+   "automationId": "21022024_1",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Login section should be middle of the page",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 1488,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_2": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_2",
+   "title": "TC02_Verify the functionality of Tabs",
+   "automationId": "21022024_2",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. User Should see tabs and PIM as a default page",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 5860,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_3": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_3",
+   "title": "TC03_Verify the functionality of Employee\nInformation Section",
+   "automationId": "AUTO-21022024_3",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "expected result \"User should add  button in employee information section\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "review": [
+    {
+     "id": "expected result",
+     "raw": "User should add  button in employee information section",
+     "headline": "not understood:",
+     "why": "no check could be read: no word says what should be true",
+     "todo": [
+      "Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page User should add  button in employee information section",
+   "actual": "Not run: expected result \"User should add  button in employee information section\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "User should add  button in employee information section",
+     "expected": "User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_4": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_4",
+   "title": "TC04_Verify the functionality of Add Button",
+   "automationId": "21022024_4",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section User should navigate to Add Employee page/popup",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 7453,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_5": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_5",
+   "title": "TC05_Verify the functionality of code/Id Text \nBox",
+   "automationId": "21022024_5",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Text box should accept values",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"67797\"",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Text box should accept values",
+     "expected": "Field \"code\" has the value \"67797\"",
+     "actual": "Field \"code\" has the value \"67797\"",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 8053,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_6": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_6",
+   "title": "TC06_Verify the functionality of Last Name Text Box",
+   "automationId": "21022024_6",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Text box should accept values",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"78688\" | Field \"Last name\" has the value \"Misuda\"",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"78688\"",
+     "actual": "Field \"code\" has the value \"78688\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Misuda\"",
+     "actual": "Field \"Last name\" has the value \"Misuda\"",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 8424,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_7": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_7",
+   "title": "TC07_Verify the functionality of First Name Text Box",
+   "automationId": "21022024_7",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Text box should accept values",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"79151\" | Field \"Last name\" has the value \"Daneka\" | Field \"First name\" has the value \"Torabe\"",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"79151\"",
+     "actual": "Field \"code\" has the value \"79151\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Daneka\"",
+     "actual": "Field \"Last name\" has the value \"Daneka\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Torabe\"",
+     "actual": "Field \"First name\" has the value \"Torabe\"",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 8701,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_8": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_8",
+   "title": "TC08_Verify the functionality of Middle Name Text Box",
+   "automationId": "21022024_8",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Text box should accept values",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"91037\" | Field \"Last name\" has the value \"Lisako\" | Field \"First name\" has the value \"Besube\" | Field \"Middle name\" has the value \"Damisu\"",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"91037\"",
+     "actual": "Field \"code\" has the value \"91037\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Lisako\"",
+     "actual": "Field \"Last name\" has the value \"Lisako\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Besube\"",
+     "actual": "Field \"First name\" has the value \"Besube\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Damisu\"",
+     "actual": "Field \"Middle name\" has the value \"Damisu\"",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 9331,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_9": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_9",
+   "title": "TC09_Verify the functionality of Nick Name Text Box",
+   "automationId": "21022024_9",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Text box should accept values",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"28641\" | Field \"Last name\" has the value \"Madali\" | Field \"First name\" has the value \"Betosu\" | Field \"Middle name\" has the value \"Surere\" | Field \"Nick name\" has the value \"Tomako\"",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"28641\"",
+     "actual": "Field \"code\" has the value \"28641\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Madali\"",
+     "actual": "Field \"Last name\" has the value \"Madali\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Betosu\"",
+     "actual": "Field \"First name\" has the value \"Betosu\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Surere\"",
+     "actual": "Field \"Middle name\" has the value \"Surere\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Tomako\"",
+     "actual": "Field \"Nick name\" has the value \"Tomako\"",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 9990,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_10": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_10",
+   "title": "TC10_Verify the functionality of Photo upload Button",
+   "automationId": "21022024_10",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E2 \"Verify Login section should be middle of the page\" is unproven: the box around the controls and the part around it are not in the same place: a person says which one the check means",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "headline": "Not proven:",
+     "why": "the box around the controls and the part around it are not in the same place: a person says which one the check means",
+     "todo": [
+      "Check on the screenshot what the page showed (the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "headline": "Not proven:",
+     "why": "\"Add Employee\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Upload button should accept photo",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"75942\" | Field \"Last name\" has the value \"Virane\" | Field \"First name\" has the value \"Lorane\" | Field \"Middle name\" has the value \"Nolire\" | Field \"Nick name\" has the value \"Sadali\" | the file field \"Photo\" holds a file",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"75942\"",
+     "actual": "Field \"code\" has the value \"75942\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Virane\"",
+     "actual": "Field \"Last name\" has the value \"Virane\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Lorane\"",
+     "actual": "Field \"First name\" has the value \"Lorane\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Nolire\"",
+     "actual": "Field \"Middle name\" has the value \"Nolire\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Sadali\"",
+     "actual": "Field \"Nick name\" has the value \"Sadali\"",
+     "result": "passed"
+    },
+    {
+     "id": "E20",
+     "raw": "Upload button should accept photo",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" holds a file",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 10769,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_11": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_11",
+   "title": "TC11_Verify the functionality of Reset",
+   "automationId": "21022024_11",
+   "status": "FAIL",
+   "reason": "E21 \"User should see the empty text boxes and uploaded photo\": expected Field \"code\" has the value \"\"; Field \"code\" has the value \"0002\"",
+   "failedStep": "E21 User should see the empty text boxes and uploaded photo",
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo User should see the empty text boxes and uploaded photo",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"77460\" | Field \"Last name\" has the value \"Savisu\" | Field \"First name\" has the value \"Raliko\" | Field \"Middle name\" has the value \"Visuvi\" | Field \"Nick name\" has the value \"Sasasa\" | the file field \"Photo\" holds a file | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "passed"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"77460\"",
+     "actual": "Field \"code\" has the value \"77460\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Savisu\"",
+     "actual": "Field \"Last name\" has the value \"Savisu\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Raliko\"",
+     "actual": "Field \"First name\" has the value \"Raliko\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Visuvi\"",
+     "actual": "Field \"Middle name\" has the value \"Visuvi\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Sasasa\"",
+     "actual": "Field \"Nick name\" has the value \"Sasasa\"",
+     "result": "passed"
+    },
+    {
+     "id": "E20",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" holds a file",
+     "result": "passed"
+    },
+    {
+     "id": "E21",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"code\" has the value \"\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E22",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Last name\" has the value \"\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E23",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"First name\" has the value \"\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E24",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Middle name\" has the value \"\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E25",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Nick name\" has the value \"\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E26",
+     "raw": "User should see the empty text boxes and uploaded photo",
+     "expected": "not state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 11854,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_12": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_12",
+   "title": "TC12_Verify the functionality of Save",
+   "automationId": "21022024_12",
+   "status": "FAIL",
+   "reason": "E21 \"Verify User should see the empty text boxes and uploaded photo\": expected Field \"code\" has the value \"\"; Field \"code\" has the value \"0002\"",
+   "failedStep": "E21 Verify User should see the empty text boxes and uploaded photo",
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo User should naviagte to Personal Information page",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"15391\" | Field \"Last name\" has the value \"Karevi\" | Field \"First name\" has the value \"Sabeko\" | Field \"Middle name\" has the value \"Radaka\" | Field \"Nick name\" has the value \"Nevivi\" | the file field \"Photo\" holds a file | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "passed"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"15391\"",
+     "actual": "Field \"code\" has the value \"15391\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Karevi\"",
+     "actual": "Field \"Last name\" has the value \"Karevi\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Sabeko\"",
+     "actual": "Field \"First name\" has the value \"Sabeko\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Radaka\"",
+     "actual": "Field \"Middle name\" has the value \"Radaka\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Nevivi\"",
+     "actual": "Field \"Nick name\" has the value \"Nevivi\"",
+     "result": "passed"
+    },
+    {
+     "id": "E20",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" holds a file",
+     "result": "passed"
+    },
+    {
+     "id": "E21",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"code\" has the value \"\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E22",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Last name\" has the value \"\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E23",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"First name\" has the value \"\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E24",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Middle name\" has the value \"\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E25",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Nick name\" has the value \"\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E26",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "not state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "passed"
+    },
+    {
+     "id": "E27",
+     "raw": "User should naviagte to Personal Information page",
+     "expected": "address contains \"Personal Information\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 12414,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_13": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_13",
+   "title": "TC13_Verify the functionality of Added Data",
+   "automationId": "21022024_13",
+   "status": "FAIL",
+   "reason": "E21 \"Verify User should see the empty text boxes and uploaded photo\": expected Field \"code\" has the value \"\"; Field \"code\" has the value \"0002\"",
+   "failedStep": "E21 Verify User should see the empty text boxes and uploaded photo",
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page User should see added data",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"84036\" | Field \"Last name\" has the value \"Sumimi\" | Field \"First name\" has the value \"Lolire\" | Field \"Middle name\" has the value \"Saline\" | Field \"Nick name\" has the value \"Kolibe\" | the file field \"Photo\" holds a file | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "passed"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "passed"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"84036\"",
+     "actual": "Field \"code\" has the value \"84036\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Sumimi\"",
+     "actual": "Field \"Last name\" has the value \"Sumimi\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Lolire\"",
+     "actual": "Field \"First name\" has the value \"Lolire\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Saline\"",
+     "actual": "Field \"Middle name\" has the value \"Saline\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Kolibe\"",
+     "actual": "Field \"Nick name\" has the value \"Kolibe\"",
+     "result": "passed"
+    },
+    {
+     "id": "E20",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" holds a file",
+     "result": "passed"
+    },
+    {
+     "id": "E21",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"code\" has the value \"\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E22",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Last name\" has the value \"\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E23",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"First name\" has the value \"\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E24",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Middle name\" has the value \"\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E25",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Nick name\" has the value \"\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E26",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "not state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "passed"
+    },
+    {
+     "id": "E27",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "address contains \"Personal Information\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E28",
+     "raw": "User should see added data",
+     "expected": "Field \"code\" has the value \"84036\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E29",
+     "raw": "User should see added data",
+     "expected": "Field \"Last name\" has the value \"Sumimi\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E30",
+     "raw": "User should see added data",
+     "expected": "Field \"First name\" has the value \"Lolire\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E31",
+     "raw": "User should see added data",
+     "expected": "Field \"Middle name\" has the value \"Saline\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E32",
+     "raw": "User should see added data",
+     "expected": "Field \"Nick name\" has the value \"Kolibe\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E33",
+     "raw": "User should see added data",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "failed"
+    }
+   ],
+   "durationMs": 12126,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_14": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_14",
+   "title": "TC14_Verify the functionality of Back Button",
+   "automationId": "21022024_14",
+   "status": "FAIL",
+   "reason": "E21 \"Verify User should see the empty text boxes and uploaded photo\": expected Field \"code\" has the value \"\"; Field \"code\" has the value \"0002\"",
+   "failedStep": "E21 Verify User should see the empty text boxes and uploaded photo",
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data User should navigate to Employee Information page",
+   "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php | the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle) | Tab \"Admin\" is on the page | Tab \"PIM\" is on the page | Tab \"Leave\" is on the page | Tab \"Time\" is on the page | Tab \"Benefits\" is on the page | Tab \"Recruitment\" is on the page | Tab \"Reports\" is on the page | Tab \"Bug Tracker\" is on the page | Tab \"Help\" is on the page | the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC) | Button \"add\" is on the page | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"26309\" | Field \"Last name\" has the value \"Lomavi\" | Field \"First name\" has the value \"Revito\" | Field \"Middle name\" has the value \"Remare\" | Field \"Nick name\" has the value \"Subesa\" | the file field \"Photo\" holds a file | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode | Field \"code\" has the value \"0002\" | Field \"Last name\" has the value \"\" | Field \"First name\" has the value \"\" | Field \"Middle name\" has the value \"\" | Field \"Nick name\" has the value \"\" | the file field \"Photo\" is empty | address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&VIEW=MAIN",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "passed"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "passed"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "passed"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "passed"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "passed"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "passed"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "address contains \"login\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Section \"Login\" in the middle of the page",
+     "actual": "the table around the controls: 296 px off the middle across; the table around it (717 px wide): 26 px off the middle across (the window is 1280 px wide; up to 64 px is the middle)",
+     "result": "not verified"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Admin\" is shown",
+     "actual": "Tab \"Admin\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E4",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"PIM\" is shown",
+     "actual": "Tab \"PIM\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E5",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Leave\" is shown",
+     "actual": "Tab \"Leave\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Time\" is shown",
+     "actual": "Tab \"Time\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E7",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Benefits\" is shown",
+     "actual": "Tab \"Benefits\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E8",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Recruitment\" is shown",
+     "actual": "Tab \"Recruitment\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E9",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Reports\" is shown",
+     "actual": "Tab \"Reports\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E10",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Bug Tracker\" is shown",
+     "actual": "Tab \"Bug Tracker\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E11",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Tab \"Help\" is shown",
+     "actual": "Tab \"Help\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E12",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "state Page \"PIM\" DEFAULT_PAGE",
+     "actual": "the screen after login is one the PIM menu opens (/orangehrm-2.5.0.2/lib/controllers/CentralController.php?VIEW=MAIN&VIEW=MAIN&reqcode=EMP&sortOrder0=ASC)",
+     "result": "passed"
+    },
+    {
+     "id": "E13",
+     "raw": "Under Employee Information Section there should be add button",
+     "expected": "Button \"add\" is shown",
+     "actual": "Button \"add\" is on the page",
+     "result": "passed"
+    },
+    {
+     "id": "E14",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "address contains \"Add Employee\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E15",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"code\" has the value \"26309\"",
+     "actual": "Field \"code\" has the value \"26309\"",
+     "result": "passed"
+    },
+    {
+     "id": "E16",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Last name\" has the value \"Lomavi\"",
+     "actual": "Field \"Last name\" has the value \"Lomavi\"",
+     "result": "passed"
+    },
+    {
+     "id": "E17",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"First name\" has the value \"Revito\"",
+     "actual": "Field \"First name\" has the value \"Revito\"",
+     "result": "passed"
+    },
+    {
+     "id": "E18",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Middle name\" has the value \"Remare\"",
+     "actual": "Field \"Middle name\" has the value \"Remare\"",
+     "result": "passed"
+    },
+    {
+     "id": "E19",
+     "raw": "Verify Text box should accept values",
+     "expected": "Field \"Nick name\" has the value \"Subesa\"",
+     "actual": "Field \"Nick name\" has the value \"Subesa\"",
+     "result": "passed"
+    },
+    {
+     "id": "E20",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" holds a file",
+     "result": "passed"
+    },
+    {
+     "id": "E21",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"code\" has the value \"\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E22",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Last name\" has the value \"\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E23",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"First name\" has the value \"\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E24",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Middle name\" has the value \"\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E25",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Field \"Nick name\" has the value \"\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "E26",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "not state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "passed"
+    },
+    {
+     "id": "E27",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "address contains \"Personal Information\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&capturemode=addmode",
+     "result": "not verified"
+    },
+    {
+     "id": "E28",
+     "raw": "Verify User should see added data",
+     "expected": "Field \"code\" has the value \"26309\"",
+     "actual": "Field \"code\" has the value \"0002\"",
+     "result": "failed"
+    },
+    {
+     "id": "E29",
+     "raw": "Verify User should see added data",
+     "expected": "Field \"Last name\" has the value \"Lomavi\"",
+     "actual": "Field \"Last name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E30",
+     "raw": "Verify User should see added data",
+     "expected": "Field \"First name\" has the value \"Revito\"",
+     "actual": "Field \"First name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E31",
+     "raw": "Verify User should see added data",
+     "expected": "Field \"Middle name\" has the value \"Remare\"",
+     "actual": "Field \"Middle name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E32",
+     "raw": "Verify User should see added data",
+     "expected": "Field \"Nick name\" has the value \"Subesa\"",
+     "actual": "Field \"Nick name\" has the value \"\"",
+     "result": "failed"
+    },
+    {
+     "id": "E33",
+     "raw": "Verify User should see added data",
+     "expected": "state Button \"upload button\" UPLOADED",
+     "actual": "the file field \"Photo\" is empty",
+     "result": "failed"
+    },
+    {
+     "id": "E34",
+     "raw": "User should navigate to Employee Information page",
+     "expected": "address contains \"Employee Information\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/index.php and the screen in it, http://127.0.0.1/orangehrm-2.5.0.2/lib/controllers/CentralController.php?reqcode=EMP&VIEW=MAIN",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 14450,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_15": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_15",
+   "title": "TC15_Verify the functionality of Employee\nName",
+   "automationId": "AUTO-21022024_15",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data.",
+   "review": [
+    {
+     "id": "step 33",
+     "raw": "Click on Employee Name",
+     "headline": "ambiguous wording:",
+     "why": "\"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one",
+     "todo": [
+      "Name the employee: Click on \"<the name>\" in the list, or give it in Test Data."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data Verify User should navigate to Employee Information page User should naviagte to Employment section",
+   "actual": "Not run: step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "not run"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "not run"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "not run"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "not run"
+    },
+    {
+     "id": "S33",
+     "raw": "Click on Employee Name",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "Verify User should add  button in employee information section",
+     "expected": "Verify User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "Verify User should navigate to Add Employee page/popup",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A10",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A11",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A12",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A13",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A14",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A15",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "Verify Upload button should accept photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A16",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Verify User should see the empty text boxes and uploaded photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A17",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "Verify User should naviagte to Personal Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A18",
+     "raw": "Verify User should see added data",
+     "expected": "Verify User should see added data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A19",
+     "raw": "Verify User should navigate to Employee Information page",
+     "expected": "Verify User should navigate to Employee Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A20",
+     "raw": "User should naviagte to Employment section",
+     "expected": "User should naviagte to Employment section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A21",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_16": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_16",
+   "title": "TC16_Verify the functionality of Employee\nSection",
+   "automationId": "AUTO-21022024_16",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data.",
+   "review": [
+    {
+     "id": "step 33",
+     "raw": "Click on Employee Name",
+     "headline": "ambiguous wording:",
+     "why": "\"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one",
+     "todo": [
+      "Name the employee: Click on \"<the name>\" in the list, or give it in Test Data."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data Verify User should navigate to Employee Information page Verify User should naviagte to Employment section Respective fileds should accept the values",
+   "actual": "Not run: step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "not run"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "not run"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "not run"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "not run"
+    },
+    {
+     "id": "S33",
+     "raw": "Click on Employee Name",
+     "result": "not run"
+    },
+    {
+     "id": "S35",
+     "raw": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "Verify User should add  button in employee information section",
+     "expected": "Verify User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "Verify User should navigate to Add Employee page/popup",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A10",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A11",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A12",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A13",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A14",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A15",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "Verify Upload button should accept photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A16",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Verify User should see the empty text boxes and uploaded photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A17",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "Verify User should naviagte to Personal Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A18",
+     "raw": "Verify User should see added data",
+     "expected": "Verify User should see added data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A19",
+     "raw": "Verify User should navigate to Employee Information page",
+     "expected": "Verify User should navigate to Employee Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A20",
+     "raw": "Verify User should naviagte to Employment section",
+     "expected": "Verify User should naviagte to Employment section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A21",
+     "raw": "Respective fileds should accept the values",
+     "expected": "Respective fileds should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A22",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_17": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_17",
+   "title": "TC17_Verify the functionality of save",
+   "automationId": "AUTO-21022024_17",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | expected result \"User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\".",
+   "review": [
+    {
+     "id": "step 33",
+     "raw": "Click on Employee Name",
+     "headline": "ambiguous wording:",
+     "why": "\"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one",
+     "todo": [
+      "Name the employee: Click on \"<the name>\" in the list, or give it in Test Data."
+     ]
+    },
+    {
+     "id": "expected result",
+     "raw": "User should updated the data",
+     "headline": "ambiguous wording:",
+     "why": "it says the data was updated but not what shows it (a message? the values on the page?)",
+     "todo": [
+      "Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\"."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data Verify User should navigate to Employee Information page Verify User should naviagte to Employment section Verify Respective fileds should accept the values User should updated the data",
+   "actual": "Not run: step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | expected result \"User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\".",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "not run"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "not run"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "not run"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "not run"
+    },
+    {
+     "id": "S33",
+     "raw": "Click on Employee Name",
+     "result": "not run"
+    },
+    {
+     "id": "S35",
+     "raw": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+     "result": "not run"
+    },
+    {
+     "id": "S37",
+     "raw": "Click on Save",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "Verify User should add  button in employee information section",
+     "expected": "Verify User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "Verify User should navigate to Add Employee page/popup",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A10",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A11",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A12",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A13",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A14",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A15",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "Verify Upload button should accept photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A16",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Verify User should see the empty text boxes and uploaded photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A17",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "Verify User should naviagte to Personal Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A18",
+     "raw": "Verify User should see added data",
+     "expected": "Verify User should see added data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A19",
+     "raw": "Verify User should navigate to Employee Information page",
+     "expected": "Verify User should navigate to Employee Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A20",
+     "raw": "Verify User should naviagte to Employment section",
+     "expected": "Verify User should naviagte to Employment section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A21",
+     "raw": "Verify Respective fileds should accept the values",
+     "expected": "Verify Respective fileds should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A22",
+     "raw": "User should updated the data",
+     "expected": "User should updated the data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A23",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_18": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_18",
+   "title": "TC18_Verify the functionality of updated\nRecords",
+   "automationId": "AUTO-21022024_18",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | step 38 \"Verify User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E34 \"checking the same updated records in Employee information page\": unresolved reference: \"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 39 \"checking the same updated records in Employee information page\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E35 \"User should see the same updated records\": unresolved reference: \"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\".",
+   "review": [
+    {
+     "id": "step 33",
+     "raw": "Click on Employee Name",
+     "headline": "ambiguous wording:",
+     "why": "\"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one",
+     "todo": [
+      "Name the employee: Click on \"<the name>\" in the list, or give it in Test Data."
+     ]
+    },
+    {
+     "id": "step 38",
+     "raw": "Verify User should updated the data",
+     "headline": "ambiguous wording:",
+     "why": "it says the data was updated but not what shows it (a message? the values on the page?)",
+     "todo": [
+      "Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\"."
+     ]
+    },
+    {
+     "id": "E34",
+     "raw": "checking the same updated records in Employee information page",
+     "headline": "unresolved reference:",
+     "why": "\"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before",
+     "todo": [
+      "Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\"."
+     ]
+    },
+    {
+     "id": "step 39",
+     "raw": "checking the same updated records in Employee information page",
+     "headline": "ambiguous wording:",
+     "why": "it says the data was updated but not what shows it (a message? the values on the page?)",
+     "todo": [
+      "Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\"."
+     ]
+    },
+    {
+     "id": "E35",
+     "raw": "User should see the same updated records",
+     "headline": "unresolved reference:",
+     "why": "\"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before",
+     "todo": [
+      "Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\"."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data Verify User should navigate to Employee Information page Verify User should naviagte to Employment section Verify Respective fileds should accept the values Verify User should updated the data checking the same updated records in Employee information page User should see the same updated records",
+   "actual": "Not run: step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | step 38 \"Verify User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E34 \"checking the same updated records in Employee information page\": unresolved reference: \"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 39 \"checking the same updated records in Employee information page\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E35 \"User should see the same updated records\": unresolved reference: \"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\".",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "not run"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "not run"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "not run"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "not run"
+    },
+    {
+     "id": "S33",
+     "raw": "Click on Employee Name",
+     "result": "not run"
+    },
+    {
+     "id": "S35",
+     "raw": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+     "result": "not run"
+    },
+    {
+     "id": "S37",
+     "raw": "Click on Save",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "Verify User should add  button in employee information section",
+     "expected": "Verify User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "Verify User should navigate to Add Employee page/popup",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A10",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A11",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A12",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A13",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A14",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A15",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "Verify Upload button should accept photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A16",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Verify User should see the empty text boxes and uploaded photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A17",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "Verify User should naviagte to Personal Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A18",
+     "raw": "Verify User should see added data",
+     "expected": "Verify User should see added data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A19",
+     "raw": "Verify User should navigate to Employee Information page",
+     "expected": "Verify User should navigate to Employee Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A20",
+     "raw": "Verify User should naviagte to Employment section",
+     "expected": "Verify User should naviagte to Employment section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A21",
+     "raw": "Verify Respective fileds should accept the values",
+     "expected": "Verify Respective fileds should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A22",
+     "raw": "Verify User should updated the data",
+     "expected": "Verify User should updated the data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A23",
+     "raw": "checking the same updated records in Employee information page",
+     "expected": "checking the same updated records in Employee information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A24",
+     "raw": "User should see the same updated records",
+     "expected": "User should see the same updated records",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A25",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "21022024_19": {
+   "executionId": "EXEC-2026-00017",
+   "testId": "21022024_19",
+   "title": "TC19_Verify the functionality of Delete Button",
+   "automationId": "AUTO-21022024_19",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | step 38 \"Verify User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E34 \"checking the same updated records in Employee information page\": unresolved reference: \"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 39 \"checking the same updated records in Employee information page\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E35 \"Verify User should see the same updated records\": unresolved reference: \"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 41 \"Select preferred Enployee/Employees\": ambiguous wording: it says \"preferred\" but not which one: the engine does not choose for the tester To fix: Write the value: Select \"<value>\" in the <name> dropdown, or give it in Test Data. | expected result \"User Should succesfully Deleted Employee Data\": ambiguous wording: it says \"Employee Data\" was deleted but not which one To fix: Name it: Verify \"<name>\" is not in the list.",
+   "review": [
+    {
+     "id": "step 33",
+     "raw": "Click on Employee Name",
+     "headline": "ambiguous wording:",
+     "why": "\"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one",
+     "todo": [
+      "Name the employee: Click on \"<the name>\" in the list, or give it in Test Data."
+     ]
+    },
+    {
+     "id": "step 38",
+     "raw": "Verify User should updated the data",
+     "headline": "ambiguous wording:",
+     "why": "it says the data was updated but not what shows it (a message? the values on the page?)",
+     "todo": [
+      "Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\"."
+     ]
+    },
+    {
+     "id": "E34",
+     "raw": "checking the same updated records in Employee information page",
+     "headline": "unresolved reference:",
+     "why": "\"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before",
+     "todo": [
+      "Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\"."
+     ]
+    },
+    {
+     "id": "step 39",
+     "raw": "checking the same updated records in Employee information page",
+     "headline": "ambiguous wording:",
+     "why": "it says the data was updated but not what shows it (a message? the values on the page?)",
+     "todo": [
+      "Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\"."
+     ]
+    },
+    {
+     "id": "E35",
+     "raw": "Verify User should see the same updated records",
+     "headline": "unresolved reference:",
+     "why": "\"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before",
+     "todo": [
+      "Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\"."
+     ]
+    },
+    {
+     "id": "step 41",
+     "raw": "Select preferred Enployee/Employees",
+     "headline": "ambiguous wording:",
+     "why": "it says \"preferred\" but not which one: the engine does not choose for the tester",
+     "todo": [
+      "Write the value: Select \"<value>\" in the <name> dropdown, or give it in Test Data."
+     ]
+    },
+    {
+     "id": "expected result",
+     "raw": "User Should succesfully Deleted Employee Data",
+     "headline": "ambiguous wording:",
+     "why": "it says \"Employee Data\" was deleted but not which one",
+     "todo": [
+      "Name it: Verify \"<name>\" is not in the list."
+     ]
+    }
+   ],
+   "expected": "Verify User should open browser Verify User should navigate to login section of Oragne Hrm Checking the login section at middle of the page Verify Login section should be middle of the page Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page. Verify User Should see tabs and PIM as a default page Under Employee Information Section there should be add button. Which should be in PIM page Verify User should add  button in employee information section Verify User should navigate to Add Employee page/popup Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Text box should accept values Verify Upload button should accept photo Verify User should see the empty text boxes and uploaded photo Verify User should naviagte to Personal Information page Verify User should see added data Verify User should navigate to Employee Information page Verify User should naviagte to Employment section Verify Respective fileds should accept the values Verify User should updated the data checking the same updated records in Employee information page Verify User should see the same updated records User Should succesfully Deleted Employee Data",
+   "actual": "Not run: step 33 \"Click on Employee Name\": ambiguous wording: \"Employee Name\" names no employee: which employee to open is not said, and the engine does not choose one To fix: Name the employee: Click on \"<the name>\" in the list, or give it in Test Data. | step 38 \"Verify User should updated the data\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E34 \"checking the same updated records in Employee information page\": unresolved reference: \"the same\" points at something earlier (\"same\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 39 \"checking the same updated records in Employee information page\": ambiguous wording: it says the data was updated but not what shows it (a message? the values on the page?) To fix: Say what is seen: Verify the message \"<text>\" is shown, or Verify <field> shows \"<value>\". | E35 \"Verify User should see the same updated records\": unresolved reference: \"records\" points at something earlier (\"updated\"); the engine does not guess what, it is resolved from what the test case did before To fix: Name it: write the field, record or value itself instead of \"same\", \"added\", \"entered\", \"it\". | step 41 \"Select preferred Enployee/Employees\": ambiguous wording: it says \"preferred\" but not which one: the engine does not choose for the tester To fix: Write the value: Select \"<value>\" in the <name> dropdown, or give it in Test Data. | expected result \"User Should succesfully Deleted Employee Data\": ambiguous wording: it says \"Employee Data\" was deleted but not which one To fix: Name it: Verify \"<name>\" is not in the list.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter url for Orange Hrm server",
+     "result": "not run"
+    },
+    {
+     "id": "S11",
+     "raw": "Click on the Add Button",
+     "result": "not run"
+    },
+    {
+     "id": "S13",
+     "raw": "Enter the valid code/id in code text box Note: Text box should accept only numbers",
+     "result": "not run"
+    },
+    {
+     "id": "S15",
+     "raw": "Enter valid Last name in Last name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S17",
+     "raw": "Enter valid First name in First name text box. Note: Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S19",
+     "raw": "Enter valid Middle name in Middle name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S21",
+     "raw": "Enter valid Nick name in Nick name text box. Note:Text box should accept only alphabets",
+     "result": "not run"
+    },
+    {
+     "id": "S23",
+     "raw": "upload a photo by clicking upload button",
+     "result": "not run"
+    },
+    {
+     "id": "S25.1",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S25.2",
+     "raw": "Entered text boxes and uploaded photo should empty by clicking reset",
+     "result": "not run"
+    },
+    {
+     "id": "S27",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S29",
+     "raw": "To checking the added data in personal information page",
+     "result": "not run"
+    },
+    {
+     "id": "S31",
+     "raw": "Click on Back Button",
+     "result": "not run"
+    },
+    {
+     "id": "S33",
+     "raw": "Click on Employee Name",
+     "result": "not run"
+    },
+    {
+     "id": "S35",
+     "raw": "Enter/update the Job Title, Employement Status, Sub-Division and Supervisor in respective fileds on Employment section",
+     "result": "not run"
+    },
+    {
+     "id": "S37",
+     "raw": "Click on Save",
+     "result": "not run"
+    },
+    {
+     "id": "S41.1",
+     "raw": "Select preferred Enployee/Employees and Click on Delete Button",
+     "result": "not run"
+    },
+    {
+     "id": "S41.2",
+     "raw": "Select preferred Enployee/Employees and Click on Delete Button",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify User should open browser",
+     "expected": "Verify User should open browser",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to login section of Oragne Hrm",
+     "expected": "Verify User should navigate to login section of Oragne Hrm",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Checking the login section at middle of the page",
+     "expected": "Checking the login section at middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Verify Login section should be middle of the page",
+     "expected": "Verify Login section should be middle of the page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "expected": "Checking the tabs of Admin,PIM (Personal Information Manager), Leave, Time, Benfits, Recruitment, Reports, Bug Tracker, Help are visible or not. Note:The PIM should be as Default Page.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A6",
+     "raw": "Verify User Should see tabs and PIM as a default page",
+     "expected": "Verify User Should see tabs and PIM as a default page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A7",
+     "raw": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "expected": "Under Employee Information Section there should be add button. Which should be in PIM page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A8",
+     "raw": "Verify User should add  button in employee information section",
+     "expected": "Verify User should add  button in employee information section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A9",
+     "raw": "Verify User should navigate to Add Employee page/popup",
+     "expected": "Verify User should navigate to Add Employee page/popup",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A10",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A11",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A12",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A13",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A14",
+     "raw": "Verify Text box should accept values",
+     "expected": "Verify Text box should accept values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A15",
+     "raw": "Verify Upload button should accept photo",
+     "expected": "Verify Upload button should accept photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A16",
+     "raw": "Verify User should see the empty text boxes and uploaded photo",
+     "expected": "Verify User should see the empty text boxes and uploaded photo",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A17",
+     "raw": "Verify User should naviagte to Personal Information page",
+     "expected": "Verify User should naviagte to Personal Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A18",
+     "raw": "Verify User should see added data",
+     "expected": "Verify User should see added data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A19",
+     "raw": "Verify User should navigate to Employee Information page",
+     "expected": "Verify User should navigate to Employee Information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A20",
+     "raw": "Verify User should naviagte to Employment section",
+     "expected": "Verify User should naviagte to Employment section",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A21",
+     "raw": "Verify Respective fileds should accept the values",
+     "expected": "Verify Respective fileds should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A22",
+     "raw": "Verify User should updated the data",
+     "expected": "Verify User should updated the data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A23",
+     "raw": "checking the same updated records in Employee information page",
+     "expected": "checking the same updated records in Employee information page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A24",
+     "raw": "Verify User should see the same updated records",
+     "expected": "Verify User should see the same updated records",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A25",
+     "raw": "User Should succesfully Deleted Employee Data",
+     "expected": "User Should succesfully Deleted Employee Data",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A26",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  }
+ }
+}

@@ -76,6 +76,9 @@ const ROLES: Record<string, readonly string[]> = {
   Table: ['table', 'grid'],
 };
 
+/** Kinds of element whose name is on the element itself (its value or label), not in a line of the page's text. */
+const ELEMENT_KINDS: ReadonlySet<string> = new Set(['Button', 'Link', 'Field', 'Dropdown', 'Checkbox', 'Radio button']);
+
 const wordsOf = (text: string): string[] =>
   tokenize(text)
     .filter((t) => t.kind === 'WORD' || t.kind === 'NUMBER')
@@ -331,6 +334,33 @@ function judgeText(exp: IrExpectation, c: IrCondition, p: Pages & { after: Obser
   const wanted = c.expect ?? c.text ?? '';
   if (!wanted || wanted.startsWith('$ref.'))
     return unproven(exp, 'UNRESOLVED', `text "${wanted}"`, 'the text is not known', 'the wanted text was not resolved', p.step);
+  // "The "Login" button is displayed" names a kind of element: only an element of that kind with that name shows it (E0.19 step 5). The
+  // words found anywhere on the page are not that button: the label "Login Name :" passed it on a page whose Login button was gone, and a
+  // button's words are its value, which is not in the page's text, so a real Add button was not found at all.
+  const kind = c.target?.ontology ?? '';
+  if (!inContainer && ELEMENT_KINDS.has(kind)) {
+    const roles = ROLES[kind] ?? [];
+    const same = p.after.elements.filter((e) => roles.includes(e.role));
+    const hit = same.filter((e) => squash(e.name) === squash(wanted) || (c.check !== 'exact-text' && holdsWords(e.name, wanted)));
+    const word = kind.toLowerCase();
+    const expected = `${exp.negated ? 'no ' : ''}${word} "${wanted}"`;
+    return settled(
+      exp,
+      hit.length > 0 !== exp.negated,
+      expected,
+      hit.length
+        ? `the ${word} "${hit[0]?.name}" is on the page${hit[0]?.disabled ? ' (disabled)' : ''}`
+        : `no ${word} called "${wanted}"; the ${word}s on the page: ${quote(
+            same
+              .map((e) => e.name)
+              .filter(Boolean)
+              .slice(0, 6),
+          )}`,
+      hit.length ? `the ${word} is on the page` : `no ${word} with that name is on the page`,
+      true,
+      p.step,
+    );
+  }
   // Said to be in a container, the text is looked for in all of what the container shows, whatever kind of thing it is.
   const isMessage = !inContainer && (c.target?.ontology === 'Message' || c.target?.ontology === 'Error');
   const pool = isMessage ? [...p.after.messages, ...p.after.fieldErrors.map((f) => f.message), ...saidBy(p.dialogs)] : p.after.lines;

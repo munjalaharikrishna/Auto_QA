@@ -1,0 +1,604 @@
+{
+ "run": "e019-orangehrm-login",
+ "recordedOn": "2026-11-08",
+ "about": "A live run at the end of E0.19 (test/baseline/e019-kpi-after.txt), kept for the run-time gate: the verdicts only, no pictures.",
+ "verdicts": {
+  "TC_LOGIN_001": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_001",
+   "title": "Login with valid username and password",
+   "automationId": "TC_LOGIN_001",
+   "status": "FAIL",
+   "reason": "E1 \"User is successfully logged in\": expected logged in; the login form is still shown and the page did not move",
+   "failedStep": "E1 User is successfully logged in",
+   "expected": "User is successfully logged in and redirected to the OrangeHRM home/dashboard page. User is successfully logged in and redirected to the OrangeHRM home/dashboard page.",
+   "actual": "the login form is still shown and the page did not move | address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "passed"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "User is successfully logged in",
+     "expected": "logged in",
+     "actual": "the login form is still shown and the page did not move",
+     "result": "failed"
+    },
+    {
+     "id": "E2",
+     "raw": "redirected to the OrangeHRM home/dashboard page",
+     "expected": "address contains \"OrangeHRM home/dashboard\"",
+     "actual": "address is http://127.0.0.1/orangehrm-2.5.0.2/login.php",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 3484,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_002": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_002",
+   "title": "Login with invalid username and valid password",
+   "automationId": "TC_LOGIN_002",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "an appropriate invalid username/password error message is displayed: the page showed new text (\"Invalid Login\"), but not in the words expected",
+   "review": [
+    {
+     "id": "E2",
+     "raw": "an appropriate invalid username/password error message is displayed",
+     "headline": "The page showed something, but not in the words of the expected result.",
+     "why": "Expected shown: \"invalid username/password\"; after the step the page showed new text: \"Invalid Login\".",
+     "todo": [
+      "If that message is the appropriate one, decide PASS on the review card; otherwise reword the expected result with the exact message."
+     ]
+    }
+   ],
+   "expected": "Login is rejected and an appropriate invalid username/password error message is displayed. Login is rejected and an appropriate invalid username/password error message is displayed.",
+   "actual": "the login form is still shown and the page did not move | the page showed new text: \"Invalid Login\"",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "passed"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Login is rejected",
+     "expected": "not logged in",
+     "actual": "the login form is still shown and the page did not move",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "an appropriate invalid username/password error message is displayed",
+     "expected": "shown: \"invalid username/password\"",
+     "actual": "messages on the page: nothing",
+     "result": "failed"
+    }
+   ],
+   "durationMs": 3099,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_003": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_003",
+   "title": "Login with valid username and invalid password",
+   "automationId": "AUTO-TC_LOGIN_003",
+   "status": "BLOCKED",
+   "reason": "The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "expected": "Login is rejected and an appropriate invalid username/password error message is displayed. Login is rejected and an appropriate invalid username/password error message is displayed.",
+   "actual": "Not run: The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "not run"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Login is rejected and an appropriate invalid username/password error message is displayed.",
+     "expected": "Login is rejected and an appropriate invalid username/password error message is displayed.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Login is rejected and an appropriate invalid username/password error message is displayed.",
+     "expected": "Login is rejected and an appropriate invalid username/password error message is displayed.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_004": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_004",
+   "title": "Login with invalid username and invalid password",
+   "automationId": "AUTO-TC_LOGIN_004",
+   "status": "BLOCKED",
+   "reason": "The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "expected": "Login is rejected and an appropriate authentication error message is displayed. Login is rejected and an appropriate authentication error message is displayed.",
+   "actual": "Not run: The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "not run"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Login is rejected and an appropriate authentication error message is displayed.",
+     "expected": "Login is rejected and an appropriate authentication error message is displayed.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Login is rejected and an appropriate authentication error message is displayed.",
+     "expected": "Login is rejected and an appropriate authentication error message is displayed.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_005": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_005",
+   "title": "Login with blank username",
+   "automationId": "AUTO-TC_LOGIN_005",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "The new engine could not confirm the PASS. The old engine passed every check, but the new engine, which also judges whether each check was proven by this run, could not confirm it (NEEDS REVIEW): the system displays a validation message indicating that the username is required: the page showed new text (\"User Name not given!\"), but not in the words expected",
+   "review": [
+    {
+     "id": "",
+     "raw": "",
+     "headline": "A PASS the second engine could not confirm.",
+     "why": "The old engine passed every check, but the new engine, which also judges whether each check was proven by this run, could not confirm it (NEEDS REVIEW): the system displays a validation message indicating that the username is required: the page showed new text (\"User Name not given!\"), but not in the words expected",
+     "todo": [
+      "Look at the screenshots of the steps in the report and decide PASS or FAIL on the review card.",
+      "If the check is worded loosely, rewrite the expected result as something the page shows, for example: Error \"…\" is shown."
+     ]
+    }
+   ],
+   "expected": "Login is not performed and the system displays a validation message indicating that the username is required.",
+   "actual": "\"Login is performed and the system\" was not visible. No errors on the page.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "passed"
+    },
+    {
+     "id": "S2",
+     "raw": "Leave the Login Name text box blank.",
+     "result": "passed"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Login is not performed and the system displays a validation message indicating that the username is required.",
+     "expected": "Login is not performed and the system displays a validation message indicating that the username is required.",
+     "actual": "\"Login is performed and the system\" was not visible",
+     "result": "passed"
+    },
+    {
+     "id": "A2",
+     "raw": "No crash",
+     "expected": "No errors on the page",
+     "actual": "No errors on the page",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 962,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_006": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_006",
+   "title": "Login with blank password",
+   "automationId": "AUTO-TC_LOGIN_006",
+   "status": "BLOCKED",
+   "reason": "The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "expected": "Login is not performed and the system displays a validation message indicating that the password is required.",
+   "actual": "Not run: The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "not run"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S3",
+     "raw": "Leave the Password text box blank.",
+     "result": "not run"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Login is not performed and the system displays a validation message indicating that the password is required.",
+     "expected": "Login is not performed and the system displays a validation message indicating that the password is required.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_007": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_007",
+   "title": "Login with both username and password blank",
+   "automationId": "AUTO-TC_LOGIN_007",
+   "status": "BLOCKED",
+   "reason": "The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "expected": "Login is not performed and required-field validation messages are displayed for the missing credentials.",
+   "actual": "Not run: The Test Data of this case gives a different value for TEST_PASSWORD than the one set for the project, so running it would not test what the case says (a case about a wrong password would log in with the right one). Give this case its own variable: write the value in Test Data as {{env.TEST_<NAME>}} and set that variable, or set TEST_PASSWORD to the value in the sheet.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "not run"
+    },
+    {
+     "id": "S2",
+     "raw": "Leave the Login Name text box blank.",
+     "result": "not run"
+    },
+    {
+     "id": "S3",
+     "raw": "Leave the Password text box blank.",
+     "result": "not run"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Login is not performed and required-field validation messages are displayed for the missing credentials.",
+     "expected": "Login is not performed and required-field validation messages are displayed for the missing credentials.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_008": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_008",
+   "title": "Verify password is masked",
+   "automationId": "TC_LOGIN_008",
+   "status": "PASS",
+   "reason": "all 3 expectation(s) proven by fresh evidence",
+   "expected": "Verify that the password is displayed as masked characters. The password is displayed as masked characters and the actual password text is not visible. The password is displayed as masked characters and the actual password text is not visible.",
+   "actual": "it shows dots | it shows dots | it shows dots",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "passed"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify that the password is displayed as masked characters",
+     "expected": "Password \"password\" is masked",
+     "actual": "it shows dots",
+     "result": "passed"
+    },
+    {
+     "id": "E2",
+     "raw": "The password is displayed as masked characters",
+     "expected": "Password \"password\" is masked",
+     "actual": "it shows dots",
+     "result": "passed"
+    },
+    {
+     "id": "E3",
+     "raw": "the actual password text is not visible",
+     "expected": "Password \"Password\" is masked",
+     "actual": "it shows dots",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 1998,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_009": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_009",
+   "title": "Verify Clear button clears entered credentials",
+   "automationId": "AUTO-TC_LOGIN_009",
+   "status": "PASS",
+   "reason": "Every check passed.",
+   "expected": "Both username and password fields are cleared. Both username and password fields are cleared.",
+   "actual": "\"username\" had the value \"\". \"password\" had the value \"\". No errors on the page.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "passed"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username in the Login Name text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "passed"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Clear' button.",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Both username and password fields are cleared.",
+     "expected": "Both username and password fields are cleared.",
+     "actual": "\"username\" had the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "A2",
+     "raw": "Both username and password fields are cleared.",
+     "expected": "Both username and password fields are cleared.",
+     "actual": "\"password\" had the value \"\"",
+     "result": "passed"
+    },
+    {
+     "id": "A3",
+     "raw": "No crash",
+     "expected": "No errors on the page",
+     "actual": "No errors on the page",
+     "result": "passed"
+    }
+   ],
+   "durationMs": 887,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC_LOGIN_010": {
+   "executionId": "EXEC-2026-00018",
+   "testId": "TC_LOGIN_010",
+   "title": "Login with username containing leading/trailing spaces",
+   "automationId": "AUTO-TC_LOGIN_010",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "expected result \"The system handles the whitespace according to the application's validation rules\": not understood: the sentence fits none of the grammar models: it is neither an action nor a check To fix: Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page. | expected result \"spaces are not accepted\": unknown branch: \"spaces are not accepted\": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen To fix: Say which result is expected, for example: \"If spaces are not accepted, <result A>; otherwise <result B>\", or state the test data that decides it.",
+   "review": [
+    {
+     "id": "expected result",
+     "raw": "The system handles the whitespace according to the application's validation rules",
+     "headline": "not understood:",
+     "why": "the sentence fits none of the grammar models: it is neither an action nor a check",
+     "todo": [
+      "Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page."
+     ]
+    },
+    {
+     "id": "expected result",
+     "raw": "spaces are not accepted",
+     "headline": "unknown branch:",
+     "why": "\"spaces are not accepted\": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen",
+     "todo": [
+      "Say which result is expected, for example: \"If spaces are not accepted, <result A>; otherwise <result B>\", or state the test data that decides it."
+     ]
+    }
+   ],
+   "expected": "The system handles the whitespace according to the application's validation rules. It should not authenticate an unintended username and should display an appropriate validation/error message if spaces are not accepted.",
+   "actual": "Not run: expected result \"The system handles the whitespace according to the application's validation rules\": not understood: the sentence fits none of the grammar models: it is neither an action nor a check To fix: Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page. | expected result \"spaces are not accepted\": unknown branch: \"spaces are not accepted\": it depends on how the application behaves, which is not known before the run, so the expected result cannot be chosen To fix: Say which result is expected, for example: \"If spaces are not accepted, <result A>; otherwise <result B>\", or state the test data that decides it.",
+   "steps": [
+    {
+     "id": "S1",
+     "raw": "Open the OrangeHRM login page.",
+     "result": "not run"
+    },
+    {
+     "id": "S2",
+     "raw": "Enter username with leading/trailing spaces in the Login Name text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S3",
+     "raw": "Enter password in the Password text box.",
+     "result": "not run"
+    },
+    {
+     "id": "S4",
+     "raw": "Click the 'Login' button.",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "The system handles the whitespace according to the application's validation rules.",
+     "expected": "The system handles the whitespace according to the application's validation rules.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "It should not authenticate an unintended username and should display an appropriate validation/error message if spaces are not accepted.",
+     "expected": "It should not authenticate an unintended username and should display an appropriate validation/error message if spaces are not accepted.",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  }
+ }
+}

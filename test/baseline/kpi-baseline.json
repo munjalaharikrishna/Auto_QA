@@ -1,0 +1,72 @@
+{
+  "version": "E0.19",
+  "frozenOn": "2026-11-08",
+  "about": "Frozen run-time baseline: the legacy engine on the real application, 11 Oct 2026 (test/baseline/live-run.md). Never updated by a tool. Denominators are fixed here: test cases and steps of each workbook as written. Questions: the distinct review questions of the run (cases with the same question are one question), plus each NOT VERIFIED case.",
+  "modules": {
+    "orangehrm-add-employee": {
+      "label": "OrangeHRM Add Employee",
+      "workbook": "Managing Employee Data.xlsx",
+      "engine": "legacy",
+      "testCases": 19,
+      "steps": 181,
+      "caseIds": [
+        "21022024_1",
+        "21022024_2",
+        "21022024_3",
+        "21022024_4",
+        "21022024_5",
+        "21022024_6",
+        "21022024_7",
+        "21022024_8",
+        "21022024_9",
+        "21022024_10",
+        "21022024_11",
+        "21022024_12",
+        "21022024_13",
+        "21022024_14",
+        "21022024_15",
+        "21022024_16",
+        "21022024_17",
+        "21022024_18",
+        "21022024_19"
+      ],
+      "setAside": 19,
+      "questions": 13,
+      "statuses": {
+        "PASS": 0,
+        "FAIL": 0,
+        "BLOCKED": 0,
+        "NEEDS REVIEW": 19,
+        "NOT VERIFIED": 0
+      }
+    },
+    "orangehrm-login": {
+      "label": "OrangeHRM Login",
+      "workbook": "OrangeHRM_Login_Test_Cases_Updated.xlsx",
+      "engine": "legacy",
+      "testCases": 10,
+      "steps": 39,
+      "caseIds": [
+        "TC_LOGIN_001",
+        "TC_LOGIN_002",
+        "TC_LOGIN_003",
+        "TC_LOGIN_004",
+        "TC_LOGIN_005",
+        "TC_LOGIN_006",
+        "TC_LOGIN_007",
+        "TC_LOGIN_008",
+        "TC_LOGIN_009",
+        "TC_LOGIN_010"
+      ],
+      "setAside": 6,
+      "questions": 6,
+      "statuses": {
+        "PASS": 4,
+        "FAIL": 0,
+        "BLOCKED": 0,
+        "NEEDS REVIEW": 5,
+        "NOT VERIFIED": 1
+      }
+    }
+  }
+}

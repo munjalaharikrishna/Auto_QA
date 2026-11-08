@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -7,6 +7,8 @@ import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ENGINES, engineFrom } from '../engine/index.js';
+import { readScreens, SCREENS_FILE } from '../engine/knowledge/index.js';
+import type { Screen } from '../engine/knowledge/screens.js';
 import { FIELDS, type Field } from '../importer/columns.js';
 import { describeChange, diffCases } from '../importer/diff.js';
 import { buildProjectExport, type ExportCase } from '../importer/project-export.js';
@@ -19,6 +21,7 @@ import { RawTestCaseSchema } from '../model/test-model.js';
 import { parseTestCase } from '../parser/index.js';
 import { RULE_KINDS, ruleKey } from '../parser/rules.js';
 import type { TestVerdict } from '../results/verdict.js';
+import { HoldRefused, HoldService, isOverdue } from '../review/holds.js';
 import { ReviewRefused, ReviewService } from '../review/service.js';
 import { describeEnv, writeEnvFile } from './credentials.js';
 import type { Decision, JobRunner, ServerEvent } from './jobs.js';
@@ -603,6 +606,22 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // The review queue of a job: the cases the engine could not decide, as cards a person says PASS or FAIL on (VD-11, DEC-05).
   // A PASS on a case where the engine chose among alike controls keeps that choice for the screen, as a walkthrough pick does (E0.17).
   const review = new ReviewService(store, {
+    // A person's answer to what a sentence means is kept as a project reading, checked like any other (E0.19 step 3).
+    read: (projectId, reading, source, who) => learning.saveReading(projectId, reading, source, who),
+    // The screens each case reached, kept beside its exploration: what a one-click rewrite is built from (E0.19 step 4).
+    screens: async (projectId) => {
+      const out = new Map<string, Screen[]>();
+      const project = await store.project(projectId);
+      if (!project) return out;
+      const dir = runner.projectDir(project, 'explore');
+      if (!existsSync(dir)) return out;
+      for (const entry of await readdir(dir, { withFileTypes: true }))
+        if (entry.isDirectory()) {
+          const seen = await readScreens(path.join(dir, entry.name, SCREENS_FILE));
+          if (seen.length) out.set(entry.name, seen);
+        }
+      return out;
+    },
     remember: (projectId, pick, source, who) =>
       learning.saveLabel(projectId, { label: pick.word, means: pick.means, screen: pick.screen, element: pick.element }, source, who, { seenOnScreen: true }),
     // A PASS changed to FAIL takes back the elements that PASS kept (E0.18 step 5).
@@ -615,7 +634,48 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (e instanceof ReviewRefused) throw e.status === 404 ? notFound(e.message.includes('card') ? 'Card' : 'Job') : bad(e.message);
     throw e;
   };
-  app.get('/api/jobs/:id/review-queue', async (req) => ({ cards: await review.cards((req.params as { id: string }).id).catch(reviewFailed) }));
+  // Opening the review is noted, at most once a minute per job, so the review KPIs can measure active review time (E0.19 step 1).
+  const reviewViewed = new Map<string, number>();
+  app.get('/api/jobs/:id/review-queue', async (req) => {
+    const id = (req.params as { id: string }).id;
+    const cards = await review.cards(id).catch(reviewFailed);
+    const last = reviewViewed.get(id) ?? 0;
+    if (cards.length > 0 && Date.now() - last >= 60_000) {
+      reviewViewed.set(id, Date.now());
+      const job = await store.job(id);
+      await store.audit('review.view', 'job', id, job?.projectId, { cards: cards.length, open: cards.filter((c) => !c.decided).length });
+    }
+    return { cards };
+  });
+  // The holding area for flaky cases (E0.19 step 7): held with an owner and a day, listed always, back by itself when the day passes.
+  const holds = new HoldService(store);
+  const holdFailed = (e: unknown): never => {
+    if (e instanceof HoldRefused) throw bad(e.message);
+    throw e;
+  };
+  app.get('/api/projects/:id/held', async (req) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const all = (req.query as { all?: string }).all === 'true';
+    return (await holds.list(project.id, all)).map((h) => ({ ...h, overdue: h.status === 'held' && isOverdue(h) }));
+  });
+  app.post('/api/jobs/:id/held', async (req, reply) => {
+    const body = z
+      .object({ testId: z.string().min(1), owner: z.unknown(), reason: z.unknown(), days: z.unknown().optional(), who: z.unknown().optional() })
+      .parse(req.body);
+    const held = await holds.hold((req.params as { id: string }).id, body.testId, body).catch(holdFailed);
+    return reply.status(201).send(held);
+  });
+  app.post('/api/projects/:id/held/:testId/release', async (req) => {
+    const params = req.params as { id: string; testId: string };
+    const project = await projectOf(params.id);
+    const body = z.object({ note: z.unknown().optional(), who: z.unknown().optional() }).parse(req.body ?? {});
+    return holds.release(project.id, params.testId, body).catch(holdFailed);
+  });
+
+  app.post('/api/jobs/:id/review-queue/answers', async (req) => {
+    const body = z.object({ cardId: z.string().min(1), means: z.unknown(), who: z.unknown().optional() }).parse(req.body);
+    return review.answer((req.params as { id: string }).id, body.cardId, { means: body.means, who: body.who }).catch(reviewFailed);
+  });
   app.get('/api/jobs/:id/review-queue/history', async (req) => ({ decisions: await review.history((req.params as { id: string }).id).catch(reviewFailed) }));
   app.post('/api/jobs/:id/review-queue/decisions', async (req) => {
     const body = z.object({ cardId: z.string().min(1), decision: z.unknown(), who: z.unknown().optional(), note: z.unknown().optional() }).parse(req.body);

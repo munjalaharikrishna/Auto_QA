@@ -20,5 +20,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - run: npm run lint
       - run: npm run typecheck
+      # E0.19 step 6: the protection gate. Blocks on a step back in understanding, a broken wrong-PASS trap, or a wrong PASS in the
+      # saved live runs; and, once the owner declares the minimum engine, on fewer than 80% fewer questions than the legacy engine.
+      - name: Protection gate
+        run: npm run engine:gate
       - run: npm run web:build
       - run: npm test
