@@ -20,8 +20,10 @@ const today = () => new Date().toISOString().slice(0, 10);
 const STATUS_LABEL = { planned: 'Planned', 'in-progress': 'In progress', released: 'Released', cancelled: 'Cancelled' } as const;
 
 /** Releases of a project: scope, date and features. After the scope is locked, every added requirement says what it does to the date. */
-export function ReleasesPage() {
-  const { projects, current, error, choose } = useProjects();
+/** With `projectId` (U1: the project's Releases section), that project's releases, with no project picker. */
+export function ReleasesPage({ projectId }: { projectId?: string } = {}) {
+  const { projects, current: picked, error, choose } = useProjects();
+  const current = projectId ? (projects?.find((p) => p.id === projectId) ?? picked) : picked;
   const [releases, setReleases] = useState<ReleaseDetail[]>();
   const [loadError, setLoadError] = useState<string>();
   const [creating, setCreating] = useState(false);
@@ -47,21 +49,23 @@ export function ReleasesPage() {
   const replace = (r: ReleaseDetail) => setReleases((all) => all?.map((x) => (x.id === r.id ? r : x)));
   return (
     <>
-      <div className="row" style={{ marginBottom: '0.25rem' }}>
-        <h1 className="grow" style={{ margin: 0 }}>
-          Releases
-        </h1>
-        <ProjectSelect projects={projects} value={current?.id} onChange={choose} />
-        {current && !creating && (
-          <button type="button" className="primary" onClick={() => setCreating(true)}>
-            New release
-          </button>
-        )}
-      </div>
-      <p className="muted">
-        Enter the scope, the date and the features of a release. Lock the scope when work starts: from then on, a requirement you add asks for a reason, shows
-        what it does to the date and the amount of work, and is kept in the change log.
-      </p>
+      <header className="page-head with-actions">
+        <div className="page-head-text">
+          <h1>Releases</h1>
+          <p className="muted">
+            Enter the scope, the date and the features of a release. Lock the scope when work starts: from then on, a requirement you add asks for a reason,
+            shows what it does to the date and the amount of work, and is kept in the change log.
+          </p>
+        </div>
+        <div className="row">
+          {!projectId && <ProjectSelect projects={projects} value={current?.id} onChange={choose} />}
+          {current && !creating && (
+            <button type="button" className="primary" onClick={() => setCreating(true)}>
+              New release
+            </button>
+          )}
+        </div>
+      </header>
       <ErrorNote error={loadError} />
       {current && creating && (
         <NewRelease
@@ -224,6 +228,8 @@ function ReleaseCard(props: {
   const { release: r, project } = props;
   const s = r.summary;
   const [error, setError] = useState<string>();
+  // U1 step 9: asked in the page, not in a browser pop-up.
+  const [deleting, setDeleting] = useState(false);
   const act = async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
     setError(undefined);
     try {
@@ -238,7 +244,7 @@ function ReleaseCard(props: {
   };
 
   return (
-    <section className="panel stack">
+    <section className="panel stack release-card">
       <div className="row">
         <h2 className="grow" style={{ margin: 0 }}>
           {r.name} {r.version && <span className="muted">{r.version}</span>}
@@ -248,7 +254,7 @@ function ReleaseCard(props: {
           {props.open ? 'Hide details' : 'Open'}
         </button>
       </div>
-      <div className="tiles" style={{ margin: 0 }}>
+      <div className="tiles release-stats">
         <Stat
           label="Release date"
           value={r.dueDate}
@@ -296,16 +302,28 @@ function ReleaseCard(props: {
             ) : (
               <span className="muted">Scope locked {when(r.baselinedAt)}</span>
             )}
-            <button
-              type="button"
-              className="danger"
-              onClick={async () => {
-                if (!confirm(`Delete the release ${r.name}?`)) return;
-                if (await act(() => api.deleteRelease(project.id, r.id))) props.onDeleted();
-              }}
-            >
-              Delete
-            </button>
+            {deleting ? (
+              <fieldset className="row tight confirm-inline">
+                <legend className="sr-only">Delete {r.name}</legend>
+                <span>Delete {r.name}? Its features and change log go with it.</span>
+                <button
+                  type="button"
+                  className="danger solid"
+                  onClick={async () => {
+                    if (await act(() => api.deleteRelease(project.id, r.id))) props.onDeleted();
+                  }}
+                >
+                  Delete release
+                </button>
+                <button type="button" onClick={() => setDeleting(false)}>
+                  Keep it
+                </button>
+              </fieldset>
+            ) : (
+              <button type="button" className="danger" onClick={() => setDeleting(true)}>
+                Delete
+              </button>
+            )}
           </div>
           {!r.baselinedAt && (
             <p className="notice">
@@ -324,6 +342,8 @@ function ReleaseCard(props: {
 }
 
 function Features({ release: r, project, act }: { release: ReleaseDetail; project: ProjectView; act: (fn: () => Promise<ReleaseDetail>) => Promise<void> }) {
+  const [removing, setRemoving] = useState<string>();
+  const [why, setWhy] = useState('');
   const title = (id: string) => r.cases.find((c) => c.extId === id)?.title ?? id;
   return (
     <div className="table-wrap">
@@ -400,21 +420,44 @@ function Features({ release: r, project, act }: { release: ReleaseDetail; projec
                 {!f.removed && !f.caseIds.length && <span className="muted">none yet: not covered</span>}
               </td>
               <td>
-                {!f.removed && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      let reason = '';
-                      if (r.baselinedAt) {
-                        reason = prompt(`Why is "${f.title}" taken out of this release?`)?.trim() ?? '';
-                        if (!reason) return;
-                      }
-                      void act(() => api.removeFeature(project.id, r.id, f.id, { reason }));
-                    }}
-                  >
-                    Remove
-                  </button>
-                )}
+                {!f.removed &&
+                  (removing === f.id && r.baselinedAt ? (
+                    <form
+                      className="stack-s"
+                      aria-label={`Why is ${f.title} taken out?`}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void act(() => api.removeFeature(project.id, r.id, f.id, { reason: why.trim() })).then(() => {
+                          setRemoving(undefined);
+                          setWhy('');
+                        });
+                      }}
+                    >
+                      <label>
+                        Why is it taken out?
+                        <input value={why} onChange={(e) => setWhy(e.target.value)} required />
+                      </label>
+                      <span className="row tight">
+                        <button type="submit" className="small danger solid" disabled={!why.trim()}>
+                          Remove
+                        </button>
+                        <button type="button" className="small" onClick={() => setRemoving(undefined)}>
+                          Keep it
+                        </button>
+                      </span>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Once the scope is locked a removal needs a reason, asked in the row (U1 step 9); before, it is removed at once.
+                        if (r.baselinedAt) setRemoving(f.id);
+                        else void act(() => api.removeFeature(project.id, r.id, f.id, { reason: '' }));
+                      }}
+                    >
+                      Remove
+                    </button>
+                  ))}
               </td>
             </tr>
           ))}

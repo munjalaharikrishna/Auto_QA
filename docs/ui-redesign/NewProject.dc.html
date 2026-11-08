@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New project</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8F7FC}
+a{color:#6D5AE6}a:hover{color:#4B3BC4}
+@keyframes slidein{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.drawer{animation:slidein .35s ease-out both}
+.pop{display:inline-flex;animation:pop .5s ease-out .4s both}
+@media (prefers-reduced-motion: reduce){.drawer,.pop{animation:none}}
+input,select{font:inherit}
+input:focus,select:focus{outline:3px solid #DCD5FA;outline-offset:1px}
+
+/* modern layer */
+@keyframes m-rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes m-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes m-drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px)}}
+@keyframes m-sheen{0%{left:-40%}60%,100%{left:120%}}
+@keyframes m-ping{0%{box-shadow:0 0 0 0 rgba(240,166,62,.55)}80%,100%{box-shadow:0 0 0 9px rgba(240,166,62,0)}}
+main{position:relative;isolation:isolate}
+main::before{content:"";position:absolute;z-index:-1;right:-80px;top:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,#ECE7FD 0%,rgba(236,231,253,0) 68%);animation:m-drift 18s ease-in-out infinite;pointer-events:none}
+main::after{content:"";position:absolute;z-index:-1;left:-60px;bottom:-60px;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,#E4F5ED 0%,rgba(228,245,237,0) 68%);animation:m-drift 22s ease-in-out infinite reverse;pointer-events:none}
+main h1{background:linear-gradient(90deg,#23213A 0%,#4B3BC4 60%,#9B7FE8);-webkit-background-clip:text;background-clip:text;color:transparent}
+main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details{border-radius:18px!important;box-shadow:0 1px 2px rgba(35,33,58,.04),0 10px 30px rgba(76,60,170,.05);background-color:rgba(255,255,255,.92)!important;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;animation:m-rise .55s ease-out both}
+main section:hover,main article:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(76,60,170,.10);border-color:#DCD5FA!important}
+main > div > :nth-child(2){animation-delay:.06s}main > div > :nth-child(3){animation-delay:.12s}main > div > :nth-child(4){animation-delay:.18s}main > div > :nth-child(5){animation-delay:.24s}main > div > :nth-child(6){animation-delay:.3s}
+main article{position:relative;overflow:hidden}
+main article::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#8B7BF0,#F0A63E)}
+[role="img"] > span{border-radius:5px;transform-origin:left;animation:m-grow .9s cubic-bezier(.2,.8,.2,1) both;background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+[role="img"] > span:nth-child(2){animation-delay:.12s}[role="img"] > span:nth-child(3){animation-delay:.24s}
+nav[aria-label="Project"]{background:rgba(255,255,255,.8)!important;backdrop-filter:blur(10px)}
+nav[aria-label="Project"] a{transition:background-color .15s ease,color .15s ease}
+nav[aria-label="Project"] a:hover{background-color:#F6F4FE}
+nav[aria-label="Project"] a[style*="background: #F1EEFD"]{box-shadow:inset 3px 0 0 #6D5AE6;background:linear-gradient(90deg,#EEEAFD,#F7F5FE)!important}
+nav[aria-label="Project"] span[style*="background: #9A6420"]{background:#F0A63E!important;color:#3B2A0C!important;animation:m-ping 2.2s ease-out infinite}
+[style*="background: #6D5AE6"]{position:relative;overflow:hidden;background:linear-gradient(135deg,#8775F0,#6D5AE6 60%,#5C49D8)!important;box-shadow:0 10px 22px rgba(109,90,230,.25)}
+[style*="background: #6D5AE6"]::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.3),rgba(255,255,255,0));animation:m-sheen 4s ease-in-out infinite;pointer-events:none}
+nav[aria-label="Project"] [style*="background: #6D5AE6"]::after{display:none}
+button,a{transition:transform .15s ease,box-shadow .15s ease}
+button:active,a:active{transform:scale(.98)}
+tbody tr,table tr+tr{transition:background-color .15s ease}
+table tr+tr:hover{background-color:#FAF9FE!important}
+input,select{transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus{box-shadow:0 0 0 4px #EEEAFD}
+@media (prefers-reduced-motion: reduce){main::before,main::after,main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details,[role="img"] > span,nav[aria-label="Project"] span[style*="background: #9A6420"],[style*="background: #6D5AE6"]::after{animation:none!important}main section:hover,main article:hover,button:active,a:active{transform:none}}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #23213A; background: #F8F7FC; min-height: 1000px; position: relative; overflow: hidden">
+
+  <div aria-hidden="true" style="max-width: 1240px; margin: 0 auto; padding: 100px 32px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; filter: blur(1px)">
+    <div style="height: 150px; border-radius: 20px; background: #EEE9FF; grid-column: 1 / -1"></div>
+    <div style="height: 300px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECEAF4"></div>
+    <div style="height: 300px; border-radius: 18px; background: #FFFFFF; border: 1px solid #ECEAF4"></div>
+    <div style="height: 300px; border-radius: 18px; background: #FCFBFE; border: 2px dashed #DCD5FA"></div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(35,33,58,.38)"></div>
+
+  <aside role="dialog" aria-modal="true" aria-labelledby="np-title" class="drawer" style="position: absolute; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: #FFFFFF; box-shadow: -18px 0 40px rgba(35,33,58,.18); display: flex; flex-direction: column">
+    <div style="padding: 24px 28px; border-bottom: 1px solid #F3F2F8; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h2 id="np-title" style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 24px; font-weight: 700">New project</h2>
+        <p style="margin: 0; font-size: 14px; color: #5E5B78">The application you want to test, and how to log in to it.</p>
+      </div>
+      <a href="Projects.dc.html" aria-label="Close" style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #5E5B78; text-decoration: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </a>
+    </div>
+
+    <form style="flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 22px">
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="np-name" style="font-size: 14px; font-weight: 600">Project name</label>
+        <div style="display: flex; gap: 10px">
+          <span aria-hidden="true" style="width: 48px; height: 48px; flex: none; border-radius: 14px; background: #E6F4EE; color: #2F6B52; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center">SD</span>
+          <input id="np-name" type="text" value="Shop Demo" style="flex: 1; padding: 12px 14px; border: 1px solid #DCD9E8; border-radius: 10px; font-size: 15px; color: #23213A">
+        </div>
+        <div role="radiogroup" aria-label="Tile colour" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <span style="font-size: 13px; color: #5E5B78">Tile colour</span>
+          <button type="button" role="radio" aria-checked="false" aria-label="Lavender" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 14px; background: #ECE8FD; box-shadow: inset 0 0 0 1px #DCD5FA"></button>
+          <button type="button" role="radio" aria-checked="true" aria-label="Mint" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 14px; background: #E6F4EE; box-shadow: inset 0 0 0 1px #CBE6D9; outline: 2px solid #6D5AE6; outline-offset: 2px"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="Apricot" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 14px; background: #FDEBDD; box-shadow: inset 0 0 0 1px #F6D8C2"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="Sky" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 14px; background: #E5EFFB; box-shadow: inset 0 0 0 1px #CCDDF3"></button>
+          <button type="button" role="radio" aria-checked="false" aria-label="Rose" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 14px; background: #FBE7EE; box-shadow: inset 0 0 0 1px #F2CFDC"></button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="np-url" style="font-size: 14px; font-weight: 600">Application address</label>
+        <input id="np-url" type="url" value="https://shop.example.test/login" style="padding: 12px 14px; border: 1px solid #3FB27F; border-radius: 10px; font-size: 15px; color: #23213A">
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #2F855A; font-weight: 500">
+          <span class="pop" style="width: 18px; height: 18px; border-radius: 9px; background: #3FB27F; color: #FFFFFF; align-items: center; justify-content: center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
+          </span>
+          The page answers, and it shows a login form
+        </span>
+      </div>
+
+      <fieldset style="border: 1px solid #ECEAF4; border-radius: 14px; margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+        <legend style="padding: 0 6px; font-size: 14px; font-weight: 600">Login for the tests</legend>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5E5B78">Username
+            <input type="text" value="qa.tester@example.test" style="padding: 11px 12px; border: 1px solid #DCD9E8; border-radius: 10px; font-size: 14px; color: #23213A">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5E5B78">Password
+            <input type="password" value="secretvalue" style="padding: 11px 12px; border: 1px solid #DCD9E8; border-radius: 10px; font-size: 14px; color: #23213A">
+          </label>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #5E5B78">Kept as a secret: never shown in results, screenshots or exports.</p>
+      </fieldset>
+
+      <details style="border: 1px solid #ECEAF4; border-radius: 14px">
+        <summary style="padding: 14px 18px; font-size: 14px; font-weight: 600; cursor: pointer">Advanced <span style="font-weight: 400; color: #5E5B78">· browser, test ids</span></summary>
+        <div style="padding: 0 18px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5E5B78">Browser
+            <select style="padding: 11px 12px; border: 1px solid #DCD9E8; border-radius: 10px; font-size: 14px; color: #23213A; background: #FFFFFF">
+              <option>Chrome</option>
+              <option>Edge</option>
+              <option>Firefox</option>
+            </select>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5E5B78">Test id attribute
+            <input type="text" value="data-testid" style="padding: 11px 12px; border: 1px solid #DCD9E8; border-radius: 10px; font-size: 14px; color: #23213A">
+          </label>
+        </div>
+      </details>
+    </form>
+
+    <div style="padding: 18px 28px; border-top: 1px solid #F3F2F8; display: flex; justify-content: flex-end; gap: 10px">
+      <a href="Projects.dc.html" style="padding: 12px 18px; min-height: 48px; box-sizing: border-box; border-radius: 12px; color: #5E5B78; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center">Cancel</a>
+      <a href="Main.dc.html" style="padding: 12px 20px; min-height: 48px; box-sizing: border-box; border-radius: 12px; background: #6D5AE6; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(109,90,230,.22)">Create project
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

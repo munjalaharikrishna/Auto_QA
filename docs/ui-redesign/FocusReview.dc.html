@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Focus review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8F7FC}
+a{color:#6D5AE6}a:hover{color:#4B3BC4}
+
+/* modern layer */
+@keyframes m-rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes m-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes m-drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px)}}
+@keyframes m-sheen{0%{left:-40%}60%,100%{left:120%}}
+@keyframes m-ping{0%{box-shadow:0 0 0 0 rgba(240,166,62,.55)}80%,100%{box-shadow:0 0 0 9px rgba(240,166,62,0)}}
+main{position:relative;isolation:isolate}
+main::before{content:"";position:absolute;z-index:-1;right:-80px;top:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,#ECE7FD 0%,rgba(236,231,253,0) 68%);animation:m-drift 18s ease-in-out infinite;pointer-events:none}
+main::after{content:"";position:absolute;z-index:-1;left:-60px;bottom:-60px;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,#E4F5ED 0%,rgba(228,245,237,0) 68%);animation:m-drift 22s ease-in-out infinite reverse;pointer-events:none}
+main h1{background:linear-gradient(90deg,#23213A 0%,#4B3BC4 60%,#9B7FE8);-webkit-background-clip:text;background-clip:text;color:transparent}
+main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details{border-radius:18px!important;box-shadow:0 1px 2px rgba(35,33,58,.04),0 10px 30px rgba(76,60,170,.05);background-color:rgba(255,255,255,.92)!important;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;animation:m-rise .55s ease-out both}
+main section:hover,main article:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(76,60,170,.10);border-color:#DCD5FA!important}
+main > div > :nth-child(2){animation-delay:.06s}main > div > :nth-child(3){animation-delay:.12s}main > div > :nth-child(4){animation-delay:.18s}main > div > :nth-child(5){animation-delay:.24s}main > div > :nth-child(6){animation-delay:.3s}
+main article{position:relative;overflow:hidden}
+main article::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#8B7BF0,#F0A63E)}
+[role="img"] > span{border-radius:5px;transform-origin:left;animation:m-grow .9s cubic-bezier(.2,.8,.2,1) both;background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+[role="img"] > span:nth-child(2){animation-delay:.12s}[role="img"] > span:nth-child(3){animation-delay:.24s}
+nav[aria-label="Project"]{background:rgba(255,255,255,.8)!important;backdrop-filter:blur(10px)}
+nav[aria-label="Project"] a{transition:background-color .15s ease,color .15s ease}
+nav[aria-label="Project"] a:hover{background-color:#F6F4FE}
+nav[aria-label="Project"] a[style*="background: #F1EEFD"]{box-shadow:inset 3px 0 0 #6D5AE6;background:linear-gradient(90deg,#EEEAFD,#F7F5FE)!important}
+nav[aria-label="Project"] span[style*="background: #9A6420"]{background:#F0A63E!important;color:#3B2A0C!important;animation:m-ping 2.2s ease-out infinite}
+[style*="background: #6D5AE6"]{position:relative;overflow:hidden;background:linear-gradient(135deg,#8775F0,#6D5AE6 60%,#5C49D8)!important;box-shadow:0 10px 22px rgba(109,90,230,.25)}
+[style*="background: #6D5AE6"]::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.3),rgba(255,255,255,0));animation:m-sheen 4s ease-in-out infinite;pointer-events:none}
+nav[aria-label="Project"] [style*="background: #6D5AE6"]::after{display:none}
+button,a{transition:transform .15s ease,box-shadow .15s ease}
+button:active,a:active{transform:scale(.98)}
+tbody tr,table tr+tr{transition:background-color .15s ease}
+table tr+tr:hover{background-color:#FAF9FE!important}
+input,select{transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus{box-shadow:0 0 0 4px #EEEAFD}
+@media (prefers-reduced-motion: reduce){main::before,main::after,main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details,[role="img"] > span,nav[aria-label="Project"] span[style*="background: #9A6420"],[style*="background: #6D5AE6"]::after{animation:none!important}main section:hover,main article:hover,button:active,a:active{transform:none}}
+</style>
+
+<style>
+@keyframes ripple{0%{box-shadow:0 0 0 0 rgba(109,90,230,.55)}70%,100%{box-shadow:0 0 0 7px rgba(109,90,230,0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.lit{animation:ripple 2s ease-out infinite}
+.live{animation:blink 1.4s ease-in-out infinite}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;border:1px solid #DCD9E8;border-bottom-width:2px;background:#FFFFFF;font:600 12px ui-monospace,Menlo,monospace;color:#3B3854;box-sizing:border-box}
+@media (prefers-reduced-motion: reduce){.lit,.live{animation:none}}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #23213A; background: #F8F7FC; min-height: 1100px; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="Project" style="flex: 1 1 248px; max-width: 280px; background: #FFFFFF; border-right: 1px solid #ECEAF4; padding: 20px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+      <div style="width: 30px; height: 30px; border-radius: 8px; background: #6D5AE6; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
+      </div>
+      <span style="font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 600; font-size: 17px">Auto QA</span>
+    </div>
+    <button type="button" aria-label="Switch project" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #ECEAF4; border-radius: 10px; background: #FAF9FD">
+      <span style="width: 28px; height: 28px; border-radius: 7px; background: #F1EEFD; color: #6D5AE6; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center">BM</span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+        <span style="font-weight: 600; font-size: 14px">Book Market</span>
+        <span style="font-size: 12px; color: #5E5B78">book-market-virid.vercel.app</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E5B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Overview
+        
+      </a>
+      <a href="TestCases.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        Test cases
+        <span style="margin-left: auto; font-size: 12px; color: #5E5B78">5</span>
+      </a>
+      <a href="Run.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+        Runs
+        
+      </a>
+      <a href="Review.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: #F1EEFD; color: #6D5AE6; font-weight: 600; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13l3 0 2 3h6l2-3h3"/><path d="M5 13l2-7h10l2 7v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/></svg>
+        Review
+        <span style="margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: #9A6420; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">3</span>
+      </a>
+      <a href="#automation" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>
+        Automation
+        
+      </a>
+      <a href="#releases" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
+        Releases
+        
+      </a>
+      <a href="Settings.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+        Settings
+        
+      </a>
+    </div>
+    <div style="margin-top: auto; border-top: 1px solid #ECEAF4; padding-top: 14px; display: flex; flex-direction: column; gap: 2px">
+      <a href="Projects.dc.html" style="padding: 8px 12px; color: #5E5B78; font-size: 13px; text-decoration: none">All projects</a>
+      <a href="#guide" style="padding: 8px 12px; color: #5E5B78; font-size: 13px; text-decoration: none">Writing guide</a>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 32px 40px 48px; box-sizing: border-box">
+    <div style="max-width: 1000px; display: flex; flex-direction: column; gap: 20px">
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #5E5B78">Book Market <span aria-hidden="true">›</span> Review <span aria-hidden="true">›</span> Focus</nav>
+
+      <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6D5AE6">Focus review</span>
+          <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 30px; font-weight: 600">Question 1 of 3</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px">
+          <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="0 of 3 answered">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#ECEAF4" stroke-width="7"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#6D5AE6" stroke-width="7" stroke-linecap="round" stroke-dasharray="54 164" transform="rotate(-90 32 32)"/>
+            <text x="32" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="#23213A">3</text>
+          </svg>
+          <span style="font-size: 13px; color: #5E5B78; max-width: 180px">questions left to a clean run · about 2 minutes</span>
+          <a href="Review.dc.html" style="font-size: 13px; font-weight: 600">Exit focus</a>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+        <article aria-label="The question" style="flex: 3 1 460px; background: #FFFFFF; border: 1px solid #ECEAF4; border-radius: 14px; padding: 26px 28px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="padding: 3px 9px; border-radius: 10px; background: #FDF6E9; color: #9A6420; font-size: 12px; font-weight: 600; white-space: nowrap">Wording</span><span style="font-size: 13px; color: #5E5B78">Step 2 · TC02, TC03, TC04</span></div>
+          <p style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.25">“Verify Broswer should be Opened”</p>
+          <p style="margin: 0; font-size: 15px; color: #5E5B78">What should be true on the screen once the browser is open?</p>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button type="button" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #6D5AE6; background: #F7F5FE">
+              <span class="kbd">1</span>
+              <span style="flex: 1; font-size: 15px; font-weight: 600">The “Your Academic Journey Starts Here.” heading is shown</span>
+              <span style="font-size: 12px; color: #4B3BC4">seen on the first screen</span>
+            </button>
+            <button type="button" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; border: 1px solid #ECEAF4; background: #FFFFFF">
+              <span class="kbd">2</span>
+              <span style="flex: 1; font-size: 15px; font-weight: 600">The “Sign in” button is shown</span>
+              <span style="font-size: 12px; color: #5E5B78">seen on the first screen</span>
+            </button>
+            <button type="button" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; border: 1px dashed #DCD9E8; background: #FFFFFF">
+              <span class="kbd">3</span>
+              <span style="flex: 1; font-size: 15px; color: #3B3854">Remove the step from the 3 cases</span>
+            </button>
+            <label style="display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 12px; border: 1px solid #ECEAF4">
+              <span class="kbd">4</span>
+              <input type="text" value="" placeholder="Write it yourself…" style="flex: 1; border: 0; font: inherit; font-size: 15px; outline: none; background: transparent">
+            </label>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: auto; padding-top: 6px; font-size: 13px; color: #5E5B78">
+            <span><span class="kbd">1</span>–<span class="kbd">4</span> answer</span>
+            <span><span class="kbd">P</span> pass · <span class="kbd">F</span> fail</span>
+            <span><span class="kbd">S</span> skip</span>
+            <span><span class="kbd">W</span> walkthrough</span>
+            <span><span class="kbd">Z</span> undo</span>
+          </div>
+        </article>
+
+        <aside aria-label="Ripple map" style="flex: 2 1 320px; background: #FFFFFF; border: 1px solid #ECEAF4; border-radius: 14px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <h2 style="margin: 0; font-size: 17px; font-weight: 600">Ripple map</h2>
+            <span style="font-size: 13px; color: #5E5B78">Every test case of the project. The glowing ones are what answer 1 settles, before you give it.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 12px; color: #5E5B78">Signin Page · BookMarket project (1).xlsx</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px"><span title="TC01" style="width: 64px; height: 52px; border-radius: 10px; background: #3FB27F; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC01</span><span class="lit" title="TC02" style="width: 64px; height: 52px; border-radius: 10px; background: #6D5AE6; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC02</span><span class="lit" title="TC03" style="width: 64px; height: 52px; border-radius: 10px; background: #6D5AE6; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC03</span><span class="lit" title="TC04" style="width: 64px; height: 52px; border-radius: 10px; background: #6D5AE6; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC04</span><span title="TC05" style="width: 64px; height: 52px; border-radius: 10px; background: #E5675C; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC05</span></div>
+            </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 12px; color: #5E5B78">Cart · cart-cases.xlsx</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px"><span title="TC11" style="width: 64px; height: 52px; border-radius: 10px; background: #3FB27F; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC11</span><span class="lit" title="TC12" style="width: 64px; height: 52px; border-radius: 10px; background: #6D5AE6; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC12</span><span title="TC13" style="width: 64px; height: 52px; border-radius: 10px; background: #3FB27F; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC13</span><span title="TC14" style="width: 64px; height: 52px; border-radius: 10px; background: #ECEAF4; color: #5E5B78; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">TC14</span></div>
+            </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #5E5B78">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #6D5AE6"></span>settled by this answer</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #3FB27F"></span>passed</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #E5675C"></span>failed</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #ECEAF4"></span>not run</span>
+          </div>
+          <div style="padding: 14px 16px; border-radius: 12px; background: #F7F5FE; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 28px; font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 700; color: #4B3BC4">4 cases</span>
+            <span style="font-size: 13px; color: #3B3854">3 on this card, and TC12 in another sheet with the same sentence. Questions in the next run: <strong>3 → 1</strong>.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #3B3854">
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8A87A3">What I will remember</span>
+            <span>“Verify Broswer should be Opened” means the first answer you pick, for this project, until you change it.</span>
+          </div>
+        </aside>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 10px">
+        <span style="flex: 1 1 200px; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #ECEAF4; font-size: 13px"><strong style="color: #6D5AE6">Now</strong> Broswer should be Opened · 3 cases</span>
+        <span style="flex: 1 1 200px; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #ECEAF4; font-size: 13px; color: #5E5B78"><strong>Next</strong> Home page, TC01 · PASS or FAIL</span>
+        <span style="flex: 1 1 200px; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #ECEAF4; font-size: 13px; color: #5E5B78"><strong>Then</strong> BookMarket Home, TC05 · FAIL only</span>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

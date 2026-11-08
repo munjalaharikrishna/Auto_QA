@@ -1,0 +1,31 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-07T12:00:00Z" },
+  "title": "Auto QA UI redesign",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Projects.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 1180, "title": "1 · All projects (start here)", "expand": "fill" },
+    "NewProject.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 1000, "title": "2 · New project", "expand": "fill" },
+    "Main.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 1000, "title": "3 · Project overview", "expand": "fill" },
+    "TestCases.dc.html": { "x": 4560, "y": 0, "w": 1440, "h": 1000, "title": "4 · Test cases", "expand": "fill" },
+    "Review.dc.html": { "x": 0, "y": 1600, "w": 1440, "h": 1900, "title": "5 · Review (fixed: PASS/FAIL, answers, holds, history)", "expand": "fill" },
+    "FocusReview.dc.html": { "x": 1520, "y": 1600, "w": 1440, "h": 1100, "title": "6 · Focus review with the Ripple map (new feature)", "expand": "fill" },
+    "LiveRun.dc.html": { "x": 3040, "y": 1600, "w": 1440, "h": 1250, "title": "7 · Live run with a question", "expand": "fill" },
+    "Run.dc.html": { "x": 4560, "y": 1600, "w": 1440, "h": 1180, "title": "8 · Run result", "expand": "fill" },
+    "Upload.dc.html": { "x": 0, "y": 3900, "w": 1440, "h": 1250, "title": "9 · Upload a workbook", "expand": "fill" },
+    "PlanCheck.dc.html": { "x": 1520, "y": 3900, "w": 1440, "h": 1150, "title": "10 · Plan check before a single run", "expand": "fill" },
+    "CaseDetail.dc.html": { "x": 3040, "y": 3900, "w": 1440, "h": 1200, "title": "11 · Test case detail", "expand": "fill" },
+    "CaseEdit.dc.html": { "x": 4560, "y": 3900, "w": 1440, "h": 1150, "title": "12 · New / edit test case", "expand": "fill" },
+    "Walkthrough.dc.html": { "x": 0, "y": 5600, "w": 1440, "h": 1150, "title": "13 · Walkthrough", "expand": "fill" },
+    "Settings.dc.html": { "x": 1520, "y": 5600, "w": 1440, "h": 1650, "title": "14 · Settings and what the engine learned", "expand": "fill" }
+  },
+  "order": ["Projects.dc.html", "NewProject.dc.html", "Main.dc.html", "TestCases.dc.html", "Review.dc.html", "FocusReview.dc.html", "LiveRun.dc.html", "Run.dc.html", "Upload.dc.html", "PlanCheck.dc.html", "CaseDetail.dc.html", "CaseEdit.dc.html", "Walkthrough.dc.html", "Settings.dc.html"],
+  "notes": {
+    "heading": { "x": 0, "y": -300, "text": "Start: projects, a new project, the project and its test cases", "kind": "title1", "maxW": 6000 },
+    "heading2": { "x": 0, "y": 1300, "text": "Answering and running: Review, Focus review with the Ripple map, a live run, its result", "kind": "title1", "maxW": 6000 },
+    "heading3": { "x": 0, "y": 3600, "text": "Test cases: upload, plan check, detail, edit", "kind": "title1", "maxW": 6000 },
+    "heading4": { "x": 0, "y": 5300, "text": "Walkthrough and settings", "kind": "title1", "maxW": 6000 }
+  },
+  "designSystems": []
+}

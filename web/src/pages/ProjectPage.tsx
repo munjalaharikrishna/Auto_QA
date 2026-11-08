@@ -1,24 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type Field, type Job, type Preview, type ProjectView, type TestCaseRecord } from '../api';
-import { CaseForm, ErrorNote, JobBadge, ProjectForm, StatusBadge, when } from '../components/common';
+import { api, type Field, type Job, type Preview, type ProjectView } from '../api';
+import { ErrorNote, JobBadge, ProjectForm, StatusBadge, when } from '../components/common';
 import { RulesTab } from '../components/Rules';
+import { Icon } from '../components/ui';
 import { useServerEvents } from '../events';
 import { Link, navigate } from '../router';
+import type { Section } from '../shell';
+import { FocusReview } from './FocusReview';
+import { ReviewSection } from './ReviewSection';
+import { CasesSection, NewCaseSection, OverviewSection } from './sections';
 
-type Tab = 'workbook' | 'single' | 'cases' | 'runs' | 'rules' | 'settings';
-const TABS: Array<[Tab, string]> = [
-  ['workbook', 'Run a workbook'],
-  ['single', 'Single test case'],
-  ['cases', 'Test cases'],
-  ['runs', 'Runs'],
-  ['rules', 'Rules'],
-  ['settings', 'Settings'],
-];
+const TITLE: Record<Exclude<Section, 'automation' | 'releases'>, string> = {
+  overview: 'Overview',
+  cases: 'Test cases',
+  runs: 'Runs',
+  review: 'Review',
+  settings: 'Settings',
+  upload: 'Upload a workbook',
+  'new-case': 'New test case',
+  focus: 'Focus review',
+};
 
-export function ProjectPage({ id }: { id: string }) {
+/**
+ * One section of a project (U1): the sidebar chooses the section, so the page shows only its part, with the section's own actions in the
+ * page head. Step 3 gave the overview, the test case list, Upload and New test case their own screens.
+ */
+export function ProjectPage({ id, section = 'overview' }: { id: string; section?: Section }) {
   const [project, setProject] = useState<ProjectView>();
   const [error, setError] = useState<string>();
-  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(location.search).get('tab') as Tab) || 'workbook');
 
   useEffect(() => {
     api.project(id).then(setProject, (e: Error) => setError(e.message));
@@ -26,54 +35,81 @@ export function ProjectPage({ id }: { id: string }) {
 
   if (error) return <ErrorNote error={error} />;
   if (!project) return <p className="muted">Loading…</p>;
+  const title = section === 'overview' ? project.name : TITLE[section as keyof typeof TITLE];
+  const actions =
+    section === 'overview' ? (
+      <>
+        <Link to={`/projects/${project.id}/new-case`} className="button secondary">
+          New test case
+        </Link>
+        <Link to={`/projects/${project.id}/upload`} className="button primary">
+          <Icon name="plus" size={16} /> Upload workbook
+        </Link>
+      </>
+    ) : section === 'cases' ? (
+      <>
+        <a href={`/api/projects/${project.id}/export`} download className="button secondary">
+          Export results (.xlsx)
+        </a>
+        <Link to={`/projects/${project.id}/upload`} className="button secondary">
+          Upload workbook
+        </Link>
+        <Link to={`/projects/${project.id}/new-case`} className="button primary">
+          <Icon name="plus" size={16} /> New test case
+        </Link>
+      </>
+    ) : null;
   return (
     <>
-      <p className="muted" style={{ margin: 0 }}>
-        <Link to="/">Projects</Link> /
-      </p>
-      <h1>{project.name}</h1>
-      <p className="muted">
-        {project.baseUrl} · Chromium · test ids: <code>{project.testIdAttribute}</code>
-        {!project.env.hasPassword && ' · no password set: tests that log in will be blocked'}
-      </p>
-      <div className="tabs" role="tablist">
-        {TABS.map(([t, label]) => (
-          <button type="button" key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-            {label}
-          </button>
-        ))}
-      </div>
-      {tab === 'workbook' && <WorkbookTab project={project} />}
-      {tab === 'single' && (
-        <section className="panel">
-          <h2>Single test case</h2>
-          <p className="muted">The platform explores it, shows you the steps, locators and code, and runs it after you approve.</p>
-          <CaseForm
-            submitLabel="Generate"
-            onSubmit={async (c) => {
-              const job = await api.submitCase(project.id, c);
-              navigate(`/jobs/${job.id}`);
-            }}
-          />
-        </section>
-      )}
-      {tab === 'cases' && <TestCasesTab project={project} />}
-      {tab === 'runs' && <RunsTab project={project} />}
-      {tab === 'rules' && <RulesTab projectId={project.id} />}
-      {tab === 'settings' && (
-        <section className="panel">
-          <h2>Settings</h2>
-          <ProjectForm
-            initial={project}
-            submitLabel="Save settings"
-            onSubmit={async (p) => {
-              setProject(await api.updateProject(project.id, p));
-            }}
-          />
-        </section>
-      )}
-      {tab === 'settings' && <DeleteProject project={project} />}
+      <header className="page-head with-actions">
+        <div className="page-head-text">
+          {(section === 'upload' || section === 'new-case' || section === 'focus') && (
+            <nav aria-label="Breadcrumb" className="crumb">
+              {section === 'focus' ? <Link to={`/projects/${project.id}/review`}>Review</Link> : <Link to={`/projects/${project.id}/cases`}>Test cases</Link>} /{' '}
+              {TITLE[section]}
+            </nav>
+          )}
+          <h1>{title}</h1>
+          <p className="muted">
+            {project.baseUrl} · Chromium · test ids: <code>{project.testIdAttribute}</code>
+            {!project.env.hasPassword && ' · no password set: tests that log in will be blocked'}
+          </p>
+        </div>
+        {actions && <div className="row">{actions}</div>}
+      </header>
+      {section === 'overview' && <OverviewSection project={project} />}
+      {section === 'cases' && <CasesSection project={project} />}
+      {section === 'upload' && <UploadSection project={project} />}
+      {section === 'new-case' && <NewCaseSection project={project} />}
+      {section === 'runs' && <RunsTab project={project} />}
+      {section === 'review' && <ReviewSection project={project} />}
+      {section === 'focus' && <FocusReview project={project} />}
+      {section === 'settings' && <SettingsSection project={project} onSaved={setProject} />}
     </>
+  );
+}
+
+/** U1 step 3: a workbook, run now or only imported. Nothing in the file is changed: results go into a copy. */
+function UploadSection({ project }: { project: ProjectView }) {
+  const [mode, setMode] = useState<'run' | 'import'>(() => (new URLSearchParams(location.search).get('mode') === 'import' ? 'import' : 'run'));
+  const [notice, setNotice] = useState<string>();
+  return (
+    <div className="stack-l">
+      <div className="tabs" role="tablist" aria-label="What to do with the workbook">
+        <button type="button" role="tab" aria-selected={mode === 'run'} onClick={() => setMode('run')}>
+          Run its test cases
+        </button>
+        <button type="button" role="tab" aria-selected={mode === 'import'} onClick={() => setMode('import')}>
+          Import only, run later
+        </button>
+      </div>
+      {notice && (
+        <p className="notice">
+          {notice} <Link to={`/projects/${project.id}/cases`}>See the test cases</Link>
+        </p>
+      )}
+      <WorkbookTab key={mode} project={project} mode={mode} onImported={setNotice} />
+    </div>
   );
 }
 
@@ -94,7 +130,7 @@ const FIELD_LABEL: Record<Field, string> = {
 const REQUIRED: Field[] = ['title', 'steps', 'expected'];
 
 /** Upload → column mapping with a preview (FR-IN-02) → run the whole workbook (FR-IN-08). */
-function WorkbookTab({ project, mode = 'run', onImported }: { project: ProjectView; mode?: 'run' | 'import'; onImported?: (message: string) => void }) {
+export function WorkbookTab({ project, mode = 'run', onImported }: { project: ProjectView; mode?: 'run' | 'import'; onImported?: (message: string) => void }) {
   const [preview, setPreview] = useState<Preview>();
   const [mapping, setMapping] = useState<Partial<Record<Field, string>>>({});
   const [busy, setBusy] = useState(false);
@@ -293,143 +329,6 @@ function WorkbookTab({ project, mode = 'run', onImported }: { project: ProjectVi
   );
 }
 
-/** Every test case written or imported, with its last result and Run again (item 1, item 3). */
-export function TestCasesTab({ project }: { project: ProjectView }) {
-  const [cases, setCases] = useState<TestCaseRecord[]>();
-  const [error, setError] = useState<string>();
-  const [importing, setImporting] = useState(false);
-  const [notice, setNotice] = useState<string>();
-  const load = useCallback(() => {
-    api.testCases(project.id).then(setCases, (e: Error) => setError(e.message));
-  }, [project.id]);
-  useEffect(load, [load]);
-  useServerEvents((e) => {
-    if (e.type === 'job' && e.job.projectId === project.id) load();
-  });
-  useEffect(() => {
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, [load]);
-
-  if (error) return <ErrorNote error={error} />;
-  if (!cases) return <p className="muted">Loading…</p>;
-  const notRun = cases.filter((c) => !c.lastStatus).length;
-  const toolbar = (
-    <div className="row" style={{ marginBottom: '0.75rem' }}>
-      <button type="button" className="primary" onClick={() => setImporting(!importing)}>
-        {importing ? 'Close import' : 'Import test cases'}
-      </button>
-      <a href={`/api/projects/${project.id}/export`} download aria-disabled={!cases.length}>
-        <button type="button" disabled={!cases.length}>
-          Export results (.xlsx)
-        </button>
-      </a>
-      <span className="muted">
-        {cases.length
-          ? `${cases.length} test case(s), ${cases.filter((c) => c.approval === 'approved').length} approved (approved ones appear in Web Automation). Export gives one sheet with every case, its status, the actual result and the screenshot${notRun ? `; ${notRun} not run yet are listed as NOT RUN` : ''}.`
-          : 'No test cases yet. Import a workbook, or write one in "Single test case".'}
-      </span>
-    </div>
-  );
-  const importPanel = importing && (
-    <div style={{ marginBottom: '1rem' }}>
-      <WorkbookTab
-        project={project}
-        mode="import"
-        onImported={(message) => {
-          setImporting(false);
-          setNotice(message);
-          load();
-        }}
-      />
-    </div>
-  );
-  if (!cases.length) {
-    return (
-      <>
-        {toolbar}
-        {notice && <p className="notice">{notice}</p>}
-        {importPanel}
-      </>
-    );
-  }
-  return (
-    <section className="panel table-wrap">
-      {toolbar}
-      {notice && <p className="notice">{notice}</p>}
-      {importPanel}
-      <table>
-        <thead>
-          <tr>
-            <th>Test case</th>
-            <th>Steps</th>
-            <th>Approval</th>
-            <th>Last result</th>
-            <th>Last run</th>
-            <th>Runs</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {cases.map((c) => (
-            <tr key={c.id}>
-              <td>
-                <Link to={`/projects/${project.id}/cases/${encodeURIComponent(c.extId)}`}>
-                  <strong>{c.extId}</strong>
-                </Link>
-                <span className="case-title">{c.title}</span>
-              </td>
-              <td>{c.raw.steps.split(/\r?\n/).filter(Boolean).length}</td>
-              <td>
-                {c.approval === 'approved' ? <span className="badge PASS">Approved</span> : <span className="badge job">Draft</span>}{' '}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await api.setApproval(project.id, c.extId, c.approval === 'approved' ? 'draft' : 'approved');
-                    load();
-                  }}
-                >
-                  {c.approval === 'approved' ? 'Unapprove' : 'Approve'}
-                </button>
-              </td>
-              <td>{c.lastStatus ? <StatusBadge status={c.lastStatus} /> : <span className="muted">not run</span>}</td>
-              <td>{when(c.lastRunAt)}</td>
-              <td>{c.runCount}</td>
-              <td>
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={async () => {
-                    const job = await api.runTestCase(project.id, c.extId);
-                    navigate(`/jobs/${job.id}`);
-                  }}
-                >
-                  Run again
-                </button>{' '}
-                <button
-                  type="button"
-                  title="Run the steps one at a time in a browser: pick elements, add checks, reword steps"
-                  onClick={async () => {
-                    try {
-                      // The case's last run, when there is one, gives the walkthrough its workbook's login case to log in with first.
-                      const job = await api.walkthrough(project.id, c.extId, c.lastJobId ? { fromJob: c.lastJobId } : {});
-                      navigate(`/jobs/${job.id}`);
-                    } catch (e) {
-                      setNotice(`Could not start the walkthrough of ${c.extId}: ${(e as Error).message}`);
-                    }
-                  }}
-                >
-                  Walkthrough
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
 const STAGE: Record<string, string> = {
   queued: 'waiting to start',
   running: 'running',
@@ -560,5 +459,60 @@ function DeleteProject({ project }: { project: ProjectView }) {
         </button>
       </div>
     </section>
+  );
+}
+
+type SettingsTab = 'project' | 'learned' | 'danger';
+/**
+ * U1 step 7: Settings in three parts. The project (its address, login, browser, test ids, the wording policy, the other values), what
+ * the engine learned from you, and the danger zone. The part shown is in the address (`?tab=learned`), so a link can open it.
+ */
+function SettingsSection({ project, onSaved }: { project: ProjectView; onSaved: (p: ProjectView) => void }) {
+  const [tab, setTab] = useState<SettingsTab>(() => {
+    const t = new URLSearchParams(location.search).get('tab');
+    return t === 'learned' || t === 'danger' ? t : 'project';
+  });
+  const [saved, setSaved] = useState(false);
+  const choose = (t: SettingsTab) => {
+    setTab(t);
+    history.replaceState(null, '', `${location.pathname}${t === 'project' ? '' : `?tab=${t}`}`);
+  };
+  return (
+    <div className="stack-l">
+      <div className="tabs" role="tablist" aria-label="Settings">
+        {(
+          [
+            ['project', 'Project'],
+            ['learned', 'What the engine learned'],
+            ['danger', 'Danger zone'],
+          ] as Array<[SettingsTab, string]>
+        ).map(([t, label]) => (
+          <button type="button" role="tab" key={t} aria-selected={tab === t} onClick={() => choose(t)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'project' && (
+        <section className="panel" aria-labelledby="settings-project">
+          <h2 id="settings-project">Application and login</h2>
+          {saved && (
+            <p className="notice" role="status">
+              Saved. The next run uses these settings.
+            </p>
+          )}
+          <ProjectForm
+            initial={project}
+            checkAddress
+            submitLabel="Save settings"
+            onSubmit={async (p) => {
+              onSaved(await api.updateProject(project.id, p));
+              setSaved(true);
+            }}
+          />
+        </section>
+      )}
+      {tab === 'learned' && <RulesTab projectId={project.id} />}
+      {tab === 'danger' && <DeleteProject project={project} />}
+    </div>
   );
 }

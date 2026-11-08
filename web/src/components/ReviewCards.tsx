@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { type AnswerResult, api, type DecideResult, fileUrl, type ReviewCard } from '../api';
 import { navigate } from '../router';
-import { ErrorNote, StatusBadge, when } from './common';
+import { ErrorNote, when } from './common';
+import { Chip, type ChipKind } from './ui';
 
 const REVIEWER_KEY = 'auto-qa.reviewer';
 
@@ -67,18 +68,37 @@ export function ReviewCards({
   );
 }
 
-function Card({
+/** The kind of question a card asks, for its chip: what a sentence means, or a decision on what the page showed. */
+const chipOf = (card: ReviewCard): { kind: ChipKind; text: string } =>
+  card.held
+    ? { kind: 'accent', text: 'Held' }
+    : card.decided
+      ? { kind: 'muted', text: 'Decided' }
+      : card.asks
+        ? { kind: 'need', text: card.meaning ? 'Answered' : 'Wording' }
+        : card.label?.name === 'flaky'
+          ? { kind: 'accent', text: 'Flaky' }
+          : { kind: 'info', text: card.label ? card.label.name[0]?.toUpperCase() + card.label.name.slice(1) : 'Decide' };
+
+/**
+ * One question (U1 step 5): the sentence asked about and why first; then what answers it, which is a sentence for a wording card and PASS
+ * or FAIL on what the page showed for the others; what the run saw is folded away on a wording card. `run` says which run the card is
+ * from on the project's review, where cards of several runs are shown together.
+ */
+export function Card({
   jobId,
   projectId,
   card,
   zoom,
   changed,
+  run,
 }: {
   jobId: string;
   projectId?: string;
   card: ReviewCard;
   zoom: (file: string) => void;
   changed: () => void;
+  run?: { label: string; at?: string };
 }) {
   const [who, setWho] = useState(remembered);
   const [note, setNote] = useState('');
@@ -87,6 +107,7 @@ function Card({
   const [result, setResult] = useState<DecideResult>();
   const refusal = card.cases.find((c) => !c.eligibility.canPass)?.eligibility.passRefusal;
   const decided = card.cases.filter((c) => c.decision);
+  const chip = chipOf(card);
 
   const decide = async (decision: 'PASS' | 'FAIL') => {
     setBusy(true);
@@ -109,70 +130,81 @@ function Card({
     }
   };
 
+  const seen = (
+    <>
+      <div className="seen-pair">
+        <div className="seen expected">
+          <span className="eyebrow">Expected</span>
+          <span>{card.expected}</span>
+        </div>
+        <div className="seen actual">
+          <span className="eyebrow">The page showed</span>
+          <span>{card.actual}</span>
+        </div>
+      </div>
+      {(card.before || card.after) && (
+        <div className="row shots">
+          {card.before && (
+            <figure>
+              <button type="button" className="thumb-button" onClick={() => card.before && zoom(card.before)} aria-label="Page before, full size">
+                <img className="thumb" src={fileUrl(card.before)} alt="" />
+              </button>
+              <figcaption className="muted">before</figcaption>
+            </figure>
+          )}
+          {card.after && (
+            <figure>
+              <button type="button" className="thumb-button" onClick={() => card.after && zoom(card.after)} aria-label="Page after, full size">
+                <img className="thumb" src={fileUrl(card.after)} alt="" />
+              </button>
+              <figcaption className="muted">after</figcaption>
+            </figure>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <article className="panel stack" aria-label={`Review card: ${card.clause || card.why}`}>
-      <div className="row">
-        <StatusBadge status="NEEDS REVIEW" />
-        {card.label && (
+    <article
+      className={`panel review-card${card.held ? ' is-held' : ''}${card.decided ? ' is-decided' : ''}`}
+      aria-label={`Review card: ${card.clause || card.why}`}
+    >
+      <div className="row tight card-top">
+        <Chip kind={chip.kind}>{chip.text}</Chip>
+        {card.label && !card.asks && (
           <span className="muted" title={card.label.meaning}>
-            {card.label.name}
+            {card.label.meaning}
           </span>
         )}
-        <strong className="grow">{card.clause || 'The run could not be judged'}</strong>
-        <span className="muted">covers {card.cases.map((c) => c.testId).join(', ')}</span>
+        <span className="muted grow card-covers">
+          covers {card.cases.map((c) => c.testId).join(', ')}
+          {run && ` · from ${run.label}${run.at ? `, ${when(run.at)}` : ''}`}
+        </span>
       </div>
-      <p style={{ margin: 0 }}>{card.why}</p>
-      {card.label && (
-        <p className="muted" style={{ margin: 0 }}>
-          Why it needs you: {card.label.meaning}.
-        </p>
+      <h3 className="card-sentence">“{card.clause || 'The run could not be judged'}”</h3>
+      <p className="muted card-why">{card.why}</p>
+
+      {card.asks && <MeansForm jobId={jobId} card={card} who={who} changed={changed} />}
+      {card.asks ? (
+        <details className="seen-details">
+          <summary className="seen-summary">What the run saw</summary>
+          {seen}
+        </details>
+      ) : (
+        seen
       )}
-      <div className="row" style={{ alignItems: 'stretch' }}>
-        <div className="notice grow">
-          <strong>Expected</strong>
-          <div>{card.expected}</div>
-        </div>
-        <div className="notice warn grow">
-          <strong>The page showed</strong>
-          <div>{card.actual}</div>
-        </div>
-      </div>
-      <div className="row">
-        {card.before && (
-          <figure style={{ margin: 0 }}>
-            <button type="button" className="thumb-button" onClick={() => card.before && zoom(card.before)} aria-label="Page before, full size">
-              <img className="thumb" src={fileUrl(card.before)} alt="" />
-            </button>
-            <figcaption className="muted">before</figcaption>
-          </figure>
-        )}
-        {card.after && (
-          <figure style={{ margin: 0 }}>
-            <button type="button" className="thumb-button" onClick={() => card.after && zoom(card.after)} aria-label="Page after, full size">
-              <img className="thumb" src={fileUrl(card.after)} alt="" />
-            </button>
-            <figcaption className="muted">after</figcaption>
-          </figure>
-        )}
-      </div>
+
       {projectId && (
-        <ul className="plain" style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }} aria-label="Walk through a case">
+        <ul className="case-chips" aria-label="Walk through a case">
           {card.cases.map((c) => (
-            <li key={c.testId} className="row">
-              <span className="grow">
-                {c.testId}
-                {c.changedSince && (
-                  <span className="muted">
-                    {' '}
-                    · changed since this run: version {c.changedSince.version} ({c.changedSince.reason}, {when(c.changedSince.at)}). The result here is the
-                    earlier version's; run it again for the new one.
-                  </span>
-                )}
-              </span>
+            <li key={c.testId} className="case-chip">
               <button
                 type="button"
+                className="small"
                 disabled={busy}
                 title="Run the steps one at a time in a browser: pick elements, add checks, reword steps"
+                aria-label={`Walkthrough of ${c.testId}`}
                 onClick={async () => {
                   try {
                     const job = await api.walkthrough(projectId, c.testId, { fromJob: jobId, ...(who.trim() ? { who: who.trim() } : {}) });
@@ -182,46 +214,67 @@ function Card({
                   }
                 }}
               >
-                Walkthrough
+                {c.testId} · Walkthrough
               </button>
+              {c.changedSince && (
+                <span className="changed-note">
+                  changed since this run: version {c.changedSince.version} ({c.changedSince.reason}, {when(c.changedSince.at)}). The result here is the earlier
+                  version's; run it again for the new one.
+                </span>
+              )}
             </li>
           ))}
         </ul>
       )}
-      {decided.length > 0 && (
-        <ul className="muted" style={{ margin: 0 }}>
-          {decided.map((c) => (
-            <li key={c.testId}>
-              {c.testId}: decided <strong>{c.decision?.decision}</strong> by {c.decision?.reviewer} on {when(c.decision?.decidedAt)}
-              {c.decision?.note ? ` (${c.decision.note})` : ''}. The engine's verdict was {c.decision?.engineStatus}.
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="row">
-        <label className="grow">
-          Your name
-          <input value={who} onChange={(e) => setWho(e.target.value)} maxLength={80} placeholder="the platform's user, if blank" />
-        </label>
-        <label className="grow" style={{ flex: 3 }}>
-          Why {decided.length ? '(needed to change a decision)' : '(optional)'}
-          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
-        </label>
-      </div>
-      {card.asks && <MeansForm jobId={jobId} card={card} who={who} changed={changed} />}
       <HoldNote card={card} projectId={projectId} who={who} changed={changed} />
       {card.label?.name === 'flaky' && !card.held && <HoldForm jobId={jobId} card={card} who={who} changed={changed} />}
-      <div className="row">
-        <button type="button" className="primary" disabled={busy || !!refusal} onClick={() => void decide('PASS')}>
-          PASS
-        </button>
-        <button type="button" disabled={busy} onClick={() => void decide('FAIL')}>
-          FAIL
-        </button>
-        {refusal && <span className="muted">PASS is not offered: {refusal}</span>}
-      </div>
+      {decided.length > 0 && (
+        <ul className="decided-list">
+          {decided.map((c) => (
+            <li key={c.testId}>
+              <Chip kind={c.decision?.decision === 'PASS' ? 'pass' : 'fail'}>Decided {c.decision?.decision}</Chip> {c.testId} · by {c.decision?.reviewer} on{' '}
+              {when(c.decision?.decidedAt)}
+              {c.decision?.note ? ` · “${c.decision.note}”` : ''}. The engine's verdict was {c.decision?.engineStatus}.
+            </li>
+          ))}
+        </ul>
+      )}
+      {(() => {
+        const decideBox = (
+          <div className="decide-box">
+            <div className="row">
+              <label className="grow">
+                Your name
+                <input value={who} onChange={(e) => setWho(e.target.value)} maxLength={80} placeholder="the platform's user, if blank" />
+              </label>
+              <label className="grow" style={{ flex: 3 }}>
+                Why {decided.length ? '(needed to change a decision)' : '(optional)'}
+                <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} />
+              </label>
+            </div>
+            <div className="row">
+              <button type="button" className="pass-button" disabled={busy || !!refusal} onClick={() => void decide('PASS')}>
+                PASS
+              </button>
+              <button type="button" className="fail-button" disabled={busy} onClick={() => void decide('FAIL')}>
+                FAIL
+              </button>
+              {refusal && <span className="muted">PASS is not offered: {refusal}</span>}
+            </div>
+          </div>
+        );
+        // A wording card is settled by its answer: PASS or FAIL is there, folded away, for the case a person decides it all the same.
+        return card.asks && !decided.length ? (
+          <details className="seen-details">
+            <summary className="seen-summary">Or decide PASS or FAIL instead</summary>
+            {decideBox}
+          </details>
+        ) : (
+          decideBox
+        );
+      })()}
       {!!card.remembers && (
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="remember-note">
           Your decision is remembered: the next run of {card.remembers === 1 ? 'this check' : `these ${card.remembers} checks`} does not ask again while the
           check, its element and what the page shows stay the same. Changing it to FAIL later takes back what a PASS taught.
         </p>
@@ -249,7 +302,20 @@ function MeansForm({ jobId, card, who, changed }: { jobId: string; card: ReviewC
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [kept, setKept] = useState<AnswerResult>();
+  const [removed, setRemoved] = useState<{ changed: string[]; unchanged: string[] }>();
   if (!card.asks) return null;
+  const remove = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      setRemoved(await api.removeStep(jobId, { cardId: card.id, ...(who.trim() ? { who: who.trim() } : {}) }));
+      changed();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const save = async (text = means) => {
     setBusy(true);
     setError(undefined);
@@ -264,7 +330,7 @@ function MeansForm({ jobId, card, who, changed }: { jobId: string; card: ReviewC
     }
   };
   return (
-    <section className="notice stack" aria-label="What the sentence means">
+    <section className="means-box" aria-label="What the sentence means">
       {card.meaning ? (
         <span>
           Answered: “{card.asks.sentence}” means <strong>“{card.meaning.to}”</strong> ({card.meaning.by}, {when(card.meaning.at)}). The next run reads every
@@ -277,10 +343,10 @@ function MeansForm({ jobId, card, who, changed }: { jobId: string; card: ReviewC
         </span>
       )}
       {!card.meaning && !!card.suggestions?.ready.length && (
-        <fieldset className="row" style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend className="muted">Did you mean:</legend>
+        <fieldset className="suggestions">
+          <legend>Did you mean · one click keeps it for every case</legend>
           {card.suggestions.ready.map((sg) => (
-            <button key={sg.text} type="button" disabled={busy} title={sg.why} onClick={() => void save(sg.text)}>
+            <button key={sg.text} type="button" className="suggestion" disabled={busy} title={sg.why} onClick={() => void save(sg.text)}>
               {sg.text}
             </button>
           ))}
@@ -312,6 +378,17 @@ function MeansForm({ jobId, card, who, changed }: { jobId: string; card: ReviewC
           {card.meaning ? 'Change the answer' : 'Keep for every case'}
         </button>
       </div>
+      {card.asks.kind === 'step' && !card.meaning && !removed && (
+        <button type="button" className="link-button" disabled={busy} onClick={() => void remove()}>
+          Or remove this step from {card.cases.length === 1 ? 'the test case' : `the ${card.cases.length} test cases`}
+        </button>
+      )}
+      {removed && (
+        <span className="muted" role="status">
+          Removed from {removed.changed.join(', ') || 'no test case'}
+          {removed.unchanged.length ? ` (not found in ${removed.unchanged.join(', ')})` : ''}: each is a new version; run them again to see the result.
+        </span>
+      )}
       <ErrorNote error={error} />
       {kept && (
         <span className="muted" role="status">

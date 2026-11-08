@@ -17,6 +17,7 @@ import { ReviewCards } from '../components/ReviewCards';
 import { GroupedReview } from '../components/Rules';
 import { Walkthrough } from '../components/Walkthrough';
 import { useServerEvents } from '../events';
+import { progressOf } from '../progress';
 import { Link, navigate } from '../router';
 
 export function JobPage({ id }: { id: string }) {
@@ -59,34 +60,50 @@ export function JobPage({ id }: { id: string }) {
         ? `Walkthrough: ${String(job.input.caseId ?? '')}`
         : String((job.input.case as RawTestCase | undefined)?.title ?? 'Test case');
 
+  const kindLabel = job.kind === 'workbook' ? 'Workbook run' : walkthrough ? 'Walkthrough' : job.status === 'review' ? 'Plan check' : 'Test case run';
   return (
     <>
-      <p className="muted" style={{ margin: 0 }}>
-        <Link to={`/projects/${job.projectId}?tab=runs`}>{job.projectId}</Link> / {job.executionId ?? job.id}
-      </p>
-      <div className="row" style={{ margin: '0.25rem 0 1rem' }}>
-        <h1 className="grow" style={{ margin: 0 }}>
-          {title}
-        </h1>
-        <JobBadge status={job.status} />
-        {!active && theCase?.id && (
-          <button
-            type="button"
-            className="primary"
-            onClick={async () => {
-              const next = await api.runTestCase(job.projectId, theCase.id!);
-              navigate(`/jobs/${next.id}`);
-            }}
-          >
-            Run again
-          </button>
-        )}
-        {active && (
-          <button type="button" className="danger" onClick={() => void api.cancel(job.id)}>
-            Cancel
-          </button>
-        )}
-      </div>
+      <header className="page-head with-actions">
+        <div className="page-head-text">
+          <nav aria-label="Breadcrumb" className="crumb">
+            <Link to={`/projects/${job.projectId}/runs`}>Runs</Link> / {job.executionId ?? job.id}
+          </nav>
+          <div className="row tight">
+            <JobBadge status={job.status} />
+            <span className="muted">
+              {kindLabel}
+              {theCase?.id && (
+                <>
+                  {' · '}
+                  <Link to={`/projects/${job.projectId}/cases/${encodeURIComponent(theCase.id)}`}>Test case: {theCase.id}</Link>
+                </>
+              )}
+              {' · '}started {when(job.startedAt ?? job.createdAt)}
+              {job.finishedAt && ` · finished ${when(job.finishedAt)}`}
+            </span>
+          </div>
+          <h1>{title}</h1>
+        </div>
+        <div className="row">
+          {!active && theCase?.id && (
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                const next = await api.runTestCase(job.projectId, theCase.id!);
+                navigate(`/jobs/${next.id}`);
+              }}
+            >
+              Run again
+            </button>
+          )}
+          {active && (
+            <button type="button" className="danger" onClick={() => void api.cancel(job.id)}>
+              Cancel run
+            </button>
+          )}
+        </div>
+      </header>
       {job.status === 'failed' && <ErrorNote error={job.error} />}
       {job.status === 'cancelled' && !walkthrough && (
         <p className="notice warn">
@@ -94,11 +111,7 @@ export function JobPage({ id }: { id: string }) {
           {theCase?.id && ' Press Run again to start it again.'}
         </p>
       )}
-      {theCase?.id && (
-        <p className="muted" style={{ margin: '0 0 0.5rem' }}>
-          Test case: <Link to={`/projects/${job.projectId}/cases/${encodeURIComponent(theCase.id)}`}>{theCase.id}</Link>
-        </p>
-      )}
+      {active && !walkthrough && <LiveProgress job={job} />}
 
       {walkthrough && <Walkthrough job={job} />}
       {!walkthrough && job.questions.map((q) => <QuestionPanel key={q.id} question={q} />)}
@@ -115,8 +128,13 @@ export function JobPage({ id }: { id: string }) {
         />
       )}
 
-      <section className="panel">
-        <h2>Progress</h2>
+      <details className="panel log-panel" open={active || job.status === 'failed'}>
+        <summary>
+          <h2>Progress log</h2>
+          <span className="muted">
+            {job.logs.length} line{job.logs.length === 1 ? '' : 's'}
+          </span>
+        </summary>
         <div className="log" aria-live="polite">
           {job.logs.length ? (
             // biome-ignore lint/suspicious/noArrayIndexKey: the log only grows at the end; lines can repeat
@@ -125,12 +143,56 @@ export function JobPage({ id }: { id: string }) {
             <span className="muted">Waiting to start…</span>
           )}
         </div>
-        <p className="muted" style={{ marginBottom: 0 }}>
-          Started {when(job.startedAt ?? job.createdAt)}
-          {job.finishedAt && ` · finished ${when(job.finishedAt)}`}
-        </p>
-      </section>
+      </details>
     </>
+  );
+}
+
+function LiveProgress({ job }: { job: JobDetail }) {
+  const p = progressOf(job.logs.map((l) => l.message));
+  const seen = p.cases.length;
+  const share = p.total ? Math.min(1, seen / p.total) : undefined;
+  const waiting = job.status === 'waiting' || job.questions.length > 0;
+  const last = job.logs.at(-1)?.message;
+  return (
+    <section className="panel live-panel" aria-label="Progress of the run">
+      <div className="row">
+        <span className={`dot ${waiting ? 'asks' : 'live'}`} aria-hidden="true" />
+        <strong className="grow">
+          {job.status === 'queued'
+            ? 'Waiting to start'
+            : waiting
+              ? 'The run is waiting for your answer'
+              : job.status === 'review'
+                ? 'The plan is ready: check it below'
+                : p.total
+                  ? `Working on ${seen} of ${p.total} test cases`
+                  : 'Running'}
+        </strong>
+        {p.now && <span className="muted">now: {p.now}</span>}
+      </div>
+      <div
+        className={`live-bar${share === undefined ? ' indeterminate' : ''}`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={p.total ?? 100}
+        aria-valuenow={share === undefined ? undefined : seen}
+      >
+        <span className="live-fill" style={{ width: share === undefined ? '35%' : `${Math.round(share * 100)}%` }} />
+      </div>
+      {p.cases.length > 0 && (
+        <ul className="live-cases">
+          {p.cases.map((c) => (
+            <li key={c.id} className="live-case">
+              <span className={`dot ${c.state}`} aria-hidden="true" />
+              <strong>{c.id}</strong>
+              <span className="muted">{c.note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!p.cases.length && last && <p className="muted">{last}</p>}
+    </section>
   );
 }
 
@@ -378,7 +440,7 @@ function ReviewPanel({ job, review }: { job: JobDetail; review: Review }) {
 }
 
 /** A screenshot full size, as a modal: focus moves into it and Esc closes it. */
-function ZoomDialog({ file, onClose }: { file: string; onClose: () => void }) {
+export function ZoomDialog({ file, onClose }: { file: string; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -410,9 +472,7 @@ function ResultsPanel({ job, summary, reload }: { job: JobDetail; summary?: Batc
         </h2>
         {job.kind === 'workbook' && (
           <a href={resultsUrl(job.id)} download>
-            <button type="button" className="primary">
-              Download results workbook
-            </button>
+            <button type="button">Download results workbook</button>
           </a>
         )}
         {job.kind === 'workbook' && review.length > 0 && (
@@ -428,18 +488,26 @@ function ResultsPanel({ job, summary, reload }: { job: JobDetail; summary?: Batc
         )}
       </div>
       {summary && (
-        <div className="tiles">
+        <div className="tiles status-tiles">
           {(['PASS', 'FAIL', 'BLOCKED', 'NEEDS REVIEW', 'NOT VERIFIED'] as const).map((s) => (
-            <div
-              key={s}
-              className={`tile badge ${s === 'NEEDS REVIEW' ? 'NEEDS' : s === 'NOT VERIFIED' ? 'NOTV' : s}`}
-              style={{ borderRadius: 8, textAlign: 'left' }}
-            >
+            <div key={s} className={`tile status-tile s-${s === 'NEEDS REVIEW' ? 'NEEDS' : s === 'NOT VERIFIED' ? 'NOTV' : s}`}>
               <strong>{summary.totals[s]}</strong>
               {s.toLowerCase()}
             </div>
           ))}
         </div>
+      )}
+      {summary && summary.totals['NEEDS REVIEW'] + summary.totals['NOT VERIFIED'] > 0 && (
+        <p className="notice row">
+          <span className="grow">
+            {summary.totals['NEEDS REVIEW'] + summary.totals['NOT VERIFIED']} test case
+            {summary.totals['NEEDS REVIEW'] + summary.totals['NOT VERIFIED'] === 1 ? ' needs' : 's need'} you. Answer here, or with every open question of the
+            project in Review.
+          </span>
+          <Link to={`/projects/${job.projectId}/review`} className="button secondary">
+            Open review
+          </Link>
+        </p>
       )}
       <ReviewCards jobId={job.id} projectId={job.projectId} onChanged={reload} zoom={setZoom} />
       <div className="table-wrap">
@@ -505,20 +573,24 @@ function VerdictRow(props: {
       <tr>
         {props.row !== undefined && <td>{props.row}</td>}
         <td>
-          <button type="button" onClick={props.toggle} aria-expanded={props.open} style={{ padding: '0.1rem 0.4rem', marginRight: '0.4rem' }}>
-            {props.open ? '−' : '+'}
-          </button>
-          <strong>{props.testId}</strong>
-          <span className="case-title">{v.title}</span>
-          <button
-            type="button"
-            className={props.status === 'NEEDS REVIEW' ? 'primary' : undefined}
-            onClick={props.edit}
-            aria-expanded={props.editing}
-            style={{ marginLeft: '0.5rem' }}
-          >
-            {props.editing ? 'Close' : 'Edit'}
-          </button>
+          <div className="case-cell">
+            <button
+              type="button"
+              className="small toggle"
+              onClick={props.toggle}
+              aria-expanded={props.open}
+              aria-label={`${props.open ? 'Hide' : 'Show'} the details of ${props.testId}`}
+            >
+              {props.open ? '−' : '+'}
+            </button>
+            <span className="case-name">
+              <strong>{props.testId}</strong>
+              <span className="case-title">{v.title}</span>
+            </span>
+            <button type="button" className={props.status === 'NEEDS REVIEW' ? 'small primary' : 'small'} onClick={props.edit} aria-expanded={props.editing}>
+              {props.editing ? 'Close' : 'Edit'}
+            </button>
+          </div>
         </td>
         <td>
           <StatusBadge status={props.status} />

@@ -4,6 +4,7 @@ import { ruleKey, withReadings } from '../parser/rules.js';
 import type { TestVerdict } from '../results/verdict.js';
 import { buildReviewCards, type CardCase, type DecisionView, evidenceHash, type ReviewCardView, type StoredVerdict } from './cards.js';
 import { isOverdue } from './holds.js';
+import { removeStep } from './remove-step.js';
 import { suggestionsFor } from './suggest.js';
 
 /**
@@ -162,6 +163,112 @@ export class ReviewService {
    * reading, checked like every reading (it must read as a real step or a check that judges something, and must not clash with another),
    * and every case of the project with that sentence is read by it from the next run on. This run's results stay as they were.
    */
+  /**
+   * U1 step 5, the review of a whole project: the cards of its finished runs, newest run first, each case only from its latest run (a
+   * case run again later is judged by that run, so an older card of it is left out). Each card says which run it is from, because a
+   * decision or an answer is recorded on that run.
+   */
+  async projectCards(projectId: string, limit = 40): Promise<Array<ReviewCardView & { jobId: string; executionId?: string; runAt: string }>> {
+    const seen = new Set<string>();
+    const out: Array<ReviewCardView & { jobId: string; executionId?: string; runAt: string }> = [];
+    for (const job of await this.store.jobs(projectId, limit)) {
+      if (job.status !== 'done' || (job.kind !== 'workbook' && job.kind !== 'single')) continue;
+      const ids = (await this.rows(job.id)).map((r) => r.testId);
+      const fresh = new Set(ids.filter((id) => !seen.has(id)));
+      for (const id of ids) seen.add(id);
+      if (!fresh.size) continue;
+      for (const card of await this.cards(job.id)) {
+        const cases = card.cases.filter((c) => fresh.has(c.testId));
+        if (!cases.length) continue;
+        out.push({
+          ...card,
+          cases,
+          decided: cases.every((c) => c.decision !== undefined),
+          jobId: job.id,
+          ...(job.executionId ? { executionId: job.executionId } : {}),
+          runAt: job.finishedAt ?? job.createdAt,
+        });
+      }
+    }
+    const open = (c: ReviewCardView) => !c.decided && !c.held;
+    return out.sort((a, b) => Number(open(b)) - Number(open(a)) || b.cases.length - a.cases.length);
+  }
+
+  /**
+   * U1 step 6, the Ripple map: before a person answers a card, which test cases of the project the answer settles. An answer about a
+   * sentence holds for every test case with that sentence, in every sheet (E0.19 step 3), so those are found in the project's test
+   * cases; a decision on what the page showed holds for the cases of the card. Every test case of the project comes with it, by sheet,
+   * with its last result, so the map can show what is settled among everything there is.
+   */
+  async ripple(
+    jobId: string,
+    cardId: string,
+  ): Promise<{ settles: string[]; sheets: Array<{ name: string; cases: Array<{ id: string; title: string; status?: string }> }> }> {
+    const job = await this.store.job(jobId);
+    if (!job) throw new ReviewRefused('There is no such job.', 404);
+    const card = (await this.cards(jobId)).find((c) => c.id === cardId);
+    if (!card) throw new ReviewRefused('There is no such card on this job.', 404);
+    const records = await this.store.testCases(job.projectId);
+    const settles = new Set(card.cases.map((c) => c.testId));
+    if (card.asks) {
+      const table = { [ruleKey(card.asks.sentence)]: '.' };
+      for (const r of records) if (withReadings(r.raw, { step: table, check: table }).applied.length) settles.add(r.extId);
+    }
+    const sheetName = new Map<string, string>();
+    const sheets = new Map<string, Array<{ id: string; title: string; status?: string }>>();
+    for (const r of records) {
+      let name = 'Written in Auto QA';
+      if (r.sourceKind === 'workbook' && r.sourceRef) {
+        if (!sheetName.has(r.sourceRef)) sheetName.set(r.sourceRef, (await this.store.upload(r.sourceRef))?.originalName ?? 'A workbook');
+        name = sheetName.get(r.sourceRef) as string;
+      }
+      if (!sheets.has(name)) sheets.set(name, []);
+      sheets.get(name)?.push({ id: r.extId, title: r.title, ...(r.lastStatus ? { status: r.lastStatus } : {}) });
+    }
+    // Cases on the card that are not saved test cases (an old run) still show, so what the answer settles is never hidden.
+    const known = new Set(records.map((r) => r.extId));
+    const loose = card.cases.filter((c) => !known.has(c.testId)).map((c) => ({ id: c.testId, title: c.testId, status: c.status }));
+    if (loose.length) sheets.set('This run', loose);
+    return { settles: [...settles], sheets: [...sheets].map(([name, cases]) => ({ name, cases })) };
+  }
+
+  /**
+   * U1 step 5, "Remove this step": a card that asks about a step line can take that line out of every test case on the card, as a new
+   * version of each (the run's results stay as they were). A case whose text no longer has the line is left as it is and said so.
+   */
+  async removeStep(
+    jobId: string,
+    cardId: string,
+    input: { who?: unknown },
+  ): Promise<{ cardId: string; sentence: string; changed: string[]; unchanged: string[] }> {
+    const reviewer = checkedName(input.who, await this.store.currentUserName());
+    const job = await this.store.job(jobId);
+    if (!job) throw new ReviewRefused('There is no such job.', 404);
+    const card = (await this.cards(jobId)).find((c) => c.id === cardId);
+    if (!card) throw new ReviewRefused('There is no such card on this job.', 404);
+    if (card.asks?.kind !== 'step') throw new ReviewRefused('Only a card about a step line can remove that step.');
+    const sentence = card.asks.sentence;
+    const changed: string[] = [];
+    const unchanged: string[] = [];
+    for (const c of card.cases) {
+      const record = await this.store.testCase(job.projectId, c.testId);
+      const next = record ? removeStep(record.raw, sentence) : undefined;
+      if (!record || !next) {
+        unchanged.push(c.testId);
+        continue;
+      }
+      await this.store.upsertTestCase(
+        job.projectId,
+        { ...next, id: record.extId },
+        { kind: record.sourceKind, ref: record.sourceRef, row: record.sourceRow },
+        `review: removed the step "${sentence}"`,
+      );
+      await this.store.audit('testcase.remove-step', 'test_case', record.extId, job.projectId, { sentence, reviewer, job: jobId });
+      changed.push(c.testId);
+    }
+    return { cardId, sentence, changed, unchanged };
+  }
+
   async answer(
     jobId: string,
     cardId: string,

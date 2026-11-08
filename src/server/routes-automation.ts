@@ -322,7 +322,7 @@ export function registerAutomationRoutes(ctx: Context): void {
   app.get('/api/dashboard', async () => {
     const projects = await store.projects();
     const cards = [];
-    const totals = { projects: projects.length, cases: 0, approved: 0, scripts: 0, pass: 0, fail: 0, notRun: 0 };
+    const totals = { projects: projects.length, cases: 0, approved: 0, scripts: 0, pass: 0, fail: 0, notRun: 0, needs: 0, blocked: 0 };
     for (const p of projects) {
       const cases = await store.testCases(p.id);
       const approved = cases.filter((c) => c.approval === 'approved');
@@ -335,13 +335,17 @@ export function registerAutomationRoutes(ctx: Context): void {
       totals.pass += count('PASS');
       totals.fail += count('FAIL');
       totals.notRun += notRun;
+      // U1 step 2: the start page shows what waits for a person and what could not run, beside pass and fail.
+      const needs = count('NEEDS REVIEW') + count('NOT VERIFIED');
+      totals.needs += needs;
+      totals.blocked += count('BLOCKED');
       const releases = [];
       for (const r of await store.releases(p.id)) {
         if (r.status === 'released' || r.status === 'cancelled') continue;
         releases.push({ ...r, summary: summarize(r, await store.releaseFeatures(r.id), cases.map(statusOf)) });
       }
       cards.push({
-        project: { id: p.id, name: p.name, baseUrl: p.baseUrl },
+        project: { id: p.id, name: p.name, baseUrl: p.baseUrl, tile: String((await store.setting('project', p.id, 'tile')) ?? 'lavender') },
         cases: {
           total: cases.length,
           approved: approved.length,
@@ -350,6 +354,8 @@ export function registerAutomationRoutes(ctx: Context): void {
           pass: count('PASS'),
           fail: count('FAIL'),
           notRun,
+          needs,
+          blocked: count('BLOCKED'),
         },
         executions: await store.executions(p.id, 5),
         releases,

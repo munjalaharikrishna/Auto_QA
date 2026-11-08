@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Walkthrough</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8F7FC}
+a{color:#6D5AE6}a:hover{color:#4B3BC4}
+
+/* modern layer */
+@keyframes m-rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes m-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes m-drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px)}}
+@keyframes m-sheen{0%{left:-40%}60%,100%{left:120%}}
+@keyframes m-ping{0%{box-shadow:0 0 0 0 rgba(240,166,62,.55)}80%,100%{box-shadow:0 0 0 9px rgba(240,166,62,0)}}
+main{position:relative;isolation:isolate}
+main::before{content:"";position:absolute;z-index:-1;right:-80px;top:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,#ECE7FD 0%,rgba(236,231,253,0) 68%);animation:m-drift 18s ease-in-out infinite;pointer-events:none}
+main::after{content:"";position:absolute;z-index:-1;left:-60px;bottom:-60px;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,#E4F5ED 0%,rgba(228,245,237,0) 68%);animation:m-drift 22s ease-in-out infinite reverse;pointer-events:none}
+main h1{background:linear-gradient(90deg,#23213A 0%,#4B3BC4 60%,#9B7FE8);-webkit-background-clip:text;background-clip:text;color:transparent}
+main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details{border-radius:18px!important;box-shadow:0 1px 2px rgba(35,33,58,.04),0 10px 30px rgba(76,60,170,.05);background-color:rgba(255,255,255,.92)!important;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;animation:m-rise .55s ease-out both}
+main section:hover,main article:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(76,60,170,.10);border-color:#DCD5FA!important}
+main > div > :nth-child(2){animation-delay:.06s}main > div > :nth-child(3){animation-delay:.12s}main > div > :nth-child(4){animation-delay:.18s}main > div > :nth-child(5){animation-delay:.24s}main > div > :nth-child(6){animation-delay:.3s}
+main article{position:relative;overflow:hidden}
+main article::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#8B7BF0,#F0A63E)}
+[role="img"] > span{border-radius:5px;transform-origin:left;animation:m-grow .9s cubic-bezier(.2,.8,.2,1) both;background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+[role="img"] > span:nth-child(2){animation-delay:.12s}[role="img"] > span:nth-child(3){animation-delay:.24s}
+nav[aria-label="Project"]{background:rgba(255,255,255,.8)!important;backdrop-filter:blur(10px)}
+nav[aria-label="Project"] a{transition:background-color .15s ease,color .15s ease}
+nav[aria-label="Project"] a:hover{background-color:#F6F4FE}
+nav[aria-label="Project"] a[style*="background: #F1EEFD"]{box-shadow:inset 3px 0 0 #6D5AE6;background:linear-gradient(90deg,#EEEAFD,#F7F5FE)!important}
+nav[aria-label="Project"] span[style*="background: #9A6420"]{background:#F0A63E!important;color:#3B2A0C!important;animation:m-ping 2.2s ease-out infinite}
+[style*="background: #6D5AE6"]{position:relative;overflow:hidden;background:linear-gradient(135deg,#8775F0,#6D5AE6 60%,#5C49D8)!important;box-shadow:0 10px 22px rgba(109,90,230,.25)}
+[style*="background: #6D5AE6"]::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.3),rgba(255,255,255,0));animation:m-sheen 4s ease-in-out infinite;pointer-events:none}
+nav[aria-label="Project"] [style*="background: #6D5AE6"]::after{display:none}
+button,a{transition:transform .15s ease,box-shadow .15s ease}
+button:active,a:active{transform:scale(.98)}
+tbody tr,table tr+tr{transition:background-color .15s ease}
+table tr+tr:hover{background-color:#FAF9FE!important}
+input,select{transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus{box-shadow:0 0 0 4px #EEEAFD}
+@media (prefers-reduced-motion: reduce){main::before,main::after,main section,main article,aside[role="dialog"] fieldset,aside[role="dialog"] details,[role="img"] > span,nav[aria-label="Project"] span[style*="background: #9A6420"],[style*="background: #6D5AE6"]::after{animation:none!important}main section:hover,main article:hover,button:active,a:active{transform:none}}
+</style>
+
+<style>
+@keyframes ripple{0%{box-shadow:0 0 0 0 rgba(109,90,230,.55)}70%,100%{box-shadow:0 0 0 7px rgba(109,90,230,0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.lit{animation:ripple 2s ease-out infinite}
+.live{animation:blink 1.4s ease-in-out infinite}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;border:1px solid #DCD9E8;border-bottom-width:2px;background:#FFFFFF;font:600 12px ui-monospace,Menlo,monospace;color:#3B3854;box-sizing:border-box}
+@media (prefers-reduced-motion: reduce){.lit,.live{animation:none}}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #23213A; background: #F8F7FC; min-height: 1150px; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="Project" style="flex: 1 1 248px; max-width: 280px; background: #FFFFFF; border-right: 1px solid #ECEAF4; padding: 20px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+      <div style="width: 30px; height: 30px; border-radius: 8px; background: #6D5AE6; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
+      </div>
+      <span style="font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 600; font-size: 17px">Auto QA</span>
+    </div>
+    <button type="button" aria-label="Switch project" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #ECEAF4; border-radius: 10px; background: #FAF9FD">
+      <span style="width: 28px; height: 28px; border-radius: 7px; background: #F1EEFD; color: #6D5AE6; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center">BM</span>
+      <span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+        <span style="font-weight: 600; font-size: 14px">Book Market</span>
+        <span style="font-size: 12px; color: #5E5B78">book-market-virid.vercel.app</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E5B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Overview
+        
+      </a>
+      <a href="TestCases.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: #F1EEFD; color: #6D5AE6; font-weight: 600; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        Test cases
+        <span style="margin-left: auto; font-size: 12px; color: #5E5B78">5</span>
+      </a>
+      <a href="Run.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+        Runs
+        
+      </a>
+      <a href="Review.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13l3 0 2 3h6l2-3h3"/><path d="M5 13l2-7h10l2 7v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/></svg>
+        Review
+        <span style="margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 11px; background: #9A6420; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">3</span>
+      </a>
+      <a href="#automation" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>
+        Automation
+        
+      </a>
+      <a href="#releases" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
+        Releases
+        
+      </a>
+      <a href="Settings.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #3B3854; font-weight: 500; font-size: 14px; text-decoration: none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+        Settings
+        
+      </a>
+    </div>
+    <div style="margin-top: auto; border-top: 1px solid #ECEAF4; padding-top: 14px; display: flex; flex-direction: column; gap: 2px">
+      <a href="Projects.dc.html" style="padding: 8px 12px; color: #5E5B78; font-size: 13px; text-decoration: none">All projects</a>
+      <a href="#guide" style="padding: 8px 12px; color: #5E5B78; font-size: 13px; text-decoration: none">Writing guide</a>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 32px 40px 48px; box-sizing: border-box">
+    <div style="max-width: 1000px; display: flex; flex-direction: column; gap: 20px">
+      <nav aria-label="Breadcrumb" style="font-size: 13px; color: #5E5B78">Book Market <span aria-hidden="true">›</span> Test cases <span aria-hidden="true">›</span> TC05 <span aria-hidden="true">›</span> Walkthrough</nav>
+
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 30px; font-weight: 600">Walkthrough: TC05</h1>
+          <span style="font-size: 14px; color: #5E5B78">A browser window is open. Do the step there, or use the buttons. What you do is recorded first; you choose what to keep.</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px"><span style="padding: 3px 9px; border-radius: 10px; background: #FDF6E9; color: #9A6420; font-size: 12px; font-weight: 600; white-space: nowrap">Recording</span></div>
+      </header>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+        <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 20px">
+      <section aria-label="Steps" style="background: #FFFFFF; border: 1px solid #ECEAF4; border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 2px"><h2 style="margin: 0; font-size: 17px; font-weight: 600">Steps</h2></div>
+          <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px">
+            <li style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;  font-size: 14px">
+              <span style="width: 22px; height: 22px; border-radius: 11px; background: #3FB27F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">✓</span>
+              <span style="flex: 1">Open the BookMarket URL</span>
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;  font-size: 14px">
+              <span style="width: 22px; height: 22px; border-radius: 11px; background: #3FB27F; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">✓</span>
+              <span style="flex: 1">Enter the given valid Email</span>
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #F1EEFD; font-size: 14px">
+              <span style="width: 22px; height: 22px; border-radius: 11px; background: #6D5AE6; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</span>
+              <span style="flex: 1">Enter the valid password</span><span style="font-size: 12px; font-weight: 600; color: #6D5AE6">here</span>
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;  font-size: 14px">
+              <span style="width: 22px; height: 22px; border-radius: 11px; background: #ECEAF4; color: #5E5B78; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">4</span>
+              <span style="flex: 1">Click on Sign in</span>
+            </li>
+          </ol>
+      </section>
+      <section aria-label="To save at the end" style="background: #FFFFFF; border: 1px solid #ECEAF4; border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 2px"><h2 style="margin: 0; font-size: 17px; font-weight: 600">To save at the end</h2></div>
+          <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+            <li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="flex: 1 1 160px">S2 reads: Enter “student@bookmarket.com” in the Email field</span><span style="padding: 3px 9px; border-radius: 10px; background: #EAF6EF; color: #2F855A; font-size: 12px; font-weight: 600; white-space: nowrap">added</span><a href="#remove" style="font-size: 12px">Remove</a></li>
+            <li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="flex: 1 1 160px">Check after S2: the Email field has the value “student@bookmarket.com”</span><a href="#remove" style="font-size: 12px">Remove</a></li>
+            <li style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="flex: 1 1 160px">Recorded: Click “Show password”</span><span style="padding: 3px 9px; border-radius: 10px; background: #FDF6E9; color: #9A6420; font-size: 12px; font-weight: 600; white-space: nowrap">waiting for your OK</span><a href="#add" style="font-size: 12px; font-weight: 600">Add</a><a href="#remove" style="font-size: 12px">Remove</a></li>
+          </ul>
+      </section>
+        </div>
+      <section aria-label="The screen" style="flex: 2 1 460px; min-width: 0; background: #FFFFFF; border: 1px solid #ECEAF4; border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 600">S2: Enter the given valid Email</h2><span style="padding: 3px 9px; border-radius: 10px; background: #EAF6EF; color: #2F855A; font-size: 12px; font-weight: 600; white-space: nowrap">Done</span></div>
+        <p style="margin: 0; font-size: 13px; color: #5E5B78">What changed: the Email field now holds student@bookmarket.com.</p>
+        <div style="position: relative; height: 280px; border-radius: 12px; border: 1px solid #ECEAF4; background: #FAF9FD" role="img" aria-label="The page after step 2, with boxes around the elements">
+          <div style="position: absolute; left: 28%; top: 20%; width: 44%; height: 14px; border-radius: 6px; background: #DCD9E8"></div>
+          <div style="position: absolute; left: 28%; top: 36%; width: 44%; height: 30px; border-radius: 6px; background: #FFFFFF; outline: 2px solid #6D5AE6"></div>
+          <div style="position: absolute; left: 28%; top: 54%; width: 44%; height: 30px; border-radius: 6px; background: #FFFFFF; outline: 1px dashed #B9AEF5"></div>
+          <div style="position: absolute; left: 28%; top: 72%; width: 44%; height: 32px; border-radius: 6px; background: #DCD5FA; outline: 1px dashed #B9AEF5"></div>
+        </div>
+        <span style="font-size: 12px; color: #5E5B78">https://book-market-virid.vercel.app/login · anything you do in the browser now is added after S2</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px"><button type="button" style="all: unset; cursor: pointer; padding: 10px 18px; min-height: 44px; box-sizing: border-box; border-radius: 8px; background: #6D5AE6; color: #FFFFFF; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Next step</button> <button type="button" style="all: unset; cursor: pointer; padding: 10px 16px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid #DCD9E8; background: #FFFFFF; color: #3B3854; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Add check</button> <button type="button" style="all: unset; cursor: pointer; padding: 10px 16px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid #DCD9E8; background: #FFFFFF; color: #3B3854; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Edit step</button> <button type="button" style="all: unset; cursor: pointer; padding: 10px 14px; min-height: 44px; box-sizing: border-box; border-radius: 8px; color: #3B3854; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center">Finish</button></div>
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 14px; border-radius: 12px; background: #F7F5FE">
+          <span style="flex: 1 1 100%; font-size: 13px; font-weight: 600">Add a check · picked: textbox “Email”</span>
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; font-weight: 600">It</span><select style="padding: 9px; border: 1px solid #DCD9E8; border-radius: 8px; font: inherit; font-size: 14px"><option>has the value…</option><option>is shown</option><option>is not shown</option><option>shows text containing…</option><option>is enabled</option><option>is disabled</option><option>page address contains…</option></select></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px;">
+            <span style="font-size: 13px; font-weight: 600; color: #3B3854">Value</span>
+            <input type="text" value="student@bookmarket.com"  style="padding: 10px 12px; border: 1px solid #DCD9E8; border-radius: 8px; font: inherit; font-size: 14px; color: #23213A; background: #FFFFFF">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; font-weight: 600">When</span><select style="padding: 9px; border: 1px solid #DCD9E8; border-radius: 8px; font: inherit; font-size: 14px"><option>after this step</option><option>at the end</option></select></label>
+          <button type="button" style="all: unset; cursor: pointer; padding: 10px 18px; min-height: 44px; box-sizing: border-box; border-radius: 8px; background: #6D5AE6; color: #FFFFFF; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px">Add the check</button>
+        </div>
+      </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

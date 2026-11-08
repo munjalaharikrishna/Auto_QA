@@ -149,6 +149,40 @@ describe('the review card in the web UI', { skip, concurrency: false }, () => {
     ]);
   });
 
+  it('the project review shows the open question of its runs first, and the decided one under Decided (U1 step 5)', async () => {
+    await page.goto(`${url}/projects/demo/review`);
+    await page.getByRole('heading', { name: '1 question needs you' }).waitFor();
+    await page.getByRole('article', { name: 'Review card: The Dashboard heading is shown' }).waitFor();
+    assert.equal(await page.getByRole('article', { name: 'Review card: Error "Invalid credentials" is shown' }).count(), 0);
+    await page.getByRole('tab', { name: /^Decided/ }).click();
+    const decided = page.getByRole('article', { name: 'Review card: Error "Invalid credentials" is shown' });
+    await decided.getByText('Decided FAIL').first().waitFor();
+    assert.equal(
+      await page
+        .getByRole('link', { name: /Review/ })
+        .first()
+        .innerText()
+        .then((t) => t.includes('1')),
+      true,
+      'the sidebar counts the open question',
+    );
+  });
+
+  it('Focus review asks one question at a time, shows what the answer settles, and takes the answer from the keyboard (U1 step 6)', async () => {
+    await page.goto(`${url}/projects/demo/focus`);
+    await page.getByText('Question 1 of 1').waitFor();
+    await page.getByRole('article', { name: 'Question: The Dashboard heading is shown' }).waitFor();
+    await page.getByRole('complementary', { name: 'Ripple map' }).getByText('TC-9', { exact: true }).waitFor();
+    await page.keyboard.press('p');
+    assert.equal(await page.getByText('Question 1 of 1').count(), 1, 'P does nothing where PASS is not offered');
+    await page.keyboard.press('f');
+    await page.getByRole('heading', { name: 'That was every question' }).waitFor();
+    const history = (await (await page.request.get(`${url}/api/jobs/${jobId}/review-queue/history`)).json()) as {
+      decisions: Array<{ testId: string; decision: string }>;
+    };
+    assert.ok(history.decisions.some((d) => d.testId === 'TC-9' && d.decision === 'FAIL'));
+  });
+
   it('had no errors in the page', () => {
     assert.deepEqual(errors, []);
   });

@@ -8,109 +8,55 @@ const KIND: Record<ProjectRule['kind'], string> = {
   element: 'A word means the name on the screen',
   approved: 'Accepted value',
 };
+const KIND_SHORT: Record<ProjectRule['kind'], string> = { step: 'Steps', check: 'Expected results', element: 'Words', approved: 'Accepted values' };
 
-/** The project's rules: every answer given in review, kept so the same wording is never asked about again (FR-RULE-02, FR-RULE-03). */
+/**
+ * What the engine learned (U1 step 7): every answer and pick a person gave, kept for this project, so the same wording is never asked
+ * about again. Each can be switched off (the engine asks again), its meaning changed (checked like a new answer), or removed; new ones
+ * can be written by hand; all of them can be exported and imported.
+ */
 export function RulesTab({ projectId }: { projectId: string }) {
   const [rules, setRules] = useState<ProjectRule[]>();
   const [error, setError] = useState<string>();
+  const [kind, setKind] = useState<ProjectRule['kind'] | 'all'>('all');
+  const [editing, setEditing] = useState<{ id: string; meaning: string }>();
+  const [removing, setRemoving] = useState<string>();
   const [draft, setDraft] = useState<{ kind: 'step' | 'check' | 'element'; pattern: string; meaning: string }>({ kind: 'step', pattern: '', meaning: '' });
   const load = useCallback(() => {
     api.rules(projectId).then(setRules, (e: Error) => setError(e.message));
   }, [projectId]);
   useEffect(load, [load]);
-  const run = (fn: () => Promise<unknown>) => fn().then(load, (e: Error) => setError(e.message));
+  const run = (fn: () => Promise<unknown>) =>
+    fn().then(
+      () => {
+        setError(undefined);
+        load();
+      },
+      (e: Error) => setError(e.message),
+    );
 
   if (!rules) return <ErrorNote error={error} />;
+  const kinds = (Object.keys(KIND) as Array<ProjectRule['kind']>).filter((k) => rules.some((r) => r.kind === k));
+  const shown = rules.filter((r) => kind === 'all' || r.kind === kind);
   return (
-    <section className="panel stack">
-      <h2 style={{ margin: 0 }}>Project rules</h2>
-      <p className="muted" style={{ margin: 0 }}>
-        Every answer you give in review is kept here, so the same wording is never asked about again. Switch a rule off to stop using it, or remove it.
-      </p>
-      <ErrorNote error={error} />
-      {rules.length ? (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>When the test case says</th>
-                <th>It means</th>
-                <th>Kind</th>
-                <th>From</th>
-                <th>On</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rules.map((r) => (
-                <tr key={r.id} style={r.enabled ? undefined : { opacity: 0.55 }}>
-                  <td>{r.pattern}</td>
-                  <td>{r.kind === 'approved' ? <span className="muted">accepted as it is</span> : r.meaning}</td>
-                  <td>{KIND[r.kind]}</td>
-                  <td>{r.source}</td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      aria-label={`${r.pattern} is on`}
-                      checked={r.enabled}
-                      onChange={(e) => void run(() => api.updateRule(projectId, r.id, { enabled: e.target.checked }))}
-                    />
-                  </td>
-                  <td>
-                    <button type="button" onClick={() => void run(() => api.deleteRule(projectId, r.id))} aria-label={`Remove the rule for ${r.pattern}`}>
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="muted">No rules yet. They appear when you answer a question or pick an element and choose to remember it.</p>
-      )}
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(() => api.saveRule(projectId, { ...draft, source: 'written by hand' })).then(() => setDraft({ ...draft, pattern: '', meaning: '' }));
-        }}
-      >
-        <select aria-label="Kind of rule" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}>
-          <option value="step">A step is read as</option>
-          <option value="check">An expected result is read as</option>
-          <option value="element">A word means the name on the screen</option>
-        </select>
-        <input
-          required
-          className="grow"
-          aria-label="When the test case says"
-          placeholder="When it says…"
-          value={draft.pattern}
-          onChange={(e) => setDraft({ ...draft, pattern: e.target.value })}
-        />
-        <input
-          required
-          className="grow"
-          aria-label="It means"
-          placeholder="It means…"
-          value={draft.meaning}
-          onChange={(e) => setDraft({ ...draft, meaning: e.target.value })}
-        />
-        <button type="submit" className="primary">
-          Add a rule
-        </button>
-      </form>
-
+    <section className="panel stack learned" aria-labelledby="learned-title">
       <div className="row">
-        <a href={`/api/projects/${projectId}/rules/export`} download>
-          <button type="button">Export the rules</button>
+        <div className="grow">
+          <h2 id="learned-title" style={{ margin: 0 }}>
+            What the engine learned
+          </h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Your answers and picks, kept for this project, so the same wording is never asked about again. Switch one off to make the engine ask again.
+          </p>
+        </div>
+        <a href={`/api/projects/${projectId}/rules/export`} download className="button secondary">
+          Export
         </a>
-        <label className="muted">
-          Import rules from a file{' '}
+        <label className="button secondary file-button">
+          Import
           <input
             type="file"
+            className="file-input"
             accept="application/json,.json"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -121,6 +67,152 @@ export function RulesTab({ projectId }: { projectId: string }) {
           />
         </label>
       </div>
+      <ErrorNote error={error} />
+      {kinds.length > 1 && (
+        <div className="tabs" role="tablist" aria-label="Filter what the engine learned">
+          <button type="button" role="tab" aria-selected={kind === 'all'} onClick={() => setKind('all')}>
+            All {rules.length}
+          </button>
+          {kinds.map((k) => (
+            <button type="button" role="tab" key={k} aria-selected={kind === k} onClick={() => setKind(k)}>
+              {KIND_SHORT[k]} {rules.filter((r) => r.kind === k).length}
+            </button>
+          ))}
+        </div>
+      )}
+      {rules.length ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>When the test case says</th>
+                <th>It means</th>
+                <th>Kind</th>
+                <th>From</th>
+                <th>On</th>
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r) => (
+                <tr key={r.id} className={r.enabled ? undefined : 'rule-off'}>
+                  <td>{r.pattern}</td>
+                  <td>
+                    {r.kind === 'approved' ? (
+                      <span className="muted">accepted as it is</span>
+                    ) : editing?.id === r.id ? (
+                      <form
+                        className="row tight"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void run(() => api.updateRule(projectId, r.id, { meaning: editing.meaning.trim() })).then(() => setEditing(undefined));
+                        }}
+                      >
+                        <input
+                          aria-label={`New meaning of ${r.pattern}`}
+                          value={editing.meaning}
+                          onChange={(e) => setEditing({ id: r.id, meaning: e.target.value })}
+                          required
+                        />
+                        <button type="submit" className="small primary">
+                          Save
+                        </button>
+                        <button type="button" className="small" onClick={() => setEditing(undefined)}>
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      r.meaning
+                    )}
+                  </td>
+                  <td>{KIND[r.kind]}</td>
+                  <td className="muted">{r.source}</td>
+                  <td>
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        className="switch-input"
+                        aria-label={`${r.pattern} is on`}
+                        checked={r.enabled}
+                        onChange={(e) => void run(() => api.updateRule(projectId, r.id, { enabled: e.target.checked }))}
+                      />
+                      <span className="switch-track" aria-hidden="true" />
+                    </label>
+                  </td>
+                  <td>
+                    {removing === r.id ? (
+                      <span className="row tight">
+                        <button type="button" className="small danger solid" onClick={() => void run(() => api.deleteRule(projectId, r.id))}>
+                          Remove
+                        </button>
+                        <button type="button" className="small" onClick={() => setRemoving(undefined)}>
+                          Keep
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="row tight">
+                        {r.kind !== 'approved' && (
+                          <button
+                            type="button"
+                            className="small"
+                            onClick={() => setEditing({ id: r.id, meaning: r.meaning })}
+                            aria-label={`Change the meaning of ${r.pattern}`}
+                          >
+                            Change
+                          </button>
+                        )}
+                        <button type="button" className="small" onClick={() => setRemoving(r.id)} aria-label={`Remove the rule for ${r.pattern}`}>
+                          Remove
+                        </button>
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted">Nothing learned yet. Answers appear here when you answer a question in Review, or pick an element and choose to remember it.</p>
+      )}
+
+      <form
+        className="add-rule"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run(() => api.saveRule(projectId, { ...draft, source: 'written by hand' })).then(() => setDraft({ ...draft, pattern: '', meaning: '' }));
+        }}
+      >
+        <span className="eyebrow">Teach it yourself</span>
+        <div className="row">
+          <select aria-label="Kind of rule" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}>
+            <option value="step">A step is read as</option>
+            <option value="check">An expected result is read as</option>
+            <option value="element">A word means the name on the screen</option>
+          </select>
+          <input
+            required
+            className="grow"
+            aria-label="When the test case says"
+            placeholder="When it says…"
+            value={draft.pattern}
+            onChange={(e) => setDraft({ ...draft, pattern: e.target.value })}
+          />
+          <input
+            required
+            className="grow"
+            aria-label="It means"
+            placeholder="It means…"
+            value={draft.meaning}
+            onChange={(e) => setDraft({ ...draft, meaning: e.target.value })}
+          />
+          <button type="submit" className="primary">
+            Add a rule
+          </button>
+        </div>
+      </form>
     </section>
   );
 }

@@ -44,6 +44,9 @@ export interface AppOptions {
   webDir?: string;
 }
 
+/** The colour of a project's tile on the start page (U1 step 2): a choice of the person, kept as a project setting. */
+export const TILES = ['lavender', 'mint', 'apricot', 'sky', 'rose'] as const;
+
 const ProjectBody = z.object({
   name: z.string().trim().min(1).max(80),
   baseUrl: z.string().trim().url(),
@@ -59,6 +62,7 @@ const ProjectBody = z.object({
   /** Other variables the tests read, e.g. TEST_WRONG_PASSWORD. An empty value keeps the current one; null removes it. */
   variables: z.record(z.string().regex(/^[A-Za-z_]\w*$/), z.string().nullable()).default({}),
   policy: z.enum(POLICIES).default('balanced'),
+  tile: z.enum(TILES).default('lavender'),
 });
 /** An update: only what is sent changes. No defaults here, or an update would reset them. */
 const ProjectPatch = z.object({
@@ -75,10 +79,44 @@ const ProjectPatch = z.object({
   policy: z.enum(POLICIES).optional(),
   /** Which engine runs this project's test cases (PD-1). Default: semantic. */
   engine: z.enum(ENGINES).optional(),
+  tile: z.enum(TILES).optional(),
 });
 const MappingBody = z.object({ mapping: z.partialRecord(z.enum(FIELDS), z.string()).default({}) });
 const AnswerBody = z.object({ answer: z.unknown() });
 const EditBody = z.object({ case: RawTestCaseSchema.omit({ row: true }) });
+
+const tileOf = (v: unknown): (typeof TILES)[number] => ((TILES as readonly string[]).includes(String(v)) ? (v as (typeof TILES)[number]) : 'lavender');
+
+/** Opens an address once, the way a browser would, and says whether it answered and whether it shows a password field. */
+export async function probeAddress(
+  url: string,
+): Promise<{ ok: boolean; status?: number; finalUrl?: string; title?: string; loginForm: boolean; error?: string }> {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return { ok: false, loginForm: false, error: 'Only http and https addresses can be checked.' };
+  try {
+    const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'AutoQA-check/1' } });
+    const html = (res.headers.get('content-type') ?? '').includes('html') ? (await res.text()).slice(0, 400_000) : '';
+    const lower = html.toLowerCase();
+    const t0 = lower.indexOf('<title');
+    const t1 = t0 >= 0 ? lower.indexOf('>', t0) : -1;
+    const t2 = t1 >= 0 ? lower.indexOf('</title>', t1) : -1;
+    const title =
+      t1 >= 0 && t2 > t1
+        ? html
+            .slice(t1 + 1, t2)
+            .trim()
+            .slice(0, 120)
+        : undefined;
+    return {
+      ok: res.ok,
+      status: res.status,
+      finalUrl: res.url,
+      ...(title ? { title } : {}),
+      loginForm: lower.includes('type="password"') || lower.includes("type='password'") || lower.includes('type=password'),
+    };
+  } catch (e) {
+    return { ok: false, loginForm: false, error: (e as Error).name === 'TimeoutError' ? 'It did not answer within 8 seconds.' : (e as Error).message };
+  }
+}
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const { store, runner } = options;
@@ -102,6 +140,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     env: describeEnv(p.workspace),
     policy: await store.projectPolicy(p.id),
     engine: engineFrom(await store.setting('project', p.id, 'engine')),
+    tile: tileOf(await store.setting('project', p.id, 'tile')),
   });
 
   // Live events for every open page (FR-RUN-02).
@@ -142,10 +181,17 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
     await writeEnvFile(workspace, { BASE_URL: body.baseUrl, TEST_USERNAME: body.username, TEST_PASSWORD: body.password, ...body.variables });
     await store.setSetting('project', project.id, 'policy', body.policy);
+    await store.setSetting('project', project.id, 'tile', body.tile);
     return reply.status(201).send(await withEnv(project));
   });
 
   app.get('/api/projects/:id', async (req) => withEnv(await projectOf((req.params as { id: string }).id)));
+
+  // U1 step 2: before a project is made, whether its address answers and shows a login form. Only http(s); nothing is kept.
+  app.post('/api/probe', async (req) => {
+    const { url } = z.object({ url: z.string().trim().url() }).parse(req.body);
+    return probeAddress(url);
+  });
 
   app.patch('/api/projects/:id', async (req) => {
     const project = await projectOf((req.params as { id: string }).id);
@@ -156,6 +202,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       await store.setSetting('project', project.id, 'policy', body.policy);
       await store.audit('project.policy', 'project', project.id, project.id, { policy: body.policy });
     }
+    if (body.tile) await store.setSetting('project', project.id, 'tile', body.tile);
     if (body.engine) {
       await store.setSetting('project', project.id, 'engine', body.engine);
       await store.audit('project.engine', 'project', project.id, project.id, { engine: body.engine });
@@ -672,9 +719,62 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return holds.release(project.id, params.testId, body).catch(holdFailed);
   });
 
+  // U1 step 2: what waits for a person in each project, for the start page: the open questions of its latest finished run, the one
+  // that covers the most test cases, the held cases, and how many answers the engine remembers.
+  app.get('/api/review-summary', async () => {
+    const out: Array<{
+      projectId: string;
+      projectName: string;
+      jobId?: string;
+      questions: number;
+      held: number;
+      biggest?: { cardId: string; clause: string; cases: number; label?: string };
+    }> = [];
+    let remembered = 0;
+    for (const p of await store.projects()) {
+      remembered += (await store.learnedEntries(p.id, { status: 'active' })).length;
+      const held = (await store.heldCases(p.id)).filter((h) => !isOverdue(h)).length;
+      const last = (await store.jobs(p.id, 30)).find((j) => j.status === 'done' && (j.kind === 'workbook' || j.kind === 'single'));
+      if (!last) {
+        out.push({ projectId: p.id, projectName: p.name, questions: 0, held });
+        continue;
+      }
+      const open = (await review.cards(last.id)).filter((c) => !c.decided && !c.held);
+      const top = [...open].sort((a, b) => b.cases.length - a.cases.length)[0];
+      out.push({
+        projectId: p.id,
+        projectName: p.name,
+        jobId: last.id,
+        questions: open.length,
+        held,
+        ...(top
+          ? { biggest: { cardId: top.id, clause: top.clause || top.why, cases: top.cases.length, ...(top.label ? { label: top.label.name } : {}) } }
+          : {}),
+      });
+    }
+    return { projects: out, remembered };
+  });
+
   app.post('/api/jobs/:id/review-queue/answers', async (req) => {
     const body = z.object({ cardId: z.string().min(1), means: z.unknown(), who: z.unknown().optional() }).parse(req.body);
     return review.answer((req.params as { id: string }).id, body.cardId, { means: body.means, who: body.who }).catch(reviewFailed);
+  });
+  // U1 step 5: a step that asks nothing anyone needs answered is taken out of the cases of its card, as a new version of each.
+  app.post('/api/jobs/:id/review-queue/remove-step', async (req) => {
+    const body = z.object({ cardId: z.string().min(1), who: z.unknown().optional() }).parse(req.body);
+    return review.removeStep((req.params as { id: string }).id, body.cardId, { who: body.who }).catch(reviewFailed);
+  });
+  // U1 step 5: one review for the whole project: the cards of its latest runs, each case from its latest run, and the held cases.
+  app.get('/api/projects/:id/review', async (req) => {
+    const project = await projectOf((req.params as { id: string }).id);
+    const cards = await review.projectCards(project.id);
+    const held = (await store.heldCases(project.id)).map((h) => ({ ...h, overdue: isOverdue(h) }));
+    return { cards, held };
+  });
+  // U1 step 6: what one answer on a card settles in the whole project, for the Ripple map of Focus review.
+  app.get('/api/jobs/:id/review-queue/ripple', async (req) => {
+    const { cardId } = z.object({ cardId: z.string().min(1) }).parse(req.query);
+    return review.ripple((req.params as { id: string }).id, cardId).catch(reviewFailed);
   });
   app.get('/api/jobs/:id/review-queue/history', async (req) => ({ decisions: await review.history((req.params as { id: string }).id).catch(reviewFailed) }));
   app.post('/api/jobs/:id/review-queue/decisions', async (req) => {

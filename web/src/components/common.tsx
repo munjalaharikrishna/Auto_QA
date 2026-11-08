@@ -1,7 +1,8 @@
 import { useId, useState } from 'react';
 import type { JobStatus } from '../../../src/server/store.js';
-import { fileUrl, type Policy, type ProjectInput, type ProjectView, type RawTestCase, type ReviewItem } from '../api';
+import { api, fileUrl, type Policy, type Probe, type ProjectInput, type ProjectView, type RawTestCase, type ReviewItem, TILES, type Tile } from '../api';
 import { Link } from '../router';
+import { initialsOf } from './ui';
 
 export function StatusBadge({ status }: { status: string }) {
   const cls = status === 'NEEDS REVIEW' ? 'NEEDS' : status === 'NOT VERIFIED' ? 'NOTV' : status;
@@ -32,8 +33,16 @@ export function ErrorNote({ error }: { error?: string }) {
 }
 
 /** Run settings (FR-IN-04, D18, FR-ENV-05). The password is write-only: blank keeps the saved one. */
-export function ProjectForm(props: { initial?: ProjectView; submitLabel: string; onSubmit: (p: ProjectInput) => Promise<void> }) {
+export function ProjectForm(props: {
+  initial?: ProjectView;
+  submitLabel: string;
+  onSubmit: (p: ProjectInput) => Promise<void>;
+  /** Check the address when it is left (U1 step 2): it answers, and shows a login form. */
+  checkAddress?: boolean;
+}) {
   const init = props.initial;
+  const [tile, setTile] = useState<Tile>(init?.tile ?? 'lavender');
+  const [probe, setProbe] = useState<Probe | 'checking'>();
   const [name, setName] = useState(init?.name ?? '');
   const [baseUrl, setBaseUrl] = useState(init?.baseUrl ?? '');
   const [testIdAttribute, setTestIdAttribute] = useState(init?.testIdAttribute ?? 'data-testid');
@@ -54,7 +63,7 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
     setError(undefined);
     try {
       const variables = Object.fromEntries(extra.filter((v) => v.name.trim()).map((v) => [v.name.trim(), v.value]));
-      await props.onSubmit({ name, baseUrl, testIdAttribute, browser: 'chromium', username, password, variables, policy });
+      await props.onSubmit({ name, baseUrl, testIdAttribute, browser: 'chromium', username, password, variables, policy, tile });
       setPassword('');
     } catch (err) {
       setError((err as Error).message);
@@ -65,6 +74,17 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
 
   return (
     <form onSubmit={submit} className="stack">
+      <fieldset className="tile-picker">
+        <legend>Tile colour</legend>
+        <span className={`project-tile tile-${tile}`} style={{ width: 40, height: 40, fontSize: 16 }} aria-hidden="true">
+          {initialsOf(name || 'New project')}
+        </span>
+        {TILES.map((t) => (
+          <label key={t} className={`tile-swatch tile-${t}`} title={t}>
+            <input type="radio" name="tile" value={t} checked={tile === t} onChange={() => setTile(t)} aria-label={t} />
+          </label>
+        ))}
+      </fieldset>
       <div className="grid2">
         <label className="field">
           <span>Project name</span>
@@ -72,7 +92,30 @@ export function ProjectForm(props: { initial?: ProjectView; submitLabel: string;
         </label>
         <label className="field">
           <span>Application URL</span>
-          <input required type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://staging.example.com" />
+          <input
+            required
+            type="url"
+            value={baseUrl}
+            onChange={(e) => {
+              setBaseUrl(e.target.value);
+              setProbe(undefined);
+            }}
+            onBlur={() => {
+              if (!props.checkAddress || !baseUrl.trim()) return;
+              setProbe('checking');
+              api.probe(baseUrl.trim()).then(setProbe, (e: Error) => setProbe({ ok: false, loginForm: false, error: e.message }));
+            }}
+            placeholder="https://staging.example.com"
+          />
+          {probe && (
+            <small role="status" className={probe === 'checking' ? 'probe' : probe.ok ? 'probe ok' : 'probe bad'}>
+              {probe === 'checking'
+                ? 'Checking the address…'
+                : probe.ok
+                  ? `It answers${probe.title ? ` (“${probe.title}”)` : ''}${probe.loginForm ? ', and it shows a login form' : '. No login form in its first HTML: a page built in the browser shows it later, and the first run finds it'}.`
+                  : `It does not answer: ${probe.error ?? `status ${probe.status}`}.`}
+            </small>
+          )}
         </label>
         <label className="field">
           <span>Username</span>

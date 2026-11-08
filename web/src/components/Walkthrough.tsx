@@ -111,13 +111,13 @@ export function Walkthrough({ job }: { job: JobDetail }) {
         )}
         {!!walk?.pending.length && (
           <div>
-            <h3 style={{ margin: '0.5rem 0 0.25rem' }}>To save at the end</h3>
+            <h3 className="pending-title">To save at the end</h3>
             {waiting > 0 && (
               <p className="muted" style={{ margin: '0 0 0.25rem' }}>
                 What you do in the browser is recorded here first. Add each one you mean as a step; the ones you do not add are not saved.
               </p>
             )}
-            <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+            <ul className="pending-list">
               {walk.pending.map((p, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: the same step can be recorded twice; the list only grows or loses an item
                 <li key={`${i} ${p.kind} ${p.sentence ?? p.text}`}>

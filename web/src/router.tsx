@@ -3,26 +3,27 @@ import { useEffect, useState } from 'react';
 /** A very small router on the History API: the UI has only a handful of pages. */
 
 export function navigate(to: string): void {
-  if (to === location.pathname) return;
+  if (to === location.pathname + location.search) return;
   history.pushState(null, '', to);
   dispatchEvent(new PopStateEvent('popstate'));
 }
 
 export function usePath(): string {
-  const [path, setPath] = useState(location.pathname);
+  const [path, setPath] = useState(location.pathname + location.search);
   useEffect(() => {
-    const on = () => setPath(location.pathname);
+    const on = () => setPath(location.pathname + location.search);
     addEventListener('popstate', on);
     return () => removeEventListener('popstate', on);
   }, []);
   return path;
 }
 
-export function Link(props: { to: string; children: React.ReactNode; className?: string }) {
+export function Link(props: { to: string; children: React.ReactNode; className?: string; current?: boolean }) {
   return (
     <a
       href={props.to}
       className={props.className}
+      aria-current={props.current ? 'page' : undefined}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
