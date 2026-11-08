@@ -1,0 +1,31 @@
+E0.19 step 1, 8 Nov 2026: the review KPIs of the E0.18 live runs (7 Nov), before the E0.19 changes.
+npm run engine:kpi -- --batch <the three runs> --key test/benchmark/orangehrm.answer-key.json
+
+Baseline: E0.19, frozen 2026-11-08 (2 workbooks, legacy engine)
+
+OrangeHRM Add Employee  (ohrm-add-dd25ddc3.json)
+  19 test cases: 4 FAIL, 15 NEEDS REVIEW
+  Set aside for a person: 15   (baseline 19, −21%)
+  Questions to answer:    7   (baseline 13, −46%)
+  Reviews per 100 steps:  3.9   (baseline 7.2)   over 181 steps (fixed)
+  Flaky: 0 (0.0%)   reasons: 9 inconclusive, 6 wording
+  Answer key (draft, not signed off): 12 of 19 match; wrong PASS 0; wrong FAIL 2 (21022024_12, 21022024_14)
+
+OrangeHRM Login  (ohrm-login-acfe3825.json)
+  10 test cases: 2 PASS, 1 FAIL, 4 BLOCKED, 3 NEEDS REVIEW
+  Set aside for a person: 7   (baseline 6, +17%)
+  Questions to answer:    3   (baseline 6, −50%)
+  Reviews per 100 steps:  7.7   (baseline 15.4)   over 39 steps (fixed)
+  Flaky: 0 (0.0%)   reasons: 2 inconclusive, 1 wording
+  Answer key (draft, not signed off): 4 of 10 match; wrong PASS 0; wrong FAIL 1 (TC_LOGIN_001)
+
+bookmarket-da666331.json  (bookmarket-da666331.json)
+  5 test cases: 5 NEEDS REVIEW
+  Set aside for a person: 5
+  Questions to answer:    4
+  Reviews per 100 steps:  33.3   over 12 steps (as run: no baseline)
+  Flaky: 0 (0.0%)   reasons: 2 inconclusive, 3 wording
+  Answer key: none of these test cases is in it, wrong PASS not measured
+
+All matched workbooks (2): questions 19 → 10 (−47%); set aside 25 → 22 (−12%)
+Owner's bar: 80% fewer questions: not met yet

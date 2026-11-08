@@ -1,3 +1,5 @@
+import type { RawTestCase } from '../model/test-model.js';
+
 /**
  * Project rules (REAL-WORLD-TEST-CASES.md M3, FR-RULE): every answer a tester gives in review is kept for the project,
  * so the same wording is never asked about again.
@@ -51,6 +53,57 @@ export function rulesFor(rules: Iterable<Pick<ProjectRule, 'kind' | 'pattern' | 
     out[r.kind][ruleKey(r.pattern)] = r.meaning;
   }
   return out;
+}
+
+/** A step line split into its number ("17. ") and its sentence, so a reading matches the sentence however the line is numbered. */
+function numbered(line: string): { lead: string; text: string } {
+  let i = 0;
+  while (i < line.length && line[i] === ' ') i += 1;
+  const start = i;
+  while (i < line.length && line[i] >= '0' && line[i] <= '9') i += 1;
+  if (i === start || !['.', ')', ':', '-'].includes(line[i] ?? '')) return { lead: '', text: line };
+  i += 1;
+  while (i < line.length && line[i] === ' ') i += 1;
+  return { lead: line.slice(0, i), text: line.slice(i) };
+}
+
+const readLine = (
+  line: string,
+  first: Record<string, string> | undefined,
+  second: Record<string, string> | undefined,
+  applied: Array<{ from: string; to: string }>,
+): string => {
+  const { lead, text } = numbered(line);
+  const key = ruleKey(text);
+  const to = key ? (first?.[key] ?? second?.[key]) : undefined;
+  if (to === undefined) return line;
+  applied.push({ from: text.trim(), to });
+  return `${lead}${to}`;
+};
+
+/**
+ * E0.19 step 3: the test case as a person's answers say it is meant. Each step line, expected result and step result whose sentence
+ * a project reading names is read as the reading's sentence (steps by the step readings first, results by the check readings first).
+ * The new engine reads the case this way, so one answer holds for every case and every sheet of the project that has that sentence.
+ */
+export function withReadings(
+  raw: RawTestCase,
+  rules: Pick<ParserRules, 'step' | 'check'> | undefined,
+): { raw: RawTestCase; applied: Array<{ from: string; to: string }> } {
+  const applied: Array<{ from: string; to: string }> = [];
+  if (!rules || (!Object.keys(rules.step).length && !Object.keys(rules.check).length)) return { raw, applied };
+  const lines = (text: string, first: Record<string, string>, second: Record<string, string>) =>
+    text
+      .split('\n')
+      .map((l) => readLine(l, first, second, applied))
+      .join('\n');
+  const out: RawTestCase = {
+    ...raw,
+    steps: lines(raw.steps, rules.step, rules.check),
+    expected: lines(raw.expected, rules.check, rules.step),
+    ...(raw.stepExpected ? { stepExpected: Object.fromEntries(Object.entries(raw.stepExpected).map(([k, v]) => [k, lines(v, rules.check, rules.step)])) } : {}),
+  };
+  return applied.length ? { raw: out, applied } : { raw, applied };
 }
 
 /** The text a rule says to read instead, or the text itself. `rule` is set when one applied. */

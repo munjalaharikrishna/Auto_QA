@@ -8,6 +8,7 @@ import { executions } from './0006_executions.js';
 import { automationReleases } from './0007_automation_releases.js';
 import { learnedEntries } from './0008_learned_entries.js';
 import { reviewDecisions } from './0009_review_decisions.js';
+import { heldCases } from './0010_held_cases.js';
 
 /** In order. A released migration is never edited: its checksum is checked at start (D26). */
 export const MIGRATIONS: Migration[] = [
@@ -20,4 +21,5 @@ export const MIGRATIONS: Migration[] = [
   automationReleases,
   learnedEntries,
   reviewDecisions,
+  heldCases,
 ];

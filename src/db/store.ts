@@ -29,6 +29,23 @@ export interface Project {
   createdAt: string;
 }
 
+/** A flaky case held by a person until a day (E0.19 step 7). */
+export interface HeldCase {
+  id: string;
+  projectId: string;
+  testId: string;
+  owner: string;
+  reason: string;
+  /** The day the hold ends by itself (ISO time). */
+  until: string;
+  status: 'held' | 'released';
+  heldBy: string;
+  heldAt: string;
+  releasedBy?: string;
+  releasedAt?: string;
+  releaseNote?: string;
+}
+
 export type JobKind = 'workbook' | 'single' | 'walkthrough';
 export type JobStatus = 'queued' | 'running' | 'waiting' | 'review' | 'done' | 'failed' | 'cancelled';
 
@@ -342,6 +359,7 @@ export class Store {
       { table: 'explorations', sql: 'DELETE FROM explorations WHERE project_id = ?' },
       { table: 'generation_snapshots', sql: 'DELETE FROM generation_snapshots WHERE project_id = ?' },
       { table: 'review_decisions', sql: 'DELETE FROM review_decisions WHERE project_id = ?' },
+      { table: 'held_cases', sql: 'DELETE FROM held_cases WHERE project_id = ?' },
       { table: 'test_results', sql: 'DELETE FROM test_results WHERE project_id = ?' },
       { table: 'verdicts_legacy', sql: `DELETE FROM verdicts_legacy WHERE job_id IN (${of('jobs')})` },
       { table: 'executions', sql: 'DELETE FROM executions WHERE project_id = ?' },
@@ -1505,6 +1523,72 @@ export class Store {
     }));
   }
 
+  /** The holds of a project (E0.19 step 7), the current ones first; with `all`, the released ones too. */
+  async heldCases(projectId: string, options: { all?: boolean } = {}): Promise<HeldCase[]> {
+    const rows = await this.db.all<Row>(
+      `SELECT * FROM held_cases WHERE project_id = ? ${options.all ? '' : "AND status = 'held'"} ORDER BY status = 'held' DESC, until_at, held_at`,
+      [projectId],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      projectId: String(r.project_id),
+      testId: String(r.ext_id),
+      owner: String(r.owner),
+      reason: String(r.reason),
+      until: String(r.until_at),
+      status: r.status as HeldCase['status'],
+      heldBy: String(r.held_by),
+      heldAt: String(r.held_at),
+      ...(r.released_by === null ? {} : { releasedBy: String(r.released_by) }),
+      ...(r.released_at === null ? {} : { releasedAt: String(r.released_at) }),
+      ...(r.release_note ? { releaseNote: String(r.release_note) } : {}),
+    }));
+  }
+
+  /** Holds a case; a case already held has its hold replaced (the old row is kept as released). */
+  async holdCase(input: { projectId: string; testId: string; owner: string; reason: string; until: string; by: string }): Promise<HeldCase> {
+    return this.transaction(async (s) => {
+      const at = now();
+      await s.db.run(
+        "UPDATE held_cases SET status = 'released', released_by = ?, released_at = ?, release_note = 'held again' WHERE project_id = ? AND ext_id = ? AND status = 'held'",
+        [input.by, at, input.projectId, input.testId],
+      );
+      const id = newId('HOLD');
+      await s.db.run(
+        `INSERT INTO held_cases (id, project_id, ext_id, owner, reason, until_at, status, held_by, held_at) VALUES (?, ?, ?, ?, ?, ?, 'held', ?, ?)`,
+        [id, input.projectId, input.testId, input.owner, input.reason, input.until, input.by, at],
+      );
+      await s.audit('case.hold', 'test_case', input.testId, input.projectId, { owner: input.owner, until: input.until, reason: input.reason });
+      return (await s.heldCases(input.projectId)).find((h) => h.id === id) as HeldCase;
+    });
+  }
+
+  /** Ends the hold of a case; the row stays with who ended it and why. */
+  async releaseHold(projectId: string, testId: string, by: string, note: string): Promise<HeldCase | undefined> {
+    return this.transaction(async (s) => {
+      const current = (await s.heldCases(projectId)).find((h) => h.testId === testId);
+      if (!current) return undefined;
+      await s.db.run("UPDATE held_cases SET status = 'released', released_by = ?, released_at = ?, release_note = ? WHERE id = ?", [
+        by,
+        now(),
+        note,
+        current.id,
+      ]);
+      await s.audit('case.release', 'test_case', testId, projectId, { by, note });
+      return (await s.heldCases(projectId, { all: true })).find((h) => h.id === current.id);
+    });
+  }
+
+  /**
+   * When a person opened the review of a job and when they decided (E0.19 step 1): every decision, also those later replaced, since
+   * each was a person's time. The review KPIs measure active review time from these.
+   */
+  async reviewActivity(jobId: string): Promise<{ views: string[]; decisions: string[] }> {
+    const views = await this.db.all<Row>("SELECT at FROM audit_log WHERE action = 'review.view' AND entity_id = ? ORDER BY at", [jobId]);
+    const decisions = await this.db.all<Row>('SELECT decided_at FROM review_decisions WHERE job_id = ? ORDER BY decided_at', [jobId]);
+    return { views: views.map((r) => String(r.at)), decisions: decisions.map((r) => String(r.decided_at)) };
+  }
+
   /**
    * Records a decision in one transaction. The same decision again changes nothing (`duplicate`). A different one supersedes the
    * current one, which stays as history (`replaced`). The result the decision is about is never touched.
@@ -1525,10 +1609,11 @@ export class Store {
     evidenceSha256: string;
   }): Promise<{ outcome: 'recorded' | 'duplicate' | 'replaced'; id: string; previous?: string } | { outcome: 'refused'; id: string; reason: string }> {
     return this.transaction(async (s) => {
-      const current = await s.db.get<Row>("SELECT * FROM review_decisions WHERE test_result_id = ? AND card_id = ? AND status = 'current'", [
-        input.testResultId,
-        input.cardId,
-      ]);
+      // A result has one decision at a time: a decision made under an earlier card grouping (before E0.19 step 2) is replaced, not doubled.
+      const current = await s.db.get<Row>(
+        "SELECT * FROM review_decisions WHERE test_result_id = ? AND status = 'current' ORDER BY decided_at DESC, id DESC LIMIT 1",
+        [input.testResultId],
+      );
       if (current && current.decision === input.decision) return { outcome: 'duplicate' as const, id: String(current.id) };
       // Checked here, in the transaction that replaces, so two clicks at once cannot change a decision without saying why.
       if (current && input.note.trim().length < 3)

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { type RawTestCase, RawTestCaseSchema } from '../../model/test-model.js';
 import type { ParserConfig } from '../../parser/index.js';
+import { withReadings } from '../../parser/rules.js';
 import { cacheEnabled, cacheKeyOf, copyOf, memo, readingVersions } from '../cache/index.js';
 import { buildContexts } from '../context/context.js';
 import type { CaseSetup } from '../context/setup.js';
@@ -152,8 +153,11 @@ export function compileStages(options: CompileOptions = {}): AnyStage[] {
     name: 'Read',
     output: RawTestCaseSchema,
     run: (input, ctx) => {
-      const raw = RawTestCaseSchema.parse(input);
+      const given = RawTestCaseSchema.parse(input);
+      // A person's answer to "what does this sentence mean" is a project reading: every case with that sentence is read by it (E0.19 step 3).
+      const { raw, applied } = withReadings(given, options.config?.rules);
       ctx.log.add('Read', 'info', 'test case read', { id: raw.id ?? '', steps: nonBlankLines(raw.steps).length });
+      for (const r of applied) ctx.log.add('Read', 'info', 'sentence read as a person said it means', { from: r.from, to: r.to });
       return raw;
     },
   };

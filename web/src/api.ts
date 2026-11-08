@@ -139,10 +139,26 @@ export interface ReviewCardCase {
   decision?: ReviewDecision;
   /** The test case was changed after this run (E0.14b): the result here is the earlier version's. */
   changedSince?: { version: number; reason: string; at: string };
+  /** In the holding area (E0.19): owned by a person until a day; overdue once the day has passed. */
+  held?: { owner: string; until: string; reason: string; overdue: boolean };
+}
+
+export interface HeldCase {
+  id: string;
+  testId: string;
+  owner: string;
+  reason: string;
+  until: string;
+  status: 'held' | 'released';
+  heldBy: string;
+  heldAt: string;
+  overdue?: boolean;
 }
 
 export interface ReviewCard {
   id: string;
+  /** Every case is held and none overdue: shown apart, not a question of the run (E0.19). */
+  held?: boolean;
   why: string;
   clause: string;
   expected: string;
@@ -155,6 +171,22 @@ export interface ReviewCard {
   label?: { name: string; meaning: string };
   /** A decision here is remembered for the next run of these checks (E0.18). */
   remembers?: number;
+  /** The card asks what a sentence means: one answer is kept for every case of the project with it (E0.19). */
+  asks?: { sentence: string; kind: 'step' | 'check' };
+  /** The answer kept for that sentence now. */
+  meaning?: { to: string; by: string; at: string };
+  /** Sentences that run, from what the screens showed: one click answers the card (E0.19). And the engine's pattern to fill in. */
+  suggestions?: { ready: Array<{ text: string; why: string }>; template?: string };
+}
+
+export interface AnswerResult {
+  cardId: string;
+  entryId: string;
+  kind: 'step' | 'check';
+  sentence: string;
+  means: string;
+  casesOnCard: number;
+  casesInProject: number;
 }
 
 export interface DecideResult {
@@ -257,6 +289,13 @@ export const api = {
   reviewCards: (id: string) => call<{ cards: ReviewCard[] }>(`/api/jobs/${id}/review-queue`),
   decideCard: (id: string, body: { cardId: string; decision: 'PASS' | 'FAIL'; who?: string; note?: string }) =>
     call<DecideResult>(`/api/jobs/${id}/review-queue/decisions`, json('POST', body)),
+  holdCase: (jobId: string, body: { testId: string; owner: string; reason: string; days: number; who?: string }) =>
+    call<HeldCase>(`/api/jobs/${jobId}/held`, json('POST', body)),
+  heldCases: (projectId: string) => call<HeldCase[]>(`/api/projects/${projectId}/held`),
+  releaseHold: (projectId: string, testId: string, body: { note?: string; who?: string }) =>
+    call<HeldCase>(`/api/projects/${projectId}/held/${encodeURIComponent(testId)}/release`, json('POST', body)),
+  answerCard: (id: string, body: { cardId: string; means: string; who?: string }) =>
+    call<AnswerResult>(`/api/jobs/${id}/review-queue/answers`, json('POST', body)),
   testCases: (projectId: string) => call<TestCaseRecord[]>(`/api/projects/${projectId}/test-cases`),
   testCase: (projectId: string, id: string) =>
     call<

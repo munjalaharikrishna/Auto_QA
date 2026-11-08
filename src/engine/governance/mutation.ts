@@ -36,6 +36,8 @@ export interface Mutation {
   rewrite: (path: string, body: string) => string;
   /** Cases whose right verdict is not their baseline once this fault is in the app. */
   overrides: Record<string, VerdictName>;
+  /** A page that answers with an error status instead (a 500 of the server, E0.19 step 5); undefined for the pages that answer as usual. */
+  status?: (path: string) => number | undefined;
 }
 
 const loginSteps = (url: string): string[] => [
@@ -121,10 +123,12 @@ export const MUTATIONS: readonly Mutation[] = [
 ];
 
 /** A server that passes everything through to `target`, with each HTML page rewritten by `rewrite`. */
-export async function startMutant(target: string, rewrite: Mutation['rewrite']): Promise<{ url: string; close(): Promise<void> }> {
+export async function startMutant(target: string, rewrite: Mutation['rewrite'], status?: Mutation['status']): Promise<{ url: string; close(): Promise<void> }> {
   const server = http.createServer(async (req, res) => {
     try {
       const path = new URL(req.url ?? '/', 'http://x').pathname;
+      const failing = status?.(path);
+      if (failing) return res.writeHead(failing, { 'content-type': 'text/html' }).end('<html><body><h1>Internal Server Error</h1></body></html>');
       const upstream = await fetch(new URL(req.url ?? '/', target), { method: req.method, redirect: 'manual' });
       const type = upstream.headers.get('content-type') ?? '';
       const headers: Record<string, string> = type ? { 'content-type': type } : {};
@@ -197,7 +201,7 @@ export async function runMutationMatrix(
   const results: BenchmarkResult[] = [];
   for (const c of cases) results.push({ id: c.id, module: 'app:untouched', verdict: await verdictFor(c, appUrl, session, screenshotDir) });
   for (const m of mutations) {
-    const mutant = await startMutant(appUrl, m.rewrite);
+    const mutant = await startMutant(appUrl, m.rewrite, m.status);
     try {
       for (const c of cases) results.push({ id: c.id, module: `mutant:${m.id}`, verdict: await verdictFor(c, mutant.url, session, screenshotDir) });
     } finally {

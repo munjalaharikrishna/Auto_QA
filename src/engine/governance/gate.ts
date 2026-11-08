@@ -24,6 +24,11 @@ export interface GateBaseline {
   /** The version the numbers were accepted at. */
   version: string;
   modules: Record<string, Measure>;
+  /**
+   * The owner declared the minimum engine (E0.19 step 6): from then on the review reduction below the owner's minimum blocks. Before,
+   * it is measured and shown, and only a wrong PASS or a step back blocks. Set by hand, never by the gate.
+   */
+  minimumEngineDeclared?: { on: string; by: string };
 }
 
 export const measureOf = (statuses: readonly PreflightStatus[], coverage: Pick<Coverage, 'steps' | 'expectations'>): Measure => {

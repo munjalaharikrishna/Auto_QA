@@ -6,7 +6,8 @@ import type { Status, TestVerdict } from '../results/verdict.js';
 /**
  * The review cards of a job (VD-11, DEC-05), built from the verdicts that were stored. A case the engine could not decide is shown
  * with what was expected, what the page showed, and the pictures; a person says PASS or FAIL. Cases that share one cause are one
- * card, so a person decides once, and each case still gets a decision of its own.
+ * card, so a person decides once, and each case still gets a decision of its own. Since E0.19 step 2 a card is one question: the
+ * sentence the engine could not decide and why (`questionOf`); a question about wording is one card whatever each page showed.
  *
  * Only a case that is waiting for a person can be decided, and a PASS needs something to confirm: a run whose steps did not all
  * finish, or one with a check that failed, has nothing to confirm and cannot be passed by a click.
@@ -83,8 +84,50 @@ export function evidenceOf(status: string, v: TestVerdict): CardEvidence {
   };
 }
 
-/** The same cause gives the same card, whatever the test case: what was unproven, and what the page showed. */
+/** The same cause gives the same card, whatever the test case: what was unproven, and what the page showed (before E0.19). */
 export const cardIdOf = (e: CardEvidence): string => fingerprintOf(`${e.status}|${e.clause || e.reason}`, e.actual);
+
+/** Labels whose question is about the sentence itself: what the page showed does not change the answer. */
+const ABOUT_THE_SENTENCE: ReadonlySet<ReviewLabel> = new Set<ReviewLabel>(['wording']);
+
+/** A sentence as a person reads it: no case, no extra spaces, no leading "Verify (that)", no closing full stop. */
+export function sameSentence(s: string): string {
+  let t = s.toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+  for (const lead of ['verify that ', 'verify ']) if (t.startsWith(lead)) t = t.slice(lead.length);
+  while (t.endsWith('.')) t = t.slice(0, -1).trimEnd();
+  return t;
+}
+
+/**
+ * The question a case puts to a person (E0.19 step 2): the sentence the engine could not decide (the first review reason, else the
+ * unproven check), why, and its label. One question is one card, whatever the test case.
+ */
+export interface CaseQuestion {
+  sentence: string;
+  /** Where the sentence is: a step line, or an expected result (of the case or of a step). An answer is a reading of that kind. */
+  kind: 'step' | 'check';
+  why: string;
+  label?: ReviewLabel;
+  /** The answer depends on what the page showed: cases whose pages showed different things are different questions. */
+  byPage: boolean;
+}
+
+export function questionOf(status: string, v: TestVerdict): CaseQuestion {
+  const first = v.review?.[0];
+  const unproven = v.checks.find((c) => c.result === 'not verified' || c.result === 'not run' || c.result === 'not checked');
+  const label = labelOf({ ...v, status: status as Status });
+  return {
+    sentence: first?.raw || unproven?.raw || v.failedStep || v.expected || '',
+    kind: first?.id.startsWith('step') ? 'step' : 'check',
+    why: first?.why ?? v.reason,
+    ...(label ? { label } : {}),
+    byPage: !(label && ABOUT_THE_SENTENCE.has(label)),
+  };
+}
+
+/** One card per question: the same sentence, the same reason, and (when the answer depends on it) the same page. */
+export const questionIdOf = (q: CaseQuestion, e: CardEvidence): string =>
+  fingerprintOf(`${q.label ?? ''}|${sameSentence(q.sentence) || e.reason}|${q.why}`, q.byPage ? e.actual : '');
 
 /** The hash of what a person was shown: a later change to the stored evidence is visible against it. */
 export const evidenceHash = (e: CardEvidence): string => cacheKeyOf(e);
@@ -111,6 +154,11 @@ export interface CardCase {
    * earlier version's, and is not changed; running the case again gives the new one's.
    */
   changedSince?: { version: number; reason: string; at: string };
+  /**
+   * The case is in the holding area (E0.19 step 7): a person owns it until a day. `overdue` when the day has passed: the hold no longer
+   * keeps it out of the questions, and its owner decides.
+   */
+  held?: { owner: string; until: string; reason: string; overdue: boolean };
 }
 
 export interface ReviewCardView {
@@ -130,6 +178,17 @@ export interface ReviewCardView {
   label?: { name: ReviewLabel; meaning: string };
   /** A decision on this card is remembered for the next run of the same checks (E0.18 step 5): the checks it covers. */
   remembers?: number;
+  /**
+   * The card asks what a sentence means (E0.19 step 3): a person answers once with a sentence the engine can run, and every case of the
+   * project with that sentence is read by it from the next run on. `kind` is where the sentence is.
+   */
+  asks?: { sentence: string; kind: 'step' | 'check' };
+  /** Every case of the card is held, and none is overdue (E0.19 step 7): it is shown apart and is not a question of the run. */
+  held?: boolean;
+  /** The answer that is kept for that sentence now, with who gave it and when. */
+  meaning?: { to: string; by: string; at: string };
+  /** Sentences the engine can run, from what the screens showed, for a one-click answer (E0.19 step 4); and its pattern to fill in. */
+  suggestions?: import('./suggest.js').Suggestions;
 }
 
 export function buildReviewCards(rows: readonly StoredVerdict[], decisions: ReadonlyMap<string, DecisionView>): ReviewCardView[] {
@@ -137,8 +196,10 @@ export function buildReviewCards(rows: readonly StoredVerdict[], decisions: Read
   for (const r of rows) {
     if (!DECIDABLE.has(r.status as Status)) continue;
     const evidence = evidenceOf(r.status, r.verdict);
-    const id = cardIdOf(evidence);
-    const decision = decisions.get(`${r.testId}|${id}`);
+    const question = questionOf(r.status, r.verdict);
+    const id = questionIdOf(question, evidence);
+    // A case is on one card of its job, so a decision made when cards were grouped another way is still its decision.
+    const decision = decisions.get(`${r.testId}|${id}`) ?? decisions.get(r.testId);
     const entry: CardCase = {
       testId: r.testId,
       ...(r.row !== undefined ? { row: r.row } : {}),
@@ -154,18 +215,17 @@ export function buildReviewCards(rows: readonly StoredVerdict[], decisions: Read
     }
     cards.set(id, {
       id,
-      why: r.verdict.review?.[0]?.why ?? r.verdict.reason,
-      clause: evidence.clause,
+      why: question.why,
+      // The headline is the sentence the person is asked about, not the first check that happened not to run.
+      clause: question.sentence,
       expected: evidence.expected,
       actual: evidence.actual,
       ...(evidence.before ? { before: evidence.before } : {}),
       ...(evidence.after ? { after: evidence.after } : {}),
       cases: [entry],
       decided: false,
-      ...(() => {
-        const name = labelOf(r.verdict);
-        return name ? { label: { name, meaning: LABEL_MEANING[name] } } : {};
-      })(),
+      ...(question.label ? { label: { name: question.label, meaning: LABEL_MEANING[question.label] } } : {}),
+      ...(!question.byPage && question.sentence ? { asks: { sentence: question.sentence, kind: question.kind } } : {}),
       ...(r.verdict.approvals?.length ? { remembers: r.verdict.approvals.length } : {}),
     });
   }

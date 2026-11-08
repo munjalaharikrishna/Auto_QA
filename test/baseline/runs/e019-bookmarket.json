@@ -1,0 +1,379 @@
+{
+ "run": "e019-bookmarket",
+ "recordedOn": "2026-11-08",
+ "about": "A live run at the end of E0.19 (test/baseline/e019-kpi-after.txt), kept for the run-time gate: the verdicts only, no pictures.",
+ "verdicts": {
+  "TC01": {
+   "executionId": "EXEC-2026-00019",
+   "testId": "TC01",
+   "title": "TC01_ Check the functionality of  signin  Page Tex tBox",
+   "automationId": "TC01",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E1 \"User should navigate to Book Market Home Page\" is unproven: \"Book Market Home\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+   "review": [
+    {
+     "id": "E1",
+     "raw": "User should navigate to Book Market Home Page",
+     "headline": "Not proven:",
+     "why": "\"Book Market Home\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is https://book-market-virid.vercel.app/login); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify Browser should be Opened User should navigate to Book Market Home Page",
+   "actual": "address is https://book-market-virid.vercel.app/login",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter BookMarket URL--->https://book-market-virid.vercel.app/login",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "User should navigate to Book Market Home Page",
+     "expected": "address contains \"Book Market Home\"",
+     "actual": "address is https://book-market-virid.vercel.app/login",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 2930,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC02": {
+   "executionId": "EXEC-2026-00019",
+   "testId": "TC02",
+   "title": "TC02_Check the functionality of Invalid Email address Text Box",
+   "automationId": "AUTO-TC02",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed. | expected result \"User should see error messages as invalid credentialsNote: student@bookmarket\": ambiguous wording: the words \"as invalid credentialsNote: student@bookmarket\" are not understood and are not checked To fix: Say it as a check of its own: Verify <what> is <state>. | expected result \"com\": not understood: the sentence fits none of the grammar models: it is neither an action nor a check To fix: Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page.",
+   "review": [
+    {
+     "id": "step 2",
+     "raw": "Verify Broswer should be Opened",
+     "headline": "not understood:",
+     "why": "no check could be read: no word says what should be true",
+     "todo": [
+      "Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed."
+     ]
+    },
+    {
+     "id": "expected result",
+     "raw": "User should see error messages as invalid credentialsNote: student@bookmarket",
+     "headline": "ambiguous wording:",
+     "why": "the words \"as invalid credentialsNote: student@bookmarket\" are not understood and are not checked",
+     "todo": [
+      "Say it as a check of its own: Verify <what> is <state>."
+     ]
+    },
+    {
+     "id": "expected result",
+     "raw": "com",
+     "headline": "not understood:",
+     "why": "the sentence fits none of the grammar models: it is neither an action nor a check",
+     "todo": [
+      "Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page."
+     ]
+    }
+   ],
+   "expected": "Verify Broswer should be Opened Verify User should navigate to Book Market Home Page User should see error messages as invalid credentialsNote: student@bookmarket .com",
+   "actual": "Not run: step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed. | expected result \"User should see error messages as invalid credentialsNote: student@bookmarket\": ambiguous wording: the words \"as invalid credentialsNote: student@bookmarket\" are not understood and are not checked To fix: Say it as a check of its own: Verify <what> is <state>. | expected result \"com\": not understood: the sentence fits none of the grammar models: it is neither an action nor a check To fix: Say what should be true on the screen, for example: An error message is displayed, or The user stays on the Login page.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter BookMarket URL--->https://book-market-virid.vercel.app/login",
+     "result": "not run"
+    },
+    {
+     "id": "S5",
+     "raw": "Enter the given valid  Email in the  Email Text box Note: student@bookmarket.com",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify Broswer should be Opened",
+     "expected": "Verify Broswer should be Opened",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to Book Market Home Page",
+     "expected": "Verify User should navigate to Book Market Home Page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "User should see error messages as invalid credentialsNote: student@bookmarket .com",
+     "expected": "User should see error messages as invalid credentialsNote: student@bookmarket .com",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC03": {
+   "executionId": "EXEC-2026-00019",
+   "testId": "TC03",
+   "title": "TC03_Check the functionality of Valid Email address Text box",
+   "automationId": "AUTO-TC03",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "review": [
+    {
+     "id": "step 2",
+     "raw": "Verify Broswer should be Opened",
+     "headline": "not understood:",
+     "why": "no check could be read: no word says what should be true",
+     "todo": [
+      "Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed."
+     ]
+    }
+   ],
+   "expected": "Verify Broswer should be Opened Verify User should navigate to BookMarket Home Page Text box should accept the values",
+   "actual": "Not run: step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter BoookMarket URL--->https://book-market-virid.vercel.app/login",
+     "result": "not run"
+    },
+    {
+     "id": "S5",
+     "raw": "Enter the given valid  Email in the  Email Text box Note:sravya@bookmarket.com",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify Broswer should be Opened",
+     "expected": "Verify Broswer should be Opened",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to BookMarket Home Page",
+     "expected": "Verify User should navigate to BookMarket Home Page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Text box should accept the values",
+     "expected": "Text box should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC04": {
+   "executionId": "EXEC-2026-00019",
+   "testId": "TC04",
+   "title": "TC04_Check the Funnctionality of Password Text box",
+   "automationId": "AUTO-TC04",
+   "status": "NEEDS REVIEW",
+   "label": "wording",
+   "reason": "step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "review": [
+    {
+     "id": "step 2",
+     "raw": "Verify Broswer should be Opened",
+     "headline": "not understood:",
+     "why": "no check could be read: no word says what should be true",
+     "todo": [
+      "Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed."
+     ]
+    }
+   ],
+   "expected": "Verify Broswer should be Opened Verify User should navigate to BookMarket Home Page Verify Text box should accept the values Text box should accept the values",
+   "actual": "Not run: step 2 \"Verify Broswer should be Opened\": not understood: no check could be read: no word says what should be true To fix: Say what should be true on the screen, for example: Verify the <name> <button, field, message> is displayed.",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter  the BookkMarket URL----->https://book-market-virid.vercel.app/login",
+     "result": "not run"
+    },
+    {
+     "id": "S5",
+     "raw": "Enter the given valid Email in the Email Text box Note: student@bookmarket.com",
+     "result": "not run"
+    },
+    {
+     "id": "S7",
+     "raw": "Enter the given valid password in Password Text box Note: password123",
+     "result": "not run"
+    }
+   ],
+   "checks": [
+    {
+     "id": "A1",
+     "raw": "Verify Broswer should be Opened",
+     "expected": "Verify Broswer should be Opened",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A2",
+     "raw": "Verify User should navigate to BookMarket Home Page",
+     "expected": "Verify User should navigate to BookMarket Home Page",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A3",
+     "raw": "Verify Text box should accept the values",
+     "expected": "Verify Text box should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A4",
+     "raw": "Text box should accept the values",
+     "expected": "Text box should accept the values",
+     "actual": "",
+     "result": "not run"
+    },
+    {
+     "id": "A5",
+     "raw": "",
+     "expected": "",
+     "actual": "",
+     "result": "not run"
+    }
+   ],
+   "durationMs": 0,
+   "evidence": {
+    "screenshots": []
+   }
+  },
+  "TC05": {
+   "executionId": "EXEC-2026-00019",
+   "testId": "TC05",
+   "title": "TC05_Check the functionality of sign in Button",
+   "automationId": "TC05",
+   "status": "NEEDS REVIEW",
+   "label": "inconclusive",
+   "reason": "E1 \"Verify User should navigate to BookMarket Home Page\" is unproven: \"BookMarket Home\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+   "review": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to BookMarket Home Page",
+     "headline": "Not proven:",
+     "why": "\"BookMarket Home\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is https://book-market-virid.vercel.app/login); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E3",
+     "raw": "Verify Text box should accept the values",
+     "headline": "Not proven:",
+     "why": "a secret is never shown, so it is not compared with the page",
+     "todo": [
+      "Check on the screenshot what the page showed (the value is a secret); decide PASS or FAIL on the review card."
+     ]
+    },
+    {
+     "id": "E4",
+     "raw": "User should navigates to Buying and Exploring Books Page",
+     "headline": "Not proven:",
+     "why": "\"Buying and Exploring Books\" is not a page the run knows the address of, so the address cannot show that this is not that page",
+     "todo": [
+      "Check on the screenshot what the page showed (address is https://book-market-virid.vercel.app/login); decide PASS or FAIL on the review card."
+     ]
+    }
+   ],
+   "expected": "Verify Browser should be Opened Verify User should navigate to BookMarket Home Page Verify Text box should accept the values Verify Text box should accept the values User should navigates to Buying and Exploring Books Page",
+   "actual": "address is https://book-market-virid.vercel.app/login | Field \"Email\" has the value \"qa.jy2xt6yd@example.test\" | the value is a secret | address is https://book-market-virid.vercel.app/login",
+   "steps": [
+    {
+     "id": "S3",
+     "raw": "Enter BoookMarket URL--->https://book-market-virid.vercel.app/login",
+     "result": "passed"
+    },
+    {
+     "id": "S5",
+     "raw": "Enter the given valid Email in the  Email  Text box Note: student@bookmarket.com",
+     "result": "passed"
+    },
+    {
+     "id": "S7",
+     "raw": "Enter the given valid password in password Text box Note: password123",
+     "result": "passed"
+    },
+    {
+     "id": "S9",
+     "raw": "Click on the signin Button",
+     "result": "passed"
+    }
+   ],
+   "checks": [
+    {
+     "id": "E1",
+     "raw": "Verify User should navigate to BookMarket Home Page",
+     "expected": "address contains \"BookMarket Home\"",
+     "actual": "address is https://book-market-virid.vercel.app/login",
+     "result": "not verified"
+    },
+    {
+     "id": "E2",
+     "raw": "Verify Text box should accept the values",
+     "expected": "Field \"Email\" has the value \"qa.jy2xt6yd@example.test\"",
+     "actual": "Field \"Email\" has the value \"qa.jy2xt6yd@example.test\"",
+     "result": "passed"
+    },
+    {
+     "id": "E3",
+     "raw": "Verify Text box should accept the values",
+     "expected": "value Password \"password\" \"$data.given_valid_password_valid\"",
+     "actual": "the value is a secret",
+     "result": "not verified"
+    },
+    {
+     "id": "E4",
+     "raw": "User should navigates to Buying and Exploring Books Page",
+     "expected": "address contains \"Buying and Exploring Books\"",
+     "actual": "address is https://book-market-virid.vercel.app/login",
+     "result": "not verified"
+    }
+   ],
+   "durationMs": 4161,
+   "evidence": {
+    "screenshots": []
+   }
+  }
+ }
+}

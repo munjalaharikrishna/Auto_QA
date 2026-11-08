@@ -31,6 +31,7 @@ export const TABLE_ORDER = [
   'executions',
   'test_results',
   'review_decisions',
+  'held_cases',
   'step_results',
   'check_results',
   'evidence',
